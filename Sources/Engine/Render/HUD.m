@@ -18,12 +18,7 @@ static NSColor *KindColor(HUDKind k, CGFloat a) {
 }
 
 static SKLabelNode *Label(CGFloat size, SKLabelHorizontalAlignmentMode align) {
-    SKLabelNode *l = [SKLabelNode labelNodeWithFontNamed:@"Menlo"];
-    l.fontSize = size;
-    l.fontColor = HUDColor(0.9);
-    l.horizontalAlignmentMode = align;
-    l.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
-    return l;
+    return UIMonoLabel(size, HUDColor(0.9), align, SKLabelVerticalAlignmentModeCenter);
 }
 
 // Four corner marks of a square of side `size`, centred on the origin.
@@ -236,7 +231,7 @@ static SKShapeNode *Bracket(void) {
     _torpLabel = Label(13, SKLabelHorizontalAlignmentModeLeft);
     [_root addChild:_torpLabel];
     _bannerLabel = Label(30, SKLabelHorizontalAlignmentModeCenter);
-    _bannerLabel.fontName = @"Menlo-Bold";
+    _bannerLabel.fontName = UIMonoBoldFont;
     _bannerLabel.alpha = 0;
     [_root addChild:_bannerLabel];
     _objectivePanel = [SKNode node];

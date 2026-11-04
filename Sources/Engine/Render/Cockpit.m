@@ -2,13 +2,14 @@
 #import <SpriteKit/SpriteKit.h>
 #import <Metal/Metal.h>
 #import "SceneAsset.h"
+#import "UIStyle.h"
 
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-static NSColor *ScreenColor(CGFloat a) { return [NSColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:a]; }
+static NSColor *ScreenColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static NSColor *WarnColor(CGFloat a) { return [NSColor colorWithRed:1.0 green:0.68 blue:0.2 alpha:a]; }
-static NSColor *EnemyColor(CGFloat a) { return [NSColor colorWithRed:1.0 green:0.42 blue:0.32 alpha:a]; }
-static NSColor *ShieldColor(CGFloat a) { return [NSColor colorWithRed:0.4 green:0.7 blue:1.0 alpha:a]; }
+static NSColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
+static NSColor *ShieldColor(CGFloat a) { return UIColorWithOpacity(UIShield, a); }
 
 // Green -> amber -> red as a level drops.
 static NSColor *LevelColor(float v, CGFloat a) {
@@ -23,12 +24,9 @@ static BOOL Blink(double t, double hz) { return fmod(t * hz, 1.0) < 0.5; }
 #pragma mark - Display widgets
 
 static SKLabelNode *Text(CGFloat size, SKLabelHorizontalAlignmentMode align, NSColor *color) {
-    SKLabelNode *l = [SKLabelNode labelNodeWithFontNamed:@"Menlo-Bold"];
-    l.fontSize = size;
-    l.fontColor = color;
-    l.horizontalAlignmentMode = align;
-    l.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
-    return l;
+    SKLabelNode *label = UIMonoLabel(size, color, align, SKLabelVerticalAlignmentModeCenter);
+    label.fontName = UIMonoBoldFont;
+    return label;
 }
 
 static SKShapeNode *Stroke(CGPathRef path, NSColor *color, CGFloat width) {
@@ -212,7 +210,7 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
         NSMutableParagraphStyle *ps = [NSMutableParagraphStyle new];
         ps.alignment = NSTextAlignmentCenter;
         BOOL twoLines = [legend containsString:@"\n"];
-        NSDictionary *attrs = @{ NSFontAttributeName : [NSFont fontWithName:@"Menlo-Bold" size:twoLines ? 38 : 54] ?: [NSFont boldSystemFontOfSize:50],
+        NSDictionary *attrs = @{ NSFontAttributeName : [NSFont fontWithName:UIMonoBoldFont size:twoLines ? 38 : 54] ?: [NSFont boldSystemFontOfSize:50],
                                  NSForegroundColorAttributeName : fg, NSParagraphStyleAttributeName : ps };
         NSSize ts = [legend sizeWithAttributes:attrs];
         [legend drawInRect:NSMakeRect(0, (r.size.height - ts.height) / 2, r.size.width, ts.height) withAttributes:attrs];
