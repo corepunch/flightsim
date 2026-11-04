@@ -27,7 +27,7 @@
 - (void)addReceiver:(SCNNode *)node skip:(NSArray<NSString *> *)skipPrefixes;
 - (void)addCaster:(SCNNode *)node skip:(NSArray<NSString *> *)skipPrefixes;
 
-// Up to 8 lights. `color` in sRGB; `intensity` as an SCNLight's (lumens);
+// Up to 12 lights. `color` in sRGB; `intensity` as an SCNLight's (lumens);
 // `reach` as its attenuationEndDistance (falloff exponent 2, from 0).
 - (void)addLight:(simd_float3)position color:(NSColor *)color intensity:(float)intensity reach:(float)reach;
 @property (nonatomic, readonly) NSUInteger lightCount;

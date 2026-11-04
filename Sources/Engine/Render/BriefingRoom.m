@@ -103,7 +103,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
         _sky = [[SpaceSky alloc] initWithDevice:device faceSize:1024 seed:4242];
         _scene.background.contents = _sky.cubeTexture;
         _scene.lightingEnvironment.contents = _sky.cubeTexture;
-        _scene.lightingEnvironment.intensity = _shadows ? 0.12 : 0.25;
+        _scene.lightingEnvironment.intensity = _shadows ? 0.06 : 0.25;
         [self cutTo:RoomShotWide];
     }
     return self;
@@ -271,17 +271,26 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     ambient.type = SCNLightTypeAmbient;
     ambient.color = RGB(0.5, 0.55, 0.7);
     // With hard shadows the fill comes down, so they read (Doom 3's contrast).
-    ambient.intensity = _shadows ? 30 : 70;
+    ambient.intensity = _shadows ? 12 : 70;
     ambient.categoryBitMask = kInside;
     SCNNode *an = [SCNNode node];
     an.light = ambient;
     [_scene.rootNode addChildNode:an];
 
     NSColor *warm = RGB(1.0, 0.78, 0.55), *amber = RGB(1.0, 0.62, 0.32), *cyan = RGB(0.35, 0.75, 1.0);
-    omni(simd_make_float3(-6, 12.5, 4), warm, 1300, 22);       // ceiling, over the audience
-    omni(simd_make_float3(6, 12.5, 4), warm, 1300, 22);
-    omni(simd_make_float3(0, 12.0, -6), warm, 900, 18);        // ceiling, over the stage
+    // The ceiling lamps hang in the bays between the beams (x = 0, +-4.35),
+    // under the beams' bottoms (13.6), so with shadows on, the beams and
+    // ribs throw long stripes across the ceiling and down the walls.
+    omni(simd_make_float3(-4.35f, 12.0f, 5), warm, 1600, 24);  // ceiling, over the audience
+    omni(simd_make_float3(4.35f, 12.0f, 5), warm, 1600, 24);
+    omni(simd_make_float3(0, 11.2f, -6), warm, 1100, 18);      // ceiling, over the stage
     omni(simd_make_float3(0, 7.9, -8.5), cyan, 650, 14);      // the screen's spill
+    if (_shadows) {
+        // Footlights along the stage edge: low and grazing, they throw the
+        // lectern, pilasters and under-screen panels long up the front wall.
+        omni(simd_make_float3(-3.0f, 1.2f, -2.0f), amber, 750, 16);
+        omni(simd_make_float3(3.0f, 1.2f, -2.0f), amber, 750, 16);
+    }
     omni(simd_make_float3(-12.5, 3.2, 0), amber, 700, 11);     // under the balconies
     omni(simd_make_float3(12.5, 3.2, 0), amber, 700, 11);
     omni(simd_make_float3(-12.5, 7.6, 2), amber, 550, 10);     // between the tiers

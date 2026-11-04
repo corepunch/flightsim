@@ -1,7 +1,7 @@
 #import "StencilShadows.h"
 #import <simd/simd.h>
 
-enum { kMaxLights = 8 };
+enum { kMaxLights = 12, kMasks = kMaxLights / 4 };   // four lights per RGBA mask
 static const uint32_t kFar = 0x80000000u;   // index flag: the vertex extruded past the light's reach
 
 typedef struct { simd_float4 position; simd_float4 color; } LightDesc;   // world pos + reach; linear rgb * scale
@@ -242,8 +242,8 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
     id<MTLRenderPipelineState> _depthPipe, _volumePipe, _maskPipe[kMaxLights];
     id<MTLDepthStencilState> _depthState, _volumeState, _maskState;
     id<MTLCommandQueue> _queue;
-    id<MTLTexture> _mask[2], _depth;
-    SCNMaterialProperty *_maskProp[2];
+    id<MTLTexture> _mask[kMasks], _depth;
+    SCNMaterialProperty *_maskProp[kMasks];
     NSMutableArray<SCNMaterial *> *_materials;
     float _resolution;
 }
@@ -255,7 +255,7 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
         _casters = [ShadowMesh new];
         _materials = [NSMutableArray array];
         _resolution = getenv("SF_STENCIL_RES") ? (float)atof(getenv("SF_STENCIL_RES")) : 0.5f;
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < kMasks; i++) {
             _maskProp[i] = [SCNMaterialProperty materialPropertyWithContents:[NSColor whiteColor]];
             _maskProp[i].minificationFilter = _maskProp[i].magnificationFilter = SCNFilterModeLinear;
             _maskProp[i].mipFilter = SCNFilterModeNone;
@@ -308,11 +308,10 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
     id<MTLLibrary> lib = [_device newLibraryWithSource:kShaders options:nil error:&err];
     if (!lib) { NSLog(@"StencilShadows: %@", err); return; }
     MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
-    pd.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
-    pd.colorAttachments[1].pixelFormat = MTLPixelFormatRGBA8Unorm;
+    for (int k = 0; k < kMasks; k++) pd.colorAttachments[k].pixelFormat = MTLPixelFormatRGBA8Unorm;
     pd.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
     pd.stencilAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-    pd.colorAttachments[0].writeMask = pd.colorAttachments[1].writeMask = MTLColorWriteMaskNone;
+    for (int k = 0; k < kMasks; k++) pd.colorAttachments[k].writeMask = MTLColorWriteMaskNone;
     pd.fragmentFunction = nil;
     pd.vertexFunction = [lib newFunctionWithName:@"depth_vs"];
     _depthPipe = [_device newRenderPipelineStateWithDescriptor:pd error:&err];
@@ -323,8 +322,7 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
     static const MTLColorWriteMask channel[4] = { MTLColorWriteMaskRed, MTLColorWriteMaskGreen,
                                                   MTLColorWriteMaskBlue, MTLColorWriteMaskAlpha };
     for (int i = 0; i < kMaxLights; i++) {
-        pd.colorAttachments[0].writeMask = i < 4 ? channel[i] : MTLColorWriteMaskNone;
-        pd.colorAttachments[1].writeMask = i < 4 ? MTLColorWriteMaskNone : channel[i - 4];
+        for (int k = 0; k < kMasks; k++) pd.colorAttachments[k].writeMask = k == i / 4 ? channel[i % 4] : MTLColorWriteMaskNone;
         _maskPipe[i] = [_device newRenderPipelineStateWithDescriptor:pd error:&err];
     }
     if (err) NSLog(@"StencilShadows: %@", err);
@@ -357,7 +355,7 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
 #pragma mark - Materials
 
 - (void)applyToMaterial:(SCNMaterial *)m tint:(NSColor *)tint {
-    NSMutableString *args = [NSMutableString stringWithString:@"#pragma arguments\ntexture2d<float> sl_mask0;\ntexture2d<float> sl_mask1;\nfloat4 sl_tint;\n"];
+    NSMutableString *args = [NSMutableString stringWithString:@"#pragma arguments\ntexture2d<float> sl_mask0;\ntexture2d<float> sl_mask1;\ntexture2d<float> sl_mask2;\nfloat4 sl_tint;\n"];
     NSMutableString *table = [NSMutableString string];
     for (NSUInteger i = 0; i < _nlights; i++) {
         [args appendFormat:@"float4 sl_p%lu;\nfloat4 sl_c%lu;\n", i, i];
@@ -369,8 +367,8 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
         "float4 clip = scn_frame.projectionTransform * float4(_surface.position, 1);\n"
         "float2 uv = float2(clip.x / clip.w * 0.5 + 0.5, 0.5 - clip.y / clip.w * 0.5);\n"
         "constexpr sampler ms(filter::linear, address::clamp_to_edge);\n"
-        "float4 m0 = sl_mask0.sample(ms, uv), m1 = sl_mask1.sample(ms, uv);\n"
-        "float lit[8] = { m0.r, m0.g, m0.b, m0.a, m1.r, m1.g, m1.b, m1.a };\n"
+        "float4 m0 = sl_mask0.sample(ms, uv), m1 = sl_mask1.sample(ms, uv), m2 = sl_mask2.sample(ms, uv);\n"
+        "float lit[12] = { m0.r, m0.g, m0.b, m0.a, m1.r, m1.g, m1.b, m1.a, m2.r, m2.g, m2.b, m2.a };\n"
         "float3 N = normalize(_surface.normal), V = normalize(_surface.view);\n"
         "float3 albedo = _surface.diffuse.rgb;\n"
         "float rough = clamp(_surface.roughness, 0.04, 1.0), metal = saturate(_surface.metalness);\n"
@@ -411,8 +409,7 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
         [m setValue:[NSValue valueWithSCNVector4:SCNVector4Make(p.x, p.y, p.z, p.w)] forKey:[NSString stringWithFormat:@"sl_p%lu", i]];
         [m setValue:[NSValue valueWithSCNVector4:SCNVector4Make(c.x, c.y, c.z, 0)] forKey:[NSString stringWithFormat:@"sl_c%lu", i]];
     }
-    [m setValue:_maskProp[0] forKey:@"sl_mask0"];
-    [m setValue:_maskProp[1] forKey:@"sl_mask1"];
+    for (int k = 0; k < kMasks; k++) [m setValue:_maskProp[k] forKey:[NSString stringWithFormat:@"sl_mask%d", k]];
     [_materials addObject:m];
 }
 
@@ -425,7 +422,7 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
                                                                                   width:w height:h mipmapped:NO];
     td.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
     td.storageMode = MTLStorageModePrivate;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < kMasks; i++) {
         _mask[i] = [_device newTextureWithDescriptor:td];
         _maskProp[i].contents = _mask[i];
     }
@@ -475,7 +472,7 @@ static BOOL ScissorFor(simd_float4 light, simd_float4x4 viewProj, float zNear, N
     id<MTLCommandBuffer> cb = [_queue commandBuffer];
     cb.label = @"Stencil shadows";
     MTLRenderPassDescriptor *rp = [MTLRenderPassDescriptor renderPassDescriptor];
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < kMasks; i++) {
         rp.colorAttachments[i].texture = _mask[i];
         rp.colorAttachments[i].loadAction = MTLLoadActionClear;
         rp.colorAttachments[i].storeAction = MTLStoreActionStore;
