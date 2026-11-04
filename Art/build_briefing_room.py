@@ -17,8 +17,8 @@
 #              Outside    the cruiser seen through the window
 #              Crowd      sprite planes, Sprite_<Kind>_<n> (see below)
 #   materials  Screen_Briefing  flat quad, UV 0..1: the live presentation
-#              Glow_<Colour>    self-lit (Amber, Warm, Cyan, Red)
-#              Wall, Panel, Metal, Dark, Floor, Stage, Seat, Rail, Banner,
+#              Glow_<Colour>    self-lit (Amber, AmberDim, Warm, Cyan, Red)
+#              Wall, WallDark, Panel, Metal, Dark, Floor, Stage, Seat, Rail, Banner,
 #              Gold, Bezel, Hull, HullDark   lit PBR, box-projected UVs at
 #              TILE metres per unit (Hull: 24 m) for the game's tiling sets
 #
@@ -87,6 +87,8 @@ MATS = {
     "HullDark": material("HullDark", (0.12, 0.13, 0.15), 0.5, 0.6),
     "Screen_Briefing": material("Screen_Briefing", (0, 0, 0), 0.2, 0.0, emit=(0.02, 0.08, 0.14), strength=1),
     "Glow_Amber": material("Glow_Amber", (0.05, 0.04, 0.02), 0.4, 0.0, emit=(1.0, 0.55, 0.2)),
+    "Glow_AmberDim": material("Glow_AmberDim", (0.05, 0.04, 0.02), 0.4, 0.0, emit=(1.0, 0.55, 0.2), strength=1.5),
+    "WallDark": material("WallDark", (0.05, 0.052, 0.056), 0.6, 0.4),
     "Glow_Warm": material("Glow_Warm", (0.05, 0.04, 0.03), 0.4, 0.0, emit=(1.0, 0.8, 0.55)),
     "Glow_Cyan": material("Glow_Cyan", (0.02, 0.05, 0.06), 0.4, 0.0, emit=(0.2, 0.85, 1.0)),
     "Glow_Red": material("Glow_Red", (0.05, 0.01, 0.01), 0.4, 0.0, emit=(1.0, 0.15, 0.1)),
@@ -116,14 +118,20 @@ SPRITE_SIZE = {"Seated": (0.72, 1.0), "Standing": (1.37, 1.9)}   # both 0.72:1, 
 SEAT_LIFT = 0.25                      # seated sprites start at the waist
 VIEW = Vector((0.0, -14.6, 4.0))      # the wide shot's eye
 
-def anchor(kind, p, facing):
+_last = {}
+
+def anchor(kind, p, facing, scale=1.0):
     """A person: one upright quad, bottom edge on `p`, facing `facing`, with
-    UVs 0..1 and material Sprite_<kind>_<n> for the game to texture."""
+    UVs 0..1 and material Sprite_<kind>_<n> for the game to texture. `scale`
+    varies their height; neighbours never share a variant."""
     p, f = Vector(p), Vector(facing).normalized()
     w, h = SPRITE_SIZE[kind]
+    w, h = w * scale, h * scale
     right = (-f).cross(Vector((0, 0, 1))).normalized() * (w / 2)
     up = Vector((0, 0, h))
-    name = "Sprite_%s_%d" % (kind, rng.randint(1, SPRITES))
+    n = rng.choice([i for i in range(1, SPRITES + 1) if i != _last.get(kind)])
+    _last[kind] = n
+    name = "Sprite_%s_%d" % (kind, n)
     if name not in MATS:
         MATS[name] = material(name, (0.02, 0.02, 0.025), 0.8)
     quad(crowd, [p - right, p + right, p + right + up, p - right + up], name)
@@ -183,10 +191,12 @@ for a, b in zip(BEAMS, BEAMS[1:]):
 
 # ---- front wall: the screen in a stepped bezel, pilasters with sconces
 x0, x1, z0, z1 = SCREEN
-box(room, (-W, FRONT, 0), (x0 - 1.2, FRONT + 0.5, H), "Wall")
-box(room, (x1 + 1.2, FRONT, 0), (W, FRONT + 0.5, H), "Wall")
-box(room, (x0 - 1.2, FRONT, z1 + 1.0), (x1 + 1.2, FRONT + 0.5, H), "Wall")
-box(room, (x0 - 1.2, FRONT, 0), (x1 + 1.2, FRONT + 0.5, z0 - 1.0), "Wall")
+# The wall around the screen stays dark and plain, so the eye goes to the
+# screen and the faces in front of it.
+box(room, (-W, FRONT, 0), (x0 - 1.2, FRONT + 0.5, H), "WallDark")
+box(room, (x1 + 1.2, FRONT, 0), (W, FRONT + 0.5, H), "WallDark")
+box(room, (x0 - 1.2, FRONT, z1 + 1.0), (x1 + 1.2, FRONT + 0.5, H), "WallDark")
+box(room, (x0 - 1.2, FRONT, 0), (x1 + 1.2, FRONT + 0.5, z0 - 1.0), "WallDark")
 for (lo, hi) in (((x0 - 1.2, FRONT - 0.4, z0 - 1.0), (x1 + 1.2, FRONT, z0 - 0.15)),
                  ((x0 - 1.2, FRONT - 0.4, z1 + 0.15), (x1 + 1.2, FRONT, z1 + 1.0)),
                  ((x0 - 1.2, FRONT - 0.4, z0 - 1.0), (x0 - 0.15, FRONT, z1 + 1.0)),
@@ -201,10 +211,10 @@ for a, b in zip(edge, edge[1:] + edge[:1]):
 sy = FRONT - 0.1
 quad(room, [(x0, sy, z0), (x1, sy, z0), (x1, sy, z1), (x0, sy, z1)], "Screen_Briefing")
 for x in (-6.0, 0.0, 6.0):
-    box(room, (x - 0.9, FRONT - 0.44, z1 + 0.5), (x + 0.9, FRONT - 0.4, z1 + 0.75), "Glow_Amber")
+    box(room, (x - 0.9, FRONT - 0.44, z1 + 0.5), (x + 0.9, FRONT - 0.4, z1 + 0.75), "Glow_Amber" if x == 0 else "Glow_AmberDim")
 # A duct run over the screen, kit machinery either side of it.
 kit(room, "Vent Block", (0, FRONT - 0.6, z1 + 2.2), size=(1.2, 17.0, 1.4), rot=(0, 0, 90), mat="Metal")
-greeble_strip('y', FRONT, x0 - 1.0, x1 + 1.0, z1 + 3.0, H - 0.9, -0.6, rng)
+greeble_strip('y', FRONT, x0 - 1.0, x1 + 1.0, z1 + 3.0, H - 0.9, -0.6, rng, density=0.35)
 
 for side in (-1, 1):
     px = side * (x1 + 2.1)
@@ -213,18 +223,18 @@ for side in (-1, 1):
     chamfer_box(room, (px - 1.05, FRONT - 1.2, 0), (px + 1.05, FRONT, 1.2), "Metal", c=0.2)
     for z in (5.0, 9.8):
         box(room, (px - 0.32, FRONT - 1.1, z - 0.85), (px + 0.32, FRONT - 1.0, z + 0.85), "Metal")
-        box(room, (px - 0.2, FRONT - 1.16, z - 0.7), (px + 0.2, FRONT - 1.1, z + 0.7), "Glow_Amber")
-    for z in range(2, 14, 2):
+        box(room, (px - 0.2, FRONT - 1.16, z - 0.7), (px + 0.2, FRONT - 1.1, z + 0.7), "Glow_Amber" if z > 9 else "Glow_AmberDim")
+    for z in range(3, 14, 4):
         box(room, (px - 0.86, FRONT - 1.01, z), (px + 0.86, FRONT - 0.95, z + 0.05), "Dark")
     # Between pilaster and side wall: a wall of machinery.
     a0, a1 = sorted((side * (x1 + 3.0), side * (W - BAL_D)))
-    greeble_strip('y', FRONT, a0, a1, 1.0, H - 1.0, -0.8, rng, mat="Panel")
+    greeble_strip('y', FRONT, a0, a1, 1.0, H - 1.0, -0.8, rng, density=0.45, mat="Panel")
 
 # Under the screen: recessed panels with lamps.
 for i in range(6):
     cx = x0 + 0.6 + i * (x1 - x0 - 1.2) / 5
     chamfer_box(room, (cx - 1.2, FRONT - 0.3, STAGE_H + 0.5), (cx + 1.2, FRONT, z0 - 1.3), "Panel", c=0.08)
-    box(room, (cx - 0.55, FRONT - 0.36, z0 - 2.0), (cx + 0.55, FRONT - 0.3, z0 - 1.75), "Glow_Amber")
+    box(room, (cx - 0.55, FRONT - 0.36, z0 - 2.0), (cx + 0.55, FRONT - 0.3, z0 - 1.75), "Glow_Amber" if i % 2 else "Glow_AmberDim")
     kit(room, rng.choice(GREEBLES), (cx, FRONT - 0.45, STAGE_H + 1.1), size=(0.3, 1.6, 0.7), rot=(0, 0, 90), mat="Metal")
 
 # ---- stage, three broad steps, lit risers
@@ -311,13 +321,27 @@ for side in (-1, 1):
             cyl(room, (rx, y, z), (rx, y, z + 1.05), 0.035, mat="Rail", segs=6)
         cyl(room, (rx, y0, z + 1.05), (rx, y1, z + 1.05), 0.05, mat="Rail", segs=8)
         cyl(room, (rx, y0, z + 0.55), (rx, y1, z + 0.55), 0.025, mat="Rail", segs=6)
-        y = y0 + 0.6
-        while y < y1 - 0.4:
-            if rng.random() < 0.75:
-                q = Vector((rx + side * rng.uniform(0.45, 0.9), y, z))
-                # Facing the room, turned partly toward the back of the hall.
-                anchor("Standing", q, Vector((-side, 0, 0)) + 0.6 * (VIEW - q).normalized())
-            y += rng.uniform(0.55, 0.9)
+        # People in ones, twos and threes, with gaps between the groups:
+        # each group stands at its own distance from the rail, its members
+        # turned a little toward each other, no two the same height.
+        y = y0 + rng.uniform(0.4, 1.6)
+        while y < y1 - 0.6:
+            size = rng.choices((1, 2, 3), weights=(3, 4, 3))[0]
+            back = rng.uniform(0.4, 1.4)
+            members = []
+            for k in range(size):
+                members.append(y)
+                y += rng.uniform(0.42, 0.62)
+            mid = sum(members) / len(members)
+            for my in members:
+                if my > y1 - 0.4:
+                    break
+                q = Vector((rx + side * (back + rng.uniform(-0.15, 0.15)), my, z))
+                # Facing the room, turned partly toward the back of the hall
+                # and toward the middle of their group.
+                f = Vector((-side, 0, 0)) + 0.6 * (VIEW - q).normalized() + Vector((0, (mid - my) * 0.9, 0))
+                anchor("Standing", q, f, scale=rng.uniform(0.92, 1.05))
+            y += rng.uniform(1.2, 3.6)
     # Floor-level doors under the lower balcony, with sconces between.
     for y in (-11.0, -4.0, 4.0):
         d0, d1 = sorted((wx - side * 0.02, wx - side * 0.3))

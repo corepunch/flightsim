@@ -28,6 +28,28 @@ static SKShapeNode *Frame(CGRect r, NSColor *stroke, NSColor *fill) {
     return n;
 }
 
+// Dialogue portraits in the room: the edge of the silhouette facing the
+// screen (a_dir, in texture units) picks up a faint cyan rim; a_dim shades
+// whoever isn't speaking toward the room's background.
+static SKShader *PortraitShader(void) {
+    static SKShader *shader;
+    if (!shader) {
+        shader = [SKShader shaderWithSource:
+            @"void main() {\n"
+             "    vec4 c = texture2D(u_texture, v_tex_coord);\n"
+             "    float open = 0.0;\n"
+             "    for (int i = 1; i <= 4; i++) open += 1.0 - texture2D(u_texture, v_tex_coord + a_dir * float(i)).a;\n"
+             "    float rim = open * 0.25 * c.a;\n"
+             "    vec3 rgb = mix(c.rgb, vec3(0.012, 0.018, 0.028) * c.a, a_dim);\n"
+             "    rgb += vec3(0.30, 0.75, 0.95) * rim * 0.55 * (1.0 - a_dim);\n"
+             "    gl_FragColor = vec4(rgb, c.a);\n"
+             "}"];
+        shader.attributes = @[ [SKAttribute attributeWithName:@"a_dir" type:SKAttributeTypeVectorFloat2],
+                               [SKAttribute attributeWithName:@"a_dim" type:SKAttributeTypeFloat] ];
+    }
+    return shader;
+}
+
 typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDebrief };
 
 // One thing on the tactical map.
@@ -116,13 +138,16 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     return i == NSNotFound ? 0 : (i == 0 ? -1 : 1);
 }
 
-// Black fading out to the right, under the tactical briefing's text column.
+// A dark backing under the tactical briefing's text column, fading out
+// toward the screen, and a band under the footer.
 - (SKSpriteNode *)leftShade {
     CGSize s = self.size;
-    CGFloat w = MAX(1, s.width * 0.5);
+    CGFloat solid = MAX(1, s.width * 0.42 + 20), fade = s.width * 0.08;
+    CGFloat w = solid + fade, k = solid / w;
     NSImage *img = [NSImage imageWithSize:NSMakeSize(256, 4) flipped:NO drawingHandler:^BOOL(NSRect r) {
         NSGradient *g = [[NSGradient alloc] initWithColorsAndLocations:
-                         UIColorWithOpacity(UIBlack, 0.82), 0.0, UIColorWithOpacity(UIBlack, 0.7), 0.7,
+                         [NSColor colorWithRed:0.01 green:0.015 blue:0.02 alpha:0.9], 0.0,
+                         [NSColor colorWithRed:0.01 green:0.015 blue:0.02 alpha:0.86], k,
                          UIColorWithOpacity(UIBlack, 0.0), 1.0, nil];
         [g drawInRect:r angle:0];
         return YES;
@@ -346,8 +371,17 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
         [portrait setScale:MIN(maxWidth / portrait.size.width, maxHeight / portrait.size.height)];
         portrait.anchorPoint = CGPointMake(0.5, 0);
         portrait.position = CGPointMake(size.width * (i == 0 ? 0.175 : 0.825), panelTop - 10);
-        portrait.color = UIColorWithOpacity(UIBackground, 1);
-        portrait.colorBlendFactor = [line[@"portrait"] isEqualToString:name] ? 0 : 0.20;
+        BOOL speaking = [line[@"portrait"] isEqualToString:name];
+        if (self.inRoom) {
+            // Lit by the room: a faint cyan rim on the edge facing the screen.
+            portrait.shader = PortraitShader();
+            float step = 2.5f / portrait.texture.size.width;   // texels, 4 taps
+            [portrait setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){ i == 0 ? step : -step, step * 0.35f }] forAttributeNamed:@"a_dir"];
+            [portrait setValue:[SKAttributeValue valueWithFloat:speaking ? 0 : 0.2f] forAttributeNamed:@"a_dim"];
+        } else {
+            portrait.color = UIColorWithOpacity(UIBackground, 1);
+            portrait.colorBlendFactor = speaking ? 0 : 0.20;
+        }
         [_root addChild:portrait];
     }
 
@@ -394,31 +428,47 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     [_root addChild:loc];
 
     // Left: who is talking, the story, then objectives / intel / loadout.
+    // In the room the prose is set in a sans-serif, as large as fits above
+    // the footer; the terminal font stays for labels.
     CGFloat lw = MAX(1, s.width * 0.42 - 60);
+    BOOL room = self.inRoom;
+    NSString *proseFont = room ? @"HelveticaNeue" : @"Menlo";
     SKLabelNode *who = Para(15, UIColorWithOpacity(UIInk, 0.95), lw);
     who.fontName = @"Menlo-Bold";
     who.text = [b[@"speaker"] uppercaseString];
     who.position = CGPointMake(50, top - 78);
     [_root addChild:who];
     _storyText = [b[@"text"] componentsJoinedByString:@"\n\n"];
-    _story = Para(15, UIColorWithOpacity(UIInk, 0.85), lw);
-    _story.position = CGPointMake(50, who.position.y - who.frame.size.height - 12);
-    _story.text = @"";
-    [_root addChild:_story];
-
-    // Measure the full text so the sections below have a fixed place.
-    SKLabelNode *probe = Para(15, UIColorWithOpacity(UIInk, 0), lw);
-    probe.text = _storyText;
-    CGFloat y = _story.position.y - probe.frame.size.height - 26;
     NSMutableString *o = [NSMutableString stringWithString:@"OBJECTIVES\n"];
     for (NSDictionary *d in m[@"objectives"])
         [o appendFormat:@"  %@ %@%@\n", [d[@"optional"] boolValue] ? @"o" : @">", d[@"text"], [d[@"optional"] boolValue] ? @" (optional)" : @""];
     [o appendString:@"\nINTEL\n"];
     for (NSString *line in b[@"intel"]) [o appendFormat:@"  - %@\n", line];
     [o appendFormat:@"\nLOADOUT   twin lasers, %d torpedo%@", [m[@"loadout"][@"torpedoes"] intValue], [m[@"loadout"][@"torpedoes"] intValue] == 1 ? @"" : @"es"];
-    SKLabelNode *details = Para(14, UIColorWithOpacity(UIInk, 0.7), lw);
+
+    // Measure the full text so the sections below have a fixed place.
+    CGFloat storyTop = who.position.y - who.frame.size.height - 12;
+    CGFloat size = room ? 20 : 15, storyH = 0;
+    for (;; size -= 1) {
+        SKLabelNode *probe = Para(size, UIColorWithOpacity(UIInk, 0), lw);
+        probe.fontName = proseFont;
+        probe.text = _storyText;
+        SKLabelNode *probe2 = Para(size - 1, UIColorWithOpacity(UIInk, 0), lw);
+        probe2.fontName = proseFont;
+        probe2.text = o;
+        storyH = probe.frame.size.height;
+        if (!room || size <= 14 || storyTop - storyH - 26 - probe2.frame.size.height > 80) break;
+    }
+    _story = Para(size, UIColorWithOpacity(UIWhite, room ? 0.92 : 0.85), lw);
+    if (!room) _story.fontColor = UIColorWithOpacity(UIInk, 0.85);
+    _story.fontName = proseFont;
+    _story.position = CGPointMake(50, storyTop);
+    _story.text = @"";
+    [_root addChild:_story];
+    SKLabelNode *details = Para(size - 1, UIColorWithOpacity(UIInk, room ? 0.85 : 0.7), lw);
+    details.fontName = proseFont;
     details.text = o;
-    details.position = CGPointMake(50, y);
+    details.position = CGPointMake(50, storyTop - storyH - 26);
     [_root addChild:details];
 
     if (self.inRoom) {
@@ -636,7 +686,24 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     for (MapItem *it in _items.allValues) {
         if (it.container) continue;
         BOOL lit = [show containsObject:it.identifier] || (it.group && [show containsObject:it.group]);
-        it.node.alpha = lit ? 1.0 : 0.28;
+        it.node.alpha = lit ? 1.0 : 0.22;
+    }
+    // The step's focus is the one thing at full contrast: bright bold label,
+    // slightly larger icon. Everything else lit stays at its normal weight.
+    NSString *focusID = st[@"focus"] ?: @"";
+    for (MapItem *it in _items.allValues) {
+        if (it.container) continue;
+        BOOL focused = [it.identifier isEqualToString:focusID] || (it.group && [it.group isEqualToString:focusID]);
+        for (SKNode *c in it.node.children) {
+            if ([c isKindOfClass:[SKLabelNode class]]) {
+                SKLabelNode *l = (SKLabelNode *)c;
+                if (![l.userData[@"ink"] isKindOfClass:[NSColor class]]) l.userData = [@{ @"ink": l.fontColor } mutableCopy];
+                l.fontColor = focused ? UIColorWithOpacity(UIWhite, 1) : l.userData[@"ink"];
+                l.fontName = focused ? @"Menlo-Bold" : @"Menlo";
+            } else {
+                c.xScale = c.yScale = focused ? 1.3 : 1.0;
+            }
+        }
     }
     [_routeLayer removeAllChildren];
     NSArray *route = st[@"route"];

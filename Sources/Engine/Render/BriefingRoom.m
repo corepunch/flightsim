@@ -39,7 +39,7 @@ static void Dress(SCNMaterial *m, NSString *set, NSColor *tint, float rough, flo
         m.diffuse.contents = TextureURL([set stringByAppendingString:@"_color"]);
         m.multiply.contents = tint;
         m.normal.contents = TextureURL([set stringByAppendingString:@"_normal"]);
-        m.normal.intensity = 0.8;
+        m.normal.intensity = 0.3;
         m.roughness.contents = TextureURL([set stringByAppendingString:@"_rough"]);
         m.roughness.intensity = rough * 2;
         m.metalness.contents = @(metal);
@@ -189,10 +189,12 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
         return;
     }
     if ([n isEqualToString:@"Glow_Amber"]) { Glow(m, RGB(1.0, 0.58, 0.24), outside ? 2.0 : 2.2); return; }
+    if ([n isEqualToString:@"Glow_AmberDim"]) { Glow(m, RGB(1.0, 0.58, 0.24), 0.55); return; }   // every other fixture: lit, no bloom
     if ([n isEqualToString:@"Glow_Warm"])  { Glow(m, RGB(1.0, 0.82, 0.6), outside ? 1.6 : 1.5); return; }
-    if ([n isEqualToString:@"Glow_Cyan"])  { Glow(m, RGB(0.25, 0.85, 1.0), 2.8); return; }
+    if ([n isEqualToString:@"Glow_Cyan"])  { Glow(m, RGB(0.25, 0.85, 1.0), 1.15); return; }
     if ([n isEqualToString:@"Glow_Red"])   { Glow(m, RGB(1.0, 0.18, 0.12), 2.4); return; }
     if ([n isEqualToString:@"Wall"])     { Dress(m, @"bulkhead", RGB(0.2, 0.205, 0.215), 0.45, 0.45, 0.25); return; }
+    if ([n isEqualToString:@"WallDark"]) { Dress(m, @"bulkhead", RGB(0.075, 0.078, 0.085), 0.55, 0.35, 0.12); return; }
     if ([n isEqualToString:@"Panel"])    { Dress(m, @"bulkhead", RGB(0.3, 0.3, 0.31), 0.35, 0.55, 0.5); return; }
     if ([n isEqualToString:@"Floor"])    { Dress(m, @"industrial", RGB(0.2, 0.21, 0.24), 0.3, 0.6, 0.5); return; }
     if ([n isEqualToString:@"Stage"])    { Dress(m, @"plating", RGB(0.16, 0.18, 0.21), 0.18, 0.7, 0.3); return; }
@@ -259,7 +261,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     omni(simd_make_float3(-6, 12.5, 4), warm, 1300, 22);       // ceiling, over the audience
     omni(simd_make_float3(6, 12.5, 4), warm, 1300, 22);
     omni(simd_make_float3(0, 12.0, -6), warm, 900, 18);        // ceiling, over the stage
-    omni(simd_make_float3(0, 7.9, -8.5), cyan, 1100, 16);      // the screen's spill
+    omni(simd_make_float3(0, 7.9, -8.5), cyan, 650, 14);      // the screen's spill
     omni(simd_make_float3(-12.5, 3.2, 0), amber, 700, 11);     // under the balconies
     omni(simd_make_float3(12.5, 3.2, 0), amber, 700, 11);
     omni(simd_make_float3(-12.5, 7.6, 2), amber, 550, 10);     // between the tiers
