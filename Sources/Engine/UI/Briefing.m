@@ -321,6 +321,9 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     [self buildMonitor:screen mission:mission page:page];
 
     NSArray<NSString *> *cast = page[@"cast"] ?: @[page[@"portrait"]];
+    // Ensure the speaking character is visible even with three-person scenes.
+    if (page[@"portrait"] && ![cast containsObject:page[@"portrait"]])
+        cast = @[page[@"portrait"], cast.firstObject ?: page[@"portrait"]];
     CGFloat wingWidth = MAX(1, CGRectGetMinX(screen));
     for (NSUInteger i = 0; i < MIN(cast.count, 2); i++) {
         NSString *name = cast[i];
@@ -682,7 +685,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
                                         UIColorWithOpacity(UIAmber, 0.8),
                                         SKLabelHorizontalAlignmentModeCenter);
             initial.fontName = @"Menlo-Bold";
-            initial.text = [[name ?: @"?" substringToIndex:1] uppercaseString];
+            initial.text = [[(name ?: @"?") substringToIndex:1] uppercaseString];
             initial.position = CGPointMake(s.width * 0.5, s.height * 0.55);
             [_root addChild:initial];
         }
