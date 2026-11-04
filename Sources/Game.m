@@ -79,7 +79,6 @@ static BOOL SegmentHits(simd_float3 p0, simd_float3 p1, simd_float3 c, float r) 
     return simd_distance_squared(p0 + d * t, c) < r * r;
 }
 
-static int gShots, gHits, gAligned;   // TEMP debug
 #pragma mark - Pilots and projectiles
 
 // An AI-flown fighter: its ship, its team's orders, and its current target
@@ -352,7 +351,8 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
     if (warp)
         for (Capital *c in _capitals)
             if ([c.identifier isEqualToString:@(warp)]) {
-                simd_float3 from = c.position + simd_normalize(simd_make_float3(0.8f, 0.35f, 1.0f)) * fmaxf(c.radius * 2.2f, 60);
+                float k = getenv("SF_WARPDIST") ? (float)atof(getenv("SF_WARPDIST")) : 2.2f;
+                simd_float3 from = c.position + simd_normalize(simd_make_float3(0.8f, 0.35f, 1.0f)) * fmaxf(c.radius * k, 60);
                 [_player resetAt:from facing:LookRotation(c.position - from, simd_make_float3(0, 1, 0))];
                 _player.throttle = 0;
                 _player.velocity = 0;
@@ -536,7 +536,6 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
     if (actions & InputActionTorpedo) [self fireTorpedo];
 
     _missionTime += dt;
-    if (getenv("SF_DEBUGFIRE") && fmod(_missionTime, 5.0) < dt) NSLog(@"TEMP inrange=%d shots=%d friendHits=%d", gAligned, gShots, gHits);
     if (_player.alive && _autopilot) {
         simd_float3 before = _player.position;
         [self thinkPilot:_autopilot dt:dt];
@@ -924,11 +923,9 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
     float range = capital ? 900 + BodyRadius(target) : 750;
     if (target && p.mode == AIModeAttack && dist < range) {
         simd_float3 leadDir = simd_normalize(aimPoint - s.position);
-        float cone = capital ? 0.98f : 0.992f;
+        float cone = capital ? 0.97f : 0.985f;
         double gap = s.shipClass == ShipClassInsurgent ? 0.35 : 0.22;
-        if (s == _player) gAligned++;
         if (simd_dot(s.forward, leadDir) > cone && _time - s.lastShot > gap + frand() * 0.25) {
-            if (s == _player) gShots++;
             s.lastShot = _time;
             BOOL friend = s.team == TeamFriend;
             float capDamage = s.shipClass == ShipClassInsurgent ? 0.18f : (friend ? 0.1f : 0.05f);
@@ -1045,7 +1042,6 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
             if (SegmentHits(p0, p1, s.position, s.radius * (s == _player ? 0.8f : 0.85f))) {
                 BOOL shielded = s.shield > 0.02f;
                 [_fx impactAt:p1 player:b->team == TeamFriend shielded:shielded];
-                if (b->team == TeamFriend) gHits++;
                 [self damageShip:s amount:b->damage player:b->fromPlayer];
                 // A hit makes AI pilots jink.
                 for (Pilot *p in _pilots)

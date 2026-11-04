@@ -147,23 +147,26 @@ static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) 
     if (!cache) cache = [NSMutableDictionary dictionary];
     if (cache[style]) return cache[style];
 
-    NSString *set = @"panels";
+    NSString *set = @"panels", *darkSet = @"hex";   // Hull and HullDark texture sets
     NSColor *tint = [NSColor colorWithRed:0.85 green:0.88 blue:0.95 alpha:1];
     NSColor *dark = [NSColor colorWithRed:0.42 green:0.44 blue:0.5 alpha:1];
     NSColor *glow = [NSColor colorWithRed:0.35 green:0.6 blue:1.0 alpha:1];
     if ([style isEqualToString:@"civil"] || [style isEqualToString:@"medical"]) {
         set = @"plating";
+        darkSet = @"ribbed";
         tint = [NSColor colorWithRed:1 green:0.97 blue:0.92 alpha:1];
         dark = [NSColor colorWithWhite:0.5 alpha:1];
         glow = [style isEqualToString:@"medical"] ? [NSColor colorWithRed:0.3 green:1 blue:0.5 alpha:1]
                                                   : [NSColor colorWithRed:1 green:0.75 blue:0.4 alpha:1];
     } else if ([style isEqualToString:@"skarn"] || [style isEqualToString:@"stealth"]) {
         BOOL stealth = [style isEqualToString:@"stealth"];
-        tint = stealth ? [NSColor colorWithWhite:0.12 alpha:1] : [NSColor colorWithRed:0.48 green:0.4 blue:0.39 alpha:1];
-        dark = stealth ? [NSColor colorWithWhite:0.06 alpha:1] : [NSColor colorWithRed:0.2 green:0.17 blue:0.17 alpha:1];
+        set = darkSet = stealth ? @"stealth" : @"armor";
+        // The stealth set is already near-black, so it only needs a light tint.
+        tint = stealth ? [NSColor colorWithWhite:0.85 alpha:1] : [NSColor colorWithRed:0.78 green:0.66 blue:0.63 alpha:1];
+        dark = stealth ? [NSColor colorWithWhite:0.55 alpha:1] : [NSColor colorWithRed:0.4 green:0.34 blue:0.33 alpha:1];
         glow = [NSColor colorWithRed:1.0 green:0.25 blue:0.12 alpha:1];
     } else if ([style isEqualToString:@"corsair"]) {
-        set = @"rusted";
+        set = darkSet = @"rusted";
         tint = [NSColor colorWithWhite:0.9 alpha:1];
         dark = [NSColor colorWithWhite:0.45 alpha:1];
         glow = [NSColor colorWithRed:1 green:0.55 blue:0.2 alpha:1];
@@ -175,7 +178,7 @@ static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) 
     }
     NSMutableDictionary *m = [NSMutableDictionary dictionary];
     m[@"Hull"] = TexturedMaterial(set, tint, 1.0);
-    m[@"HullDark"] = TexturedMaterial(set, dark, 1.0);
+    m[@"HullDark"] = TexturedMaterial(darkSet, dark, 1.0);
     m[@"Civil"] = TexturedMaterial(@"plating", [NSColor colorWithRed:0.95 green:0.95 blue:0.96 alpha:1], 0.8);
     m[@"Trim"] = PlainMaterial([NSColor colorWithWhite:0.5 alpha:1], 0.35, 0.9);
     m[@"Windows"] = EmissiveMaterial(WindowImage(), 1.8);

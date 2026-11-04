@@ -2,3 +2,4 @@ build/
 fx/
 .DS_Store
 *.blend1
+Art/kit/*.blend

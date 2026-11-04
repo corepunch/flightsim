@@ -5,38 +5,57 @@ typedef struct { int v, t, n; } Corner;
 
 @implementation ObjLoader
 
-// One object's faces, split by material, with corners deduplicated into a
-// shared vertex buffer.
+// One object's faces, split by material. Every triangle corner becomes its
+// own vertex (no dedupe: fast and simple), which also lets each triangle
+// carry its own tangent for normal mapping.
 static SCNNode *BuildNode(NSString *name, NSArray<NSString *> *mats, NSArray<NSMutableData *> *tris,
                           const simd_float3 *pos, const simd_float2 *uv, const simd_float3 *nrm) {
-    NSMutableDictionary<NSValue *, NSNumber *> *index = [NSMutableDictionary dictionary];
-    NSMutableData *vp = [NSMutableData data], *vt = [NSMutableData data], *vn = [NSMutableData data];
+    NSUInteger total = 0;
+    for (NSMutableData *d in tris) total += d.length / sizeof(Corner);
+    if (!total) return nil;
+    NSMutableData *vp = [NSMutableData dataWithLength:total * 12], *vt = [NSMutableData dataWithLength:total * 8];
+    NSMutableData *vn = [NSMutableData dataWithLength:total * 12], *vg = [NSMutableData dataWithLength:total * 16];
+    float *P = vp.mutableBytes, *T = vt.mutableBytes, *N = vn.mutableBytes, *G = vg.mutableBytes;
     NSMutableArray<SCNGeometryElement *> *elements = [NSMutableArray array];
     NSMutableArray<SCNMaterial *> *materials = [NSMutableArray array];
     uint32_t count = 0;
     for (NSUInteger m = 0; m < mats.count; m++) {
-        NSMutableData *corners = tris[m];
-        NSUInteger n = corners.length / sizeof(Corner);
+        NSUInteger n = tris[m].length / sizeof(Corner);
         if (!n) continue;
-        const Corner *cs = corners.bytes;
+        const Corner *cs = tris[m].bytes;
         NSMutableData *idx = [NSMutableData dataWithLength:n * sizeof(uint32_t)];
         uint32_t *ip = idx.mutableBytes;
-        for (NSUInteger i = 0; i < n; i++) {
-            Corner c = cs[i];
-            NSValue *key = [NSValue valueWithBytes:&c objCType:@encode(Corner)];
-            NSNumber *found = index[key];
-            if (!found) {
-                simd_float3 p = pos[c.v];
-                simd_float2 t = c.t >= 0 ? uv[c.t] : simd_make_float2(0, 0);
+        for (NSUInteger i = 0; i + 2 < n; i += 3) {
+            simd_float3 p[3];
+            simd_float2 t[3];
+            for (int k = 0; k < 3; k++) {
+                Corner c = cs[i + k];
+                p[k] = pos[c.v];
+                t[k] = c.t >= 0 ? uv[c.t] : simd_make_float2(0, 0);
                 simd_float3 nn = c.n >= 0 ? nrm[c.n] : simd_make_float3(0, 1, 0);
-                float pf[3] = { p.x, p.y, p.z }, tf[2] = { t.x, 1.0f - t.y }, nf[3] = { nn.x, nn.y, nn.z };
-                [vp appendBytes:pf length:sizeof pf];
-                [vt appendBytes:tf length:sizeof tf];
-                [vn appendBytes:nf length:sizeof nf];
-                found = @(count++);
-                index[key] = found;
+                uint32_t v = count + (uint32_t)k;
+                P[v * 3] = p[k].x; P[v * 3 + 1] = p[k].y; P[v * 3 + 2] = p[k].z;
+                T[v * 2] = t[k].x; T[v * 2 + 1] = 1.0f - t[k].y;
+                N[v * 3] = nn.x; N[v * 3 + 1] = nn.y; N[v * 3 + 2] = nn.z;
+                ip[i + k] = v;
             }
-            ip[i] = found.unsignedIntValue;
+            // Tangent along +U (texture right), with handedness in w.
+            simd_float3 e1 = p[1] - p[0], e2 = p[2] - p[0];
+            simd_float2 d1 = t[1] - t[0], d2 = t[2] - t[0];
+            float det = d1.x * d2.y - d2.x * d1.y;
+            simd_float3 tan = fabsf(det) > 1e-12f ? (e1 * d2.y - e2 * d1.y) / det : e1;
+            simd_float3 bit = fabsf(det) > 1e-12f ? (e2 * d1.x - e1 * d2.x) / det : e2;
+            for (int k = 0; k < 3; k++) {
+                uint32_t v = count + (uint32_t)k;
+                simd_float3 nn = simd_make_float3(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]);
+                simd_float3 tt = tan - nn * simd_dot(nn, tan);
+                tt = simd_length(tt) > 1e-8f ? simd_normalize(tt) : simd_make_float3(1, 0, 0);
+                // The V flip above mirrors the texture vertically, so the
+                // handedness flips too.
+                float w = simd_dot(simd_cross(nn, tt), bit) < 0 ? 1.0f : -1.0f;
+                G[v * 4] = tt.x; G[v * 4 + 1] = tt.y; G[v * 4 + 2] = tt.z; G[v * 4 + 3] = w;
+            }
+            count += 3;
         }
         [elements addObject:[SCNGeometryElement geometryElementWithData:idx primitiveType:SCNGeometryPrimitiveTypeTriangles
                                                          primitiveCount:n / 3 bytesPerIndex:sizeof(uint32_t)]];
@@ -44,14 +63,15 @@ static SCNNode *BuildNode(NSString *name, NSArray<NSString *> *mats, NSArray<NSM
         mat.name = mats[m];
         [materials addObject:mat];
     }
-    if (!elements.count) return nil;
     SCNGeometrySource *sp = [SCNGeometrySource geometrySourceWithData:vp semantic:SCNGeometrySourceSemanticVertex vectorCount:count
                                                       floatComponents:YES componentsPerVector:3 bytesPerComponent:4 dataOffset:0 dataStride:12];
     SCNGeometrySource *st = [SCNGeometrySource geometrySourceWithData:vt semantic:SCNGeometrySourceSemanticTexcoord vectorCount:count
                                                       floatComponents:YES componentsPerVector:2 bytesPerComponent:4 dataOffset:0 dataStride:8];
     SCNGeometrySource *sn = [SCNGeometrySource geometrySourceWithData:vn semantic:SCNGeometrySourceSemanticNormal vectorCount:count
                                                       floatComponents:YES componentsPerVector:3 bytesPerComponent:4 dataOffset:0 dataStride:12];
-    SCNGeometry *g = [SCNGeometry geometryWithSources:@[sp, st, sn] elements:elements];
+    SCNGeometrySource *sg = [SCNGeometrySource geometrySourceWithData:vg semantic:SCNGeometrySourceSemanticTangent vectorCount:count
+                                                      floatComponents:YES componentsPerVector:4 bytesPerComponent:4 dataOffset:0 dataStride:16];
+    SCNGeometry *g = [SCNGeometry geometryWithSources:@[sp, st, sn, sg] elements:elements];
     g.materials = materials;
     SCNNode *node = [SCNNode nodeWithGeometry:g];
     node.name = name;
