@@ -1,4 +1,5 @@
 #import "UIMotion.h"
+#import "UIStyle.h"
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
 typedef UIFont UIMotionFont;
@@ -264,24 +265,25 @@ void UIMotionGlitchBurst(SKLabelNode *label, NSTimeInterval duration, CGFloat st
 
 #pragma mark - Light
 
-// White textures, tinted per use: a scan head with a trail behind it, and a
-// beam with a soft vertical falloff.
-static SKTexture *GradientTexture(BOOL trail) {
-    const size_t w = 4, h = trail ? 128 : 24;
+static SKTexture *GradientTexture(void);
+
+// A white scan head with a trail fading up behind it, tinted per use.
+static SKTexture *TrailTexture(void) {
+    static SKTexture *texture;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ texture = GradientTexture(); });
+    return texture;
+}
+
+static SKTexture *GradientTexture(void) {
+    const size_t w = 4, h = 128;
     CGColorSpaceRef space = CGColorSpaceCreateDeviceGray();
     CGContextRef ctx = CGBitmapContextCreate(NULL, w, h, 8, w * 2, space, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
     CGColorSpaceRelease(space);
     for (size_t y = 0; y < h; y++) {
-        CGFloat a;
-        if (trail) {
-            // The head is the bottom two rows; the trail fades upward.
-            CGFloat t = (CGFloat)y / (h - 1);
-            a = y < 2 ? 1 : 0.32 * pow(1 - t, 2.2);
-        } else {
-            CGFloat d = ((CGFloat)y - (h - 1) / 2.0) / ((h - 1) / 2.0);
-            a = exp(-d * d * 9) + 0.6 * exp(-d * d * 90);
-            a = MIN(1, a);
-        }
+        // The head is the bottom row; the trail fades upward.
+        CGFloat t = (CGFloat)y / (h - 1);
+        CGFloat a = y < 1 ? 1 : 0.32 * pow(1 - t, 2.2);
         CGContextSetGrayFillColor(ctx, a, a);
         CGContextFillRect(ctx, CGRectMake(0, y, w, 1));
     }
@@ -289,20 +291,6 @@ static SKTexture *GradientTexture(BOOL trail) {
     CGContextRelease(ctx);
     SKTexture *texture = [SKTexture textureWithCGImage:image];
     CGImageRelease(image);
-    return texture;
-}
-
-static SKTexture *TrailTexture(void) {
-    static SKTexture *texture;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{ texture = GradientTexture(YES); });
-    return texture;
-}
-
-static SKTexture *BeamTexture(void) {
-    static SKTexture *texture;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{ texture = GradientTexture(NO); });
     return texture;
 }
 
@@ -340,7 +328,8 @@ void UIMotionSweep(SKNode *parent, CGRect rect, SKColor *color, BOOL downward,
 }
 
 SKSpriteNode *UIMotionBeam(SKNode *parent, CGFloat x0, CGFloat x1, CGFloat y, SKColor *color) {
-    SKSpriteNode *beam = Light(BeamTexture(), CGSizeMake(fabs(x1 - x0), 12), color);
+    // A hairline like the rest of the interface's strokes.
+    SKSpriteNode *beam = [SKSpriteNode spriteNodeWithColor:color size:CGSizeMake(fabs(x1 - x0), 1)];
     beam.anchorPoint = CGPointMake(x1 >= x0 ? 0 : 1, 0.5);
     beam.position = CGPointMake(x0, y);
     [parent addChild:beam];
@@ -393,19 +382,26 @@ NSTimeInterval UIMotionClosePanel(SKNode *holder, CGRect rect, SKColor *color, B
         [holder removeFromParent];
         return 0;
     }
-    const NSTimeInterval shut = 0.13, retract = 0.12;
+    // Roll down: the top edge falls onto the bottom edge, riding a line that
+    // then retracts toward the speaker's side.
+    const NSTimeInterval shut = 0.15, retract = 0.12;
     CGFloat edge = toRight ? CGRectGetMaxX(rect) : CGRectGetMinX(rect);
     CGFloat other = toRight ? CGRectGetMinX(rect) : CGRectGetMaxX(rect);
-    CGFloat from = CGRectGetMinY(rect) + (CGRectGetHeight(rect)) * (1 - holder.yScale);
-    SKSpriteNode *bottom = UIMotionBeam(parent, edge, other, from, color);
-    [bottom runAction:[SKAction sequence:@[
-        UIEased([SKAction moveToY:CGRectGetMaxY(rect) duration:shut], UICurveIn),
+    CGFloat floor = CGRectGetMaxY(rect) - CGRectGetHeight(rect) * holder.yScale;
+    SKSpriteNode *line = UIMotionBeam(parent, edge, other, CGRectGetMaxY(rect), color);
+    [line runAction:[SKAction sequence:@[
+        UIEased([SKAction moveToY:floor duration:shut], UICurveIn),
         UIEased([SKAction scaleXTo:0 duration:retract], UICurveIn),
         [SKAction removeFromParent],
     ]]];
+    // The holder pivots on its top edge, so moving it down while it shrinks
+    // keeps the bottom edge where it is.
     [holder removeAllActions];
     [holder runAction:[SKAction sequence:@[
-        UIEased([SKAction scaleYTo:0.001 duration:shut], UICurveIn),
+        [SKAction group:@[
+            UIEased([SKAction moveToY:floor duration:shut], UICurveIn),
+            UIEased([SKAction scaleYTo:0.001 duration:shut], UICurveIn),
+        ]],
         [SKAction removeFromParent],
     ]]];
     return shut + retract;
@@ -458,7 +454,8 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
         return 0.15;
     }
     const NSTimeInterval collapse = 0.16, shrink = 0.14, fade = 0.12;
-    SKSpriteNode *flash = Light(BeamTexture(), CGSizeMake(size.width, 14), [SKColor colorWithWhite:0.9 alpha:1]);
+    SKSpriteNode *flash = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0.95 alpha:1]
+                                                       size:CGSizeMake(size.width, 1)];
     flash.position = CGPointMake(size.width / 2, size.height / 2);
     flash.alpha = 0;
     [stage.parent addChild:flash];
@@ -478,3 +475,102 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
     ]]];
     return collapse + shrink + fade;
 }
+
+#pragma mark - Hover
+
+@implementation UIHover {
+    NSMutableArray<NSValue *> *_rects;
+    NSMutableArray<SKNode *> *_overlays;
+    NSInteger _current;
+    CGPoint _fraction, _pending;
+    BOOL _hasPending;
+}
+
+- (instancetype)init {
+    if ((self = [super init])) {
+        _rects = [NSMutableArray array];
+        _overlays = [NSMutableArray array];
+        _current = -1;
+        _fraction = CGPointMake(-1, -1);
+    }
+    return self;
+}
+
+- (void)queuePointAtFraction:(CGPoint)point {
+    @synchronized (self) {
+        _pending = point;
+        _hasPending = YES;
+    }
+}
+
+- (void)reset {
+    [_rects removeAllObjects];
+    [_overlays removeAllObjects];
+    _current = -1;
+}
+
+- (CGPoint)pointIn:(SKScene *)scene {
+    if (_fraction.x < 0 || _fraction.y < 0) return CGPointMake(-1e6, -1e6);
+    return CGPointMake(_fraction.x * scene.size.width, _fraction.y * scene.size.height);
+}
+
+- (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent {
+    if (!button || CGRectIsEmpty(rect)) return;
+    // A brighter edge and a lit face, extending out of the left edge.
+    CGPoint pivot = CGPointMake(CGRectGetMinX(rect), CGRectGetMidY(rect));
+    SKNode *overlay = [SKNode node];
+    overlay.position = pivot;
+    SKShapeNode *face = UISkewedShape(rect, UIColorWithOpacity(accent, 1), UIColorWithOpacity(accent, 0.14));
+    face.blendMode = SKBlendModeAdd;
+    face.position = CGPointMake(-pivot.x, -pivot.y);
+    [overlay addChild:face];
+    overlay.alpha = 0;
+    [button addChild:overlay];
+#if TARGET_OS_IOS
+    [_rects addObject:[NSValue valueWithCGRect:rect]];
+#else
+    [_rects addObject:[NSValue valueWithRect:rect]];
+#endif
+    [_overlays addObject:overlay];
+    // A rebuild under a resting pointer keeps the button lit without replaying the animation.
+    SKScene *scene = button.scene;
+    if (scene && _current < 0 && CGRectContainsPoint(rect, [self pointIn:scene])) {
+        _current = (NSInteger)_overlays.count - 1;
+        overlay.alpha = 1;
+    }
+}
+
+- (void)updateInScene:(SKScene *)scene {
+    @synchronized (self) {
+        if (!_hasPending) return;
+        _fraction = _pending;
+        _hasPending = NO;
+    }
+    CGPoint point = [self pointIn:scene];
+    NSInteger hit = -1;
+    for (NSUInteger i = 0; i < _rects.count; i++)
+#if TARGET_OS_IOS
+        if (CGRectContainsPoint(_rects[i].CGRectValue, point)) { hit = (NSInteger)i; break; }
+#else
+        if (CGRectContainsPoint(_rects[i].rectValue, point)) { hit = (NSInteger)i; break; }
+#endif
+    if (hit == _current) return;
+    if (_current >= 0 && _current < (NSInteger)_overlays.count) {
+        SKNode *out = _overlays[_current];
+        [out removeAllActions];
+        [out runAction:UIMotionReduced() ? [SKAction fadeOutWithDuration:0]
+                                         : UIEased([SKAction fadeOutWithDuration:0.22], UICurveOut)];
+    }
+    _current = hit;
+    if (hit < 0) return;
+    SKNode *in = _overlays[hit];
+    [in removeAllActions];
+    if (UIMotionReduced()) { in.alpha = 1; return; }
+    in.xScale = 0.92;
+    [in runAction:[SKAction group:@[
+        UIEased([SKAction fadeInWithDuration:0.12], UICurveOut),
+        UIEased([SKAction scaleXTo:1 duration:0.2], UICurveOutExpo),
+    ]]];
+}
+
+@end

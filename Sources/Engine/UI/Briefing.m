@@ -19,6 +19,54 @@ static SKLabelNode *Para(CGFloat size, NSColor *c, CGFloat width) {
 
 typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
+static NSString *const PortraitDeparture = @"portraitDeparture";
+static NSString *const PlayerPortrait = @"Lancer1";
+static const CGFloat CaptionDrop = 42;
+
+static SKShader *MonitorDistortionShader(void) {
+    static SKShader *shader;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        shader = [SKShader shaderWithSource:
+            @"float blockNoise(vec2 cell, float packet) {\n"
+             "    return fract(sin(dot(cell, vec2(27.31, 53.17)) + packet * 11.53) * 437.23);\n"
+             "}\n"
+             "void main() {\n"
+             "    vec2 uv = v_tex_coord;\n"
+             "    float time = u_time * u_motion_rate;\n"
+             "    float phase = mod(time, 2.8);\n"
+             "    float packet = floor(time / 2.8) * 3.0 + floor(phase * 5.0);\n"
+             "    vec2 cell = floor(uv * a_block_grid);\n"
+             "    vec2 cluster = floor(cell * 0.5);\n"
+             "    float damage = blockNoise(cluster, packet);\n"
+             "    float tile = blockNoise(cell + 17.0, packet);\n"
+             "    vec4 signal;\n"
+             "    if (phase < 0.56 && damage >= 0.82 && tile >= 0.16) {\n"
+             // Neighbouring tiles share a motion vector, with some decoded at lower resolution.
+             "        vec2 drift = vec2(damage < 0.91 ? -1.0 : 1.0, blockNoise(cluster + 31.0, packet) - 0.5);\n"
+             "        vec2 sampleUV = uv + drift * 0.72 / a_block_grid;\n"
+             "        if (tile > 0.64) {\n"
+             "            vec2 pixels = a_block_grid * 4.0;\n"
+             "            sampleUV = (floor(sampleUV * pixels) + 0.5) / pixels;\n"
+             "        }\n"
+             "        signal = texture2D(u_texture, clamp(sampleUV, 0.0, 1.0));\n"
+             // Chroma errors are visible even in the dark parts of the monitor.
+             "        float chroma = blockNoise(cluster + 53.0, packet);\n"
+             "        vec3 tint = chroma < 0.5 ? vec3(0.31, 0.12, 0.48) : vec3(0.05, 0.40, 0.36);\n"
+             "        float opacity = mix(0.13, 0.32, tile);\n"
+             "        signal.rgb = min(signal.rgb * (0.65 + tint), vec3(signal.a));\n"
+             "        signal = vec4(tint * opacity, opacity) + signal * (1.0 - opacity);\n"
+             "    } else {\n"
+             "        signal = texture2D(u_texture, uv);\n"
+             "    }\n"
+             "    gl_FragColor = signal * v_color_mix;\n"
+             "}"];
+        shader.uniforms = @[[SKUniform uniformWithName:@"u_motion_rate" float:1 / UIMotionTimeScale()]];
+        shader.attributes = @[[SKAttribute attributeWithName:@"a_block_grid" type:SKAttributeTypeVectorFloat2]];
+    });
+    return shader;
+}
+
 // How a tactical cue arrives: the map powering up, the map wiped in fresh,
 // the same map changing emphasis, or no motion.
 typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFresh, CueStyleTween };
@@ -73,10 +121,11 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     Mode _shownMode;
     NSUInteger _shownIndex;
     CGFloat _shownBarY;
-    NSArray<NSString *> *_shownCast;
-    NSString *_shownActive, *_shownChannel, *_shownContent, *_shownFocus, *_shownAction;
+    NSString *_shownChannel, *_shownContent, *_shownFocus, *_shownAction;
     NSArray *_shownRoute;
     NSMutableDictionary<NSString *, NSNumber *> *_shownAlpha;
+    SKNode *_portraitLayer;
+    NSMutableSet<SKSpriteNode *> *_portraitsToDismiss;
     // The speech bubble on screen, and the one being replaced.
     SKNode *_captionHolder, *_oldCaptionHolder;
     NSArray<SKNode *> *_captionText, *_oldCaptionText;
@@ -84,6 +133,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     BOOL _captionRight, _oldCaptionRight;
     NSString *_captionSpeaker, *_oldCaptionSpeaker;
     SKLabelNode *_speech;
+    UIHover *_hover;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -91,6 +141,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         self.scaleMode = SKSceneScaleModeResizeFill;
         self.backgroundColor = [NSColor clearColor];
         self.speed = 1 / UIMotionTimeScale();
+        _hover = [UIHover new];
         _stage = [SKNode node];
         _root = [SKNode node];
         _ghost = [SKNode node];
@@ -112,6 +163,19 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 - (BOOL)intro { return _transition == UITransitionIntro; }
 - (BOOL)paging { return _transition == UITransitionPage; }
 
+- (void)dismissPortrait:(SKSpriteNode *)portrait {
+    if ([portrait actionForKey:PortraitDeparture]) return;
+    [portrait removeAllActions];
+    BOOL reduced = UIMotionReduced();
+    NSTimeInterval duration = reduced ? 0.1 : 0.35;
+    CGFloat offset = portrait.position.x <= self.size.width / 2 ? -70 : 70;
+    SKAction *fade = [SKAction fadeOutWithDuration:duration];
+    SKAction *exit = reduced ? fade : [SKAction group:@[
+        fade, UIEased([SKAction moveByX:offset y:0 duration:duration], UICurveIn),
+    ]];
+    [portrait runAction:[SKAction sequence:@[exit, [SKAction removeFromParent]]] withKey:PortraitDeparture];
+}
+
 - (void)rebuild {
     if (!_presented && _transition != UITransitionIntro) _transition = UITransitionNone;
     CGPoint centre = CGPointMake(self.size.width / 2, self.size.height / 2);
@@ -125,12 +189,19 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
             // Mode change on screen: the old layout dissolves under the new one.
             for (SKNode *node in [_root.children copy]) {
                 [node removeFromParent];
-                [_ghost addChild:node];
-                UIMotionDismiss(node, CGVectorMake(0, 0), 0.24);
+                if (node == _portraitLayer) {
+                    for (SKSpriteNode *portrait in node.children) {
+                        [portrait removeFromParent];
+                        [_ghost addChild:portrait];
+                        [self dismissPortrait:portrait];
+                    }
+                } else {
+                    [_ghost addChild:node];
+                    UIMotionDismiss(node, CGVectorMake(0, 0), 0.24);
+                }
             }
         }
-        _shownCast = nil;
-        _shownActive = _shownChannel = _shownContent = _shownFocus = _shownAction = nil;
+        _shownChannel = _shownContent = _shownFocus = _shownAction = nil;
         _shownRoute = nil;
         _shownAlpha = nil;
         _captionHolder = nil;
@@ -157,7 +228,11 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         _oldCaptionText = nil;
     }
 
+    // Keep the actual sprites (and their running actions) through page turns.
+    if (![self paging]) _portraitLayer = [SKNode node];
+    _portraitsToDismiss = [NSMutableSet setWithArray:_portraitLayer.children];
     [_root removeAllChildren];
+    [_hover reset];
     _footerNodes = [NSMutableArray array];
     _confirmRect = _previousRect = _backRect = CGRectZero;
     _missionRows = CGRectZero;
@@ -179,6 +254,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         case ModeBriefing: [self buildBriefing]; break;
         case ModeDebrief: [self buildDebrief]; break;
     }
+    for (SKSpriteNode *portrait in _portraitsToDismiss) [self dismissPortrait:portrait];
+    _portraitsToDismiss = nil;
     // A bubble that has no successor closes where it stood.
     [self closeOldCaption];
     _shownMode = _mode;
@@ -340,22 +417,28 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     return node;
 }
 
+- (SKNode *)footerButton:(CGRect)rect title:(NSString *)title accent:(UIRGB)accent {
+    SKNode *button = [self footerAdd:UIActionButton(rect, title, accent)];
+    [_hover addButton:button rect:rect accent:accent];
+    return button;
+}
+
 - (void)buildFooter:(NSString *)text action:(NSString *)action {
     CGFloat inset = MIN(50, self.size.width * 0.05);
     BOOL console = _mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0);
     if ([self compactStoryLayout]) {
         CGFloat bottom = 16, height = 44;
         _backRect = CGRectMake(inset, bottom, 84, height);
-        [self footerAdd:UIActionButton(_backRect, @"MISSIONS", UIAmber)];
+        [self footerButton:_backRect title:@"MISSIONS" accent:UIAmber];
         BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
         if (hasPrevious) {
             _previousRect = CGRectMake(CGRectGetMaxX(_backRect) + 8, bottom, 44, height);
-            [self footerAdd:UIActionButton(_previousRect, @"←", UIAmber)];
+            [self footerButton:_previousRect title:@"←" accent:UIAmber];
         }
         CGFloat width = MIN(144, self.size.width * 0.38);
         _confirmRect = CGRectMake(self.size.width - inset - width, bottom, width, height);
         NSString *label = [action stringByReplacingOccurrencesOfString:@"↵  " withString:@""];
-        [self footerAdd:UIActionButton(_confirmRect, label, UIAmber)];
+        [self footerButton:_confirmRect title:label accent:UIAmber];
         return;
     }
     CGRect rail = CGRectMake(inset - 10, 14, self.size.width - 2 * inset + 20, 52);
@@ -363,7 +446,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat hintLeft = inset + 8;
     if (_mode == ModeList) {
         _backRect = CGRectMake(inset, 20, 140, 40);
-        [self footerAdd:UIActionButton(_backRect, @"‹  MAIN MENU", UIInk)];
+        [self footerButton:_backRect title:@"‹  MAIN MENU" accent:UIInk];
         hintLeft = CGRectGetMaxX(_backRect) + 18;
     }
     SKLabelNode *hint = Para(12, UIColorWithOpacity(UIInk, console ? 0.9 : 0.65),
@@ -375,7 +458,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     if (!action) return;
 
     _confirmRect = CGRectMake(self.size.width - inset - 180, 20, 180, 40);
-    [self footerAdd:UIActionButton(_confirmRect, action, console ? UIAmber : UIInk)];
+    [self footerButton:_confirmRect title:action accent:console ? UIAmber : UIInk];
 }
 
 #pragma mark - Briefing
@@ -391,7 +474,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     for (NSDictionary *line in _dialogueScene[@"lines"]) {
         [pages addObject:@{ @"speaker": line[@"speaker"], @"portrait": line[@"portrait"],
                             @"text": line[@"text"], @"channel": line[@"channel"] ?: @"MISSION BRIEFING",
-                            @"cast": _dialogueScene[@"cast"] ?: @[line[@"portrait"]] }];
+                            @"dialogue": @YES }];
     }
 
     // The mission's original briefing is the officer's speech. Each tactical
@@ -463,6 +546,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     }
     [art setScale:scale];
     art.position = CGPointMake(size.width / 2, centerY);
+    CGRect frame = art.frame;
     [_root addChild:art];
     if ([self intro] && !UIMotionReduced()) {
         art.alpha = 0;
@@ -476,39 +560,46 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     shade.anchorPoint = CGPointZero;
     [_root addChild:shade];
 
-    CGRect frame = art.frame;
     return CGRectMake(frame.origin.x + frame.size.width * 0.25,
                       frame.origin.y + frame.size.height * boardBottom,
                       frame.size.width * 0.50, frame.size.height * boardHeight);
 }
 
 - (void)addPortrait:(NSString *)name facingRight:(BOOL)facingRight active:(BOOL)active inRect:(CGRect)area {
+    if (!_portraitLayer.parent) [_root addChild:_portraitLayer];
+    CGFloat dim = active ? 0 : 0.38;
+    CGPoint home = CGPointMake(CGRectGetMidX(area), CGRectGetMinY(area));
+    SKSpriteNode *existing = (SKSpriteNode *)[_portraitLayer childNodeWithName:name];
+    if (existing) {
+        [_portraitsToDismiss removeObject:existing];
+        if ([existing actionForKey:PortraitDeparture]) {
+            [existing removeActionForKey:PortraitDeparture];
+            SKAction *fade = [SKAction fadeInWithDuration:0.25];
+            [existing runAction:UIMotionReduced() ? fade : [SKAction group:@[
+                fade,
+                UIEased([SKAction moveTo:home duration:0.25], UICurveOut),
+            ]]];
+        }
+        [existing runAction:[SKAction colorizeWithColorBlendFactor:dim duration:0.25] withKey:@"speakerFade"];
+        return;
+    }
+
     SKSpriteNode *portrait = [self artNamed:name];
     if (!portrait) return;
+    portrait.name = name;
     CGFloat scale = MIN(area.size.width / portrait.size.width, area.size.height / portrait.size.height);
     [portrait setScale:scale];
-    // The original Okafor and Sen cutouts face left. The other art faces right.
-    BOOL sourceFacesRight = ![name isEqualToString:@"Okafor"] && ![name isEqualToString:@"MiraCaptain"];
+    BOOL sourceFacesRight = ![name isEqualToString:PlayerPortrait] &&
+                            ![name isEqualToString:@"Lancer5"] && ![name isEqualToString:@"Lancer6"] &&
+                            ![name isEqualToString:@"Okafor"] && ![name isEqualToString:@"MiraCaptain"];
     if (sourceFacesRight != facingRight) portrait.xScale = -scale;
     portrait.anchorPoint = CGPointMake(0.5, 0);
-    portrait.position = CGPointMake(CGRectGetMidX(area), CGRectGetMinY(area));
+    portrait.position = home;
     portrait.color = UIColorWithOpacity(UIBackground, 1);
-    CGFloat dim = active ? 0 : 0.38;
     portrait.colorBlendFactor = dim;
-    [_root addChild:portrait];
-    if (UIMotionReduced() || !([self intro] || [self paging])) return;
-    if (![_shownCast containsObject:name]) {
-        // A new face walks in from its own side of the room.
+    [_portraitLayer addChild:portrait];
+    if ([self intro] || [self paging]) {
         UIMotionSlideIn(portrait, CGVectorMake(facingRight ? -70 : 70, 0), [self intro] ? 0.15 : 0, 0.5);
-    } else if ([_shownActive isEqualToString:name] != active) {
-        // The speaker steps up into the light; the listener drops back.
-        portrait.colorBlendFactor = active ? 0.38 : 0;
-        [portrait runAction:[SKAction colorizeWithColorBlendFactor:dim duration:0.25]];
-        if (active) {
-            CGPoint home = portrait.position;
-            portrait.position = CGPointMake(home.x, home.y - 8);
-            [portrait runAction:UIEased([SKAction moveTo:home duration:0.3], UICurveOut)];
-        }
     }
 }
 
@@ -608,9 +699,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat captionWidth = screen.size.width * 0.70;
     const CGFloat captionPadding = 44; // Speaker header and bottom inset.
     CGFloat tallestCaption = [self captionTextHeightForLines:_pages width:captionWidth fontSize:textSize] + captionPadding;
-    // Overlap the lower bezel while keeping the caption below the tactical content.
-    // The painted line sits below the content rect, unlike the drawn panel's edge.
-    CGFloat captionTop = CGRectGetMinY(screen) + (paintedBoard ? -screen.size.height * 0.025 : 3);
+    // Leave a gap below the monitor while keeping the caption above the footer.
+    CGFloat captionTop = CGRectGetMinY(screen) + (paintedBoard ? 0 : 3) - CaptionDrop;
     while (tallestCaption > captionTop - floor && textSize > 12) {
         textSize = MAX(12, textSize - 1);
         tallestCaption = [self captionTextHeightForLines:_pages width:captionWidth fontSize:textSize] + captionPadding;
@@ -621,40 +711,54 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     _focusRing = nil;
     [self buildMonitor:screen mission:mission page:page];
 
-    NSString *active = page[@"portrait"];
-    NSArray<NSString *> *cast = page[@"cast"] ?: @[active];
-    NSString *left = cast.firstObject;
-    NSString *right = cast.count > 1 ? cast[1] : nil;
-    BOOL speakerOnRight = ![left isEqualToString:active];
-    if (speakerOnRight) right = active;
     CGFloat wing = CGRectGetMinX(screen);
+    CGRect speakerArea, playerArea;
     if (narrow) {
         CGFloat height = MAX(floor, captionTop - tallestCaption) + 6;
-        [self addPortrait:left facingRight:YES active:[left isEqualToString:active]
-                   inRect:CGRectMake(0, 0, size.width * (right ? 0.55 : 1), height)];
-        if (right) [self addPortrait:right facingRight:NO active:[right isEqualToString:active]
-                              inRect:CGRectMake(size.width * 0.45, 0, size.width * 0.55, height)];
+        speakerArea = CGRectMake(0, 0, size.width / 2, height);
+        playerArea = CGRectOffset(speakerArea, size.width / 2, 0);
     } else {
         CGFloat width = MIN(size.width * 0.31, wing * 1.45);
         CGFloat bottom = compact ? 0 : floor - 10;
         CGFloat height = MAX(1, size.height - bottom - 48);
         CGFloat center = wing * 0.65;
-        [self addPortrait:left facingRight:YES active:[left isEqualToString:active]
-                   inRect:CGRectMake(center - width / 2, bottom, width, height)];
-        if (right) [self addPortrait:right facingRight:NO active:[right isEqualToString:active]
-                              inRect:CGRectMake(size.width - center - width / 2, bottom, width, height)];
+        speakerArea = CGRectMake(center - width / 2, bottom, width, height);
+        playerArea = CGRectMake(size.width - center - width / 2, bottom, width, height);
     }
+    [self addPortrait:page[@"portrait"] facingRight:YES active:YES inRect:speakerArea];
+    [self addPortrait:PlayerPortrait facingRight:NO active:NO inRect:playerArea];
 
-    CGFloat captionLeft = speakerOnRight ? CGRectGetMaxX(screen) - captionWidth : CGRectGetMinX(screen);
-    [self addCaption:page inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
-             fontSize:textSize speakerOnRight:speakerOnRight];
-    _shownCast = right ? @[left, right] : @[left];
-    _shownActive = active;
+    [self addCaption:page inRect:CGRectMake(CGRectGetMinX(screen), captionBottom, captionWidth, captionHeight)
+             fontSize:textSize speakerOnRight:NO];
     [self footer:@"← / →  Briefing     Esc  Missions"
            action:_page + 1 == _pages.count ? @"↵  LAUNCH" : @"↵  CONTINUE"];
 }
 
 - (void)buildMonitor:(CGRect)screen mission:(NSDictionary *)mission page:(NSDictionary *)page {
+    SKNode *display = _root;
+    if (!CGRectIsEmpty(screen) && !UIMotionReduced()) {
+        CGPoint center = CGPointMake(CGRectGetMidX(screen), CGRectGetMidY(screen));
+        SKCropNode *crop = [SKCropNode node];
+        SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:SKColor.whiteColor size:screen.size];
+        mask.position = center;
+        crop.maskNode = mask;
+        [_root addChild:crop];
+
+        SKEffectNode *effect = [SKEffectNode node];
+        effect.shader = MonitorDistortionShader();
+        CGFloat blockSize = MAX(10, screen.size.height / 14);
+        vector_float2 grid = { screen.size.width / blockSize, screen.size.height / blockSize };
+        [effect setValue:[SKAttributeValue valueWithVectorFloat2:grid] forAttributeNamed:@"a_block_grid"];
+        effect.shouldEnableEffects = YES;
+        [crop addChild:effect];
+        // Give the effect a screen-sized buffer even while the content animates in.
+        SKSpriteNode *glass = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIConsoleGlass, 0.01)
+                                                          size:screen.size];
+        glass.position = center;
+        [effect addChild:glass];
+        display = effect;
+    }
+
     NSDictionary *brief = mission[@"briefing"];
     CGFloat pad = MIN(22, screen.size.width * 0.04);
     CGFloat left = CGRectGetMinX(screen) + pad, right = CGRectGetMaxX(screen) - pad;
@@ -665,23 +769,23 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     title.fontName = UIMonoBoldFont;
     title.text = [NSString stringWithFormat:@"%02lu  /  %@", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]];
     title.position = CGPointMake(left, top);
-    [_root addChild:title];
+    [display addChild:title];
 
     SKLabelNode *location = Para(MIN(13, MAX(9, width / 45)), UIColorWithOpacity(UIInk, 0.75), width);
     location.text = [NSString stringWithFormat:@"%@  /  SD %@", brief[@"location"], brief[@"stardate"]];
     location.position = CGPointMake(left, CGRectGetMinY(title.frame) - 4);
-    [_root addChild:location];
+    [display addChild:location];
 
     CGFloat channelY = CGRectGetMinY(location.frame) - 10;
     SKLabelNode *channel = Text(12, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
     channel.fontName = UIMonoBoldFont;
     channel.text = page[@"channel"];
     channel.position = CGPointMake(left, channelY);
-    [_root addChild:channel];
+    [display addChild:channel];
     SKLabelNode *counter = Text(12, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeRight);
     counter.text = [NSString stringWithFormat:@"%02lu / %02lu", (unsigned long)_page + 1, (unsigned long)_pages.count];
     counter.position = CGPointMake(right, channelY);
-    [_root addChild:counter];
+    [display addChild:counter];
 
     CGFloat contentTop = CGRectGetMinY(channel.frame) - 8;
     CGFloat bottom = CGRectGetMinY(screen) + 4;
@@ -689,6 +793,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     NSString *kind = nil;
     SKNode *content = [self buildMonitorContent:mission page:page left:left right:right top:contentTop
                                          bottom:bottom kind:&kind];
+    [display addChild:content];
     BOOL map = [kind hasPrefix:@"map"];
     BOOL fresh = ![kind isEqualToString:_shownContent];
 
@@ -707,7 +812,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     if (map) {
         NSDictionary *step = page[@"tactical"];
         NSString *dialogueFocus = _dialogueScene[@"focus"];
-        if (!step && page[@"cast"] && dialogueFocus) step = @{ @"show": @[dialogueFocus], @"focus": dialogueFocus };
+        if (!step && [page[@"dialogue"] boolValue] && dialogueFocus) step = @{ @"show": @[dialogueFocus], @"focus": dialogueFocus };
         CueStyle style = [self intro] ? CueStyleIntro : (![self paging] ? CueStyleStill : (fresh ? CueStyleFresh : CueStyleTween));
         [self applyTacticalCue:step style:style];
     }
@@ -738,7 +843,6 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
             legend.text = [NSString stringWithFormat:@"RED  /  %@", schematicKind.uppercaseString];
             legend.position = CGPointMake(left, bottom + 12);
             [group addChild:legend];
-            [_root addChild:group];
             *kind = key;
             return group;
         }
@@ -752,7 +856,6 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         list.text = lines;
         list.position = CGPointMake(left, contentTop - 8);
         while (list.fontSize > 10 && CGRectGetMinY(list.frame) < bottom) list.fontSize -= 1;
-        [_root addChild:list];
         *kind = [@"readout:" stringByAppendingString:lines];
         return list;
     }
@@ -770,7 +873,6 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     display.maskNode = mask;
     _mapLayer = [SKNode node];
     [display addChild:_mapLayer];
-    [_root addChild:display];
 
     // Gather everything with a position, then fit the x/z plane into the map.
     NSMutableArray<NSDictionary *> *things = [NSMutableArray array];
@@ -806,6 +908,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         // Forward (-Z) is up on the map.
         return CGPointMake(mid.x + (p.x - cx) * scale, mid.y - (p.z - cz) * scale);
     };
+    CGPoint playerPoint = project(Vec3(m[@"player"][@"pos"]));
 
     // Grid and scale bar.
     for (int i = 1; i < 8; i++) {
@@ -901,9 +1004,13 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         SKNode *holder = [SKNode node];
         [holder addChild:icon];
         if ([t[@"label"] length] && ![kind isEqualToString:@"field"] && !([kind isEqualToString:@"capital"] && [t[@"group"] length])) {
-            SKLabelNode *l = Text(11, UIColorWithOpacity(UIInk, 0.85), SKLabelHorizontalAlignmentModeLeft);
+            // Put a nearby wingman's callsign opposite the player's callsign.
+            BOOL wingman = [kind isEqualToString:@"wave"] && [t[@"team"] isEqualToString:@"friend"] &&
+                           hypot(p.x - playerPoint.x, p.y - playerPoint.y) < 24;
+            SKLabelNode *l = Text(11, UIColorWithOpacity(UIInk, 0.85),
+                                  wingman ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeLeft);
             l.text = [t[@"label"] uppercaseString];
-            l.position = CGPointMake(p.x + 12, p.y + 6);
+            l.position = CGPointMake(p.x + (wingman ? -15 : 12), p.y + 6);
             [holder addChild:l];
         } else if ([kind isEqualToString:@"field"]) {
             SKLabelNode *l = Text(11, UIColorWithOpacity(UIRed, 0.9), SKLabelHorizontalAlignmentModeCenter);
@@ -1169,12 +1276,14 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         CGFloat floor = compact ? (s.height - captionHeight) / 2 : 72;
         CGFloat bottom = compact ? 0 : floor + captionHeight - 8;
         CGFloat height = compact ? floor + 6 : s.height - bottom - 26;
-        [self addPortrait:line[@"portrait"] facingRight:YES active:YES
-                   inRect:CGRectMake(inset, bottom, width, MAX(1, height))];
-        [self addCaption:line inRect:CGRectMake(inset, floor, width, captionHeight)
-                 fontSize:fontSize speakerOnRight:NO];
-        _shownCast = @[line[@"portrait"]];
-        _shownActive = line[@"portrait"];
+        CGRect leftArea = CGRectMake(inset, bottom, width / 2, MAX(1, height));
+        BOOL playerSpeaking = [line[@"portrait"] isEqualToString:PlayerPortrait];
+        NSString *other = playerSpeaking ? line[@"listener"] : line[@"portrait"];
+        if (other) [self addPortrait:other facingRight:YES active:!playerSpeaking inRect:leftArea];
+        [self addPortrait:PlayerPortrait facingRight:NO active:playerSpeaking inRect:CGRectOffset(leftArea, width / 2, 0)];
+        CGFloat captionBottom = MAX(compact ? 64 : 70, floor - CaptionDrop);
+        [self addCaption:line inRect:CGRectMake(inset, captionBottom, width, captionHeight)
+                 fontSize:fontSize speakerOnRight:playerSpeaking];
         [self footer:@"← / →  Conversation     Esc  Missions"
                action:_debriefBeat == conversation.count ? next : @"↵  CONTINUE"];
         return;
@@ -1227,6 +1336,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 #pragma mark - Input & animation
 
+- (void)hoverAtFraction:(CGPoint)point { [_hover queuePointAtFraction:point]; }
+
 - (void)queueClickAtFraction:(CGPoint)point {
     @synchronized (self) {
         _queuedClick = [NSValue valueWithPoint:point];
@@ -1247,6 +1358,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 }
 
 - (BriefingCommand)handle:(InputAction)a {
+    [_hover updateInScene:self];
     NSValue *click;
     @synchronized (self) {
         click = _queuedClick;

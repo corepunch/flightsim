@@ -13,6 +13,12 @@ A Kestrel Frontier campaign in four acts. Lancer's first watch exposes a leaked 
 
 | Character | Portrait | Part in the campaign |
 | --- | --- | --- |
+| Lancer 1 | `Lancer1` | Player character and lead Executioner pilot |
+| Lancer 2 | `Lancer2` | Lancer 1's wingman from the first patrol, killed defending Bastion in Iron Wall |
+| Lancer 3 | `Lancer3` | Joins the relief flight for CNS Kestrel |
+| Lancer 4 | `Lancer4` | Flies cover on the attack at Hammerfall |
+| Lancer 5 | `Lancer5` | Escorts tanker Corla during refuelling at Brenn depot |
+| Lancer 6 | `Lancer6` | Escorts the evacuation liner Aurora Star to Halden Gate |
 | Commander Ilse Varn | `Varn` | Bastion's commander and Lancer's commanding officer |
 | Lt. Cmdr Daro Okafor | `Okafor` | Intelligence officer who traces the Concord seal |
 | Captain Elara Sen | `MiraCaptain` | Freighter captain and witness to the first leak |
@@ -29,7 +35,9 @@ A Kestrel Frontier campaign in four acts. Lancer's first watch exposes a leaked 
 
 Mission events and tactical orders live in `Resources/Missions/missions.json`. Each briefing opens with illustrated dialogue and follows with situation, flight plan, objectives and loadout. The debrief shows objective results first. A successful sortie leads into its epilogue and then the next mission. A failed sortie can be retried from the results.
 
-The desktop and tablet-size layouts flank the painted Bastion monitor with the active cast. Phone-size views anchor the characters at the bottom edge and place the dialogue around the middle. The current executable uses Cocoa on macOS. The phone and tablet layouts can be checked by resizing the macOS window.
+The cast speaks from the left. Lancer 1 stays on the right, including when he replies in the Iron Wall debrief. The desktop and tablet-size layouts flank the painted Bastion monitor, while phone-size views anchor the characters at the bottom edge. The current executable uses Cocoa on macOS. The phone and tablet layouts can be checked by resizing the macOS window.
+
+Iron Wall's `casualty` records a scripted loss. The radio call goes out once, when Lancer 2 falls in combat or when the Iron Vow loses its shields. Hammerfall's flight roster reflects the loss.
 
 The cyan hulls and red subsystems in the tactical pages come from the shipped OBJ meshes. Regenerate those PNGs with `python3 Art/build_schematics.py` and Pillow after changing the source mesh or schematic cue. Building the app uses the checked-in PNGs.
 

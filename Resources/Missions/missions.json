@@ -59,11 +59,12 @@
         "stardate": "2716.104",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Varn", "Okafor"],
+          "cast": ["Varn", "Okafor", "Lancer2"],
           "focus": "nav2",
           "lines": [
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Three buoys, one clean orbit. Your first patrol should be the most boring hour of your life." },
-            { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Traffic control found fresh scan marks on the outer buoys. If you meet anyone out there, see what they were looking at." }
+            { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Traffic control found fresh scan marks on the outer buoys. If you meet anyone out there, see what they were looking at." },
+            { "speaker": "Lancer 2", "portrait": "Lancer2", "text": "I'll fly your wing. You take us through the buoys, Lancer. I'll watch for company." }
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -78,7 +79,7 @@
           { "caption": "Scouts were last seen near NAV 2. Expect three Skarn Wasp interceptors.", "show": ["nav2", "scouts"], "focus": "nav2" },
           { "caption": "When the route is clear, return to the Bastion's approach point.", "show": ["home", "bastion"], "route": ["nav3", "home"] }
         ],
-        "intel": ["Hostile: 3x Skarn Wasp interceptor (light, fast, weak shields)", "Friendly: CNS Bastion, fleet carrier", "Craft: Executioner heavy fighter, twin lasers"]
+        "intel": ["Hostile: 3x Skarn Wasp interceptor (light, fast, weak shields)", "Friendly: CNS Bastion, fleet carrier", "Wingman: Lancer 2", "Craft: Executioner heavy fighter, twin lasers"]
       },
       "loadout": { "torpedoes": 2 },
       "player": { "pos": [0, 0, 600], "facing": [0, 0, -1] },
@@ -93,6 +94,7 @@
       ],
       "fields": [ { "type": "buoys", "navs": ["nav1", "nav2", "nav3"] } ],
       "waves": [
+        { "id": "wingman", "ship": "Executioner", "count": 1, "team": "friend", "pos": [65, 15, 570], "order": "attack", "name": "Lancer 2" },
         { "id": "scouts", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [2300, 300, -3200], "spread": 120, "nav": "nav2", "order": "attack" }
       ],
       "objectives": [
@@ -354,11 +356,12 @@
         "stardate": "2716.121",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Orin", "Varn"],
+          "cast": ["Orin", "Varn", "Lancer5"],
           "focus": "corla",
           "lines": [
             { "speaker": "Chief Engineer Mae Orin", "portrait": "Orin", "text": "I've fuelled ships on this line for twenty years. Someone filed a divert order for Corla while she was already on the hose. I told the crew to ignore it." },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Hold the depot. We need the tanker more than another victory tally." }
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Hold the depot. We need the tanker more than another victory tally." },
+            { "speaker": "Lancer 5", "portrait": "Lancer5", "text": "I'll stay with Corla while she's on the hose. If the Skarn split up, I'll call which ones are coming for the tanker." }
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -372,7 +375,7 @@
           { "caption": "Tanker Corla, docked at the depot's spine.", "show": ["corla"], "focus": "corla" },
           { "caption": "Raiders come in from several sides. Hold for 150 seconds.", "show": ["r1", "r2", "r3"], "focus": "depot" }
         ],
-        "intel": ["Defend: tanker Corla, Brenn fuel depot (2 turrets)", "Hostile: mixed Wasp and Talon raids", "Wingman: Lancer 2"]
+        "intel": ["Defend: tanker Corla, Brenn fuel depot (2 turrets)", "Hostile: mixed Wasp and Talon raids", "Wingman: Lancer 5"]
       },
       "loadout": { "torpedoes": 0 },
       "player": { "pos": [0, 80, -200], "facing": [0, 0, -1] },
@@ -381,7 +384,7 @@
         { "id": "corla", "asset": "Tanker", "team": "friend", "name": "Tanker Corla", "pos": [0, 40, -1100], "facing": [0, 0, -1] }
       ],
       "waves": [
-        { "id": "wingman", "ship": "Executioner", "count": 1, "team": "friend", "pos": [60, 80, -150], "order": "escort:corla", "name": "Lancer 2" },
+        { "id": "wingman", "ship": "Executioner", "count": 1, "team": "friend", "pos": [60, 80, -150], "order": "escort:corla", "name": "Lancer 5" },
         { "id": "r1", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [-1700, 0, -1500], "spread": 100, "at": 10, "order": "attack" },
         { "id": "r2", "ship": "Talon", "count": 3, "team": "enemy", "pos": [1500, 200, -2400], "spread": 100, "at": 45, "order": "strike:corla" },
         { "id": "r3", "ship": "Talon", "count": 2, "team": "enemy", "pos": [0, -1500, -800], "spread": 100, "at": 95, "order": "strike:depot" },
@@ -393,6 +396,7 @@
       ],
       "messages": [
         { "at": 2, "from": "Corla", "text": "Hose connected. Keep them off us for a few minutes." },
+        { "spawn": "r2", "from": "Lancer 5", "text": "Talons inbound on Corla. I'm taking the lead bomber." },
         { "at": 75, "from": "Corla", "text": "Halfway there." },
         { "after": "hold", "from": "Corla", "text": "Tanks full, undocking. Thanks, Lancer." }
       ],
@@ -587,11 +591,12 @@
         "stardate": "2716.136",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Rhea", "Varn"],
+          "cast": ["Rhea", "Varn", "Lancer3"],
           "focus": "kestrel",
           "lines": [
             { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "Bastion, this is Sol. We followed an evacuation order that led straight into two corvettes. The order was signed by someone in the Directorate. I kept it.", "channel": "CNS KESTREL / UPLINK" },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Save the frigate. Her crew can tell us who issued the order." }
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Save the frigate. Her crew can tell us who issued the order." },
+            { "speaker": "Lancer 3", "portrait": "Lancer3", "text": "I'll help clear the fighters so you can get a clean torpedo run at those corvettes." }
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -820,26 +825,27 @@
         "stardate": "2716.151",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Lusk", "Varn", "MiraCaptain"],
+          "cast": ["Lusk", "Varn", "MiraCaptain", "Lancer6"],
           "focus": "aurora",
           "lines": [
             { "speaker": "Captain Lusk", "portrait": "Lusk", "text": "Six thousand civilians are aboard the Aurora Star. They keep asking whether home will still be there when we return." },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "They get an answer after they're safe. Escort them through the gate." },
-            { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Mira is carrying refugees on the other side. I'll be waiting for them." }
+            { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Mira is carrying refugees on the other side. I'll be waiting for them." },
+            { "speaker": "Lancer 6", "portrait": "Lancer6", "text": "I'll stay close to the Aurora Star. If the bombers get past you, I'll be there." }
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
         "text": [
           "Fleet Command does not think we can stop the dreadnought here. The colonies are being evacuated.",
           "The liner Aurora Star is carrying six thousand civilians to the Halden gate. She is big, slow and has no guns.",
-          "Every Skarn fighter in the system will be after her. Lancer 2 is with you. Get her to the gate."
+          "Every Skarn fighter in the system will be after her. Lancer 6 is with you. Get her to the gate."
         ],
         "steps": [
           { "caption": "Liner Aurora Star, full of evacuees.", "show": ["aurora"], "focus": "aurora" },
           { "caption": "Her route to the Halden gate, five kilometres away.", "show": ["gate"], "route": ["aurora", "gate"] },
           { "caption": "Attacks from every side. Bombers have priority.", "show": ["t1", "t2", "t3"], "focus": "aurora" }
         ],
-        "intel": ["Escort: liner Aurora Star (unarmed, 6000 aboard)", "Hostile: repeated Wasp and Talon attacks", "Wingman: Lancer 2"]
+        "intel": ["Escort: liner Aurora Star (unarmed, 6000 aboard)", "Hostile: repeated Wasp and Talon attacks", "Wingman: Lancer 6"]
       },
       "loadout": { "torpedoes": 0 },
       "player": { "pos": [0, 60, 300], "facing": [0, 0, -1] },
@@ -849,7 +855,7 @@
       ],
       "navs": [ { "id": "gatenav", "name": "GATE", "pos": [0, 0, -5100] } ],
       "waves": [
-        { "id": "wingman", "ship": "Executioner", "count": 1, "team": "friend", "pos": [60, 60, 350], "order": "escort:aurora", "name": "Lancer 2" },
+        { "id": "wingman", "ship": "Executioner", "count": 1, "team": "friend", "pos": [60, 60, 350], "order": "escort:aurora", "name": "Lancer 6" },
         { "id": "w1", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [-1600, 300, -1500], "spread": 120, "at": 12, "order": "attack" },
         { "id": "t1", "ship": "Talon", "count": 2, "team": "enemy", "pos": [1600, 0, -1800], "spread": 100, "at": 25, "order": "strike:aurora" },
         { "id": "t2", "ship": "Talon", "count": 3, "team": "enemy", "pos": [0, 1500, -3000], "spread": 100, "at": 55, "order": "strike:aurora" },
@@ -862,7 +868,7 @@
       ],
       "messages": [
         { "at": 3, "from": "Aurora Star", "text": "This is Captain Lusk. We have children aboard, Lancer. Please." },
-        { "spawn": "t2", "from": "Lancer 2", "text": "Bombers above us, diving on the liner!" },
+        { "spawn": "t2", "from": "Lancer 6", "text": "Bombers above us, diving on the liner!" },
         { "after": "escort", "from": "Aurora Star", "text": "Gate lock... we are through. God bless you, Lancer." }
       ],
       "debrief": {
@@ -1117,12 +1123,13 @@
         "stardate": "2716.173",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Varn", "Korr", "Rhea"],
+          "cast": ["Varn", "Korr", "Rhea", "Lancer2"],
           "focus": "cruiser",
           "lines": [
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Fleet Command has Hale in custody. They want a copy of Sol's orders and Sen's manifest. They'll get both when we have a clear channel." },
             { "portrait": "Korr", "speaker": "Admiral Korr", "text": "I buried two crews at Velan while your Directorate argued about whose map it was. By morning, Concord will have to negotiate for every gate it draws a line through.", "channel": "SKARN FLAGSHIP / OPEN CHANNEL" },
             { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "The Kestrel is with you, Commander. We held together because Lancer kept saving people." },
+            { "speaker": "Lancer 2", "portrait": "Lancer2", "text": "You still owe me a coffee from that first patrol, Lead. I'll collect when we land." },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Break the Iron Vow. Keep our ships alive for one final assault." }
           ]
         },
@@ -1161,12 +1168,15 @@
       "messages": [
         { "at": 3, "from": "Commander Varn", "text": "Here it comes. Lancer flight, generators first." },
         { "after": "shields", "from": "CNS Kestrel", "text": "Its shields are down! All guns, fire!" },
-        { "after": "kill", "from": "Commander Varn", "text": "The Iron Vow is gone. Well done, all of you." }
+        { "after": "kill", "from": "Commander Varn", "text": "The Iron Vow is gone. Lancer flight, return to Bastion." }
       ],
+      "casualty": { "pilot": "Lancer 2", "after": "shields", "from": "Bastion Control", "text": "Lancer Two is down. No escape beacon. Rescue is on the way." },
       "debrief": {
         "win": "The Iron Vow broke on the Bastion's defences. One ship is left: the dreadnought.",
         "lose": "The cruiser reached the Bastion.",
         "dialogue": [
+          { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Search and rescue found Two's fighter. He never got out. I'm sorry, Lancer." },
+          { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "His mug's still next to mine. I told him I'd bring the coffee this time." },
           { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "The Iron Vow is broken. The fleet is standing by for your attack on the Hammer." }
         ]
       }
@@ -1179,13 +1189,14 @@
         "stardate": "2716.180",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Imani", "Kesh", "Korr", "Varn"],
+          "cast": ["Imani", "Kesh", "Korr", "Varn", "Lancer4"],
           "focus": "dread",
           "lines": [
             { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "The Hammer is charging. Its shields cover the reactor trench. Take down the generators, kill its thrust and go straight for the core." },
             { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "I designed that firing circuit. If you cut power in the trench, it can't finish the charge. I'm staying on this channel until you come back." },
             { "portrait": "Korr", "speaker": "Admiral Korr", "text": "Open channel to Bastion. Every ship that turns away now gets passage. The gate stays with me.", "channel": "SKARN FLAGSHIP / OPEN CHANNEL" },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "This began with three navigation buoys. It ends with every crew we've brought home fighting together. Lancer, bring down the Hammer." }
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "This began with three navigation buoys. It ends with every crew we've brought home fighting together. Lancer, bring down the Hammer." },
+            { "speaker": "Lancer 4", "portrait": "Lancer4", "text": "Three and Six are with me. We'll clear the approach. Bring the rest of us home, Lead." }
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -1201,7 +1212,7 @@
           { "caption": "Step three: the reactor in the dorsal trench forward of the tower.", "show": ["dread"], "focus": "dread", "schematic": "Core" },
           { "caption": "Two corvettes and its fighters screen it. The Bastion and Kestrel will hold back the bombers.", "show": ["cv1", "cv2", "bastion", "kestrel"], "focus": "bastion" }
         ],
-        "intel": ["Target: Skarn dreadnought (22 turrets, 4 shield gens, 4 engines, reactor)", "Hostile: 2 corvettes, many Wasps and Talons", "Support: CNS Bastion, CNS Kestrel, Lancer 2-4"]
+        "intel": ["Target: Skarn dreadnought (22 turrets, 4 shield gens, 4 engines, reactor)", "Hostile: 2 corvettes, many Wasps and Talons", "Support: CNS Bastion, CNS Kestrel, Lancers 3, 4 and 6"]
       },
       "loadout": { "torpedoes": 10 },
       "player": { "pos": [0, 100, 0], "facing": [0, 0, -1] },
@@ -1213,7 +1224,7 @@
         { "id": "cv2", "asset": "Corvette", "team": "enemy", "name": "Skarn Corvette Claw", "pos": [700, -150, -3500], "facing": [0, 0, 1], "path": [[500, -100, -800], [800, 0, -2500]], "speed": 30, "loop": true }
       ],
       "waves": [
-        { "id": "wing", "ship": "Executioner", "count": 3, "team": "friend", "pos": [80, 130, 100], "spread": 70, "order": "attack", "name": "Lancer" },
+        { "id": "wing", "ship": "Executioner", "count": 3, "team": "friend", "pos": [80, 130, 100], "spread": 70, "order": "attack", "name": "Lancer Flight", "callsigns": ["Lancer 3", "Lancer 4", "Lancer 6"] },
         { "id": "screen", "ship": "Wasp", "count": 6, "team": "enemy", "pos": [0, 400, -3800], "spread": 250, "at": 5, "order": "attack" },
         { "id": "t1", "ship": "Talon", "count": 4, "team": "enemy", "pos": [-1800, 0, -2500], "spread": 150, "at": 50, "order": "strike:bastion" },
         { "id": "w2", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [1800, 300, -3000], "spread": 150, "at": 100, "order": "attack" },
@@ -1237,7 +1248,7 @@
         "lose": "The assault failed. The Hammer still stands between the fleet and Halden Gate.",
         "dialogue": [
           { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Halden reports a stable gate. The first ship home is Mercy. They want to know whether they can bring our people through." },
-          { "portrait": "Juno", "speaker": "Juno Vale", "text": "Tell them Berth Four is open. We cut the receiver out of the deck. There's a hole where it used to be. We're putting the names of everyone who got us home there." },
+          { "portrait": "Juno", "speaker": "Juno Vale", "text": "Tell them Berth Four is open. We cut the receiver out of the deck. We're putting a plaque where it used to be. I left room for Two's rook beside his name." },
           { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Mira to Lancer. I'm bringing the first families home. Cargo manifest says blankets, coffee and a seat for you, if you ever want it." }
         ]
       }

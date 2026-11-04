@@ -7,7 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ART = ROOT / "Resources/Briefing"
 PORTRAITS = {"Varn", "Okafor", "MiraCaptain", "Orin", "Imani", "Juno",
-             "Rhea", "Lusk", "Kesh", "Hale", "Korr"}
+             "Rhea", "Lusk", "Kesh", "Hale", "Korr", "Lancer2", "Lancer3", "Lancer4",
+             "Lancer1", "Lancer5", "Lancer6"}
 
 
 def check_art(path, transparent=False):
@@ -32,6 +33,8 @@ def validate_mission(mission):
     for line in scene["lines"] + epilogue:
         assert line["portrait"] in PORTRAITS, (index, line)
         assert line["speaker"].strip() and line["text"].strip(), (index, line)
+        if line["portrait"] == "Lancer1":
+            assert line in epilogue and line["listener"] in PORTRAITS - {"Lancer1"}, (index, line)
     assert all(mission["debrief"][key].strip() for key in ("win", "lose")), index
 
     entities = {entity["id"]: entity for entity in mission["entities"]}
@@ -53,6 +56,19 @@ def validate_mission(mission):
     objectives = mission["objectives"]
     objective_ids = {item["id"] for item in objectives}
     assert objectives and len(objective_ids) == len(objectives), index
+    friendly_pilots = []
+    for wave in mission.get("waves", []):
+        name, count = wave.get("name"), wave.get("count", 1)
+        callsigns = wave.get("callsigns")
+        if callsigns is not None:
+            assert len(callsigns) == count and all(call.strip() for call in callsigns), (index, wave)
+        elif name:
+            callsigns = [name] if count == 1 else [f"{name} {seat + 2}" for seat in range(count)]
+        if wave["team"] == "friend":
+            friendly_pilots.extend(callsigns or [])
+    if casualty := mission.get("casualty"):
+        assert friendly_pilots.count(casualty["pilot"]) == 1, (index, casualty)
+        assert casualty["after"] in objective_ids and casualty["text"].strip() and casualty["from"].strip(), (index, casualty)
     for objective in objectives:
         assert set(objective.get("after", [])) <= objective_ids - {objective["id"]}, (index, objective)
         assert set(objective.get("targets", [])) <= units, (index, objective)

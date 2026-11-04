@@ -36,6 +36,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     NSMutableArray<SKLabelNode *> *_header, *_rowLabels[MenuItemCount], *_footerLabels;
     NSMutableArray<SKNode *> *_controlRows;
     SKNode *_backButton;
+    UIHover *_hover;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -45,6 +46,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         // can fade as a whole over whatever is behind it.
         self.backgroundColor = [SKColor clearColor];
         self.speed = 1 / UIMotionTimeScale();
+        _hover = [UIHover new];
         _stage = [SKNode node];
         _scenery = [SKNode node];
         _root = [SKNode node];
@@ -126,6 +128,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     SKShapeNode *shape = UISkewedShape(rect, UIColorWithOpacity(accent, selected ? 0.92 : 0.36),
                                       UIColorWithOpacity(selected ? UIConsoleSteel : UIPanel, 0.94));
     [row addChild:shape];
+    [_hover addButton:row rect:rect accent:accent];
     CGFloat x = CGRectGetMinX(rect) + 23, y = CGRectGetMidY(rect);
     SKLabelNode *label = [self label:title size:compact ? 14 : 17 color:accent opacity:1
                                   x:x y:y + (detail.length ? 8 : 0)];
@@ -181,6 +184,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     _controlsBack = CGRectMake(x, CGRectGetMinY(bounds), MIN(210, width), 44);
     _backButton = UIActionButton(_controlsBack, @"‹  MAIN MENU", UIAmber);
     [_root addChild:_backButton];
+    [_hover addButton:_backButton rect:_controlsBack accent:UIAmber];
 }
 
 - (MainMenuInsets)layoutInsets {
@@ -200,6 +204,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         _stage.xScale = _stage.yScale = 1;
     }
     [_root removeAllChildren];
+    [_hover reset];
     _backButton = nil;
     _controlRows = nil;
     memset(_rowNodes, 0, sizeof(_rowNodes));
@@ -484,6 +489,8 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 
 
 
+- (void)hoverAtFraction:(CGPoint)point { [_hover queuePointAtFraction:point]; }
+
 - (void)queueClickAtFraction:(CGPoint)point {
     @synchronized (self) {
         _pendingPoint = point;
@@ -504,6 +511,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 
 - (MainMenuCommand)handle:(InputAction)actions {
     [self refreshLayout];
+    [_hover updateInScene:self];
     CGPoint click = CGPointMake(-1, -1);
     @synchronized (self) {
         if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);

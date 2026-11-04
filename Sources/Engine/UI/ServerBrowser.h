@@ -13,6 +13,8 @@ typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJ
 
 - (void)showServers:(NSArray<LANServer *> *)servers;
 - (void)queueClickAtFraction:(CGPoint)point;
+// Pointer position for button hover; (-1, -1) when it leaves the view.
+- (void)hoverAtFraction:(CGPoint)point;
 - (BrowserCommand)handle:(InputAction)actions;
 - (void)setStatus:(NSString *)status;
 

@@ -1,4 +1,5 @@
 #import <SpriteKit/SpriteKit.h>
+#import "UIStyle.h"
 
 // Motion for the front end: one vocabulary of timings, curves and effects so
 // every screen powers up, changes and powers down the same way. Screens are
@@ -84,3 +85,15 @@ void UIMotionWipe(SKNode *node, CGRect rect, SKColor *line, NSTimeInterval delay
 NSTimeInterval UIMotionDismiss(SKNode *node, CGVector drift, NSTimeInterval duration);
 // A tube switching off: the stage collapses to a line, then a point.
 NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size);
+
+// Pointer hover for a screen's buttons: each lights up as the pointer
+// arrives and dims as it leaves. Register buttons on every rebuild.
+@interface UIHover : NSObject
+// Any thread; (-1, -1) when the pointer leaves the view.
+- (void)queuePointAtFraction:(CGPoint)point;
+- (void)reset;
+// button's children must be laid out in the same space as rect.
+- (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent;
+// Render thread, once per frame.
+- (void)updateInScene:(SKScene *)scene;
+@end

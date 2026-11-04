@@ -7,30 +7,22 @@
 set -e
 cd "$(dirname "$0")"
 
+log() {
+    printf '[build +%ss] %s\n' "$SECONDS" "$*"
+}
+
 APP=build/SpaceFight.app
-rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/PlugIns"
+mkdir -p build
+zmodload zsh/system
+: >> build/.lock
+if ! zsystem flock -t 0 -f build_lock build/.lock 2>/dev/null; then
+    log "Waiting for the current build to finish"
+    zsystem flock -f build_lock build/.lock
+fi
 
-CFLAGS=(-fobjc-arc -O2 -g -Wall -Wno-unused-function -mmacosx-version-min=13.0)
-ENGINE_INCLUDES=(-ISources/Shared)
-for d in Sources/Engine/*/; do ENGINE_INCLUDES+=(-I"$d"); done
-
-# The game module: loaded by the server at run time (SF_GAME overrides the path).
-# Only GetGameAPI is exported.
-clang "${CFLAGS[@]}" -ISources/Shared -ISources/Game -fvisibility=hidden -dynamiclib \
-    Sources/Shared/*.(m|c) Sources/Game/*.m \
-    -framework Foundation -install_name @rpath/game.dylib \
-    -o "$APP/Contents/PlugIns/game.dylib"
-
-clang "${CFLAGS[@]}" "${ENGINE_INCLUDES[@]}" \
-    Sources/Shared/*.(m|c) Sources/Engine/*/*.m \
-    -framework Cocoa -framework SceneKit -framework SpriteKit -framework Metal \
-    -framework CoreGraphics -framework QuartzCore -framework IOKit -framework Carbon -framework ImageIO -framework AVFoundation -framework CoreMedia -framework CoreVideo \
-    -o "$APP/Contents/MacOS/SpaceFight"
-
-cp Resources/Info.plist "$APP/Contents/"
-cp -R Resources/Briefing Resources/Menu Resources/Shaders Resources/Particles Resources/Textures Resources/Missions "$APP/Contents/Resources/"
-cp CREDITS.md "$APP/Contents/Resources/"
+jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null) || jobs=1
+log "Checking native targets ($jobs parallel jobs)"
+make -j "$jobs" all
 
 # Models: the OBJs in Resources/Models are the sources (what Blender and
 # Art/*.py export); the app ships them baked to SceneKit .scn by
@@ -41,6 +33,7 @@ CACHE=build/ModelCache
 mkdir -p build/tools
 for src in Tools/*.(m|h); do
     if [[ ! -x $BAKER || $src -nt $BAKER ]]; then
+        log "Rebuilding the model baker and invalidating the model cache"
         clang -fobjc-arc -O2 -Wall -mmacosx-version-min=13.0 -ITools Tools/*.m \
             -framework Cocoa -framework SceneKit -o $BAKER
         rm -rf "$CACHE"
@@ -49,20 +42,49 @@ for src in Tools/*.(m|h); do
 done
 # Capital ships and the cockpit are split into named parts by ObjLoader; the
 # fighters go through SceneKit's own importer (see BakeModels.m).
+log "Checking the model cache"
 PARTS=(Resources/Models/Cockpit.obj Resources/Models/Capital/*.obj)
+baked=0
+cached=0
 for obj in Resources/Models/**/*.obj; do
     rel=${obj#Resources/}
     scn=$CACHE/${rel:r}.scn
-    [[ -f $scn && ! $obj -nt $scn ]] && continue
+    if [[ -f $scn && ! $obj -nt $scn ]]; then
+        cached=$((cached + 1))
+        continue
+    fi
     mode=(--scenekit)
     (( ${PARTS[(Ie)$obj]} )) && mode=()
+    log "Baking $rel"
     $BAKER $mode "${scn:h}" $obj
+    baked=$((baked + 1))
 done
+log "Assembling $APP ($cached models cached, $baked baked)"
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/PlugIns"
+cp build/Native/SpaceFight "$APP/Contents/MacOS/"
+cp build/Native/game.dylib "$APP/Contents/PlugIns/"
+cp Resources/Info.plist "$APP/Contents/"
+cp -cR Resources/Briefing Resources/Menu Resources/Shaders Resources/Particles Resources/Textures Resources/Missions "$APP/Contents/Resources/"
+cp CREDITS.md "$APP/Contents/Resources/"
 rsync -a --exclude '*.obj' --exclude '*.mtl' Resources/Models "$APP/Contents/Resources/"
-rsync -a --include '*/' --include '*.scn' --exclude '*' "$CACHE/Models/" "$APP/Contents/Resources/Models/"
-codesign --force --sign - "$APP" >/dev/null 2>&1 || true
+# Clone cached scenes on APFS. cp falls back to copying on other filesystems.
+for dir in "$CACHE/Models" "$CACHE/Models"/**/*(/N); do
+    scenes=("$dir"/*.scn(N))
+    (( ${#scenes} )) || continue
+    dest=$APP/Contents/Resources/${dir#$CACHE/}
+    mkdir -p "$dest"
+    cp -pc "${scenes[@]}" "$dest/"
+done
+log "Signing the app bundle"
+codesign --force --sign - "$APP" || log "Code signing failed, continuing"
 
-echo "Built $APP"
+log "Built $APP"
+zsystem flock -u "$build_lock"
 if [[ "$1" == "run" ]]; then
-    "$APP/Contents/MacOS/SpaceFight"
+    log "Launching SpaceFight through macOS Launch Services"
+    if ! /usr/bin/open -n -W "$PWD/$APP"; then
+        print -u2 "Could not open SpaceFight.app. Run from your macOS desktop session or open the app in Finder."
+        exit 1
+    fi
 fi

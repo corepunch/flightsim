@@ -98,6 +98,7 @@ static NSString *const kRed = @"red";
     _pendingEntities = [NSMutableArray array];
     _pendingWaves = [NSMutableArray array];
     _pendingMessages = [mission[@"messages"] mutableCopy] ?: [NSMutableArray array];
+    _pendingCasualty = mission[@"casualty"];
 
     gi.modelIndex(FighterModelName(ShipClassExecutioner).UTF8String);
     for (NSDictionary *e in mission[@"entities"]) {
@@ -196,6 +197,7 @@ static NSString *const kRed = @"red";
     simd_float3 centre = Vec3(w[@"pos"]);
     float spread = w[@"spread"] ? [w[@"spread"] floatValue] : 80;
     NSString *order = w[@"order"] ?: @"attack";
+    NSArray<NSString *> *callsigns = w[@"callsigns"];
     NSRange colon = [order rangeOfString:@":"];
     simd_float3 ref = [self referencePosition];
     for (int i = 0; i < count; i++) {
@@ -216,7 +218,8 @@ static NSString *const kRed = @"red";
         p.order = colon.location == NSNotFound ? order : [order substringToIndex:colon.location];
         p.orderTarget = colon.location == NSNotFound ? nil : [order substringFromIndex:colon.location + 1];
         p.wave = w[@"id"];
-        if (w[@"name"]) p.callsign = count > 1 ? [NSString stringWithFormat:@"%@ %d", w[@"name"], i + 2] : w[@"name"];
+        if (i < callsigns.count) p.callsign = callsigns[i];
+        else if (w[@"name"]) p.callsign = count > 1 ? [NSString stringWithFormat:@"%@ %d", w[@"name"], i + 2] : w[@"name"];
         if (p.callsign) s.nameIndex = gi.stringIndex(p.callsign.UTF8String);
         [_pilots addObject:p];
         if (jump) [self jumpFlashAt:pos scale:0.4f];
@@ -319,6 +322,20 @@ static NSString *const kRed = @"red";
 
 #pragma mark - Update
 
+- (void)updateCasualty {
+    NSDictionary *casualty = _pendingCasualty;
+    for (GPilot *pilot in _pilots) {
+        GFighter *ship = pilot.ship;
+        if (ship.team != TeamFriend || ![pilot.callsign isEqualToString:casualty[@"pilot"]]) continue;
+        if (ship.alive && ![self triggered:casualty]) return;
+        // Use the regular destruction path if combat hasn't already taken the pilot.
+        _pendingCasualty = nil;
+        if (ship.alive) [self damageShip:ship amount:ship.shield + ship.hull + 1 by:nil shake:0];
+        GCommand(nil, SVC_RADIO, casualty[@"text"], casualty[@"from"], nil);
+        return;
+    }
+}
+
 - (void)updateMission:(float)dt {
     // Arrivals and radio traffic.
     for (NSDictionary *e in [_pendingEntities copy])
@@ -333,6 +350,7 @@ static NSString *const kRed = @"red";
     _currentNav = nil;
     for (GClient *c in _clients) c.status = nil;
     for (GObjective *o in _objectives) [self evaluate:o dt:dt];
+    if (_pendingCasualty) [self updateCasualty];
     for (GClient *c in _clients) {
         if (!c.inGame || [c.status ?: @"" isEqualToString:c.sentStatus ?: @""]) continue;
         c.sentStatus = c.status;

@@ -49,7 +49,41 @@
 - (void)setOverlaySKScene:(SKScene *)scene {
     if (![scene isKindOfClass:HUD.class]) [self releaseMouse];
     [super setOverlaySKScene:scene];
+    // A new screen learns where the pointer already rests.
+    NSPoint p = [self convertPoint:self.window.mouseLocationOutsideOfEventStream fromView:nil];
+    [self reportHoverAt:NSPointInRect(p, self.bounds) ? p : NSMakePoint(-1, -1)];
 }
+
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    for (NSTrackingArea *area in self.trackingAreas) [self removeTrackingArea:area];
+    [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect
+        options:NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect
+          owner:self userInfo:nil]];
+}
+
+// Front-end screens light buttons under the pointer. view is in view points;
+// (-1, -1) means the pointer has left.
+- (void)reportHoverAt:(NSPoint)p {
+    SKScene *overlay = self.overlaySKScene;
+    if (![overlay respondsToSelector:@selector(hoverAtFraction:)]) return;
+    CGRect bounds = self.bounds;
+    if (bounds.size.width <= 0 || bounds.size.height <= 0) return;
+    CGPoint fraction = CGPointMake(-1, -1);
+    if (p.x >= 0 && p.y >= 0) {
+        CGFloat x = (p.x - CGRectGetMinX(bounds)) / bounds.size.width;
+        CGFloat y = (p.y - CGRectGetMinY(bounds)) / bounds.size.height;
+        fraction = CGPointMake(x, self.isFlipped ? 1 - y : y);
+    }
+    [(id)overlay hoverAtFraction:fraction];
+}
+
+- (void)reportHover:(NSEvent *)event {
+    if (self.input.mouseCaptured) return;
+    [self reportHoverAt:[self convertPoint:event.locationInWindow fromView:nil]];
+}
+
+- (void)mouseExited:(NSEvent *)event { [self reportHoverAt:NSMakePoint(-1, -1)]; }
 
 - (void)mouseDown:(NSEvent *)event {
     if (getenv("SF_SNAPSHOT")) return;
@@ -71,8 +105,14 @@
 - (void)mouseUp:(NSEvent *)event { [self.input setMouseFire:NO]; }
 - (void)rightMouseDown:(NSEvent *)event { [self.input recenterMouse]; }
 
-- (void)mouseMoved:(NSEvent *)event { [self.input mouseMovedByX:event.deltaX y:event.deltaY]; }
-- (void)mouseDragged:(NSEvent *)event { [self.input mouseMovedByX:event.deltaX y:event.deltaY]; }
+- (void)mouseMoved:(NSEvent *)event {
+    [self reportHover:event];
+    [self.input mouseMovedByX:event.deltaX y:event.deltaY];
+}
+- (void)mouseDragged:(NSEvent *)event {
+    [self reportHover:event];
+    [self.input mouseMovedByX:event.deltaX y:event.deltaY];
+}
 - (void)rightMouseDragged:(NSEvent *)event { [self.input mouseMovedByX:event.deltaX y:event.deltaY]; }
 
 @end

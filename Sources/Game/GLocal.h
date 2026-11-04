@@ -207,6 +207,7 @@ typedef struct {
     BOOL _success;
     NSArray<GObjective *> *_objectives;
     NSMutableArray<NSDictionary *> *_pendingWaves, *_pendingEntities, *_pendingMessages;
+    NSDictionary *_pendingCasualty;
     NSMutableSet<NSString *> *_spawned, *_navsVisited;
     NSMutableDictionary<NSString *, NSValue *> *_navs;
     NSMutableDictionary<NSString *, NSString *> *_navNames;

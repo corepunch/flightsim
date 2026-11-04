@@ -23,6 +23,8 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
 
 - (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed;
 - (void)queueClickAtFraction:(CGPoint)point;
+// Pointer position for button hover; (-1, -1) when it leaves the view.
+- (void)hoverAtFraction:(CGPoint)point;
 - (MainMenuCommand)handle:(InputAction)actions;
 // Exit by switching off like a tube (for quitting). Returns its length.
 - (NSTimeInterval)motionPowerDown;

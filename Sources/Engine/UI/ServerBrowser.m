@@ -16,6 +16,7 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
 @implementation ServerBrowser {
     SKNode *_stage, *_root;
     UITransition _transition;
+    UIHover *_hover;
     NSArray<LANServer *> *_servers;
     NSUInteger _index;
     NSString *_status;
@@ -32,6 +33,7 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
         self.scaleMode = SKSceneScaleModeResizeFill;
         self.backgroundColor = [NSColor clearColor];
         self.speed = 1 / UIMotionTimeScale();
+        _hover = [UIHover new];
         _stage = [SKNode node];
         _root = [SKNode node];
         [_stage addChild:_root];
@@ -48,6 +50,8 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
     _signature = nil;
     [self rebuild];
 }
+
+- (void)hoverAtFraction:(CGPoint)point { [_hover queuePointAtFraction:point]; }
 
 - (void)queueClickAtFraction:(CGPoint)point {
     @synchronized (self) {
@@ -72,6 +76,7 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
     BOOL intro = _transition == UITransitionIntro;
     _transition = UITransitionNone;
     [_root removeAllChildren];
+    [_hover reset];
     _laidOut = self.size;
     CGSize s = self.size;
     _stage.position = CGPointMake(s.width / 2, s.height / 2);
@@ -136,8 +141,12 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
     _joinRect = self.selected ? CGRectMake(s.width - x - 145, 20, 145, 44) : CGRectZero;
     SKNode *back = UIActionButton(_backRect, @"‹  BACK", UIInk);
     [_root addChild:back];
+    [_hover addButton:back rect:_backRect accent:UIInk];
     SKNode *join = self.selected ? UIActionButton(_joinRect, @"JOIN GAME  ›", UIAmber) : nil;
-    if (join) [_root addChild:join];
+    if (join) {
+        [_root addChild:join];
+        [_hover addButton:join rect:_joinRect accent:UIAmber];
+    }
     if (!intro) return;
     UIMotionFlickerIn(shade, 0);
     UIMotionDecode(kicker, 0.05, 0.4);
@@ -187,6 +196,7 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
 }
 
 - (BrowserCommand)handle:(InputAction)actions {
+    [_hover updateInScene:self];
     CGPoint click = CGPointMake(-1, -1);
     @synchronized (self) {
         if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
