@@ -483,7 +483,8 @@ static NSString *const kRed = @"red";
             NSString *k = c.identifier;
             float t = o.scanTime[k].floatValue;
             if (t >= 2.0f) { done++; continue; }
-            NSArray *near = c.alive ? [self playersNear:c.position range:(range ?: 150) + c.radius] : @[];
+            if (!c.alive) { [self setObjective:o state:ObjectiveFailed]; return; }
+            NSArray *near = [self playersNear:c.position range:(range ?: 150) + c.radius];
             if (near.count) {
                 t += dt;
                 o.scanTime[k] = @(t);

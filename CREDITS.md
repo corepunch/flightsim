@@ -65,6 +65,10 @@ Made for this project:
   `Art/build_cockpit.py`) and its displays, which are drawn in code
 - The Kestrel Frontier campaign: missions, briefings and debriefings in
   `Resources/Missions/missions.json`
+- The Bastion briefing backdrop and character portraits in `Resources/Briefing/`,
+  illustrated with ImageGen
+- Tactical schematics rendered from the capital ship meshes by
+  `Art/build_schematics.py`
 - Asteroids, mines, escape pods, containers, nav buoys and the jump gate,
   modelled procedurally by `Art/build_capitals.py`
 
