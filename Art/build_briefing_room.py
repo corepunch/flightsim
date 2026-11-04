@@ -17,8 +17,11 @@
 #              Outside    the cruiser seen through the window
 #              Crowd      sprite planes, Sprite_<Kind>_<n> (see below)
 #   materials  Screen_Briefing  flat quad, UV 0..1: the live presentation
-#              Glow_<Colour>    self-lit (Amber, AmberDim, Warm, Cyan, Red)
+#              Glow_<Colour>    self-lit (Lamp, Amber, AmberDim, Warm, Cyan, Red);
+#                               Glow_Lamp is a light fixture: the game puts a
+#                               lamp at each (LAMPS in the JSON)
 #              Wall, WallDark, Panel, Metal, Dark, Floor, Stage, Seat, Rail, Banner,
+#              Grate, Duct,
 #              Gold, Bezel, Hull, HullDark   lit PBR, box-projected UVs at
 #              TILE metres per unit (Hull: 24 m) for the game's tiling sets
 #
@@ -92,6 +95,9 @@ MATS = {
     "Glow_Warm": material("Glow_Warm", (0.05, 0.04, 0.03), 0.4, 0.0, emit=(1.0, 0.8, 0.55)),
     "Glow_Cyan": material("Glow_Cyan", (0.02, 0.05, 0.06), 0.4, 0.0, emit=(0.2, 0.85, 1.0)),
     "Glow_Red": material("Glow_Red", (0.05, 0.01, 0.01), 0.4, 0.0, emit=(1.0, 0.15, 0.1)),
+    "Glow_Lamp": material("Glow_Lamp", (0.05, 0.05, 0.05), 0.4, 0.0, emit=(0.9, 0.95, 1.0), strength=12),
+    "Grate": material("Grate", (0.05, 0.055, 0.06), 0.5, 0.6),
+    "Duct": material("Duct", (0.32, 0.26, 0.12), 0.7, 0.1),
 }
 
 KIT = Kit(os.path.join(HERE, "kit", "Shipyard.blend"),
@@ -119,6 +125,25 @@ SEAT_LIFT = 0.25                      # seated sprites start at the waist
 VIEW = Vector((0.0, -14.6, 4.0))      # the wide shot's eye
 
 _last = {}
+
+# Doom 3 direction: big calm modules (the tech texture sets carry the
+# detail), dark grating and ducts overhead, and almost nothing glowing
+# that isn't a light fixture. LAMPS are the fixtures the game lights.
+LAMPS = []
+
+def fixture(lo, hi, face, kind, cone, aim=(0, 0, -1)):
+    """A lamp housing (Metal) from lo to hi with its lens (Glow_Lamp) on
+    the side `face` ('-z' down, '+z' up), and a lamp just off the lens."""
+    lo, hi = Vector(lo), Vector(hi)
+    chamfer_box(room, lo, hi, "Metal", c=0.04)
+    c = (lo + hi) / 2
+    if face == '-z':
+        box(room, (lo.x + 0.08, lo.y + 0.08, lo.z - 0.02), (hi.x - 0.08, hi.y - 0.08, lo.z), "Glow_Lamp")
+        at = Vector((c.x, c.y, lo.z - 0.25))
+    else:
+        box(room, (lo.x + 0.08, lo.y + 0.08, hi.z), (hi.x - 0.08, hi.y - 0.08, hi.z + 0.02), "Glow_Lamp")
+        at = Vector((c.x, c.y, hi.z + 0.25))
+    LAMPS.append({"kind": kind, "at": [round(v, 3) for v in at], "aim": list(aim), "cone": cone})
 
 def anchor(kind, p, facing, scale=1.0):
     """A person: one upright quad, bottom edge on `p`, facing `facing`, with
@@ -164,30 +189,29 @@ def greeble_strip(axis, fixed, a0, a1, lo, hi, depth, rng, density=0.9, mat="Met
 box(room, (-W, BACK, -0.2), (W, FRONT, 0), "Floor")
 box(room, (-W, BACK, H), (W, FRONT, H + 0.3), "Dark")
 box(room, (-W, BACK - 0.4, 0), (W, BACK, H), "Wall")
-greeble_strip('y', BACK, -W + BAL_D, W - BAL_D, 3.5, H - 1.5, 0.5, rng, mat="Panel")
+for z in (4.2, 8.4, 12.6):                                                   # ledges at the module bands
+    chamfer_box(room, (-W + BAL_D, BACK, z - 0.12), (W - BAL_D, BACK + 0.25, z + 0.12), "Panel", c=0.05)
 box(room, (-3, BACK, 0), (3, BACK + 0.15, 3.5), "Panel")                       # main doors
 box(room, (-0.04, BACK + 0.15, 0), (0.04, BACK + 0.2, 3.2), "Dark")
-box(room, (-1.2, BACK + 0.15, 3.7), (1.2, BACK + 0.22, 4.0), "Glow_Amber")
+box(room, (-0.15, BACK + 0.15, 3.7), (0.15, BACK + 0.22, 3.85), "Glow_Red")         # a status light
 
-# Ceiling: deep beams front to back, cross ribs with downlights, ducts and
-# machinery between the beams.
+# Ceiling: deep beams front to back and cross ribs, dark grating between
+# them with big insulated ducts running under it, and three fixtures:
+# over the audience either side of the aisle, and over the stage.
 BEAMS = (-11.5, -6.5, -2.2, 2.2, 6.5, 11.5)
 for x in BEAMS:
     chamfer_box(room, (x - 0.4, BACK, H - 1.4), (x + 0.4, FRONT, H), "Panel", c=0.15)
-    box(room, (x - 0.42, BACK, H - 1.45), (x + 0.42, FRONT, H - 1.38), "Metal")
 for y in range(int(BACK) + 2, int(FRONT), 4):
     chamfer_box(room, (-W, y - 0.3, H - 0.8), (W, y + 0.3, H), "Metal", c=0.1)
-    for a, b in zip(BEAMS, BEAMS[1:]):
-        x = (a + b) / 2
-        box(room, (x - 0.6, y - 0.12, H - 0.84), (x + 0.6, y + 0.12, H - 0.8), "Glow_Warm")
 for a, b in zip(BEAMS, BEAMS[1:]):
-    x = (a + b) / 2
-    w = b - a - 1.0
-    for y in range(int(BACK) + 4, int(FRONT), 4):
-        if rng.random() < 0.7:
-            kit(room, rng.choice(["Vent Block", "hull.Grill", "Build-up Block", "checkBlock"]),
-                (x, y - 2.0, H - 0.35), size=(w * rng.uniform(0.5, 0.9), 3.0, 0.6), rot=(180, 0, 0), mat="Dark")
-    polyline(room, [(x - w / 2 + 0.2, BACK, H - 1.0), (x - w / 2 + 0.2, FRONT, H - 1.0)], 0.12, "Metal")
+    box(room, (a + 0.4, BACK, H - 0.5), (b - 0.4, FRONT, H - 0.45), "Grate")
+for x, r in ((-8.6, 0.45), (-9.9, 0.3), (8.8, 0.5), (4.0, 0.35)):
+    cyl(room, (x, BACK, H - 0.9 - r), (x, FRONT, H - 0.9 - r), r, mat="Duct", segs=16)
+    for y in range(int(BACK) + 1, int(FRONT), 3):                            # bands round the ducts
+        cyl(room, (x, y - 0.06, H - 0.9 - r), (x, y + 0.06, H - 0.9 - r), r + 0.03, mat="Metal", segs=16)
+for (x, y) in ((-4.35, -5.0), (4.35, -5.0)):
+    fixture((x - 0.9, y - 0.5, H - 1.75), (x + 0.9, y + 0.5, H - 1.45), '-z', "audience", 115)
+fixture((-0.9, 4.5, H - 1.75), (0.9, 5.5, H - 1.45), '-z', "stage", 95, aim=(0, 0.45, -1))
 
 # ---- front wall: the screen in a stepped bezel, pilasters with sconces
 x0, x1, z0, z1 = SCREEN
@@ -210,11 +234,9 @@ for a, b in zip(edge, edge[1:] + edge[:1]):
     cyl(room, (a[0], FRONT - 0.12, a[1]), (b[0], FRONT - 0.12, b[1]), 0.04, mat="Glow_Cyan", segs=6)
 sy = FRONT - 0.1
 quad(room, [(x0, sy, z0), (x1, sy, z0), (x1, sy, z1), (x0, sy, z1)], "Screen_Briefing")
-for x in (-6.0, 0.0, 6.0):
-    box(room, (x - 0.9, FRONT - 0.44, z1 + 0.5), (x + 0.9, FRONT - 0.4, z1 + 0.75), "Glow_Amber" if x == 0 else "Glow_AmberDim")
 # A duct run over the screen, kit machinery either side of it.
 kit(room, "Vent Block", (0, FRONT - 0.6, z1 + 2.2), size=(1.2, 17.0, 1.4), rot=(0, 0, 90), mat="Metal")
-greeble_strip('y', FRONT, x0 - 1.0, x1 + 1.0, z1 + 3.0, H - 0.9, -0.6, rng, density=0.35)
+chamfer_box(room, (x0 - 1.0, FRONT - 0.4, z1 + 3.0), (x1 + 1.0, FRONT, H - 0.9), "Panel", c=0.08)
 
 for side in (-1, 1):
     px = side * (x1 + 2.1)
@@ -223,18 +245,17 @@ for side in (-1, 1):
     chamfer_box(room, (px - 1.05, FRONT - 1.2, 0), (px + 1.05, FRONT, 1.2), "Metal", c=0.2)
     for z in (5.0, 9.8):
         box(room, (px - 0.32, FRONT - 1.1, z - 0.85), (px + 0.32, FRONT - 1.0, z + 0.85), "Metal")
-        box(room, (px - 0.2, FRONT - 1.16, z - 0.7), (px + 0.2, FRONT - 1.1, z + 0.7), "Glow_Amber" if z > 9 else "Glow_AmberDim")
     for z in range(3, 14, 4):
         box(room, (px - 0.86, FRONT - 1.01, z), (px + 0.86, FRONT - 0.95, z + 0.05), "Dark")
     # Between pilaster and side wall: a wall of machinery.
     a0, a1 = sorted((side * (x1 + 3.0), side * (W - BAL_D)))
-    greeble_strip('y', FRONT, a0, a1, 1.0, H - 1.0, -0.8, rng, density=0.45, mat="Panel")
+    for z in (4.2, 8.4, 12.6):
+        chamfer_box(room, (a0, FRONT - 0.3, z - 0.12), (a1, FRONT, z + 0.12), "Panel", c=0.05)
 
 # Under the screen: recessed panels with lamps.
 for i in range(6):
     cx = x0 + 0.6 + i * (x1 - x0 - 1.2) / 5
     chamfer_box(room, (cx - 1.2, FRONT - 0.3, STAGE_H + 0.5), (cx + 1.2, FRONT, z0 - 1.3), "Panel", c=0.08)
-    box(room, (cx - 0.55, FRONT - 0.36, z0 - 2.0), (cx + 0.55, FRONT - 0.3, z0 - 1.75), "Glow_Amber" if i % 2 else "Glow_AmberDim")
     # A slatted vent in each panel: dark recess, five thin louvres.
     box(room, (cx - 0.8, FRONT - 0.31, STAGE_H + 0.8), (cx + 0.8, FRONT - 0.3, STAGE_H + 1.5), "Dark")
     for k in range(5):
@@ -247,11 +268,10 @@ for i in range(3):
     h = STAGE_H * (i + 1) / 4
     y = STAGE_Y - 0.45 * (3 - i)
     box(room, (-9.5 + i * 0.3, y, 0), (9.5 - i * 0.3, STAGE_Y, h), "Stage")
-    for side in (-1, 1):
-        sx = side * (8.0 + i * 0.1)
-        box(room, (sx - 1.0, y - 0.01, h - 0.08), (sx + 1.0, y, h - 0.03), "Glow_Amber")
-for x in range(-10, 11, 2):
-    box(room, (x - 0.25, STAGE_Y - 0.02, STAGE_H - 0.12), (x + 0.25, STAGE_Y, STAGE_H - 0.06), "Glow_Warm")
+# Two footlight cans on the stage edge, washing up the front wall.
+for x in (-3.2, 3.2):
+    fixture((x - 0.3, STAGE_Y + 0.3, STAGE_H), (x + 0.3, STAGE_Y + 0.9, STAGE_H + 0.3), '+z', "foot", 60,
+            aim=(-0.15 * math.copysign(1, x), 1.0, 0.75))
 # A lectern, stage left.
 chamfer_box(room, (-6.4, 4.0, STAGE_H), (-5.4, 4.7, STAGE_H + 1.15), "Metal", c=0.1)
 box(room, (-6.45, 3.95, STAGE_H + 1.15), (-5.35, 4.75, STAGE_H + 1.22), "Panel")
@@ -275,9 +295,6 @@ for side in (-1, 1):
             y = wy0 + (wy1 - wy0) * k / 5
             box(room, (wx - 0.1, y - 0.1, wz0), (wx + 0.25, y + 0.1, wz1), "Panel")
         box(room, (wx - 0.1, wy0, wz0 + 1.2), (wx + 0.25, wy1, wz0 + 1.35), "Panel")
-        for k in range(5):
-            y = wy0 + (wy1 - wy0) * (k + 0.5) / 5
-            box(room, (wx + 0.55, y - 0.5, wz1 - 0.06), (wx + 0.72, y + 0.5, wz1), "Glow_Amber")
     else:
         box(room, (wlo, BACK, 0), (whi, FRONT, H), "Wall")
         bx = wx - 0.3
@@ -303,8 +320,9 @@ for side in (-1, 1):
             zt = H
         lo_x, hi_x = sorted((wx, wx - side * 0.35))
         chamfer_box(room, (lo_x, y - 0.35, 0), (hi_x, y + 0.35, zt), "Panel", c=0.1)
-        greeble_strip('x', wx, y + 0.45, y + 3.55, TIERS[0] + 1.3, TIERS[1] - 0.6, -side * 0.4, rng, density=0.6)
-        greeble_strip('x', wx, y + 0.45, y + 3.55, 3.2, TIERS[0] - 1.0, -side * 0.3, rng, density=0.4)
+    for z in (2.9, TIERS[0] + 2.2, TIERS[1] + 2.2):                          # a ledge along each band
+        lo_x, hi_x = sorted((wx, wx - side * 0.22))
+        chamfer_box(room, (lo_x, BACK, z - 0.1), (hi_x, FRONT, z + 0.1), "Panel", c=0.04)
 
     edge_x = wx - side * BAL_D
     lo_x, hi_x = sorted((wx, edge_x))
@@ -313,8 +331,9 @@ for side in (-1, 1):
         box(room, (lo_x, y0, z - 0.45), (hi_x, y1, z), "Panel")
         f0, f1 = sorted((edge_x - side * 0.15, edge_x + side * 0.05))
         chamfer_box(room, (f0, y0, z - 0.9), (f1, y1, z + 0.1), "Metal", c=0.06)
-        for y in range(int(y0) + 1, int(y1), 2):
-            box(room, (edge_x - 0.25, y - 0.15, z - 0.95), (edge_x + 0.25, y + 0.15, z - 0.9), "Glow_Warm")
+        fy = -3.0 if z == TIERS[0] else 3.0
+        cx = wx - side * BAL_D / 2
+        fixture((cx - 0.5, fy - 0.8, z - 0.7), (cx + 0.5, fy + 0.8, z - 0.45), '-z', "low" if z == TIERS[0] else "tier", 110)
         # End caps of the balcony.
         for y in (y0, y1):
             chamfer_box(room, (lo_x, y - 0.2, z - 0.9), (hi_x, y + 0.2, z + 1.1), "Metal", c=0.08)
@@ -346,16 +365,19 @@ for side in (-1, 1):
                 f = Vector((-side, 0, 0)) + 0.6 * (VIEW - q).normalized() + Vector((0, (mid - my) * 0.9, 0))
                 anchor("Standing", q, f, scale=rng.uniform(0.92, 1.05))
             y += rng.uniform(1.2, 3.6)
+    # A lamp hung over the upper tier's rail, aimed back at the wall, so the
+    # rail and the people throw their shadows on it.
+    ux = wx - side * (BAL_D + 0.3)
+    fy = 1.0 if side < 0 else -4.0
+    cyl(room, (ux, fy, H - 1.4), (ux, fy, H - 2.3), 0.04, mat="Metal", segs=6)   # its hanger
+    fixture((ux - 0.4, fy - 0.9, H - 2.6), (ux + 0.4, fy + 0.9, H - 2.3), '-z', "upper", 110, aim=(side * 0.8, 0, -1))
     # Floor-level doors under the lower balcony, with sconces between.
     for y in (-11.0, -4.0, 4.0):
         d0, d1 = sorted((wx - side * 0.02, wx - side * 0.3))
         chamfer_box(room, (d0, y - 0.9, 0), (d1, y + 0.9, 2.7), "Panel", c=0.08)
         box(room, (d0 - 0.01, y - 0.03, 0), (d1 + 0.01, y + 0.03, 2.6), "Dark")
         box(room, (d0 - 0.01, y - 1.1, 2.7), (d1 + 0.01, y + 1.1, 2.9), "Metal")
-        box(room, (d0 - 0.02, y - 0.45, 3.1), (d1 + 0.02, y + 0.45, 3.3), "Glow_Amber")
-    for y in (-7.5, 0.0, 8.0):
-        s0, s1 = sorted((wx - side * 0.02, wx - side * 0.18))
-        box(room, (s0, y - 0.15, 2.3), (s1, y + 0.15, 3.5), "Glow_Amber")
+        box(room, (d0 - 0.02, y + 1.0, 1.4), (d1 + 0.02, y + 1.12, 1.52), "Glow_Red")   # a status light
 
 # ---- audience: rows of seats on a slight rake, centre aisle
 ROWS, ROW0, PITCH, RAKE = 8, -1.6, 1.45, 0.16
@@ -377,8 +399,6 @@ for r in range(ROWS):
         box(room, (x + 0.33, y - 0.2, z), (x + 0.41, y + 0.35, z + 0.7), "Metal")
         if rng.random() < 0.88:
             anchor("Seated", (x + rng.uniform(-0.04, 0.04), y, z + 0.42 + SEAT_LIFT), (0, -1, 0))   # back to the camera
-    for sx in (-0.5, 0.5):
-        box(room, (sx - 0.04, y - 0.55, z + 0.03), (sx + 0.04, y + 0.15, z + 0.07), "Glow_Amber")
 
 # ---- the cruiser alongside, seen through the window (kit BattleShip)
 lo, hi = kit(outside, "BattleShip", (-95, 20, 26), size=(None, 140, None), rot=(4, 0, -14), mat="Hull",
@@ -409,7 +429,8 @@ shots = {
     "screen": {"eye": g((0.0, -2.0, (z0 + z1) / 2)), "at": g((0.0, FRONT, (z0 + z1) / 2)), "fov": 40},
 }
 data = {"shots": shots,
-        "screen": {"min": g((x0, sy, z0)), "max": g((x1, sy, z1))}}
+        "screen": {"min": g((x0, sy, z0)), "max": g((x1, sy, z1))},
+        "lamps": [{"kind": l["kind"], "at": g(l["at"]), "aim": g(l["aim"]), "cone": l["cone"]} for l in LAMPS]}
 with open(ANCHORS, "w") as f:
     json.dump(data, f, indent=1)
     f.write("\n")

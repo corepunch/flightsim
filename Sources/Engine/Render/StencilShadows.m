@@ -4,7 +4,8 @@
 enum { kMaxLights = 12, kMasks = kMaxLights / 4 };   // four lights per RGBA mask
 static const uint32_t kFar = 0x80000000u;   // index flag: the vertex extruded past the light's reach
 
-typedef struct { simd_float4 position; simd_float4 color; } LightDesc;   // world pos + reach; linear rgb * scale
+// World position + reach; linear rgb * scale; spot axis + cos of the cone's half angle (-2: omni).
+typedef struct { simd_float4 position; simd_float4 color; simd_float4 spot; } LightDesc;
 
 typedef struct {
     simd_float4x4 viewProj;
@@ -184,7 +185,8 @@ static uint8_t *ClosedPieces(ShadowMesh *mesh) {
 
 // The volume of one light: a prism from every triangle that casts (turned
 // to face the light), sides only where neighbouring prisms don't cancel.
-static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 L, float reach) {
+static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 L, float reach, simd_float4 spot) {
+    float cone = spot.w > -1.5f ? acosf(spot.w) : (float)M_PI;
     uint32_t nt = mesh.triCount;
     const Tri *tris = mesh->tris.bytes;
     const simd_float4 *v = mesh->verts.bytes;
@@ -202,7 +204,11 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
         simd_float3 mid = (a + b + c) / 3;
         float r = fmaxf(simd_distance(mid, a), fmaxf(simd_distance(mid, b), simd_distance(mid, c)));
         float plane = simd_dot(n, L - a);
-        if (simd_distance(mid, L) - r > reach || fabsf(plane) < 0.05f) continue;
+        float dist = simd_distance(mid, L);
+        if (dist - r > reach || fabsf(plane) < 0.05f) continue;
+        // Wholly outside a spot's cone: its shadow would be too.
+        if (cone < (float)M_PI && dist > r &&
+            acosf(simd_clamp(simd_dot(spot.xyz, (mid - L) / dist), -1.0f, 1.0f)) - asinf(r / dist) > cone) continue;
         if (plane < 0) {
             if (closed[i]) continue;          // the light-facing side of a closed piece covers it
             uint32_t x = t.b; t.b = t.c; t.c = x;
@@ -270,13 +276,19 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
 - (void)addCaster:(SCNNode *)node skip:(NSArray<NSString *> *)skip { Collect(node, skip, _casters); }
 
 - (void)addLight:(simd_float3)p color:(NSColor *)color intensity:(float)intensity reach:(float)reach {
+    [self addLight:p color:color intensity:intensity reach:reach direction:simd_make_float3(0, -1, 0) cone:180];
+}
+
+- (void)addLight:(simd_float3)p color:(NSColor *)color intensity:(float)intensity reach:(float)reach
+       direction:(simd_float3)dir cone:(float)degrees {
     if (_nlights >= kMaxLights) { NSLog(@"StencilShadows: more than %d lights", kMaxLights); return; }
     NSColor *c = [color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] ?: color;
     simd_float3 lin = simd_make_float3(powf((float)c.redComponent, 2.2f), powf((float)c.greenComponent, 2.2f),
                                        powf((float)c.blueComponent, 2.2f));
     // Fitted against SceneKit's own omni lights in the briefing room
     // (SF_STENCIL=0 against SF_STENCIL=lit): within ~10% across the frame.
-    _lights[_nlights++] = (LightDesc){ simd_make_float4(p, reach), simd_make_float4(lin * (intensity * 0.42f), 0) };
+    _lights[_nlights++] = (LightDesc){ simd_make_float4(p, reach), simd_make_float4(lin * (intensity * 0.42f), 0),
+        simd_make_float4(simd_normalize(dir), degrees >= 180 ? -2.0f : cosf(degrees * 0.5f * (float)M_PI / 180)) };
 }
 
 - (void)finish {
@@ -291,7 +303,7 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
     uint8_t *closed = ClosedPieces(_casters);
     size_t total = 0;
     for (NSUInteger i = 0; i < _nlights; i++) {
-        NSData *idx = BuildVolume(_casters, closed, _lights[i].position.xyz, _lights[i].position.w);
+        NSData *idx = BuildVolume(_casters, closed, _lights[i].position.xyz, _lights[i].position.w, _lights[i].spot);
         _volumes[i] = [_device newBufferWithBytes:idx.bytes length:MAX(idx.length, 16) options:MTLResourceStorageModeShared];
         _volumeCount[i] = idx.length / sizeof(uint32_t);
         total += _volumeCount[i] / 3;
@@ -354,61 +366,71 @@ static NSData *BuildVolume(ShadowMesh *mesh, const uint8_t *closed, simd_float3 
 
 #pragma mark - Materials
 
+// One lamp's GGX contribution; `Lv` from the surface to the lamp, view space.
+static NSString *const kLampFunction = @
+    "#pragma declaration\n"
+    "inline float3 sl_lamp(float3 Lv, float reach, float3 axis, float cone, float3 N, float3 V, float NdV,\n"
+    "                      float3 albedo, float3 F0, float metal, float a2, float k) {\n"
+    "    float d = length(Lv);\n"
+    "    float w = saturate(1 - pow(d / reach, 4.0));\n"
+    "    float att = w * w / max(d * d, 0.01);   // inverse square, windowed to the reach\n"
+    "    float3 L = Lv / max(d, 1e-4);\n"
+    "    if (cone > -1.5) att *= smoothstep(cone, cone + 0.12, dot(-L, axis));   // a spot's soft edge\n"
+    "    float NdL = dot(N, L);\n"
+    "    if (NdL <= 0 || att <= 0) return float3(0);\n"
+    "    float3 H = normalize(L + V);\n"
+    "    float NdH = saturate(dot(N, H)), VdH = saturate(dot(V, H));\n"
+    "    float dd = NdH * NdH * (a2 - 1) + 1;\n"
+    "    float D = a2 / (3.14159265 * dd * dd);\n"
+    "    float G = NdL / (NdL * (1 - k) + k) * NdV / (NdV * (1 - k) + k);\n"
+    "    float3 F = F0 + (1 - F0) * pow(1 - VdH, 5.0);\n"
+    "    float3 spec = D * G * F / (4 * NdL * NdV + 1e-4);\n"
+    "    float3 kd = (1 - F) * (1 - metal);\n"
+    "    return (kd * albedo / 3.14159265 + spec) * (NdL * att);\n"
+    "}\n";
+
+static NSString *F(float v) { return [NSString stringWithFormat:@"%.6g", v]; }
+
 - (void)applyToMaterial:(SCNMaterial *)m tint:(NSColor *)tint {
-    NSMutableString *args = [NSMutableString stringWithString:@"#pragma arguments\ntexture2d<float> sl_mask0;\ntexture2d<float> sl_mask1;\ntexture2d<float> sl_mask2;\nfloat4 sl_tint;\n"];
-    NSMutableString *table = [NSMutableString string];
-    for (NSUInteger i = 0; i < _nlights; i++) {
-        [args appendFormat:@"float4 sl_p%lu;\nfloat4 sl_c%lu;\n", i, i];
-        [table appendFormat:@"P[%lu] = sl_p%lu; C[%lu] = sl_c%lu;\n", i, i, i, i];
-    }
-    NSString *body = [NSString stringWithFormat:@
+    // The lamps are static, so each is baked into the source as constants
+    // and its call unrolled: arrays of them per fragment spill registers
+    // past about eight lamps and halve the frame rate.
+    NSMutableString *src = [NSMutableString stringWithString:
+        @"#pragma arguments\ntexture2d<float> sl_mask0;\ntexture2d<float> sl_mask1;\ntexture2d<float> sl_mask2;\nfloat4 sl_tint;\n"];
+    [src appendString:kLampFunction];
+    [src appendString:@
         "#pragma body\n"
-        "float4 P[%d]; float4 C[%d];\n%@"
         "float4 clip = scn_frame.projectionTransform * float4(_surface.position, 1);\n"
         "float2 uv = float2(clip.x / clip.w * 0.5 + 0.5, 0.5 - clip.y / clip.w * 0.5);\n"
         "constexpr sampler ms(filter::linear, address::clamp_to_edge);\n"
         "float4 m0 = sl_mask0.sample(ms, uv), m1 = sl_mask1.sample(ms, uv), m2 = sl_mask2.sample(ms, uv);\n"
-        "float lit[12] = { m0.r, m0.g, m0.b, m0.a, m1.r, m1.g, m1.b, m1.a, m2.r, m2.g, m2.b, m2.a };\n"
         "float3 N = normalize(_surface.normal), V = normalize(_surface.view);\n"
         "float3 albedo = _surface.diffuse.rgb;\n"
         "float rough = clamp(_surface.roughness, 0.04, 1.0), metal = saturate(_surface.metalness);\n"
         "float a2 = rough * rough * rough * rough, k = (rough + 1) * (rough + 1) / 8;\n"
         "float3 F0 = mix(float3(0.04), albedo, metal);\n"
         "float NdV = max(dot(N, V), 1e-4);\n"
-        "float3 sum = float3(0);\n"
-        "for (int i = 0; i < %lu; i++) {\n"
-        "    if (lit[i] <= 0) continue;\n"
-        "    float3 Lv = (scn_frame.viewTransform * float4(P[i].xyz, 1)).xyz - _surface.position;\n"
-        "    float d = length(Lv);\n"
-        "    float w = saturate(1 - pow(d / P[i].w, 4.0));\n"
-        "    float att = w * w / max(d * d, 0.01);   // inverse square, windowed to the reach\n"
-        "    float3 L = Lv / max(d, 1e-4);\n"
-        "    float NdL = dot(N, L);\n"
-        "    if (NdL <= 0 || att <= 0) continue;\n"
-        "    float3 H = normalize(L + V);\n"
-        "    float NdH = saturate(dot(N, H)), VdH = saturate(dot(V, H));\n"
-        "    float dd = NdH * NdH * (a2 - 1) + 1;\n"
-        "    float D = a2 / (3.14159265 * dd * dd);\n"
-        "    float G = NdL / (NdL * (1 - k) + k) * NdV / (NdV * (1 - k) + k);\n"
-        "    float3 F = F0 + (1 - F0) * pow(1 - VdH, 5.0);\n"
-        "    float3 spec = D * G * F / (4 * NdL * NdV + 1e-4);\n"
-        "    float3 kd = (1 - F) * (1 - metal);\n"
-        "    sum += (kd * albedo / 3.14159265 + spec) * C[i].rgb * (NdL * att * lit[i]);\n"
-        "}\n"
-        "_output.color.rgb += sum * sl_tint.rgb * 3.14159265;\n%@",
-        kMaxLights, kMaxLights, table, (unsigned long)_nlights,
-        getenv("SF_STENCIL_DEBUG") ? @"_output.color.rgb = float3(lit[0], lit[1], lit[2]) * 0.5 + sum * 0.0001;\n" : @""];
+        "float4x4 vt = scn_frame.viewTransform;\n"
+        "float3 sum = float3(0);\n"];
+    static const char *chan[4] = { "r", "g", "b", "a" };
+    for (NSUInteger i = 0; i < _nlights; i++) {
+        LightDesc l = _lights[i];
+        NSString *lit = [NSString stringWithFormat:@"m%lu.%s", i / 4, chan[i % 4]];
+        [src appendFormat:@"if (%@ > 0) sum += %@ * float3(%@, %@, %@) * sl_lamp("
+                           "(vt * float4(%@, %@, %@, 1)).xyz - _surface.position, %@, "
+                           "(vt * float4(%@, %@, %@, 0)).xyz, %@, N, V, NdV, albedo, F0, metal, a2, k);\n",
+            lit, lit, F(l.color.x), F(l.color.y), F(l.color.z),
+            F(l.position.x), F(l.position.y), F(l.position.z), F(l.position.w),
+            F(l.spot.x), F(l.spot.y), F(l.spot.z), F(l.spot.w)];
+    }
+    [src appendString:@"_output.color.rgb += sum * sl_tint.rgb * 3.14159265;\n"];
+    if (getenv("SF_STENCIL_DEBUG")) [src appendString:@"_output.color.rgb = float3(m0.r, m0.g, m0.b) * 0.5 + sum * 0.0001;\n"];
     NSMutableDictionary *mods = [m.shaderModifiers mutableCopy] ?: [NSMutableDictionary dictionary];
-    mods[SCNShaderModifierEntryPointFragment] = [args stringByAppendingString:body];
+    mods[SCNShaderModifierEntryPointFragment] = src;
     m.shaderModifiers = mods;
     NSColor *t = [(tint ?: [NSColor whiteColor]) colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
     [m setValue:[NSValue valueWithSCNVector4:SCNVector4Make(powf((float)t.redComponent, 2.2f), powf((float)t.greenComponent, 2.2f),
                                                              powf((float)t.blueComponent, 2.2f), 1)] forKey:@"sl_tint"];
-    for (NSUInteger i = 0; i < _nlights; i++) {
-        simd_float4 p = _lights[i].position, c = _lights[i].color;
-        [m setValue:[NSValue valueWithSCNVector4:SCNVector4Make(p.x, p.y, p.z, p.w)] forKey:[NSString stringWithFormat:@"sl_p%lu", i]];
-        [m setValue:[NSValue valueWithSCNVector4:SCNVector4Make(c.x, c.y, c.z, 0)] forKey:[NSString stringWithFormat:@"sl_c%lu", i]];
-    }
     for (int k = 0; k < kMasks; k++) [m setValue:_maskProp[k] forKey:[NSString stringWithFormat:@"sl_mask%d", k]];
     [_materials addObject:m];
 }

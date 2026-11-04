@@ -10,7 +10,7 @@ assets reviewable as code and reproducible from a clean checkout.
 | `build_capitals.py` | capital ships, stations, props, rocks | `Resources/Models/Capital/*.obj` |
 | `build_cockpit.py` | the player cockpit | `Resources/Models/Cockpit.obj` |
 | `build_briefing_room.py` | the CNS Bastion briefing room | `Resources/Models/BriefingRoom.obj`, `Resources/Briefing/BriefingRoom.json` |
-| `build_hull_textures.py` | tiling PBR texture sets | `Resources/Textures/<set>_*` |
+| `build_hull_textures.py` | tiling PBR texture sets (hulls; `tech*`: the Doom 3 style interior) | `Resources/Textures/<set>_*` |
 | `kitbash.py` | shared helpers (mesh builder, primitives, kit loader) | — |
 
 `build.sh` bakes every OBJ into SceneKit `.scn` (`Tools/BakeModels.m`); the

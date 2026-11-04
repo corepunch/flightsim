@@ -59,12 +59,24 @@ static void Dress(SCNMaterial *m, NSString *set, NSColor *tint, float rough, flo
     }
 }
 
+// The tech interior sets (Art/build_hull_textures.py: techwall, techfloor,
+// techtrim, techgrate) carry their own albedo; one tile is 4 m, like the
+// room's UVs, and their relief is meant to be seen at full strength.
+static void Tech(SCNMaterial *m, NSString *set, float tint, float scale) {
+    Dress(m, set, RGB(tint, tint, tint), 0.5, 0.65, scale);
+    m.normal.intensity = 1.0;
+    m.metalness.contents = TextureURL([set stringByAppendingString:@"_metal"]);
+    m.metalness.wrapS = m.metalness.wrapT = SCNWrapModeRepeat;
+    m.metalness.contentsTransform = SCNMatrix4MakeScale(scale, scale, 1);
+}
+
 static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     m.lightingModelName = SCNLightingModelConstant;
     m.diffuse.contents = c;
     m.diffuse.intensity = intensity;   // > 1: blooms
     m.emission.contents = [NSColor blackColor];
 }
+
 
 @implementation BriefingRoom {
     id<MTLDevice> _device;
@@ -79,6 +91,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     float _leanNow;
     CGFloat _aspect;
     NSMutableDictionary<NSString *, NSImage *> *_sprites;
+    NSArray<NSDictionary *> *_lamps;   // the fixtures in BriefingRoom.json
     StencilShadows *_shadows;   // nil: the hall's lamps are plain SCNLights, no shadows
 }
 
@@ -103,7 +116,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
         _sky = [[SpaceSky alloc] initWithDevice:device faceSize:1024 seed:4242];
         _scene.background.contents = _sky.cubeTexture;
         _scene.lightingEnvironment.contents = _sky.cubeTexture;
-        _scene.lightingEnvironment.intensity = _shadows ? 0.06 : 0.25;
+        _scene.lightingEnvironment.intensity = _shadows ? 0.03 : 0.25;   // a hint of reflection, no fill
         [self cutTo:RoomShotWide];
     }
     return self;
@@ -120,6 +133,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
         shots[name] = [NSData dataWithBytes:&p length:sizeof p];
     }];
     _shots = shots;
+    _lamps = d[@"lamps"];
     _screenMin = d ? Vec(d[@"screen"][@"min"]) : simd_make_float3(-8, 4.4, -11.9);
     _screenMax = d ? Vec(d[@"screen"][@"max"]) : simd_make_float3(8, 11.4, -11.9);
     if (!d) NSLog(@"BriefingRoom: BriefingRoom.json missing");
@@ -206,11 +220,24 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
         m.emission.contents = [NSColor blackColor];
         return;
     }
+    if ([n isEqualToString:@"Glow_Lamp"])  { Glow(m, RGB(0.9, 0.95, 1.0), 3.0); return; }   // a fixture's lens
+    if ([n isEqualToString:@"Duct"])     { Dress(m, nil, RGB(0.3, 0.24, 0.1), 0.7, 0.1, 1); return; }
     if ([n isEqualToString:@"Glow_Amber"]) { Glow(m, RGB(1.0, 0.58, 0.24), outside ? 2.0 : 2.2); return; }
     if ([n isEqualToString:@"Glow_AmberDim"]) { Glow(m, RGB(1.0, 0.58, 0.24), 0.55); return; }   // every other fixture: lit, no bloom
     if ([n isEqualToString:@"Glow_Warm"])  { Glow(m, RGB(1.0, 0.82, 0.6), outside ? 1.6 : 1.5); return; }
     if ([n isEqualToString:@"Glow_Cyan"])  { Glow(m, RGB(0.25, 0.85, 1.0), 1.15); return; }
     if ([n isEqualToString:@"Glow_Red"])   { Glow(m, RGB(1.0, 0.18, 0.12), 2.4); return; }
+    if (_shadows && !outside) {
+        // Doom 3 style: big calm modules, tiles and grating under hard light.
+        if ([n isEqualToString:@"Wall"])     { Tech(m, @"techwall", 0.5, 1); return; }
+        if ([n isEqualToString:@"WallDark"]) { Tech(m, @"techwall", 0.28, 1); return; }
+        if ([n isEqualToString:@"Panel"])    { Tech(m, @"techtrim", 0.5, 1); return; }
+        if ([n isEqualToString:@"Floor"])    { Tech(m, @"techfloor", 0.45, 1); return; }
+        if ([n isEqualToString:@"Stage"])    { Tech(m, @"techgrate", 0.5, 1); return; }
+        if ([n isEqualToString:@"Grate"])    { Tech(m, @"techgrate", 0.3, 1); return; }
+        if ([n isEqualToString:@"Metal"])    { Tech(m, @"techtrim", 0.45, 2); return; }
+        if ([n isEqualToString:@"Dark"])     { Tech(m, @"techtrim", 0.18, 2); return; }
+    }
     if ([n isEqualToString:@"Wall"])     { Dress(m, @"bulkhead", RGB(0.2, 0.205, 0.215), 0.45, 0.45, 0.25); return; }
     if ([n isEqualToString:@"WallDark"]) { Dress(m, @"bulkhead", RGB(0.075, 0.078, 0.085), 0.55, 0.35, 0.12); return; }
     if ([n isEqualToString:@"Panel"])    { Dress(m, @"bulkhead", RGB(0.3, 0.3, 0.31), 0.35, 0.55, 0.5); return; }
@@ -224,6 +251,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     if ([n isEqualToString:@"Rail"])     { Dress(m, nil, RGB(0.62, 0.45, 0.25), 0.3, 1.0, 1); return; }
     if ([n isEqualToString:@"Gold"])     { Dress(m, nil, RGB(0.85, 0.62, 0.28), 0.3, 1.0, 1); return; }
     if ([n isEqualToString:@"Banner"])   { Dress(m, nil, RGB(0.32, 0.035, 0.045), 0.85, 0.0, 1); m.doubleSided = YES; return; }
+    if ([n isEqualToString:@"Grate"])    { Dress(m, nil, RGB(0.03, 0.033, 0.036), 0.5, 0.6, 1); return; }
     if ([n isEqualToString:@"Bezel"])    { Dress(m, nil, RGB(0.015, 0.017, 0.02), 0.3, 0.4, 1); return; }
     NSLog(@"BriefingRoom: unknown material %@", n);
     Dress(m, nil, RGB(0.2, 0.2, 0.2), 0.5, 0.2, 1);
@@ -245,7 +273,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     m.diffuse.contents = image;
     m.diffuse.wrapS = m.diffuse.wrapT = SCNWrapModeClamp;
     m.diffuse.mipFilter = SCNFilterModeLinear;
-    m.diffuse.intensity = 0.9;
+    m.diffuse.intensity = _shadows ? 0.6 : 0.9;   // unlit: under Doom 3 lighting, kept down to sit in the dark
     m.doubleSided = NO;
     m.blendMode = SCNBlendModeReplace;
     m.shaderModifiers = @{ SCNShaderModifierEntryPointFragment: @"if (_output.color.a < 0.5) discard_fragment();" };
@@ -271,30 +299,25 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     ambient.type = SCNLightTypeAmbient;
     ambient.color = RGB(0.5, 0.55, 0.7);
     // With hard shadows the fill comes down, so they read (Doom 3's contrast).
-    ambient.intensity = _shadows ? 12 : 70;
+    ambient.intensity = _shadows ? 0 : 70;   // Doom 3: no fill; what no lamp reaches is black
     ambient.categoryBitMask = kInside;
     SCNNode *an = [SCNNode node];
     an.light = ambient;
     [_scene.rootNode addChildNode:an];
 
     NSColor *warm = RGB(1.0, 0.78, 0.55), *amber = RGB(1.0, 0.62, 0.32), *cyan = RGB(0.35, 0.75, 1.0);
-    // The ceiling lamps hang in the bays between the beams (x = 0, +-4.35),
-    // under the beams' bottoms (13.6), so with shadows on, the beams and
-    // ribs throw long stripes across the ceiling and down the walls.
-    omni(simd_make_float3(-4.35f, 12.0f, 5), warm, 1600, 24);  // ceiling, over the audience
-    omni(simd_make_float3(4.35f, 12.0f, 5), warm, 1600, 24);
-    omni(simd_make_float3(0, 11.2f, -6), warm, 1100, 18);      // ceiling, over the stage
-    omni(simd_make_float3(0, 7.9, -8.5), cyan, 650, 14);      // the screen's spill
     if (_shadows) {
-        // Footlights along the stage edge: low and grazing, they throw the
-        // lectern, pilasters and under-screen panels long up the front wall.
-        omni(simd_make_float3(-3.0f, 1.2f, -2.0f), amber, 750, 16);
-        omni(simd_make_float3(3.0f, 1.2f, -2.0f), amber, 750, 16);
+        [self buildDoom3Lights];
+    } else {
+        omni(simd_make_float3(-6, 12.5, 4), warm, 1300, 22);       // ceiling, over the audience
+        omni(simd_make_float3(6, 12.5, 4), warm, 1300, 22);
+        omni(simd_make_float3(0, 12.0, -6), warm, 900, 18);        // ceiling, over the stage
+        omni(simd_make_float3(0, 7.9, -8.5), cyan, 650, 14);      // the screen's spill
+        omni(simd_make_float3(-12.5, 3.2, 0), amber, 700, 11);     // under the balconies
+        omni(simd_make_float3(12.5, 3.2, 0), amber, 700, 11);
+        omni(simd_make_float3(-12.5, 7.6, 2), amber, 550, 10);     // between the tiers
+        omni(simd_make_float3(12.5, 7.6, 2), amber, 550, 10);
     }
-    omni(simd_make_float3(-12.5, 3.2, 0), amber, 700, 11);     // under the balconies
-    omni(simd_make_float3(12.5, 3.2, 0), amber, 700, 11);
-    omni(simd_make_float3(-12.5, 7.6, 2), amber, 550, 10);     // between the tiers
-    omni(simd_make_float3(12.5, 7.6, 2), amber, 550, 10);
 
     SCNLight *star = [SCNLight light];
     star.type = SCNLightTypeDirectional;
@@ -305,6 +328,25 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     sn.light = star;
     sn.simdOrientation = simd_quaternion(simd_make_float3(0, 0, -1), simd_normalize(simd_make_float3(0.6, -0.4, -0.7)));
     [_scene.rootNode addChildNode:sn];
+}
+
+// Under stencil shadows: Doom 3's rig. No fill at all; a spot at each
+// fixture the room was built with (BriefingRoom.json "lamps"), aimed where
+// the light is wanted, each a pool with hard shadows and black between.
+- (void)buildDoom3Lights {
+    NSColor *white = RGB(0.86, 0.94, 1.0), *amber = RGB(1.0, 0.66, 0.38);
+    // kind -> colour, lumens (as an SCNLight's), reach
+    NSDictionary *rig = @{ @"audience": @[white, @7000, @20], @"stage": @[white, @6000, @18],
+                           @"foot": @[white, @1500, @15], @"low": @[amber, @2400, @11], @"tier": @[white, @2200, @11],
+                           @"upper": @[white, @2600, @12] };
+    for (NSDictionary *l in _lamps) {
+        NSArray *r = rig[l[@"kind"]];
+        if (!r) { NSLog(@"BriefingRoom: unknown lamp kind %@", l[@"kind"]); continue; }
+        [_shadows addLight:Vec(l[@"at"]) color:r[0] intensity:[r[1] floatValue] reach:[r[2] floatValue]
+                 direction:Vec(l[@"aim"]) cone:[l[@"cone"] floatValue]];
+    }
+    // The screen is lit too: its spill on the stage and the front wall.
+    [_shadows addLight:simd_make_float3(0, 7.9f, -8.5f) color:RGB(0.35, 0.75, 1.0) intensity:450 reach:10];
 }
 
 - (NSArray *)warmupObjects { return @[_scene]; }

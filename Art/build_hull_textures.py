@@ -561,6 +561,202 @@ def ribbed(name, seed):
     return 1
 
 
+# ---------------------------------------------------------------- interiors
+#
+# Dark, heavy tech interiors in the spirit of id Tech 4 (Doom 3) era sets,
+# all original: deep bevelled modules, conduits, grilles and bolts in dark
+# gunmetal, with a lot of grime in the cavities and bright wear on the
+# edges, so they read under hard per-light shading with no fill. One tile
+# is 4 m (the briefing room's UVs run one unit per 4 m).
+
+
+def bolts(H, A, M, cx, cy, r=6):
+    yy, xx = np.mgrid[-r:r + 1, -r:r + 1]
+    t = np.clip(1 - (xx * xx + yy * yy) / float(r * r), 0, 1)
+    for x, y in zip(np.atleast_1d(cx), np.atleast_1d(cy)):
+        x, y = int(x) % N, int(y) % N
+        sy, sx = slice(max(y - r, 0), min(y + r + 1, N)), slice(max(x - r, 0), min(x + r + 1, N))
+        tt = t[sy.start - (y - r):sy.stop - (y - r), sx.start - (x - r):sx.stop - (x - r)]
+        H[sy, sx] = np.maximum(H[sy, sx], H[sy, sx] * (tt <= 0) + (np.sqrt(tt) * 0.5 + 0.2) * (tt > 0))
+        A[sy, sx] = np.where((tt > 0)[..., None], A[sy, sx] * 0.7 + 0.08, A[sy, sx])
+        M[sy, sx] = np.where(tt > 0, 0.85, M[sy, sx])
+
+
+def grille(H, A, R, sl, w, h, pitch=12, vertical=False):
+    """Slots through a panel: louvres over a black void."""
+    yy, xx = np.mgrid[0:h, 0:w]
+    u = (xx if vertical else yy) % pitch
+    slat = np.clip(1 - np.abs(u - pitch / 2) / (pitch / 2), 0, 1)
+    d = edge_distance(w, h)
+    inside = d > 6
+    H[sl] = np.where(inside, H[sl] - 0.7 + slat * 0.55, H[sl])
+    A[sl] = np.where(inside[..., None], A[sl] * (0.25 + 0.75 * slat[..., None] ** 2), A[sl])
+    R[sl] = np.where(inside, 0.7, R[sl])
+
+
+def pipes(H, A, M, R, y0, count, radius, gap):
+    """Horizontal conduits across the tile, wrapped."""
+    yy, _ = grid()
+    for k in range(count):
+        c = y0 + k * (2 * radius + gap)
+        t = np.clip(1 - (wrap(yy - c) / radius) ** 2, 0, 1)
+        on = t > 0
+        H[on] = np.maximum(H[on], 0.6 + np.sqrt(t[on]) * 0.9)
+        A[on] = A[on] * 0.6 + 0.07
+        M[on] = 0.8
+        R[on] = 0.3
+        # Clamps every 512 px.
+        _, xx = grid()
+        clamp = on & (np.abs(wrap(xx - 128 - 512 * (k % 2) / 2) % 512 - 256) < 10)
+        H[clamp] += 0.35
+        A[clamp] *= 0.6
+
+
+def plate(rng, A, R, M, sl, tone, rough=0.3):
+    """A smooth metal plate: one flat cool grey-green, a little per-plate."""
+    t = tone * rng.uniform(0.95, 1.05)
+    A[sl] = np.array([0.93, 1.0, 0.98], np.float32) * t
+    R[sl] = rough + rng.uniform(-0.03, 0.03)
+    M[sl] = 0.65
+
+
+def raised(H, sl, w, h, height, bevel):
+    """Raise a rectangle with a sloped edge `bevel` px wide."""
+    H[sl] += np.clip(edge_distance(w, h) / bevel, 0, 1) * height
+
+
+def seam(H, A, sl, w, h, width=2.5):
+    d = edge_distance(w, h)
+    H[sl][d < width] -= 1.0
+    A[sl][d < width] *= 0.25
+
+
+def techwall(name, seed):
+    """Wall modules 1024 px (2 m) wide and the tile (4 m) tall, in bands:
+    a lamp lip, a tall smooth upper plate, a ledge, a lower plate with
+    faint hazard striping, a vent strip, a kick plate; a thick raised
+    pillar between modules. Big calm surfaces, few details."""
+    rng = np.random.default_rng(seed)
+    H, A, R, M, E = maps()
+    P = 64                                       # half the pillar
+    bands = [(0, 130, "lip"), (130, 760, "upper"), (890, 120, "ledge"), (1010, 560, "lower"),
+             (1570, 110, "vent"), (1680, 368, "kick")]
+    for col in range(2):
+        x0, x1 = col * 1024 + P, col * 1024 + 1024 - P
+        w = x1 - x0
+        for (y, h, kind) in bands:
+            sl = (slice(y, y + h), slice(x0, x1))
+            tone = {"lip": 0.2, "upper": 0.34, "ledge": 0.38, "lower": 0.3, "vent": 0.16, "kick": 0.24}[kind]
+            plate(rng, A, R, M, sl, tone, 0.26 if kind in ("upper", "lower") else 0.38)
+            if kind == "ledge":
+                raised(H, sl, w, h, 3.0, 22)
+            elif kind == "lip":
+                raised(H, sl, w, h, 2.0, 14)
+                d = edge_distance(w, h)
+                slot = (slice(y + 40, y + 90), slice(x0 + 120, x1 - 120))
+                H[slot] -= 1.5
+                A[slot] *= 0.3
+            elif kind == "vent":
+                grille(H, A, R, (slice(y + 20, y + h - 20), slice(x0 + 60, x1 - 60)), w - 120, h - 40, pitch=16, vertical=True)
+            elif kind == "upper":
+                raised(H, sl, w, h, 0.8, 30)
+                # Two small inlets and a status light housing, low on the plate.
+                for (ix, iy, iw, ih) in [(80, 560, 180, 26), (w - 300, 560, 120, 26), (w // 2 - 40, 600, 80, 14)]:
+                    isl = (slice(y + iy, y + iy + ih), slice(x0 + ix, x0 + ix + iw))
+                    H[isl] -= 0.6
+                    A[isl] *= 0.35
+            elif kind == "lower":
+                raised(H, sl, w, h, 0.5, 30)
+                yy, xx = np.mgrid[0:h, 0:w]
+                stripe = (((xx + yy) // 90) % 2 == 0) & (yy > 300) & (yy < 520)
+                A[sl] = np.where(stripe[..., None], A[sl] * 0.82, A[sl])
+            else:
+                raised(H, sl, w, h, 1.2, 12)
+            seam(H, A, sl, w, h)
+        # The pillar: raised, a groove down the middle, bolted.
+        for xs in ([slice(N - P, N), slice(0, P)] if col == 0 else [slice(1024 - P, 1024 + P)]):
+            sl = (slice(0, N), xs)
+            plate(rng, A, R, M, sl, 0.28, 0.32)
+            H[sl] += 4.0
+        c = col * 1024
+        _, xx = grid()
+        dx = np.abs(wrap(xx - c))
+        groove = dx < 8
+        H[groove] -= 2.0
+        A[groove] *= 0.3
+        edge = (dx >= P - 3) & (dx < P)
+        H[edge] -= 1.5
+        bolts(H, A, M, np.full(N // 256, (c + 32) % N), np.arange(128, N, 256), r=8)
+        bolts(H, A, M, np.full(N // 256, (c - 32) % N), np.arange(128, N, 256), r=8)
+    scratches(rng, A, R, M, 120, length=(10, 60))
+    finish(name, rng, H, A, R, M, E, grime_amount=0.35, streak_amount=0.5)
+    return 1
+
+
+def techfloor(name, seed):
+    """Floor: 256 px (0.5 m) square tiles, smooth and faintly bevelled,
+    in thin dark grout."""
+    rng = np.random.default_rng(seed)
+    H, A, R, M, E = maps()
+    T = 256
+    for ty in range(N // T):
+        for tx in range(N // T):
+            sl = (slice(ty * T, ty * T + T), slice(tx * T, tx * T + T))
+            plate(rng, A, R, M, sl, 0.3, 0.3)
+            M[sl] = 0.15                          # ceramic, not metal
+            raised(H, sl, T, T, 1.0, 6)
+            seam(H, A, sl, T, T, 3.0)
+    finish(name, rng, H, A, R, M, E, grime_amount=0.4, streak_amount=0.0)
+    return 1
+
+
+def techgrate(name, seed):
+    """Walkway grating: 512 px (1 m) panels of square mesh in frames."""
+    rng = np.random.default_rng(seed)
+    H, A, R, M, E = maps()
+    T = 512
+    yy, xx = np.mgrid[0:T, 0:T]
+    mesh = ((xx % 24) < 5) | ((yy % 24) < 5)
+    for ty in range(N // T):
+        for tx in range(N // T):
+            sl = (slice(ty * T, ty * T + T), slice(tx * T, tx * T + T))
+            plate(rng, A, R, M, sl, 0.3, 0.35)
+            d = edge_distance(T, T)
+            frame = d < 22
+            hole = ~mesh & ~frame
+            H[sl] = np.where(frame, 2.0, np.where(mesh, 1.2, -2.0))
+            A[sl] = np.where(hole[..., None], 0.02, A[sl])
+            R[sl] = np.where(hole, 0.9, R[sl])
+            seam(H, A, sl, T, T, 2.5)
+    finish(name, rng, H, A, R, M, E, grime_amount=0.5, streak_amount=0.0)
+    return 1
+
+
+def techtrim(name, seed):
+    """Beams and machinery: big bevelled 1024 x 512 px plates, a slot or
+    a vent on some, bolted corners."""
+    rng = np.random.default_rng(seed)
+    H, A, R, M, E = maps()
+    TW, TH = 1024, 512
+    for ty in range(N // TH):
+        for tx in range(N // TW):
+            sl = (slice(ty * TH, ty * TH + TH), slice(tx * TW, tx * TW + TW))
+            plate(rng, A, R, M, sl, rng.choice([0.26, 0.32]), 0.3)
+            raised(H, sl, TW, TH, 2.0, 24)
+            k = rng.choice(["plain", "slot", "vent"], p=[0.5, 0.3, 0.2])
+            if k == "slot":
+                isl = (slice(ty * TH + 220, ty * TH + 260), slice(tx * TW + 160, tx * TW + 860))
+                H[isl] -= 1.2
+                A[isl] *= 0.3
+            elif k == "vent":
+                grille(H, A, R, (slice(ty * TH + 140, ty * TH + 370), slice(tx * TW + 300, tx * TW + 724)), 424, 230, pitch=16)
+            seam(H, A, sl, TW, TH)
+            bolts(H, A, M, np.array([tx * TW + 40, tx * TW + TW - 40] * 2),
+                  np.array([ty * TH + 40, ty * TH + 40, ty * TH + TH - 40, ty * TH + TH - 40]), r=9)
+    scratches(rng, A, R, M, 100, length=(10, 60))
+    finish(name, rng, H, A, R, M, E, grime_amount=0.35, streak_amount=0.5)
+    return 1
+
 SETS = {
     "panels": lambda: generate("panels", 11, detail=1.0, paint=0.35, windows=0.05, tones=(0.48, 0.86)),
     "plating": lambda: generate("plating", 23, detail=0.55, paint=0.6, windows=0.08, big=True, tones=(0.62, 0.9)),
@@ -571,6 +767,11 @@ SETS = {
     # Interior bulkheads (the briefing room): big painted panels, few
     # greebles, no windows.
     "bulkhead": lambda: generate("bulkhead", 79, detail=0.25, paint=0.8, windows=0.0, big=True, tones=(0.55, 0.72)),
+    # Interiors with no fill light (the briefing room under stencil shadows).
+    "techwall": lambda: techwall("techwall", 83),
+    "techfloor": lambda: techfloor("techfloor", 89),
+    "techtrim": lambda: techtrim("techtrim", 97),
+    "techgrate": lambda: techgrate("techgrate", 101),
 }
 
 os.makedirs(OUT, exist_ok=True)

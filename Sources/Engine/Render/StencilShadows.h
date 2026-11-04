@@ -30,6 +30,10 @@
 // Up to 12 lights. `color` in sRGB; `intensity` as an SCNLight's (lumens);
 // `reach` as its attenuationEndDistance (falloff exponent 2, from 0).
 - (void)addLight:(simd_float3)position color:(NSColor *)color intensity:(float)intensity reach:(float)reach;
+// A spot (Doom 3's lights mostly were): lights only within `cone` degrees
+// (full angle) around `direction`, with a soft edge.
+- (void)addLight:(simd_float3)position color:(NSColor *)color intensity:(float)intensity reach:(float)reach
+       direction:(simd_float3)direction cone:(float)degrees;
 @property (nonatomic, readonly) NSUInteger lightCount;
 
 // Builds the volumes; call once after adding everything.
