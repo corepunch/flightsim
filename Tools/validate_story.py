@@ -29,12 +29,15 @@ def validate_mission(mission):
     epilogue = mission["debrief"]["dialogue"]
     assert len(scene["lines"]) >= 2 and epilogue, f"Mission {index}: missing story"
     assert cast == {line["portrait"] for line in scene["lines"]}, f"Mission {index}: cast mismatch"
+    assert "Lancer1" in cast, f"Mission {index}: Lancer 1 never speaks in the briefing"
     check_art(ART / f'{scene["room"]}.png')
-    for line in scene["lines"] + epilogue:
-        assert line["portrait"] in PORTRAITS, (index, line)
-        assert line["speaker"].strip() and line["text"].strip(), (index, line)
-        if line["portrait"] == "Lancer1":
-            assert line in epilogue and line["listener"] in PORTRAITS - {"Lancer1"}, (index, line)
+    for conversation in (scene["lines"], epilogue):
+        listeners = {line["portrait"] for line in conversation} - {"Lancer1"}
+        for line in conversation:
+            assert line["portrait"] in PORTRAITS, (index, line)
+            assert line["speaker"].strip() and line["text"].strip(), (index, line)
+            if line["portrait"] == "Lancer1":
+                assert line["listener"] in listeners, (index, line)
     assert all(mission["debrief"][key].strip() for key in ("win", "lose")), index
 
     entities = {entity["id"]: entity for entity in mission["entities"]}

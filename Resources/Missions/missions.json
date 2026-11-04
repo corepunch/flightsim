@@ -59,12 +59,15 @@
         "stardate": "2716.104",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Varn", "Okafor", "Lancer2"],
+          "cast": ["Varn", "Okafor", "Lancer2", "Lancer1"],
           "focus": "nav2",
           "lines": [
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Three buoys, one clean orbit. Your first patrol should be the most boring hour of your life." },
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Traffic control found fresh scan marks on the outer buoys. If you meet anyone out there, see what they were looking at." },
-            { "speaker": "Lancer 2", "portrait": "Lancer2", "text": "I'll fly your wing. You take us through the buoys, Lancer. I'll watch for company." }
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Okafor", "text": "Any idea where they last showed up? I'd like to know when to stop admiring the view." },
+            { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Near NAV 2. Keep your eyes out from the first buoy. They know the route as well as we do." },
+            { "speaker": "Lancer 2", "portrait": "Lancer2", "text": "I'll fly your wing. You take us through the buoys, Lancer. I'll watch for company." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer2", "text": "Good. Coffee's on me when we get back." }
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -111,7 +114,8 @@
         "win": "Three scouts down and the picket line holds. The Skarn now know we are watching.",
         "lose": "We lost you on the patrol. Without that report, the Skarn will know exactly where the Bastion is.",
         "dialogue": [
-          { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "The scout recorder contained our convoy's departure schedule. That's not something the Skarn could have guessed." }
+          { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "The scout recorder contained our convoy's departure schedule. That's not something the Skarn could have guessed." },
+          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Okafor", "text": "Then warn the convoy before we chase the leak. Is Captain Sen still on Bastion's frequency?"}
         ]
       }
     },
@@ -123,11 +127,14 @@
         "stardate": "2716.107",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["MiraCaptain", "Varn"],
+          "cast": ["MiraCaptain", "Varn", "Lancer1"],
           "focus": "mira",
           "lines": [
             { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Sen, freighter Mira. We haul medical filters and ration packs. Someone just tried to cancel our escort using the convoy's private call sign.", "channel": "FREIGHTER MIRA / UPLINK" },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Escort both ships first. We can investigate the leak once they're alive to answer questions." }
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "text": "Can Tobin match your speed, Captain? Two ships are easier to cover if I can see them both." },
+            { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "She's heavier than we are. I'll ease off and let her set the pace.", "channel": "FREIGHTER MIRA / UPLINK" },
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Escort both ships first. We can investigate the leak once they're alive to answer questions." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "Understood. I'll keep Two with the freighters if the interceptors try to draw us off." }
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -183,12 +190,14 @@
         "stardate": "2716.111",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["MiraCaptain", "Okafor", "Varn"],
+          "cast": ["MiraCaptain", "Okafor", "Varn", "Lancer1"],
           "focus": "relay",
           "lines": [
             { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "K-7 sent a distress call before the convoy attack. The voice said they were ordered to shut down their own transmitter." },
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "That order carried a valid Concord command seal. Someone inside our network silenced the relay." },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "First we save the relay. Then we find whose seal that was." }
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "How long does the relay need us? I don't want to chase the last bomber and leave them exposed." },
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Two and a half minutes. Kestrel takes the watch once the backlog is through. Then we find whose seal that was." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "I'll stay on the relay. If anyone calls off the relief, I want to hear it from you." }
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
@@ -242,10 +251,12 @@
         "stardate": "2716.114",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Okafor", "Varn"],
+          "cast": ["Okafor", "Varn", "Lancer1"],
           "focus": "corvette",
           "lines": [
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "The Vesk has been destroying survey drones, not ships. Every lost drone was mapping the Corvid jump corridor." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Okafor", "text": "Can you plot the gaps in the surveys? I'll start where the Vesk left off." },
+            { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "I've marked her patrol loop on the board. It crosses the last stretch the drones surveyed." },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Find that corvette before it wipes the next survey. I'll have salvage crews listen for its recorder." }
           ]
         },
@@ -296,12 +307,14 @@
         "stardate": "2716.118",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Okafor", "MiraCaptain", "Varn"],
+          "cast": ["Okafor", "MiraCaptain", "Varn", "Lancer1"],
           "focus": "containers",
           "lines": [
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "The Vesk's recorder lists a pickup at Tarn. The weapons on that manifest were paid for with Concord military credits." },
             { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "I saw those container codes on my own manifests. Somebody is using legitimate freighters to move contraband." },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Scan before you fire. We are not starting a war with our own civilians." }
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "If the first tag comes back dirty, do I take the shot or finish the sweep?" },
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Finish the sweep. Keep your guns cold until you've read all six tags. There are civilian shipments out there." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "text": "Captain, stay on this frequency. If I find one of your codes, I'd like you to see the scan." }
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
@@ -344,7 +357,8 @@
         "win": "We cut a supply line, and the corsairs now know we are onto them.",
         "lose": "We lost the chance to identify the shipment at Tarn.",
         "dialogue": [
-          { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Look at the departure stamp. Ondine hauled this same lot out of Tarn last week. She'll have the original paperwork." }
+          { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Look at the departure stamp. Ondine hauled this same lot out of Tarn last week. She'll have the original paperwork." },
+          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "text": "Put me through to Ondine. Whoever changed those manifests will know what we just found."}
         ]
       }
     },
@@ -356,12 +370,15 @@
         "stardate": "2716.121",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Orin", "Varn", "Lancer5"],
+          "cast": ["Orin", "Varn", "Lancer5", "Lancer1"],
           "focus": "corla",
           "lines": [
             { "speaker": "Chief Engineer Mae Orin", "portrait": "Orin", "text": "I've fuelled ships on this line for twenty years. Someone filed a divert order for Corla while she was already on the hose. I told the crew to ignore it." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Orin", "text": "Can Corla pull off the hose if the depot takes a hit?" },
+            { "speaker": "Chief Engineer Mae Orin", "portrait": "Orin", "text": "She's stuck there until she's full. Give me two and a half minutes and I'll get her clear." },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Hold the depot. We need the tanker more than another victory tally." },
-            { "speaker": "Lancer 5", "portrait": "Lancer5", "text": "I'll stay with Corla while she's on the hose. If the Skarn split up, I'll call which ones are coming for the tanker." }
+            { "speaker": "Lancer 5", "portrait": "Lancer5", "text": "I'll stay with Corla while she's on the hose. If the Skarn split up, I'll call which ones are coming for the tanker." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer5", "text": "Call the first ship that turns toward Corla. I'll intercept so you can stay with the tanker."}
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -416,10 +433,12 @@
         "stardate": "2716.125",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Imani", "Okafor", "Varn"],
+          "cast": ["Imani", "Okafor", "Varn", "Lancer1"],
           "focus": "pods",
           "lines": [
             { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "The Ondine is gone. Mercy is tracking five beacons, and one pod is already reporting a pressure leak." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Imani", "text": "Can I take the pods at speed, Doctor, or do I have to stop alongside each one?" },
+            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "You can stay moving. Pass within thirty metres and your tractor will pick them up." },
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Ondine carried the original Tarn manifest. The survivors can tell us what they loaded. Get them aboard Mercy first." },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Bring every pod home. Every one." }
           ]
@@ -467,7 +486,8 @@
         "win": "All of the Ondine's crew are aboard the Mercy. Every one of them.",
         "lose": "We did not get everyone out.",
         "dialogue": [
-          { "speaker": "Juno Vale", "portrait": "Juno", "text": "When my pod went dark I started counting breaths. I was at sixty when you found me. I'm Juno. I kept a copy of the cargo log." }
+          { "speaker": "Juno Vale", "portrait": "Juno", "text": "When my pod went dark I started counting breaths. I was at sixty when you found me. I'm Juno. I kept a copy of the cargo log." },
+          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Juno", "text": "I'm glad you kept counting, Juno. Give the log to Imani when you've had a chance to breathe."}
         ]
       }
     },
@@ -479,11 +499,14 @@
         "stardate": "2716.130",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Juno", "Imani", "Varn"],
+          "cast": ["Juno", "Imani", "Varn", "Lancer1"],
           "focus": "halcyon",
           "lines": [
             { "speaker": "Juno Vale", "portrait": "Juno", "text": "I was on the Ondine. Our cargo wasn't weapons. It was gate calibration equipment, marked for destruction. Somebody wanted it hidden." },
             { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "Those calibrators can turn a jump gate into a resonant transmitter. The Corvid field is the ideal place to test one." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Imani", "text": "Once Halcyon reaches the survey point, how long is she sitting still?" },
+            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "Forty seconds. The dish has to hold steady the whole time." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Imani", "text": "Tell the survey crew to keep their eyes on the instruments. I'll watch the rocks." },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Escort the Halcyon. Let's see what the field is concealing." }
           ]
         },
@@ -538,10 +561,11 @@
         "stardate": "2716.133",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Orin", "Okafor"],
+          "cast": ["Orin", "Okafor", "Lancer1"],
           "focus": "mines",
           "lines": [
             { "speaker": "Chief Engineer Mae Orin", "portrait": "Orin", "text": "The mine pattern matches an old Concord exclusion diagram. The Skarn shouldn't have access to our own deployment grid." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Orin", "text": "Orin, give me the edge of the old grid. I'll start outside it and work inward."},
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Someone has been feeding them our routes. Clear the corridor so Bastion can move before the next betrayal." }
           ]
         },
@@ -591,12 +615,15 @@
         "stardate": "2716.136",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Rhea", "Varn", "Lancer3"],
+          "cast": ["Rhea", "Varn", "Lancer3", "Lancer1"],
           "focus": "kestrel",
           "lines": [
             { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "Bastion, this is Sol. We followed an evacuation order that led straight into two corvettes. The order was signed by someone in the Directorate. I kept it.", "channel": "CNS KESTREL / UPLINK" },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Rhea", "text": "Captain, can you turn Kestrel away from either of those corvettes?" },
+            { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "We're drifting. I still have guns, but I can't change which way they face.", "channel": "CNS KESTREL / UPLINK" },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Save the frigate. Her crew can tell us who issued the order." },
-            { "speaker": "Lancer 3", "portrait": "Lancer3", "text": "I'll help clear the fighters so you can get a clean torpedo run at those corvettes." }
+            { "speaker": "Lancer 3", "portrait": "Lancer3", "text": "I'll help clear the fighters so you can get a clean torpedo run at those corvettes." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer3", "text": "Take any fighter that gets on my tail, Three. I'll make the turn back for the corvettes."}
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -648,10 +675,11 @@
         "stardate": "2716.140",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Juno", "Imani", "Varn"],
+          "cast": ["Juno", "Imani", "Varn", "Lancer1"],
           "focus": "ring",
           "lines": [
             { "speaker": "Juno Vale", "portrait": "Juno", "text": "Tannhal was the delivery address on our cargo log. I checked the dock plans. There's a gate receiver under Berth Four marked as scrap, but it still has power." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Juno", "text": "Get the dockhands away from Berth Four. I'll keep the next wave outside the ring."},
             { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "If a transmitter at Corvid can shake that receiver from here, it can do the same to Halden Gate. There are ships in that lane every minute." },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Forty thousand people live there. Hold the ring. We will find the machine later." }
           ]
@@ -707,11 +735,12 @@
         "stardate": "2716.144",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Okafor", "Hale", "Varn"],
+          "cast": ["Okafor", "Hale", "Varn", "Lancer1"],
           "focus": "platforms",
           "lines": [
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "We've traced the false orders to the Directorate Continuity Office. Its director, Soren Hale, claims this is a classified counter-Skarn operation." },
             { "portrait": "Hale", "speaker": "Director Soren Hale", "text": "I authorised a listening post. The Skarn took it from us. Return to Bastion and hand over whatever Captain Sol gave you.", "channel": "DIRECTORATE / SECURE LINK" },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Hale", "text": "Captain Sol handed that order to me in person. It stays with me until I can put it in Commander Varn's hands."},
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Lancer, you're cleared to strike the platforms. Once those guns are down, we'll send you through for a close pass." }
           ]
         },
@@ -763,10 +792,12 @@
         "stardate": "2716.147",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Imani", "Juno", "Varn"],
+          "cast": ["Imani", "Juno", "Varn", "Lancer1"],
           "focus": "yard",
           "lines": [
             { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "The emissions match an old gate experiment. Your pass should get us a look at the equipment under the hull. If you see a second ring around the chamber, bring me a clean image." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Imani", "text": "Do I have to slow down for a clean image? I don't fancy lining up a shot under those turrets." },
+            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "Keep your speed up. The camera records automatically as you fly through the sensor points." },
             { "speaker": "Juno Vale", "portrait": "Juno", "text": "I loaded one of those rings aboard Ondine. It took six of us just to get it off the lift. Find out where it ended up." },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Three sensor points, then break away. Your camera will do the work. We need you back to tell us what you saw." }
           ]
@@ -813,7 +844,8 @@
         "win": "The recordings show a Skarn dreadnought nearly finished. Fleet Command has ordered the evacuation of the Kestrel colonies.",
         "lose": "The recordings were lost with your fighter.",
         "dialogue": [
-          { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "There it is. The second ring makes the gate itself part of the weapon. The markings on the hull read Hammer of Skarn. Send the image to Fleet Command." }
+          { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "There it is. The second ring makes the gate itself part of the weapon. The markings on the hull read Hammer of Skarn. Send the image to Fleet Command." },
+          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Imani", "text": "I'll send the raw pass too. If Fleet Command asks what that ring can do, they should hear it from you."}
         ]
       }
     },
@@ -825,10 +857,11 @@
         "stardate": "2716.151",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Lusk", "Varn", "MiraCaptain", "Lancer6"],
+          "cast": ["Lusk", "Varn", "MiraCaptain", "Lancer6", "Lancer1"],
           "focus": "aurora",
           "lines": [
             { "speaker": "Captain Lusk", "portrait": "Lusk", "text": "Six thousand civilians are aboard the Aurora Star. They keep asking whether home will still be there when we return." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lusk", "text": "Keep your passengers strapped in, Captain. If you have to turn, tell me first so I can cover the side you expose."},
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "They get an answer after they're safe. Escort them through the gate." },
             { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Mira is carrying refugees on the other side. I'll be waiting for them." },
             { "speaker": "Lancer 6", "portrait": "Lancer6", "text": "I'll stay close to the Aurora Star. If the bombers get past you, I'll be there." }
@@ -887,12 +920,13 @@
         "stardate": "2716.155",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Orin", "Hale", "Varn"],
+          "cast": ["Orin", "Hale", "Varn", "Lancer1"],
           "focus": "bastion",
           "lines": [
             { "speaker": "Chief Engineer Mae Orin", "portrait": "Orin", "text": "The destroyer has our new anchorage. We only sent those coordinates to three people. Director Hale, care to explain how they got them?" },
             { "portrait": "Hale", "speaker": "Director Soren Hale", "text": "I traded a gate experiment for a ceasefire. Korr was supposed to demonstrate it at an empty gate. I gave her Corvid. I never gave her Halden.", "channel": "DIRECTORATE / SECURE LINK" },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "You gave her a fleet and a working weapon. Clear this channel. Lancer, stop that destroyer before it closes on us." }
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "You gave her a fleet and a working weapon. Clear this channel. Lancer, stop that destroyer before it closes on us." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "I'll hit the engines first. If I can slow her down, you'll have room to move Bastion clear."}
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -947,12 +981,14 @@
         "stardate": "2716.160",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Kesh", "Okafor", "Varn"],
+          "cast": ["Kesh", "Okafor", "Varn", "Lancer1"],
           "focus": "barge",
           "lines": [
             { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "I'm Kesh Ardan. I serviced the Hammer's firing circuit. They locked me up with your missing crews when I refused to arm it. I can prove where Korr means to fire.", "channel": "PRISON BARGE THAL / UPLINK" },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Kesh", "text": "Kesh, keep everyone away from the gun decks. I'll make my passes on the turrets."},
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Ardan spliced into a service transmitter. That's our window. Free the barge before they trace the call." },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Turrets only. Four hundred lives depend on your aim." }
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "Once the last gun goes quiet, who gets those people out?" },
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Kestrel will tow the barge. Take the turrets only, then cover it until she arrives." }
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
@@ -993,7 +1029,8 @@
         "win": "Four hundred of our people are free. Many of them are already asking to fly.",
         "lose": "The barge was lost with everyone aboard.",
         "dialogue": [
-          { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "Korr is aiming through Halden at the settlements beyond it. The Hammer takes its firing signal from a stealth courier. I know how to find the courier's wake." }
+          { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "Korr is aiming through Halden at the settlements beyond it. The Hammer takes its firing signal from a stealth courier. I know how to find the courier's wake." },
+          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Kesh", "text": "Get some rest while you can, Kesh. When you're ready, show me what to look for in that wake."}
         ]
       }
     },
@@ -1005,11 +1042,12 @@
         "stardate": "2716.164",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Kesh", "Imani"],
+          "cast": ["Kesh", "Imani", "Lancer1"],
           "focus": "b2",
           "lines": [
             { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "The courier follows the buoys to stay under your scanners. Destroy it and the Hammer loses its remote firing signal. Korr will have to close on Halden and fire from the bridge." },
-            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "Tune to the wake Kesh described. If you bring back a trace of the carrier signal, I can tell you when the Hammer starts to charge." }
+            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "Tune to the wake Kesh described. If you bring back a trace of the carrier signal, I can tell you when the Hammer starts to charge." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Imani", "text": "Give me the wake on my scope, Doctor. I'd rather fly one more buoy than shoot at a guess."}
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
@@ -1063,10 +1101,11 @@
         "stardate": "2716.169",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["MiraCaptain", "Okafor"],
+          "cast": ["MiraCaptain", "Okafor", "Lancer1"],
           "focus": "nest",
           "lines": [
             { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "I know where the corsairs keep those coils. My crew used to haul machine parts to Asteroid Hollow. Their stores are directly under the reactor dome." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "text": "Sen, I need the path your freighter took in. If the dome is under rock, that's where I'll look for a shot."},
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Cut off the coils and the Hammer gets one shot. We intend to make sure it misses." }
           ]
         },
@@ -1123,13 +1162,14 @@
         "stardate": "2716.173",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Varn", "Korr", "Rhea", "Lancer2"],
+          "cast": ["Varn", "Korr", "Rhea", "Lancer2", "Lancer1"],
           "focus": "cruiser",
           "lines": [
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Fleet Command has Hale in custody. They want a copy of Sol's orders and Sen's manifest. They'll get both when we have a clear channel." },
             { "portrait": "Korr", "speaker": "Admiral Korr", "text": "I buried two crews at Velan while your Directorate argued about whose map it was. By morning, Concord will have to negotiate for every gate it draws a line through.", "channel": "SKARN FLAGSHIP / OPEN CHANNEL" },
             { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "The Kestrel is with you, Commander. We held together because Lancer kept saving people." },
             { "speaker": "Lancer 2", "portrait": "Lancer2", "text": "You still owe me a coffee from that first patrol, Lead. I'll collect when we land." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer2", "text": "I'll pour it myself this time, Two. Stay close until we've taken those shields down."},
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Break the Iron Vow. Keep our ships alive for one final assault." }
           ]
         },
@@ -1189,14 +1229,16 @@
         "stardate": "2716.180",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Imani", "Kesh", "Korr", "Varn", "Lancer4"],
+          "cast": ["Imani", "Kesh", "Korr", "Varn", "Lancer4", "Lancer1"],
           "focus": "dread",
           "lines": [
             { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "The Hammer is charging. Its shields cover the reactor trench. Take down the generators, kill its thrust and go straight for the core." },
-            { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "I designed that firing circuit. If you cut power in the trench, it can't finish the charge. I'm staying on this channel until you come back." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Kesh", "text": "Kesh, will killing the engines buy us time, or can Korr fire from a dead stop?" },
+            { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "She can fire from a dead stop. I designed that circuit. Hit the core in the trench and the charge dies. I'll be on this channel." },
             { "portrait": "Korr", "speaker": "Admiral Korr", "text": "Open channel to Bastion. Every ship that turns away now gets passage. The gate stays with me.", "channel": "SKARN FLAGSHIP / OPEN CHANNEL" },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "This began with three navigation buoys. It ends with every crew we've brought home fighting together. Lancer, bring down the Hammer." },
-            { "speaker": "Lancer 4", "portrait": "Lancer4", "text": "Three and Six are with me. We'll clear the approach. Bring the rest of us home, Lead." }
+            { "speaker": "Lancer 4", "portrait": "Lancer4", "text": "Three and Six are with me. We'll clear the approach. Bring the rest of us home, Lead." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer4", "text": "Four, keep Three and Six clear once I reach the trench. If I get one clean pass, that's enough."}
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -1249,7 +1291,8 @@
         "dialogue": [
           { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Halden reports a stable gate. The first ship home is Mercy. They want to know whether they can bring our people through." },
           { "portrait": "Juno", "speaker": "Juno Vale", "text": "Tell them Berth Four is open. We cut the receiver out of the deck. We're putting a plaque where it used to be. I left room for Two's rook beside his name." },
-          { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Mira to Lancer. I'm bringing the first families home. Cargo manifest says blankets, coffee and a seat for you, if you ever want it." }
+          { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Mira to Lancer. I'm bringing the first families home. Cargo manifest says blankets, coffee and a seat for you, if you ever want it." },
+          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "text": "Save me that seat, Captain. I'll bring Two's mug."}
         ]
       }
     }

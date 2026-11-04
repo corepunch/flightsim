@@ -2,7 +2,7 @@
 
 From the logged-in macOS desktop session, run `./Tools/run-gui-checks.sh`.
 It builds and opens a separate app bundle to check portrait transitions
-throughout the campaign at two window sizes. It checks for a pass message
+throughout the campaign at desktop, narrow and iPhone sizes. It checks for a pass message
 after the app exits and keeps the bundle and logs on failure.
 
 Use Launch Services for ad hoc GUI checks and previews as well. Give each

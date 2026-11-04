@@ -30,7 +30,7 @@ if ! /usr/bin/open -n -g -W --stdout "$qa/stdout.log" --stderr "$qa/stderr.log" 
     exit 1
 fi
 if [[ -s "$qa/stderr.log" ]]; then cat "$qa/stderr.log" >&2; fi
-if ! /usr/bin/grep -E '^PASS: portrait transitions across [0-9]+ missions at desktop and narrow sizes\.$' "$qa/stdout.log"; then
+if ! /usr/bin/grep -E '^PASS: portrait transitions across [0-9]+ missions at desktop, narrow and iPhone sizes\.$' "$qa/stdout.log"; then
     print -u2 "Portrait checks did not finish successfully. Bundle and logs: $qa"
     exit 1
 fi

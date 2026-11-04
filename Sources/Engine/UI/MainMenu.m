@@ -6,6 +6,21 @@
 static const UIRGB MenuNight = { 4.0 / 255, 6.0 / 255, 11.0 / 255 };
 static const UIRGB MenuTitle = { 0.89, 0.97, 0.96 };
 
+static SKShader *MenuArtShader(void) {
+    static SKShader *shader;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        shader = [SKShader shaderWithSource:
+            @"void main() {\n"
+             "    vec2 uv = v_tex_coord;\n"
+             "    float horizontal = smoothstep(0.0, 0.18, uv.x) * smoothstep(0.0, 0.05, 1.0 - uv.x);\n"
+             "    float vertical = smoothstep(0.0, 0.14, min(uv.y, 1.0 - uv.y));\n"
+             "    gl_FragColor = texture2D(u_texture, uv) * v_color_mix * horizontal * vertical;\n"
+             "}"];
+    });
+    return shader;
+}
+
 typedef NS_ENUM(NSInteger, MenuItem) {
     MenuItemCampaign, MenuItemMissions, MenuItemMultiplayer, MenuItemControls, MenuItemQuit, MenuItemCount
 };
@@ -106,6 +121,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     CGFloat artWidth = size.width * (portrait ? 1.18 : 0.72);
     SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_art
                                                      size:CGSizeMake(artWidth, artWidth * artSize.height / artSize.width)];
+    art.shader = MenuArtShader();
     art.position = CGPointMake(portrait ? size.width * 0.45 : size.width - artWidth / 2,
                                size.height * (portrait ? 0.68 : 0.5));
     art.zPosition = -1;

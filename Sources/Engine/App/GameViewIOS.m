@@ -18,8 +18,6 @@
     _flightControls = [[TouchFlightControls alloc] initWithInput:input];
     _flightControls.frame = self.bounds;
     _flightControls.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.multipleTouchEnabled = YES;
-    [self addSubview:_flightControls];
 
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
     [nc addObserver:self selector:@selector(controllerChanged:) name:InputControllerDidChangeNotification object:input];
@@ -31,12 +29,14 @@
 
 @synthesize input = _input;
 
+- (UIView *)flightControlsView { return _flightControls; }
+
 - (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 
 - (void)updateFlightControls {
     BOOL flying = [self.overlaySKScene isKindOfClass:HUD.class];
     [_flightControls updateController];
-    _flightControls.hidden = !flying;
+    [_flightControls showInHUD:flying ? self.overlaySKScene : nil];
     [_input setFlightInputActive:flying];
 }
 

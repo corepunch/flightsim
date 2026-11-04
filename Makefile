@@ -66,6 +66,13 @@ $(NATIVE)/game/%.c.o: %.c Makefile $(TOOLCHAIN)
 
 -include $(addsuffix .d,$(basename $(ENGINE_OBJECTS) $(GAME_OBJECTS) $(ENGINE_PCH) $(GAME_PCH)))
 
+.PHONY: iphone ipad ios-devices
+iphone ipad:
+	@./build.sh "$@"
+
+ios-devices:
+	@xcrun devicectl list devices --timeout 15
+
 ifneq ($(filter ios,$(MAKECMDGOALS)),)
 include Tools/iOS.mk
 endif

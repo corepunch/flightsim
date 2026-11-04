@@ -1,5 +1,9 @@
-build/
+[Bb]uild/
 fx/
 .DS_Store
 *.blend1
 Art/kit/*.blend
+
+# Xcode user settings (the generated project and shared scheme are tracked).
+xcuserdata/
+*.xcuserstate

@@ -24,12 +24,16 @@
 
 - (void)cycleTargetFor:(GClient *)cl {
     GFighter *me = cl.ship;
-    if (!me) return;
+    if (!me.alive) return;
     NSArray *list = [[self targetablesFor:cl] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
         float da = simd_distance(BodyPosition(a), me.position), db = simd_distance(BodyPosition(b), me.position);
         return da < db ? NSOrderedAscending : (da > db ? NSOrderedDescending : NSOrderedSame);
     }];
-    if (!list.count) { cl.selected = nil; return; }
+    if (!list.count) {
+        cl.selected = nil;
+        GCommand(cl, SVC_RADIO, @"No targets in sight", @"", nil);
+        return;
+    }
     NSUInteger i = cl.selected ? [list indexOfObject:cl.selected] : NSNotFound;
     cl.selected = list[i == NSNotFound ? 0 : (i + 1) % list.count];
 }

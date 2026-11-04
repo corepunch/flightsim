@@ -1,5 +1,23 @@
 # iPhone and iPad build
 
+Open `SpaceFight.xcodeproj` and choose the shared `SpaceFight-iOS` scheme.
+Select an iPhone or iPad simulator to build and run. For a physical device,
+choose your development team under Signing & Capabilities. Xcode compiles
+the game directly and bakes its SceneKit models in DerivedData.
+
+Regenerate after adding or removing source files:
+
+```sh
+sh Tools/Xcode/generate.sh
+```
+
+The generator uses an installed Python 3.9+ and works offline. Set
+`FLIGHTSIM_PYTHON` to an installed interpreter if needed. The generator keeps
+the shared scheme and existing signing settings. Pass `--team` or
+`--bundle-id` to set those explicitly.
+
+## Command line
+
 On a Mac with Xcode and an installed iOS Simulator runtime:
 
 ```sh
@@ -9,10 +27,26 @@ xcrun simctl install booted "$app"
 xcrun simctl launch booted com.igor.spacefight
 ```
 
-The simulator and Mac builds reuse the same model bake cache. For a physical
-device, `./build.sh ios-device` creates
-`build/iOS/iphoneos-arm64/SpaceFight.app`. Sign and provision that bundle with
-your Apple Development identity before installing it on an iPhone or iPad.
+For a paired physical device with Developer Mode enabled:
+
+```sh
+make iphone
+make ipad
+make ios-devices
+make ipad DEVICE="My iPad"
+```
+
+The deploy targets build, sign, install, and launch the game on the requested
+device family. They prefer a single USB-connected device when several are
+available. Set `DEVICE` to a name, hardware UDID, or CoreDevice identifier to
+choose explicitly. Unlock the device before launch.
+
+Signing uses a local Apple Development identity and a development provisioning
+profile covering both the device and `com.igor.spacefight`. Use
+`PROFILE=/path/to/profile.mobileprovision` or `TEAM=<team-id>` to select signing
+credentials, or set `BUNDLE_ID` to the identifier covered by your profile.
+`./build.sh ios-device` still creates the unsigned bundle at
+`build/iOS/iphoneos-arm64/SpaceFight.app`. Command-line builds share a model bake cache.
 
 The game runs in either landscape orientation. The flight controls sit halfway
 down the screen on iPhone and two-thirds down on iPad.

@@ -29,6 +29,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 static NSString *const PortraitDeparture = @"portraitDeparture";
 static NSString *const PlayerPortrait = @"Lancer1";
 static const CGFloat CaptionDrop = 42;
+static const CGFloat PortraitDepth = 1, CaptionDepth = 2, FooterDepth = 3;
 
 static SKShader *MonitorDistortionShader(void) {
     static SKShader *shader;
@@ -174,10 +175,10 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     if ([portrait actionForKey:PortraitDeparture]) return;
     [portrait removeAllActions];
     BOOL reduced = UIMotionReduced();
-    NSTimeInterval duration = reduced ? 0.1 : 0.35;
+    NSTimeInterval duration = reduced ? 0.1 : ([self paging] ? 0.25 : 0.35);
     CGFloat offset = portrait.position.x <= self.size.width / 2 ? -70 : 70;
     SKAction *fade = [SKAction fadeOutWithDuration:duration];
-    SKAction *exit = reduced ? fade : [SKAction group:@[
+    SKAction *exit = reduced || [self paging] ? fade : [SKAction group:@[
         fade, UIEased([SKAction moveByX:offset y:0 duration:duration], UICurveIn),
     ]];
     [portrait runAction:[SKAction sequence:@[exit, [SKAction removeFromParent]]] withKey:PortraitDeparture];
@@ -228,6 +229,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     if (_transition == UITransitionPage) {
         for (SKNode *node in [_oldCaptionText arrayByAddingObject:_oldCaptionHolder ?: [SKNode node]]) {
             [node removeFromParent];
+            node.zPosition = CaptionDepth;
             [_ghost addChild:node];
         }
     } else {
@@ -235,10 +237,16 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         _oldCaptionText = nil;
     }
 
-    // Keep the actual sprites (and their running actions) through page turns.
-    if (![self paging]) _portraitLayer = [SKNode node];
+    // Keep the portrait layer attached through page turns. Only the room,
+    // monitor and captions need to be rebuilt.
+    if (![self paging]) {
+        [_portraitLayer removeFromParent];
+        _portraitLayer = [SKNode node];
+        _portraitLayer.zPosition = PortraitDepth;
+    }
     _portraitsToDismiss = [NSMutableSet setWithArray:_portraitLayer.children];
-    [_root removeAllChildren];
+    for (SKNode *node in _root.children)
+        if (node != _portraitLayer) [node removeFromParent];
     [_hover reset];
     _footerNodes = [NSMutableArray array];
     _confirmRect = _previousRect = _backRect = CGRectZero;
@@ -419,6 +427,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 }
 
 - (SKNode *)footerAdd:(SKNode *)node {
+    node.zPosition = FooterDepth;
     [_root addChild:node];
     [_footerNodes addObject:node];
     return node;
@@ -479,9 +488,10 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     NSString *portrait = [speaker containsString:@"Okafor"] ? @"Okafor" : @"Varn";
     NSMutableArray<NSDictionary *> *pages = [NSMutableArray array];
     for (NSDictionary *line in _dialogueScene[@"lines"]) {
-        [pages addObject:@{ @"speaker": line[@"speaker"], @"portrait": line[@"portrait"],
-                            @"text": line[@"text"], @"channel": line[@"channel"] ?: @"MISSION BRIEFING",
-                            @"dialogue": @YES }];
+        NSMutableDictionary *page = [line mutableCopy];
+        page[@"channel"] = line[@"channel"] ?: @"MISSION BRIEFING";
+        page[@"dialogue"] = @YES;
+        [pages addObject:page];
     }
 
     // The mission's original briefing is the officer's speech. Each tactical
@@ -492,7 +502,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     }
     for (NSDictionary *step in brief[@"steps"]) {
         [pages addObject:@{ @"speaker": speaker, @"portrait": portrait, @"tactical": step,
-                            @"text": step[@"caption"] ?: @"", @"channel": @"FLIGHT PLAN" }];
+                            @"text": step[@"caption"] ?: @"",
+                            @"channel": step[@"schematic"] ? @"TARGET SCHEMATIC" : @"FLIGHT PLAN" }];
     }
 
     NSMutableArray<NSString *> *orders = [NSMutableArray array];
@@ -581,10 +592,10 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         [_portraitsToDismiss removeObject:existing];
         if ([existing actionForKey:PortraitDeparture]) {
             [existing removeActionForKey:PortraitDeparture];
-            SKAction *fade = [SKAction fadeInWithDuration:0.25];
-            [existing runAction:UIMotionReduced() ? fade : [SKAction group:@[
-                fade,
-                UIEased([SKAction moveTo:home duration:0.25], UICurveOut),
+            BOOL reduced = UIMotionReduced();
+            SKAction *fade = [SKAction fadeInWithDuration:reduced ? 0.1 : 0.25];
+            [existing runAction:reduced ? fade : [SKAction group:@[
+                fade, UIEased([SKAction moveTo:home duration:0.25], UICurveOut),
             ]]];
         }
         [existing runAction:[SKAction colorizeWithColorBlendFactor:dim duration:0.25] withKey:@"speakerFade"];
@@ -605,8 +616,11 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     portrait.color = UIColorWithOpacity(UIBackground, 1);
     portrait.colorBlendFactor = dim;
     [_portraitLayer addChild:portrait];
-    if ([self intro] || [self paging]) {
-        UIMotionSlideIn(portrait, CGVectorMake(facingRight ? -70 : 70, 0), [self intro] ? 0.15 : 0, 0.5);
+    if ([self intro]) {
+        UIMotionSlideIn(portrait, CGVectorMake(facingRight ? -70 : 70, 0), 0.15, 0.5);
+    } else if ([self paging]) {
+        portrait.alpha = 0;
+        [portrait runAction:[SKAction fadeInWithDuration:UIMotionReduced() ? 0.1 : 0.25]];
     }
 }
 
@@ -623,9 +637,12 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
 - (void)addCaption:(NSDictionary *)line inRect:(CGRect)rect fontSize:(CGFloat)fontSize
       speakerOnRight:(BOOL)speakerOnRight {
+    SKNode *layer = [SKNode node];
+    layer.zPosition = CaptionDepth;
+    [_root addChild:layer];
     SKShapeNode *panel = UIReadoutPanel(rect, UIColorWithOpacity(UIConsoleEdge, 0.95),
                                         UIColorWithOpacity(UIConsoleSteel, 0.95));
-    [_root addChild:panel];
+    [layer addChild:panel];
     CGFloat left = CGRectGetMinX(rect) + 16, top = CGRectGetMaxY(rect);
     CGFloat width = MAX(1, rect.size.width - 32);
     SKLabelNode *speaker = Text(13, UIColorWithOpacity(UIAmber, 1),
@@ -638,13 +655,13 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         if (speaker.frame.size.width > width) speaker.fontSize *= width / speaker.frame.size.width;
     }
     speaker.position = CGPointMake(speakerOnRight ? CGRectGetMaxX(rect) - 16 : left, top - 10);
-    [_root addChild:speaker];
+    [layer addChild:speaker];
 
     SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), width);
     speech.fontName = UIBodyFont;
     speech.text = line[@"text"];
     speech.position = CGPointMake(left, top - 32);
-    [_root addChild:speech];
+    [layer addChild:speech];
 
     // The bubble hangs from its top edge, which stays put between lines.
     SKNode *holder;
@@ -732,11 +749,13 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         speakerArea = CGRectMake(center - width / 2, bottom, width, height);
         playerArea = CGRectMake(size.width - center - width / 2, bottom, width, height);
     }
-    [self addPortrait:page[@"portrait"] facingRight:YES active:YES inRect:speakerArea];
-    [self addPortrait:PlayerPortrait facingRight:NO active:NO inRect:playerArea];
+    BOOL playerSpeaking = [page[@"portrait"] isEqualToString:PlayerPortrait];
+    NSString *other = playerSpeaking ? page[@"listener"] : page[@"portrait"];
+    if (other) [self addPortrait:other facingRight:YES active:!playerSpeaking inRect:speakerArea];
+    [self addPortrait:PlayerPortrait facingRight:NO active:playerSpeaking inRect:playerArea];
 
     [self addCaption:page inRect:CGRectMake(CGRectGetMinX(screen), captionBottom, captionWidth, captionHeight)
-             fontSize:textSize speakerOnRight:NO];
+             fontSize:textSize speakerOnRight:playerSpeaking];
     [self footer:@"← / →  Briefing     Esc  Missions"
            action:_page + 1 == _pages.count ? @"↵  LAUNCH" : @"↵  CONTINUE"];
 }
@@ -847,7 +866,9 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
             schematic.position = CGPointMake((left + right) / 2, bottom + 14 + height / 2);
             [group addChild:schematic];
             SKLabelNode *legend = Text(10, UIColorWithOpacity(UIRed, 1), SKLabelHorizontalAlignmentModeLeft);
-            legend.text = [NSString stringWithFormat:@"RED  /  %@", schematicKind.uppercaseString];
+            NSDictionary *subsystems = @{ @"Core": @"REACTOR CORE", @"Engine": @"ENGINES",
+                                          @"Shield": @"SHIELD GENERATORS", @"Turret": @"TURRETS" };
+            legend.text = [NSString stringWithFormat:@"TARGET  /  %@", subsystems[schematicKind] ?: schematicKind.uppercaseString];
             legend.position = CGPointMake(left, bottom + 12);
             [group addChild:legend];
             *kind = key;
@@ -1384,6 +1405,10 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
                 if (row == _index) a |= InputActionConfirm;
                 else [self showListSelecting:row];
             }
+        } else if (_mode != ModeList &&
+                   CGRectContainsPoint((CGRect){ .size = self.size }, point)) {
+            // Scene taps turn pages. Final actions still require confirmation.
+            a |= InputActionRight;
         }
     }
     NSUInteger count = CampaignMissions().count;

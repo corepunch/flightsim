@@ -35,7 +35,7 @@ A Kestrel Frontier campaign in four acts. Lancer's first watch exposes a leaked 
 
 Mission events and tactical orders live in `Resources/Missions/missions.json`. Each briefing opens with illustrated dialogue and follows with situation, flight plan, objectives and loadout. The debrief shows objective results first. A successful sortie leads into its epilogue and then the next mission. A failed sortie can be retried from the results.
 
-The cast speaks from the left. Lancer 1 stays on the right, including when he replies in the Iron Wall debrief. The desktop and tablet-size layouts flank the painted Bastion monitor, while phone-size views anchor the characters at the bottom edge. The current executable uses Cocoa on macOS. The phone and tablet layouts can be checked by resizing the macOS window.
+The cast speaks from the left. Lancer 1 stays on the right and has a reply in every briefing and in debriefs where he has something to add. The character he addresses stays in view during his reply. The desktop and tablet layouts flank the painted Bastion monitor, while compact phone layouts anchor the characters at the bottom edge.
 
 Iron Wall's `casualty` records a scripted loss. The radio call goes out once, when Lancer 2 falls in combat or when the Iron Vow loses its shields. Hammerfall's flight roster reflects the loss.
 

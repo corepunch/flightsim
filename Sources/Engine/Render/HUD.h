@@ -9,7 +9,7 @@ typedef struct {
     BOOL boosting;
     int kills, deaths;
     BOOL playerDead;
-    CGPoint sun;            // lens flare source, view points
+    CGPoint sun;            // sun streak center, HUD points
     float sunVisibility;    // 0..1
     float damageFlash;      // 0..1
     BOOL cockpit;           // gauges are on the cockpit displays instead

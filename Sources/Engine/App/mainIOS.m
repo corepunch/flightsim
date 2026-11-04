@@ -28,8 +28,13 @@
     GameView *view = [[GameView alloc] initWithFrame:self.window.bounds
                                            options:@{SCNPreferredRenderingAPIKey: @(SCNRenderingAPIMetal)}];
     view.input = input;
+    UIView *container = [[UIView alloc] initWithFrame:self.window.bounds];
+    view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [container addSubview:view];
+    // Keep raw flight touches separate from SceneKit gesture handling.
+    [container addSubview:view.flightControlsView];
     FlightViewController *controller = [FlightViewController new];
-    controller.view = view;
+    controller.view = container;
     self.window.rootViewController = controller;
     self.host = [[Host alloc] initWithView:view input:input];
     self.displayLink = [CADisplayLink displayLinkWithTarget:self.host selector:@selector(displayLinkTick:)];

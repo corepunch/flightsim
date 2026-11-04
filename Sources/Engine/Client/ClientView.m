@@ -537,6 +537,10 @@ typedef struct {
     simd_float3 camFwd = simd_act(_cameraNode.simdOrientation, simd_make_float3(0, 0, -1));
     if (simd_dot(world - _cameraNode.simdPosition, camFwd) <= 0.1f) return NO;
     SCNVector3 p = [_view projectPoint:SCNVector3Make(world.x, world.y, world.z)];
+#if TARGET_OS_IOS
+    // The iOS view counts down from the top. The SpriteKit HUD counts up.
+    p.y = CGRectGetHeight(_view.bounds) - p.y;
+#endif
     *out = CGPointMake(p.x, p.y);
     return YES;
 }
@@ -619,7 +623,7 @@ typedef struct {
     CGPoint sp;
     if ([self project:sunPoint into:&sp]) {
         float edge = fminf(fminf(sp.x, size.width - sp.x), fminf(sp.y, size.height - sp.y));
-        float vis = clampf(edge / 150.0f + 0.3f, 0, 1);
+        float vis = clampf(edge / 100.0f, 0, 1);
         if (vis > 0) {
             NSArray *hits = [_scene.rootNode hitTestWithSegmentFromPoint:SCNVector3Make(camPos.x, camPos.y, camPos.z)
                                                                  toPoint:SCNVector3Make(camPos.x + _sky.sunDirection.x * 5000,

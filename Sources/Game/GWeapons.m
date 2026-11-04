@@ -159,7 +159,11 @@
 - (void)fireTorpedoFor:(GClient *)cl {
     GFighter *s = cl.ship;
     id target = cl.selected;
-    if (cl.torpedoes <= 0 || !s.alive || !target) return;
+    if (!s.alive) return;
+    if (cl.torpedoes <= 0 || !BodyAlive(target)) {
+        GCommand(cl, SVC_RADIO, cl.torpedoes <= 0 ? @"No torpedoes left" : @"Select a target to launch a torpedo", @"", nil);
+        return;
+    }
     if (simd_distance(BodyPosition(target), s.position) > 2500) {
         GCommand(cl, SVC_RADIO, @"Target out of torpedo range", @"", nil);
         return;
