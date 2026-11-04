@@ -1,3 +1,4 @@
 build/
 fx/
 .DS_Store
+*.blend1

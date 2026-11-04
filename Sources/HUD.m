@@ -310,6 +310,8 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     SetBar(_shieldFill, 200 * f.shield, 6);
     _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
     _scoreLabel.text = [NSString stringWithFormat:@"KILLS %d   DEATHS %d", f.kills, f.deaths];
+    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel])
+        n.hidden = f.cockpit;
     _deadLabel.hidden = !f.playerDead;
     _damage.alpha = f.damageFlash * 0.35;
 

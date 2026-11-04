@@ -12,6 +12,8 @@ typedef NS_ENUM(NSInteger, ShipClass) {
 @interface Ship : NSObject
 
 + (instancetype)shipWithClass:(ShipClass)shipClass smoke:(BOOL)smoke;
++ (SCNGeometry *)geometryForClass:(ShipClass)shipClass;   // shared, OBJ space (+Z nose)
++ (NSString *)nameForClass:(ShipClass)shipClass;
 
 @property (nonatomic, readonly) SCNNode *node;     // forward is -Z
 @property (nonatomic, readonly) SCNNode *model;

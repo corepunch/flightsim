@@ -85,6 +85,12 @@ static NSString *const kShieldFragment =
     return g;
 }
 
++ (SCNGeometry *)geometryForClass:(ShipClass)shipClass {
+    return [self geometryForSpec:SpecFor(shipClass)];
+}
+
++ (NSString *)nameForClass:(ShipClass)shipClass { return SpecFor(shipClass).mesh; }
+
 + (instancetype)shipWithClass:(ShipClass)shipClass smoke:(BOOL)smoke {
     return [[self alloc] initWithClass:shipClass smoke:smoke];
 }

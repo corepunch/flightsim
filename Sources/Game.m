@@ -3,12 +3,14 @@
 #import "SpaceSky.h"
 #import "HUD.h"
 #import "Effects.h"
+#import "Cockpit.h"
 
 #define ENEMY_COUNT 5
 #define MAX_BOLTS 160
 
 static const float kBoltSpeed = 900.0f;
 static const float kBoltLife = 1.4f;
+static const simd_float3 kCockpitEye = {0, 1.0f, -2.2f};
 
 typedef struct {
     simd_float3 position, velocity;
@@ -52,6 +54,7 @@ static simd_quatf LookRotation(simd_float3 forward, simd_float3 up) {
     SCNScene *_scene;
     SpaceSky *_sky;
     HUD *_hud;
+    Cockpit *_cockpitModel;
 
     Ship *_player;
     NSMutableArray<Enemy *> *_enemies;
@@ -163,6 +166,10 @@ static simd_quatf LookRotation(simd_float3 forward, simd_float3 up) {
     if (look && sscanf(look, "%f,%f,%f", &lx, &ly, &lz) == 3) startDir = simd_normalize(simd_make_float3(lx, ly, lz));
     [_player resetAt:simd_make_float3(0, 0, 0) facing:LookRotation(startDir, simd_make_float3(0, 1, 0))];
     _player.throttle = 0;
+    if (getenv("SF_HURT")) {   // debug: start damaged, to check the warning lamps
+        _player.shield = 0;
+        _player.hull = 0.2f;
+    }
 
     // Engine glow lights up the rear of the player's ship.
     SCNLight *glow = [SCNLight light];
@@ -175,6 +182,13 @@ static simd_quatf LookRotation(simd_float3 forward, simd_float3 up) {
     _engineLight.light = glow;
     _engineLight.position = SCNVector3Make(0, 0.5, 6.0);
     [_player.node addChildNode:_engineLight];
+
+    // Interior for the cockpit view; its origin is the pilot's eye.
+    _cockpitModel = [[Cockpit alloc] initWithDevice:_view.device];
+    _cockpitModel.node.simdPosition = kCockpitEye;
+    _cockpitModel.node.hidden = YES;
+    [_player.node addChildNode:_cockpitModel.node];
+    _cockpit = getenv("SF_COCKPIT") != NULL;
 
     _enemies = [NSMutableArray array];
     for (int i = 0; i < ENEMY_COUNT; i++) {
@@ -263,6 +277,10 @@ static simd_quatf LookRotation(simd_float3 forward, simd_float3 up) {
 
     _damageFlash = fmaxf(0, _damageFlash - dt * 2.5f);
     [self updateHUD:controls];
+}
+
+- (void)renderer:(id<SCNSceneRenderer>)renderer willRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
+    [_cockpitModel renderDisplaysWithQueue:renderer.commandQueue time:time];
 }
 
 - (void)restart {
@@ -473,7 +491,7 @@ static BOOL SegmentHits(simd_float3 p0, simd_float3 p1, simd_float3 c, float r) 
 
     float speed = simd_length(_player.velocity);
     float boostFx = _player.boosting ? 1.0f : 0.0f;
-    simd_float3 offset = _cockpit ? simd_make_float3(0, 1.0f, -2.2f)
+    simd_float3 offset = _cockpit ? kCockpitEye
                                   : simd_make_float3(0, 3.4f, 17.0f + speed * 0.012f + boostFx * 3.0f);
     simd_float3 pos = _player.position + simd_act(_cockpit ? shipQ : _camOrientation, simd_act(look, offset));
     if (_cockpit) pos = _player.position + simd_act(shipQ, offset);
@@ -485,8 +503,10 @@ static BOOL SegmentHits(simd_float3 p0, simd_float3 p1, simd_float3 c, float r) 
     _cameraNode.simdPosition = pos;
     _cameraNode.simdOrientation = q;
     _player.model.hidden = _cockpit;
+    _cockpitModel.node.hidden = !_cockpit;
 
     SCNCamera *cam = _cameraNode.camera;
+    cam.zNear = _cockpit ? 0.08 : 0.3;   // the headrest is a hand's width behind the eye
     float fov = 68.0f + speed * 0.03f + boostFx * 8.0f;
     cam.fieldOfView += (fov - cam.fieldOfView) * (1.0f - expf(-3.0f * dt));
     cam.motionBlurIntensity = boostFx * 0.25f;
@@ -518,6 +538,7 @@ static BOOL SegmentHits(simd_float3 p0, simd_float3 p1, simd_float3 c, float r) 
     f.deaths = _deaths;
     f.playerDead = !_player.alive;
     f.damageFlash = _damageFlash;
+    f.cockpit = _cockpit;
 
     // Lens flare when the sun is in view and not blocked by a ship.
     simd_float3 camPos = _cameraNode.simdPosition;
@@ -576,6 +597,7 @@ static BOOL SegmentHits(simd_float3 p0, simd_float3 p1, simd_float3 c, float r) 
         targets[n++] = t;
     }
     [_hud updateFrame:f targets:targets count:n];
+    if (_cockpit) [self updateCockpit:c];
 
     NSString *inputText = [NSString stringWithFormat:@"%@%@  |  %@  |  H help",
                            _input.joystickName ? [NSString stringWithFormat:@"Joystick: %@ (%@)", _input.joystickName, _input.axisDescription] : @"No joystick",
@@ -585,6 +607,71 @@ static BOOL SegmentHits(simd_float3 p0, simd_float3 p1, simd_float3 c, float r) 
         _lastInputText = inputText;
         [_hud setInputText:inputText];
     }
+}
+
+#pragma mark - Cockpit
+
+- (void)updateCockpit:(ControlState)c {
+    CockpitFrame f = {0};
+    f.throttle = _player.throttle;
+    f.speed = simd_length(_player.velocity);
+    f.maxSpeed = _player.maxSpeed;
+    f.boostEnergy = _player.boostEnergy;
+    f.hull = _player.hull;
+    f.shield = _player.shield;
+    f.damageFlash = _damageFlash;
+    f.boosting = _player.boosting;
+    f.alive = _player.alive;
+    f.firing = c.fire && _player.alive;
+    f.pitch = c.pitch;
+    f.yaw = c.yaw;
+    f.roll = c.roll;
+    f.kills = _kills;
+    f.deaths = _deaths;
+    f.time = _time;
+    f.target = -1;
+    f.nearest = FLT_MAX;
+
+    simd_quatf inv = simd_inverse(_player.orientation);
+    CockpitContact contacts[COCKPIT_MAX_CONTACTS];
+    NSUInteger n = 0;
+    float bestScore = FLT_MAX;
+    for (Enemy *e in _enemies) {
+        Ship *s = e.ship;
+        if (!s.alive || n >= COCKPIT_MAX_CONTACTS) continue;
+        simd_float3 rel = s.position - _player.position;
+        float dist = simd_length(rel);
+        CockpitContact k = {0};
+        k.local = simd_act(inv, rel);
+        k.orientation = simd_mul(inv, s.orientation);
+        k.hull = s.hull;
+        k.shield = s.shield;
+        k.shipClass = s.shipClass;
+        k.attacking = e.mode == AIModeAttack && simd_dot(s.forward, -rel / fmaxf(dist, 1)) > 0.8f;
+        f.nearest = fminf(f.nearest, dist);
+        // Someone on our tail: behind us, close, and pointed at us.
+        if (k.attacking && dist < 700 && k.local.z > 0) f.six = YES;
+        // Target the contact nearest the nose, favouring closer ones.
+        float off = acosf(clampf(simd_dot(_player.forward, rel / fmaxf(dist, 1)), -1, 1));
+        float score = off + dist / 3000.0f;
+        if (score < bestScore) { bestScore = score; f.target = (int)n; }
+        contacts[n++] = k;
+    }
+    if (f.target >= 0) {
+        Ship *t = nil;
+        int i = 0;
+        for (Enemy *e in _enemies) if (e.ship.alive && i++ == f.target) { t = e.ship; break; }
+        simd_float3 rel = t.position - _player.position;
+        float dist = simd_length(rel);
+        simd_float3 relV = t.velocity - _player.velocity;
+        f.closingSpeed = -simd_dot(relV, rel / fmaxf(dist, 1));
+        // Lock: the lead point sits within a couple of degrees of the nose.
+        float tHit = dist / kBoltSpeed;
+        for (int k = 0; k < 2; k++) tHit = simd_distance(t.position + relV * tHit, _player.position) / kBoltSpeed;
+        simd_float3 lead = simd_normalize(t.position + relV * tHit - _player.position);
+        f.lock = dist < 1200 && simd_dot(lead, _player.forward) > cosf(2.5f * (float)M_PI / 180.0f);
+    }
+    [_cockpitModel updateFrame:f contacts:contacts count:n];
 }
 
 @end

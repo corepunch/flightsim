@@ -12,6 +12,7 @@ typedef struct {
     CGPoint sun;            // lens flare source, view points
     float sunVisibility;    // 0..1
     float damageFlash;      // 0..1
+    BOOL cockpit;           // gauges are on the cockpit displays instead
 } HUDFrame;
 
 typedef struct {
