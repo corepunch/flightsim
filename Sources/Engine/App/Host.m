@@ -300,6 +300,15 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
     InputAction actions = [_input consumeActions];
     ControlState controls = [_input poll:dt];
+    if (getenv("SF_TESTINPUT")) {   // debug: a pilot who weaves and fires, for testing prediction
+        float t = (float)_time;
+        controls.pitch = sinf(t * 0.7f) * 0.8f;
+        controls.yaw = sinf(t * 0.4f + 1) * 0.5f;
+        controls.roll = sinf(t * 1.1f) * 0.6f;
+        controls.throttle = 0.6f + 0.4f * sinf(t * 0.3f);
+        controls.boost = fmodf(t, 9) > 7;
+        controls.fire = fmodf(t, 3) > 1.5f;
+    }
     [_client readPackets];
     if (_state != HostStateFlying) {
         // Keep both ends of the connection alive while nothing is flown.

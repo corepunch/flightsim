@@ -154,7 +154,7 @@ typedef struct {
 #pragma mark - Events (temp entities)
 
 typedef enum {
-    EV_BOLT = 1,        // id, pos, vel, team
+    EV_BOLT = 1,        // id, pos, vel, team; entity = the player who fired, 0 for AI
     EV_IMPACT,          // id (bolt, 0 none), pos, team, flags EVF_SHIELDED
     EV_MUZZLE,          // entity, pos = gun in ship space, team
     EV_DAMAGE,          // entity hit, flags EVF_SHIELDED, scale = camera shake if it is you

@@ -17,6 +17,7 @@ typedef struct {
     float life;
     uint16_t id;
     BOOL active;
+    BOOL awaitingId;        // predicted: the server's id comes with its EV_BOLT
 } ClientBolt;
 
 // The view of one entity: a fighter, capital (or prop, rock, buoy) or torpedo.
@@ -44,6 +45,7 @@ typedef struct {
     NSMutableDictionary<NSNumber *, EntityView *> *_views;
     ClientBolt _bolts[MAX_BOLT_NODES];
     SCNNode *_boltNodes[MAX_BOLT_NODES];
+    uint32_t _boltSerial[MAX_BOLT_NODES], _nextBoltSerial;
 
     simd_quatf _camOrientation;
     float _shake, _damageFlash, _lookYaw, _lookPitch, _boostFx;
@@ -295,20 +297,48 @@ typedef struct {
 
 #pragma mark - Events
 
+- (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel team:(int)team id:(uint16_t)boltId {
+    for (int i = 0; i < MAX_BOLT_NODES; i++) {
+        if (_bolts[i].active) continue;
+        _bolts[i] = (ClientBolt){ pos, vel, BOLT_LIFE, boltId, YES, NO };
+        SCNNode *n = _boltNodes[i];
+        [_fx styleBolt:n player:team == TeamFriend];
+        n.simdPosition = pos;
+        n.simdOrientation = simd_quaternion(simd_make_float3(0, 1, 0), simd_normalize(vel));
+        n.hidden = NO;
+        return i;
+    }
+    return -1;
+}
+
+- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal {
+    int i = [self spawnBolt:pos velocity:velocity team:TeamFriend id:0];
+    if (i >= 0) {
+        _bolts[i].awaitingId = YES;
+        _boltSerial[i] = ++_nextBoltSerial;
+    }
+    [_fx muzzleFlashOn:_playerView.node local:gunLocal player:YES];
+}
+
 - (void)handleEvent:(const GameEvent *)e player:(const PlayerState *)ps {
     simd_float3 me = ps->move.origin;
+    if (_predictedEntity && e->entity == _predictedEntity) {
+        if (e->type == EV_MUZZLE) return;      // already flashed
+        if (e->type == EV_BOLT) {
+            // Our own shot: give its id to the oldest predicted bolt still waiting.
+            int best = -1;
+            for (int i = 0; i < MAX_BOLT_NODES; i++)
+                if (_bolts[i].active && _bolts[i].awaitingId && (best < 0 || _boltSerial[i] < _boltSerial[best])) best = i;
+            if (best >= 0) {
+                _bolts[best].awaitingId = NO;
+                _bolts[best].id = e->id;
+                return;
+            }
+        }
+    }
     switch (e->type) {
         case EV_BOLT:
-            for (int i = 0; i < MAX_BOLT_NODES; i++) {
-                if (_bolts[i].active) continue;
-                _bolts[i] = (ClientBolt){ e->pos, e->vel, BOLT_LIFE, e->id, YES };
-                SCNNode *n = _boltNodes[i];
-                [_fx styleBolt:n player:e->team == TeamFriend];
-                n.simdPosition = e->pos;
-                n.simdOrientation = simd_quaternion(simd_make_float3(0, 1, 0), simd_normalize(e->vel));
-                n.hidden = NO;
-                break;
-            }
+            [self spawnBolt:e->pos velocity:e->vel team:e->team id:e->id];
             break;
         case EV_IMPACT:
             if (e->id)

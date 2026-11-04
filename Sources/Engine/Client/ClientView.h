@@ -32,6 +32,10 @@
 - (void)drawEntities:(const EntityState *)entities count:(NSUInteger)count player:(const PlayerState *)ps
             controls:(ControlState)controls time:(double)time dt:(float)dt;
 - (void)handleEvent:(const GameEvent *)event player:(const PlayerState *)ps;
+// Own ship under prediction: its bolts and muzzle flashes are drawn when the
+// player fires, and the server's copies of them are matched up, not redrawn.
+@property (nonatomic) uint16_t predictedEntity;
+- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal;
 - (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c;
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time;
 

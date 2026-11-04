@@ -11,7 +11,7 @@
         if (++_nextBoltId == 0) _nextBoltId = 1;
         *b = (GBolt){ .position = pos, .velocity = v + dir * speed, .life = BOLT_LIFE, .damage = damage,
                       .capDamage = capDamage, .team = team, .owner = owner, .id = _nextBoltId, .active = YES };
-        GEvent((GameEvent){ .type = EV_BOLT, .id = b->id, .team = team, .pos = b->position, .vel = b->velocity });
+        GEvent((GameEvent){ .type = EV_BOLT, .id = b->id, .team = team, .entity = owner.ship.number, .pos = b->position, .vel = b->velocity });
         return b;
     }
     return NULL;

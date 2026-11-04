@@ -3,6 +3,8 @@
 #import "NetProtocol.h"
 #import <QuartzCore/QuartzCore.h>
 #include "SharedMath.h"
+#include "ShipMove.h"
+#import "Assets.h"
 
 #define MAX_SNAPSHOTS 32
 #define CMD_BACKUP 64           // user commands kept (redundant resends)
@@ -37,6 +39,15 @@ static const double kNetInterpDelay = TICK_DT * 3;
     uint32_t _sequence, _lastSentSequence;
     double _msecRemainder, _lastMoveSent;
     NSMutableData *_lerped;
+
+    // Prediction of our own ship.
+    Snapshot *_predictionBase;          // the snapshot the last prediction started from
+    simd_float3 _errorOffset;           // shown on top of the prediction, decaying to zero
+    simd_quatf _errorRotation;
+    double _fireClock, _lastShot;
+    NSUInteger _gunIndex;
+    double _statsAt, _errorSum, _errorMax;
+    NSUInteger _errorCount;
 }
 
 - (instancetype)initWithView:(ClientView *)view {
@@ -47,6 +58,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
         _snapshots = [NSMutableArray array];
         _lerped = [NSMutableData data];
         _interpDelay = kLocalInterpDelay;
+        _errorRotation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
     }
     return self;
 }
@@ -90,6 +102,9 @@ static const double kNetInterpDelay = TICK_DT * 3;
 - (void)begin {
     if (_state != ClientConnected) return;
     [self resetSnapshots];
+    _fireClock = 0;
+    _lastShot = -1;
+    _gunIndex = 0;
     _state = ClientActive;
     MsgWriter *w = [MsgWriter new];
     [w u8:clc_stringcmd];
@@ -249,6 +264,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
         cmd.impulse = (actions & InputActionTorpedo) ? IMPULSE_TORPEDO : ((actions & InputActionTarget) ? IMPULSE_TARGET : IMPULSE_NONE);
         QuantizeUserCmd(&cmd);
         _cmds[cmd.sequence % CMD_BACKUP] = cmd;
+        [self predictShot:&cmd];
     }
 
     // Up to 60 packets a second; each carries the new commands plus the last
@@ -266,6 +282,85 @@ static const double kNetInterpDelay = TICK_DT * 3;
     for (uint32_t s = first; s <= _sequence && count; s++) WriteUserCmd(w, &_cmds[s % CMD_BACKUP]);
     _lastSentSequence = _sequence;
     [_channel transmit:w.data];
+}
+
+#pragma mark - Prediction
+
+// Our ship as of the newest command: the server's state after the last
+// command it ran, plus every command since, through the same flight model.
+// Ramming capitals isn't predicted; the server's bounce shows up as a
+// (smoothed) correction.
+- (BOOL)predictFrom:(Snapshot *)s into:(ShipMoveState *)out {
+    // The autopilot flies on the server and ignores our commands.
+    static int disabled = -1;
+    if (disabled < 0) disabled = getenv("SF_AUTOPILOT") != NULL || getenv("SF_NOPREDICT") != NULL;
+    PlayerState ps = s.ps;
+    if (disabled || !s || !ps.alive || !ps.entity || _sequence - ps.lastCommand >= CMD_BACKUP) return NO;
+    ShipMoveState m = ps.move;
+    for (uint32_t q = ps.lastCommand + 1; q <= _sequence; q++) {
+        const UserCmd *c = &_cmds[q % CMD_BACKUP];
+        ShipMove(&m, &ps.params, ShipInputFromCmd(c), clampf(c->msec / 1000.0f, 0, 0.1f));
+    }
+    *out = m;
+    return YES;
+}
+
+// Guns fire on the same clock the server keeps for us (seconds of commands
+// run), so predicted shots line up with the server's.
+- (void)predictShot:(const UserCmd *)cmd {
+    ShipMoveState m;
+    if (![self predictFrom:_snapshots.lastObject into:&m]) return;
+    _fireClock += clampf(cmd->msec / 1000.0f, 0, 0.1f);
+    if (!(cmd->buttons & BUTTON_FIRE) || _fireClock - _lastShot <= 0.11) return;
+    _lastShot = _fireClock;
+    FighterSpec spec = FighterSpecFor(ShipClassExecutioner);
+    simd_float3 gun = spec.guns[_gunIndex++ % spec.gunCount];
+    [_view predictedShotFrom:m.origin + simd_act(m.orientation, gun)
+                    velocity:m.velocity + QuatForward(m.orientation) * BOLT_SPEED
+                         gun:gun];
+}
+
+- (BOOL)predictedMove:(ShipMoveState *)out dt:(float)dt {
+    Snapshot *newest = _snapshots.lastObject;
+    ShipMoveState now;
+    if (![self predictFrom:newest into:&now]) {
+        _predictionBase = nil;
+        return NO;
+    }
+    // A new snapshot moves the starting point. Whatever that changes in the
+    // prediction is a correction: hide it and let it fade instead of popping.
+    if (_predictionBase && _predictionBase != newest) {
+        ShipMoveState before;
+        if ([self predictFrom:_predictionBase into:&before]) {
+            simd_float3 jump = before.origin - now.origin;
+            _errorSum += simd_length(jump);
+            _errorMax = fmax(_errorMax, simd_length(jump));
+            _errorCount++;
+            if (simd_length(jump) < 30) {
+                _errorOffset += jump;
+                _errorRotation = simd_normalize(simd_mul(simd_mul(before.orientation, simd_inverse(now.orientation)), _errorRotation));
+            } else {
+                _errorOffset = 0;   // a real teleport
+                _errorRotation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
+            }
+        }
+    }
+    _predictionBase = newest;
+    if (getenv("SF_NET_STATS") && _clock - _statsAt >= 5) {   // debug: how far off prediction was
+        _statsAt = _clock;
+        if (_errorCount) NSLog(@"Client: prediction corrections avg %.3f m, max %.3f m over %lu snapshots",
+                               _errorSum / _errorCount, _errorMax, (unsigned long)_errorCount);
+        _errorSum = _errorMax = 0;
+        _errorCount = 0;
+    }
+    float k = 1.0f - expf(-12.0f * dt);
+    _errorOffset *= 1.0f - k;
+    _errorRotation = simd_slerp(_errorRotation, simd_quaternion(0.0f, simd_make_float3(0, 1, 0)), k);
+    if (simd_length(_errorRotation.vector) < 0.5f) _errorRotation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
+    now.origin += _errorOffset;
+    now.orientation = simd_normalize(simd_mul(_errorRotation, now.orientation));
+    *out = now;
+    return YES;
 }
 
 #pragma mark - Interpolation
@@ -320,9 +415,20 @@ static ShipMoveState LerpMove(ShipMoveState a, ShipMoveState b, float t) {
     float t = to.time > from.time ? (float)((_renderTime - from.time) / (to.time - from.time)) : 1.0f;
     t = clampf(t, 0, 1);
 
+    // Our own ship is drawn where we predict it, now; everything else a
+    // little in the past, between snapshots.
     PlayerState ps = to.ps;
     PlayerState pa = from.ps;
-    ps.move = LerpMove(pa.move, ps.move, t);
+    ShipMoveState predicted;
+    BOOL predicting = [self predictedMove:&predicted dt:dt];
+    if (predicting) {
+        PlayerState newest = _snapshots.lastObject.ps;
+        ps = newest;
+        ps.move = predicted;
+    } else {
+        ps.move = LerpMove(pa.move, ps.move, t);
+    }
+    _view.predictedEntity = predicting ? ps.entity : 0;
 
     // Events happen during the tick that ends at the snapshot's time: play a
     // snapshot's events once the render time passes its start.
