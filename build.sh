@@ -25,7 +25,7 @@ clang "${CFLAGS[@]}" -ISources/Shared -ISources/Game -fvisibility=hidden -dynami
 clang "${CFLAGS[@]}" "${ENGINE_INCLUDES[@]}" \
     Sources/Shared/*.(m|c) Sources/Engine/*/*.m \
     -framework Cocoa -framework SceneKit -framework SpriteKit -framework Metal \
-    -framework QuartzCore -framework IOKit -framework Carbon -framework ImageIO -framework AVFoundation -framework CoreMedia -framework CoreVideo \
+    -framework CoreGraphics -framework QuartzCore -framework IOKit -framework Carbon -framework ImageIO -framework AVFoundation -framework CoreMedia -framework CoreVideo \
     -o "$APP/Contents/MacOS/SpaceFight"
 
 cp Resources/Info.plist "$APP/Contents/"

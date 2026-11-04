@@ -1,4 +1,5 @@
 #import <Cocoa/Cocoa.h>
+#import <CoreGraphics/CoreGraphics.h>
 #import "GameView.h"
 #import "Host.h"
 #import "FXRecorder.h"
@@ -109,6 +110,14 @@ int main(int argc, const char *argv[]) {
             return RunDedicated(argc >= 3 ? atoi(argv[2]) - 1 : 0);
         // SpaceFight --connect <host[:port]>: join that server after boot.
         if (argc >= 3 && !strcmp(argv[1], "--connect")) setenv("SF_CONNECT", argv[2], 1);
+
+        // AppKit can abort during startup if the launcher cannot reach WindowServer.
+        CFDictionaryRef session = CGSessionCopyCurrentDictionary();
+        if (!session) {
+            fputs("Kestrel Frontier requires access to the macOS desktop. Open SpaceFight.app from Finder.\n", stderr);
+            return EXIT_FAILURE;
+        }
+        CFRelease(session);
 
         NSApplication *app = [NSApplication sharedApplication];
         app.activationPolicy = NSApplicationActivationPolicyRegular;
