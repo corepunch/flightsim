@@ -68,6 +68,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     NSUInteger _index;
     BOOL _success;
     NSArray<NSString *> *_results;
+    NSUInteger _debriefBeat;
     NSDictionary *_dialogueScene;
     NSArray<NSDictionary *> *_pages;
     NSUInteger _page;
@@ -324,7 +325,18 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     for (NSUInteger i = 0; i < MIN(cast.count, 2); i++) {
         NSString *name = cast[i];
         SKSpriteNode *portrait = [self artNamed:name];
-        if (!portrait) continue;
+        if (!portrait) {
+            // Large placeholder until a bespoke full-body PNG is illustrated.
+            CGFloat x = i == 0 ? wingWidth * 0.65 : size.width - wingWidth * 0.65;
+            SKLabelNode *missing = Text(MIN(76, size.height * 0.10),
+                                        UIColorWithOpacity(UIAmber, 0.55),
+                                        SKLabelHorizontalAlignmentModeCenter);
+            missing.fontName = @"Menlo-Bold";
+            missing.text = [[name substringToIndex:1] uppercaseString];
+            missing.position = CGPointMake(x, panelTop + (size.height - panelTop) * 0.40);
+            [_root addChild:missing];
+            continue;
+        }
         CGFloat maxWidth = MIN(size.width * 0.31, wingWidth * 1.45);
         CGFloat maxHeight = MAX(1, size.height - panelTop - 56);
         [portrait setScale:MIN(maxWidth / portrait.size.width, maxHeight / portrait.size.height)];
@@ -635,37 +647,88 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     _index = index;
     _success = success;
     _results = [results copy];
+    _debriefBeat = 0;
     [self rebuild];
 }
 
 - (void)buildDebrief {
-    BOOL success = _success;
-    NSUInteger index = _index;
+    NSDictionary *mission = CampaignMission(_index);
+    NSArray<NSDictionary *> *conversation = _success ? mission[@"debrief"][@"dialogue"] : nil;
+    BOOL epilogue = _success && _debriefBeat > 0 && _debriefBeat <= conversation.count;
     CGSize s = self.size;
-    NSDictionary *m = CampaignMission(index);
-    SKLabelNode *t = Text(40, success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1), SKLabelHorizontalAlignmentModeCenter);
-    t.fontName = @"Menlo-Bold";
-    t.text = success ? @"MISSION COMPLETE" : @"MISSION FAILED";
-    t.position = CGPointMake(s.width / 2, s.height - 120);
-    [_root addChild:t];
+    CGFloat inset = MAX(24, MIN(50, s.width * 0.045));
+    CGFloat width = MAX(1, s.width - inset * 2);
+    CGFloat fontSize = MAX(15, MIN(23, s.width / 58));
+
+    if (epilogue) {
+        NSDictionary *line = conversation[_debriefBeat - 1];
+        // The briefing-room background and large character art are reused
+        // after missions. This makes rescued people visible as continuing cast.
+        [self addBackdrop:@"Bastion"];
+        NSString *name = line[@"portrait"];
+        SKSpriteNode *portrait = [self artNamed:name];
+        CGFloat bottom = 190;
+        if (portrait) {
+            CGFloat availableHeight = MAX(100, s.height - bottom - 24);
+            CGFloat availableWidth = MIN(s.width * 0.50, 450);
+            [portrait setScale:MIN(availableWidth / MAX(1, portrait.size.width),
+                                   availableHeight / MAX(1, portrait.size.height))];
+            portrait.anchorPoint = CGPointMake(0.5, 0);
+            portrait.position = CGPointMake(s.width * 0.5, bottom - 8);
+            [_root addChild:portrait];
+        } else {
+            // Missing concept art must not make a character invisible.
+            SKLabelNode *initial = Text(MIN(90, s.height * 0.13),
+                                        UIColorWithOpacity(UIAmber, 0.8),
+                                        SKLabelHorizontalAlignmentModeCenter);
+            initial.fontName = @"Menlo-Bold";
+            initial.text = [[name ?: @"?" substringToIndex:1] uppercaseString];
+            initial.position = CGPointMake(s.width * 0.5, s.height * 0.55);
+            [_root addChild:initial];
+        }
+        CGFloat captionHeight = MIN(MAX(118, s.height * 0.22), 180);
+        CGFloat captionBottom = 72;
+        [_root addChild:ConsolePanel(CGRectMake(inset, captionBottom, width, captionHeight), BastionSteel, 0.96)];
+        SKLabelNode *speaker = Text(15, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
+        speaker.fontName = @"Menlo-Bold";
+        speaker.text = [line[@"speaker"] uppercaseString];
+        speaker.position = CGPointMake(inset + 20, captionBottom + captionHeight - 15);
+        [_root addChild:speaker];
+        SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), width - 40);
+        speech.fontName = @"HelveticaNeue";
+        speech.text = line[@"text"];
+        speech.position = CGPointMake(inset + 20, captionBottom + captionHeight - 48);
+        [_root addChild:speech];
+        [self footer:@"← / →  Conversation     Esc  Missions"
+               action:_debriefBeat == conversation.count ? @"↵  NEXT MISSION" : @"↵  CONTINUE"];
+        return;
+    }
+
+    SKLabelNode *title = Text(MIN(36, MAX(22, s.width / 30)),
+                              _success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1),
+                              SKLabelHorizontalAlignmentModeCenter);
+    title.fontName = @"Menlo-Bold";
+    title.text = _success ? @"MISSION COMPLETE" : @"MISSION FAILED";
+    title.position = CGPointMake(s.width / 2, s.height - 95);
+    [_root addChild:title];
     SKLabelNode *name = Text(18, UIColorWithOpacity(UIAmber, 0.9), SKLabelHorizontalAlignmentModeCenter);
-    name.text = [NSString stringWithFormat:@"MISSION %02lu  -  %@", (unsigned long)index + 1, [m[@"title"] uppercaseString]];
-    name.position = CGPointMake(s.width / 2, s.height - 180);
+    name.text = [NSString stringWithFormat:@"MISSION %02lu  -  %@",
+                 (unsigned long)_index + 1, [mission[@"title"] uppercaseString]];
+    name.position = CGPointMake(s.width / 2, s.height - 145);
     [_root addChild:name];
-    CGFloat w = MIN(900, s.width - 120);
-    SKLabelNode *p = Para(18, UIColorWithOpacity(UIInk, 0.9), w);
-    p.text = success ? m[@"debrief"][@"win"] : m[@"debrief"][@"lose"];
-    p.position = CGPointMake((s.width - w) / 2, s.height - 240);
-    [_root addChild:p];
-    SKLabelNode *r = Para(16, UIColorWithOpacity(UIInk, 0.75), w);
-    NSMutableString *lines = [NSMutableString stringWithString:@"OBJECTIVES\n"];
-    for (NSString *line in _results) [lines appendFormat:@"  %@\n", line];
-    r.text = lines;
-    r.position = CGPointMake((s.width - w) / 2, p.position.y - p.frame.size.height - 40);
-    [_root addChild:r];
-    BOOL more = success && index + 1 < CampaignMissions().count;
+    SKLabelNode *summary = Para(fontSize, UIColorWithOpacity(UIInk, 0.9), width);
+    summary.text = _success ? mission[@"debrief"][@"win"] : mission[@"debrief"][@"lose"];
+    summary.position = CGPointMake(inset, s.height - 200);
+    [_root addChild:summary];
+    SKLabelNode *results = Para(16, UIColorWithOpacity(UIInk, 0.75), width);
+    NSMutableString *lines = [NSMutableString stringWithString:@"OBJECTIVES\\n"];
+    for (NSString *line in _results) [lines appendFormat:@"  %@\\n", line];
+    results.text = lines;
+    results.position = CGPointMake(inset, CGRectGetMinY(summary.frame) - 32);
+    [_root addChild:results];
+    BOOL more = _success && _index + 1 < CampaignMissions().count;
     [self footer:@"R  Fly again     Esc  Missions"
-           action:success ? (more ? @"↵  NEXT MISSION" : @"↵  MISSIONS") : @"↵  RETRY"];
+           action:conversation.count ? @"↵  CONTINUE STORY" : (_success ? (more ? @"↵  NEXT MISSION" : @"↵  MISSIONS") : @"↵  RETRY")];
 }
 
 #pragma mark - Input & animation
@@ -707,10 +770,21 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         case ModeDebrief:
             if (a & InputActionBack) [self showListSelecting:_index];
             else if (a & InputActionRestart) return BriefingCommandLaunch;
-            else if (a & InputActionConfirm) {
-                if (!_success) return BriefingCommandLaunch;
-                if (_index + 1 < count) [self showBriefing:_index + 1];
-                else [self showListSelecting:_index];
+            else if (a & InputActionLeft) {
+                if (_debriefBeat > 0) { _debriefBeat--; [self rebuild]; }
+            } else if (a & (InputActionRight | InputActionConfirm)) {
+                if (!_success) {
+                    if (a & InputActionConfirm) return BriefingCommandLaunch;
+                    break;
+                }
+                NSArray *conversation = CampaignMission(_index)[@"debrief"][@"dialogue"];
+                if (_debriefBeat < conversation.count) {
+                    _debriefBeat++;
+                    [self rebuild];
+                } else if (a & InputActionConfirm) {
+                    if (_index + 1 < count) [self showBriefing:_index + 1];
+                    else [self showListSelecting:_index];
+                }
             }
             break;
     }
