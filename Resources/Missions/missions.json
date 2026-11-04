@@ -99,6 +99,11 @@
       "briefing": {
         "location": "Kestrel System - Outer comm relay K-7",
         "stardate": "2716.111",
+        "dialogue": [
+          { "portrait": "MiraCaptain", "speaker": "Mira’s captain", "text": "We heard K-7 calling for help before the bombers showed up. I asked your escort to go back." },
+          { "portrait": "Varn", "speaker": "Cmdr Ilse Varn", "text": "And I ordered them to stay with you. That’s why both your ships are here." },
+          { "portrait": "MiraCaptain", "speaker": "Mira’s captain", "text": "I know. I’m asking you to go back now." }
+        ],
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
         "text": [
           "Relay K-7 is how this system talks to the rest of the Concord. If it goes dark, the Bastion is alone out here.",

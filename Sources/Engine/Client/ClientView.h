@@ -15,7 +15,7 @@
 @property (nonatomic, readonly) SCNNode *cameraNode;
 @property (nonatomic, readonly) HUD *hud;
 @property (nonatomic) BOOL cockpit;
-@property (nonatomic, copy) NSArray<NSString *> *configStrings;
+@property (atomic, copy) NSArray<NSString *> *configStrings;   // set on the render thread, read while precaching
 
 // Load queue, once: scene, boot sky, camera, own ship, cockpit, effects.
 - (void)buildScene;

@@ -1,4 +1,5 @@
 #import "GameView.h"
+#import "Briefing.h"
 #import <Carbon/Carbon.h>
 
 @implementation GameView
@@ -45,6 +46,18 @@
 - (void)flagsChanged:(NSEvent *)event { [self.input flagsChanged:event]; }
 
 - (void)mouseDown:(NSEvent *)event {
+    if (getenv("SF_SNAPSHOT")) return;
+    SKScene *overlay = self.overlaySKScene;
+    if ([overlay isKindOfClass:[Briefing class]]) {
+        CGPoint p = [self convertPoint:event.locationInWindow fromView:nil];
+        CGRect bounds = self.bounds;
+        if (bounds.size.width > 0 && bounds.size.height > 0) {
+            [(Briefing *)overlay queueClickAtFraction:CGPointMake(
+                (p.x - CGRectGetMinX(bounds)) / bounds.size.width,
+                (p.y - CGRectGetMinY(bounds)) / bounds.size.height)];
+        }
+        return;
+    }
     if (!self.input.mouseCaptured) { [self captureMouse]; return; }
     [self.input setMouseFire:YES];
 }

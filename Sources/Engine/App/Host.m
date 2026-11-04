@@ -5,6 +5,7 @@
 #import "Briefing.h"
 #import "Loading.h"
 #import "Progress.h"
+#import "NetTransport.h"
 #import "Assets.h"
 #include "SharedMath.h"
 #import <stdatomic.h>
@@ -50,7 +51,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _Atomic int _loadStage;
     _Atomic bool _loadDone;
     double _loadStartedAt;
-    BOOL _booted, _revealing;
+    BOOL _booted, _revealing, _precaching;
 }
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
@@ -66,8 +67,13 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _client = [[Client alloc] initWithView:_clientView];
         __weak Host *weakSelf = self;
         _client.missionEndHandler = ^(BOOL success, NSArray<NSString *> *results) { [weakSelf missionEnded:success results:results]; };
-        _server = [Server new];
-        [_client connectLocal:_server name:NSFullUserName() ?: @"Pilot"];
+        _client.gamestateHandler = ^{ [weakSelf gamestateArrived]; };
+        _client.disconnectHandler = ^(NSString *reason) { [weakSelf disconnected:reason]; };
+        // The local server: this player reaches it over loopback, with the
+        // same packets a remote player would send.
+        _server = [[Server alloc] initWithName:[NSString stringWithFormat:@"%@'s game", NSFullUserName() ?: @"Pilot"]];
+        [_server addTransport:[LoopbackTransport side:1]];
+        [self connectLocal];
 
         // Show the loading card over an empty scene right away; the real scene
         // is built off the main thread and swapped in when it is ready.
@@ -87,6 +93,10 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         dispatch_async(_loadQueue, ^{ [self bootInBackground]; });
     }
     return self;
+}
+
+- (void)connectLocal {
+    [_client connectTo:[NetAddress loopback:1] transport:[LoopbackTransport side:0] name:NSFullUserName() ?: @"Pilot"];
 }
 
 #pragma mark - Loading
@@ -177,7 +187,20 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (void)startMission:(NSUInteger)index {
     if (_state == HostStateLoading) return;
     [_server stop];
+    [_client leaveGame];
     [_clientView clearMission];
+    [self showLoadingCard:index];
+    _server.loading = YES;
+    dispatch_async(_loadQueue, ^{
+        CFTimeInterval t0 = CACurrentMediaTime();
+        [self->_server spawnMission:(int)index];
+        self->_server.loading = NO;   // the gamestate goes out on the next frame
+        NSLog(@"Server: mission %d spawned in %.2f s", (int)index + 1, CACurrentMediaTime() - t0);
+    });
+}
+
+// Render thread: the loading card for a mission, until the client is in.
+- (void)showLoadingCard:(NSUInteger)index {
     _state = HostStateLoading;
     _revealing = NO;
     _missionIndex = index;
@@ -191,35 +214,56 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [self reportStage:LoadStageStart progress:0];
     atomic_store(&_loadDone, false);
     _loadStartedAt = _time;
+    [self reportStage:LoadStageFleet progress:0.05f];
     dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_loading; });
-    dispatch_async(_loadQueue, ^{ [self loadMissionInBackground:(int)index]; });
 }
 
-// Load queue. The render thread only animates the loading card while this
-// runs, so neither the server nor the client view is touched concurrently.
-- (void)loadMissionInBackground:(int)index {
-    CFTimeInterval t0 = CACurrentMediaTime();
-    [self reportStage:LoadStageFleet progress:0.05f];
-    [_server spawnMission:index];
-    [_server flush];                    // delivers the gamestate to the client
+// Render thread: the server has sent a mission (ours or a remote host's).
+// Precache its assets off-thread, then begin.
+- (void)gamestateArrived {
+    if (_precaching) return;
+    NSUInteger index = (NSUInteger)_client.missionIndex;
+    if (_state != HostStateLoading || index != _missionIndex) {
+        [_clientView clearMission];
+        [self showLoadingCard:index];
+    }
+    _precaching = YES;
     [self reportStage:LoadStageSky progress:0.2f];
+    dispatch_async(_loadQueue, ^{ [self precacheInBackground]; });
+}
 
+// Load queue. The render thread only animates the loading card and pumps
+// packets while this runs; the client view isn't drawn.
+- (void)precacheInBackground {
+    CFTimeInterval t0 = CACurrentMediaTime();
     float p = 0;
     NSArray *objects = [_clientView loadMissionAssets:&p];
     [self reportStage:LoadStageUpload progress:0.6f];
     [self prepare:objects from:0.6f to:1.0f];
     [self reportStage:LoadStageReady progress:1];
-    NSLog(@"Mission %d loaded in %.2f s (%lu prototypes)", index + 1, CACurrentMediaTime() - t0, (unsigned long)objects.count);
+    NSLog(@"Client: mission %lu precached in %.2f s (%lu prototypes)", (unsigned long)_missionIndex + 1,
+          CACurrentMediaTime() - t0, (unsigned long)objects.count);
     atomic_store(&_loadDone, true);
 }
 
 // Render thread: attach what the load queue built and start flying.
 - (void)finishMission {
+    _precaching = NO;
     [_clientView attachMission];
     [_client begin];
-    [_server flush];
     _state = HostStateFlying;
     [self reveal:0.6];
+}
+
+- (void)disconnected:(NSString *)reason {
+    _precaching = NO;
+    if (_state == HostStateFlying || _state == HostStateOver || (_state == HostStateLoading && _booted)) {
+        _state = HostStateMenu;
+        [_clientView clearMission];
+        [_briefing showListSelecting:_missionIndex];
+        dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+    }
+    [self connectLocal];   // back to our own server
 }
 
 - (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
@@ -227,6 +271,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _state = HostStateOver;
     if (success) ProgressMarkCompleted(_missionIndex);
     [_server stop];
+    [_client leaveGame];
     [_briefing showDebrief:_missionIndex success:success results:results];
     dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
 }
@@ -234,6 +279,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (void)abortToMenu {
     _state = HostStateMenu;
     [_server stop];
+    [_client leaveGame];
     [_clientView clearMission];
     [_briefing showListSelecting:_missionIndex];
     dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
@@ -254,6 +300,12 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
     InputAction actions = [_input consumeActions];
     ControlState controls = [_input poll:dt];
+    [_client readPackets];
+    if (_state != HostStateFlying) {
+        // Keep both ends of the connection alive while nothing is flown.
+        [_client sendInput:(ControlState){ .hat = -1 } actions:0 dt:dt];
+        [_server frame:dt];
+    }
     if (_state == HostStateLoading) { [self updateLoading]; return; }
     if (_revealing) {
         [self updateReveal];
@@ -271,6 +323,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
     [_client sendInput:controls actions:actions dt:dt];
     [_server frame:dt];
+    [_client readPackets];                   // this frame's snapshot, over loopback
     if (_state != HostStateFlying) return;   // the mission ended during that frame
     [_client drawWithControls:controls time:_time dt:dt];
 }

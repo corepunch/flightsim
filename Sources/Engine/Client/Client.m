@@ -1,22 +1,41 @@
 #import "Client.h"
+#import "NetChannel.h"
+#import "NetProtocol.h"
+#import <QuartzCore/QuartzCore.h>
 #include "SharedMath.h"
 
 #define MAX_SNAPSHOTS 32
+#define CMD_BACKUP 64           // user commands kept (redundant resends)
+#define CMD_REDUNDANCY 3        // already-sent commands repeated in each packet
 
-// How far behind the newest snapshot the world is drawn. One tick is enough
-// over loopback; a network needs room for jitter and a lost packet.
+// How far behind the newest snapshot the world is drawn: room for one late
+// or lost snapshot. Loopback needs only one tick.
 static const double kLocalInterpDelay = TICK_DT + 0.005;
+static const double kNetInterpDelay = TICK_DT * 3;
+
+@implementation Snapshot
+- (NSUInteger)entityCount { return _entities.length / sizeof(EntityState); }
+- (const EntityState *)entityStates { return _entities.bytes; }
+@end
 
 @implementation Client {
-    __weak Server *_server;
-    int _slot;
+    id<NetTransport> _transport;
+    NetChannel *_channel;
+    NSString *_name;
+    double _lastConnectAttempt;
+    uint32_t _spawnCount;
+
     NSMutableArray<NSString *> *_cs;
-    NSMutableArray<Snapshot *> *_snapshots;
-    uint32_t _lastEventFrame;       // events of snapshots up to this frame have been played
+    NSMutableArray<Snapshot *> *_snapshots;     // in game, oldest first
+    Snapshot *_frames[UPDATE_BACKUP];           // every decoded frame, for delta baselines
+    uint32_t _lastFrame;                        // newest decoded frame
+    uint32_t _lastEventFrame;
     double _clock, _renderTime, _latestArrival, _interpDelay;
     BOOL _renderTimeValid;
-    uint32_t _sequence;
-    double _msecRemainder;
+
+    UserCmd _cmds[CMD_BACKUP];
+    uint32_t _sequence, _lastSentSequence;
+    double _msecRemainder, _lastMoveSent;
     NSMutableData *_lerped;
 }
 
@@ -27,7 +46,6 @@ static const double kLocalInterpDelay = TICK_DT + 0.005;
         for (int i = 0; i < MAX_CONFIGSTRINGS; i++) [_cs addObject:@""];
         _snapshots = [NSMutableArray array];
         _lerped = [NSMutableData data];
-        _slot = -1;
         _interpDelay = kLocalInterpDelay;
     }
     return self;
@@ -35,91 +53,219 @@ static const double kLocalInterpDelay = TICK_DT + 0.005;
 
 - (NSArray<NSString *> *)configStrings { return _cs; }
 - (int)missionIndex { return _cs[CS_MISSION].intValue; }
+- (NetAddress *)serverAddress { return _channel.address; }
 
 #pragma mark - Connection
 
-- (void)connectLocal:(Server *)server name:(NSString *)name {
+- (void)connectTo:(NetAddress *)address transport:(id<NetTransport>)transport name:(NSString *)name {
     [self disconnect];
-    _server = server;
-    _slot = [server connect:self name:name];
-    _connected = _slot >= 0;
-    _interpDelay = kLocalInterpDelay;
+    _transport = transport;
+    _channel = [[NetChannel alloc] initWithTransport:transport address:address];
+    _name = [name copy];
+    _state = ClientConnecting;
+    _lastConnectAttempt = -100;
+    _interpDelay = address.isLoopback ? kLocalInterpDelay : kNetInterpDelay;
 }
 
 - (void)disconnect {
-    if (_connected) [_server drop:_slot];
-    _connected = NO;
-    _inGame = NO;
-    _slot = -1;
+    if (_state >= ClientConnected) {
+        MsgWriter *w = [MsgWriter new];
+        [w u8:clc_stringcmd];
+        [w string:@"disconnect"];
+        for (int i = 0; i < 3; i++) [_channel transmit:w.data];
+    }
+    _state = ClientDisconnected;
+    _channel = nil;
     [self resetSnapshots];
 }
 
 - (void)resetSnapshots {
     [_snapshots removeAllObjects];
+    for (int i = 0; i < UPDATE_BACKUP; i++) _frames[i] = nil;
+    _lastFrame = 0;
     _renderTimeValid = NO;
     _lastEventFrame = 0;
 }
 
 - (void)begin {
-    if (!_connected) return;
+    if (_state != ClientConnected) return;
     [self resetSnapshots];
-    _inGame = YES;
-    [_server begin:_slot];
+    _state = ClientActive;
+    MsgWriter *w = [MsgWriter new];
+    [w u8:clc_stringcmd];
+    [w string:[NSString stringWithFormat:@"begin %u", _spawnCount]];
+    [_channel queueReliable:w.data];
+    [_channel transmit:nil];
 }
 
-#pragma mark - ServerClient
-
-- (void)serverGamestate:(NSArray<NSString *> *)configStrings {
-    _inGame = NO;
+- (void)leaveGame {
+    if (_state == ClientActive) _state = ClientConnected;
     [self resetSnapshots];
-    for (int i = 0; i < MAX_CONFIGSTRINGS; i++) _cs[i] = i < (int)configStrings.count ? configStrings[i] : @"";
-    _view.configStrings = _cs;
-    if (_gamestateHandler) _gamestateHandler();
 }
 
-- (void)serverConfigString:(int)index value:(NSString *)value {
-    if (index < 0 || index >= MAX_CONFIGSTRINGS) return;
-    _cs[index] = value;
-    _view.configStrings = _cs;
-}
+#pragma mark - Packets in
 
-- (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c {
-    if (type == SVC_MISSION_END) {
-        if (_missionEndHandler) _missionEndHandler([a isEqualToString:@"1"], b.length ? [b componentsSeparatedByString:@"\n"] : @[]);
-        return;
+- (void)readPackets {
+    if (_state == ClientDisconnected) return;
+    double now = CACurrentMediaTime();
+    if (_state == ClientConnecting && now - _lastConnectAttempt > 1.0) {
+        _lastConnectAttempt = now;
+        [NetChannel sendOutOfBand:[NSString stringWithFormat:@"connect %d %@", PROTOCOL_VERSION, _name]
+                        transport:_transport to:_channel.address];
     }
-    [_view serverCommand:type a:a b:b c:c];
+    NetAddress *from = nil;
+    NSData *packet;
+    while (_channel && (packet = [_transport receiveFrom:&from])) {
+        if (![from isEqual:_channel.address]) continue;
+        NSString *oob = [NetChannel outOfBandText:packet];
+        if (oob) { [self connectionless:oob]; continue; }
+        if (_state < ClientConnected) continue;
+        NSData *payload = [_channel process:packet];
+        if (payload) [self parseServer:payload];
+    }
+    if (_state >= ClientConnected && now - _channel.lastReceived > NET_TIMEOUT) [self dropWithReason:@"Server timed out"];
 }
 
-- (void)serverSnapshot:(Snapshot *)snapshot {
-    if (!_inGame) return;
-    Snapshot *last = _snapshots.lastObject;
-    if (last && snapshot.frame <= last.frame) return;   // duplicate or out of order
-    [_snapshots addObject:snapshot];
+- (void)connectionless:(NSString *)text {
+    if ([text hasPrefix:@"client_connect"] && _state == ClientConnecting) {
+        _state = ClientConnected;
+        _channel.lastReceived = CACurrentMediaTime();
+        NSLog(@"Client: connected to %@", _channel.address);
+    } else if ([text hasPrefix:@"reject"] && _state == ClientConnecting) {
+        [self dropWithReason:[NSString stringWithFormat:@"Server refused: %@", [text substringFromIndex:MIN(text.length, 7)]]];
+    }
+}
+
+- (void)dropWithReason:(NSString *)reason {
+    NSLog(@"Client: %@", reason);
+    _state = ClientDisconnected;
+    _channel = nil;
+    [self resetSnapshots];
+    if (_disconnectHandler) _disconnectHandler(reason);
+}
+
+- (void)parseServer:(NSData *)payload {
+    MsgReader *r = [[MsgReader alloc] initWithData:payload];
+    while (r.remaining && !r.overflow) {
+        uint8_t op = [r u8];
+        switch (op) {
+            case svc_nop: break;
+            case svc_disconnect: [self dropWithReason:[r string]]; return;
+            case svc_gamestate:
+                _spawnCount = [r u32];
+                for (int i = 0; i < MAX_CONFIGSTRINGS; i++) _cs[i] = @"";
+                if (_state == ClientActive) _state = ClientConnected;
+                [self resetSnapshots];
+                break;
+            case svc_configstring: {
+                int index = [r u16];
+                NSString *value = [r string];
+                if (index < MAX_CONFIGSTRINGS) _cs[index] = value;
+                _view.configStrings = _cs;
+                break;
+            }
+            case svc_gamestate_done:
+                if ([r u32] != _spawnCount) break;
+                _view.configStrings = _cs;
+                if (_gamestateHandler) _gamestateHandler();
+                break;
+            case svc_command: {
+                int type = [r u8];
+                NSString *a = [r string], *b = [r string], *c = [r string];
+                if (type == SVC_MISSION_END) {
+                    if (_missionEndHandler) _missionEndHandler([a isEqualToString:@"1"], b.length ? [b componentsSeparatedByString:@"\n"] : @[]);
+                } else {
+                    [_view serverCommand:type a:a b:b c:c];
+                }
+                break;
+            }
+            case svc_frame: [self parseFrame:r]; break;
+            default:
+                NSLog(@"Client: bad server message %d", op);
+                return;
+        }
+    }
+}
+
+- (void)parseFrame:(MsgReader *)r {
+    uint32_t frame = [r u32], deltaFrom = [r u32];
+    PlayerState ps;
+    ReadPlayerState(r, &ps);
+    Snapshot *base = nil;
+    if (deltaFrom) {
+        base = _frames[deltaFrom % UPDATE_BACKUP];
+        if (base.frame != deltaFrom) base = nil;
+    }
+    NSMutableData *entities = [NSMutableData data];
+    BOOL ok = ReadPacketEntities(r, base.entityStates, base.entityCount, entities);
+    NSData *events = ReadEvents(r);
+    // A frame against a baseline we no longer have can't be decoded; keep
+    // acknowledging the last good one and the server falls back.
+    if (!ok || r.overflow || (deltaFrom && !base) || _state != ClientActive) return;
+
+    Snapshot *s = [Snapshot new];
+    s.frame = frame;
+    s.time = frame * (double)TICK_DT;
+    s.ps = ps;
+    s.entities = entities;
+    s.events = events;
+    _frames[frame % UPDATE_BACKUP] = s;
+    if (frame <= _lastFrame) return;
+    _lastFrame = frame;
+    [_snapshots addObject:s];
     if (_snapshots.count > MAX_SNAPSHOTS) [_snapshots removeObjectAtIndex:0];
     _latestArrival = _clock;
 }
 
-#pragma mark - Input
+#pragma mark - Packets out
 
 - (void)sendInput:(ControlState)c actions:(InputAction)actions dt:(float)dt {
     _clock += dt;
-    if (!_inGame) return;
+    if (_state < ClientConnected) return;
+    double now = CACurrentMediaTime();
+    if (_state != ClientActive) {
+        // Keepalive: carries acks and our reliable commands.
+        if (_channel.hasPendingReliable || now - _channel.lastSent > 0.25) {
+            MsgWriter *w = [MsgWriter new];
+            [w u8:clc_nop];
+            [_channel transmit:w.data];
+        }
+        return;
+    }
+
+    BOOL impulse = (actions & (InputActionTarget | InputActionTorpedo)) != 0;
     _msecRemainder += dt * 1000.0;
     int msec = (int)_msecRemainder;
-    if (msec < 1 && !(actions & (InputActionTarget | InputActionTorpedo))) return;
-    _msecRemainder -= msec;
-    msec = MIN(msec, 250);
-    UserCmd cmd = {0};
-    cmd.sequence = ++_sequence;
-    cmd.msec = (uint8_t)msec;
-    cmd.pitch = c.pitch;
-    cmd.yaw = c.yaw;
-    cmd.roll = c.roll;
-    cmd.throttle = c.throttle;
-    cmd.buttons = (c.fire ? BUTTON_FIRE : 0) | (c.boost ? BUTTON_BOOST : 0);
-    cmd.impulse = (actions & InputActionTorpedo) ? IMPULSE_TORPEDO : ((actions & InputActionTarget) ? IMPULSE_TARGET : IMPULSE_NONE);
-    [_server slot:_slot command:&cmd];
+    if (msec >= 1 || impulse) {
+        _msecRemainder -= msec;
+        UserCmd cmd = {0};
+        cmd.sequence = ++_sequence;
+        cmd.msec = (uint8_t)MIN(msec, 250);
+        cmd.pitch = c.pitch;
+        cmd.yaw = c.yaw;
+        cmd.roll = c.roll;
+        cmd.throttle = c.throttle;
+        cmd.buttons = (c.fire ? BUTTON_FIRE : 0) | (c.boost ? BUTTON_BOOST : 0);
+        cmd.impulse = (actions & InputActionTorpedo) ? IMPULSE_TORPEDO : ((actions & InputActionTarget) ? IMPULSE_TARGET : IMPULSE_NONE);
+        QuantizeUserCmd(&cmd);
+        _cmds[cmd.sequence % CMD_BACKUP] = cmd;
+    }
+
+    // Up to 60 packets a second; each carries the new commands plus the last
+    // few already sent, so one lost packet loses no input.
+    if (now - _lastMoveSent < 1.0 / 60.0 && !impulse) return;
+    if (_sequence == _lastSentSequence && now - _lastMoveSent < 0.1) return;
+    _lastMoveSent = now;
+    uint32_t first = _lastSentSequence + 1 > CMD_REDUNDANCY ? _lastSentSequence + 1 - CMD_REDUNDANCY : 1;
+    if (_sequence - first + 1 > 32) first = _sequence - 31;
+    MsgWriter *w = [MsgWriter new];
+    [w u8:clc_move];
+    [w u32:_lastFrame];
+    uint32_t count = _sequence >= first ? _sequence - first + 1 : 0;
+    [w u8:(uint8_t)count];
+    for (uint32_t s = first; s <= _sequence && count; s++) WriteUserCmd(w, &_cmds[s % CMD_BACKUP]);
+    _lastSentSequence = _sequence;
+    [_channel transmit:w.data];
 }
 
 #pragma mark - Interpolation
@@ -161,15 +307,15 @@ static ShipMoveState LerpMove(ShipMoveState a, ShipMoveState b, float t) {
 }
 
 - (void)drawWithControls:(ControlState)controls time:(double)time dt:(float)dt {
-    if (!_inGame || !_snapshots.count) return;
+    if (_state != ClientActive || !_snapshots.count) return;
     [self advanceRenderTime:dt];
 
     // The pair of snapshots around the render time.
     Snapshot *from = _snapshots.firstObject, *to = from;
     for (Snapshot *s in _snapshots) {
         if (s.time <= _renderTime) from = s;
-        if (s.time >= _renderTime) { to = s; break; }
         to = s;
+        if (s.time >= _renderTime) break;
     }
     float t = to.time > from.time ? (float)((_renderTime - from.time) / (to.time - from.time)) : 1.0f;
     t = clampf(t, 0, 1);

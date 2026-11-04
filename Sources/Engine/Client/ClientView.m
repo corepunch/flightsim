@@ -66,7 +66,8 @@ typedef struct {
 #pragma mark - Configstrings
 
 - (NSString *)cs:(int)index {
-    return index >= 0 && index < (int)_configStrings.count ? _configStrings[index] : @"";
+    NSArray *cs = self.configStrings;
+    return index >= 0 && index < (int)cs.count ? cs[index] : @"";
 }
 - (NSString *)stringAt:(uint16_t)i { return i ? [self cs:CS_STRINGS + i] : nil; }
 - (NSString *)modelAt:(uint16_t)i { return i ? [self cs:CS_MODELS + i] : @""; }

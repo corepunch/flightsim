@@ -1,17 +1,22 @@
 #import "Server.h"
 #import "ModelInfo.h"
 #import "GameLoader.h"
+#import "NetChannel.h"
+#import "NetProtocol.h"
+#import <QuartzCore/QuartzCore.h>
 
-@implementation Snapshot
-- (NSUInteger)entityCount { return _entities.length / sizeof(EntityState); }
-- (const EntityState *)entityStates { return _entities.bytes; }
-@end
+typedef NS_ENUM(NSInteger, SlotState) { SlotFree, SlotConnected, SlotInGame };
 
-@interface ServerSlot : NSObject
-@property (nonatomic, strong) id<ServerClient> client;
+@interface ServerSlot : NSObject {
+@public
+    uint32_t frameNumbers[UPDATE_BACKUP];
+    __strong NSData *frameEntities[UPDATE_BACKUP];  // quantized, as the client decoded them
+}
+@property (nonatomic) SlotState state;
+@property (nonatomic, strong) NetChannel *channel;
 @property (nonatomic, copy) NSString *name;
-@property (nonatomic) BOOL inGame;
-@property (nonatomic, strong) NSMutableArray<dispatch_block_t> *outbox;
+@property (nonatomic) uint32_t lastCommand;     // sequence of the last user command run
+@property (nonatomic) uint32_t deltaFrame;      // last frame the client says it has, 0 none
 @end
 @implementation ServerSlot
 @end
@@ -22,12 +27,13 @@ static __unsafe_unretained Server *sv;
 
 @implementation Server {
     GameExport *_ge;
+    NSMutableArray<id<NetTransport>> *_transports;
     NSMutableArray<NSString *> *_configStrings;
     NSMutableDictionary<NSNumber *, ModelInfo *> *_models;
     NSMutableArray<ServerSlot *> *_slots;
     NSMutableData *_events;
-    double _accumulator;
-    uint32_t _frame;
+    double _accumulator, _statsAt;
+    uint32_t _frame, _spawnCount;
 }
 
 #pragma mark - Game imports
@@ -87,30 +93,31 @@ static void SV_Event(const GameEvent *e) {
 }
 
 static void SV_Command(int client, int type, const char *a, const char *b, const char *c) {
-    NSString *sa = @(a ?: ""), *sb = @(b ?: ""), *sc = @(c ?: "");
+    MsgWriter *w = [MsgWriter new];
+    [w u8:svc_command];
+    [w u8:(uint8_t)type];
+    [w string:@(a ?: "")];
+    [w string:@(b ?: "")];
+    [w string:@(c ?: "")];
     for (NSUInteger i = 0; i < sv->_slots.count; i++) {
         if (client >= 0 && (int)i != client) continue;
         ServerSlot *slot = sv->_slots[i];
-        if (!slot.client) continue;
-        id<ServerClient> to = slot.client;
-        [sv queue:slot block:^{ [to serverCommand:type a:sa b:sb c:sc]; }];
+        if (slot.state == SlotInGame) [slot.channel queueReliable:w.data];
     }
 }
 
 #pragma mark - Lifecycle
 
-- (instancetype)init {
+- (instancetype)initWithName:(NSString *)name {
     if ((self = [super init])) {
         sv = self;
+        _name = [name copy];
+        _transports = [NSMutableArray array];
         _configStrings = [NSMutableArray arrayWithCapacity:MAX_CONFIGSTRINGS];
         for (int i = 0; i < MAX_CONFIGSTRINGS; i++) [_configStrings addObject:@""];
         _models = [NSMutableDictionary dictionary];
         _slots = [NSMutableArray array];
-        for (int i = 0; i < MAX_CLIENTS; i++) {
-            ServerSlot *s = [ServerSlot new];
-            s.outbox = [NSMutableArray array];
-            [_slots addObject:s];
-        }
+        for (int i = 0; i < MAX_CLIENTS; i++) [_slots addObject:[ServerSlot new]];
         _events = [NSMutableData data];
 
         GameImport gi = {
@@ -141,82 +148,193 @@ static void SV_Command(int client, int type, const char *a, const char *b, const
     if (sv == self) sv = nil;
 }
 
+- (void)addTransport:(id<NetTransport>)transport { [_transports addObject:transport]; }
+
 - (double)time { return _frame * (double)TICK_DT; }
 
-- (void)queue:(ServerSlot *)slot block:(dispatch_block_t)block {
-    @synchronized (slot.outbox) { [slot.outbox addObject:block]; }
+- (int)clientCount {
+    int n = 0;
+    for (ServerSlot *s in _slots) if (s.state != SlotFree) n++;
+    return n;
+}
+
+#pragma mark - Configstrings and gamestate
+
+static NSData *ConfigStringMessage(int index, NSString *value) {
+    MsgWriter *w = [MsgWriter new];
+    [w u8:svc_configstring];
+    [w u16:(uint16_t)index];
+    [w string:value];
+    return w.data;
 }
 
 - (void)setConfigString:(int)index value:(NSString *)value {
     if ([_configStrings[index] isEqualToString:value]) return;
     _configStrings[index] = value;
-    for (ServerSlot *slot in _slots) {
-        id<ServerClient> to = slot.client;
-        if (to) [self queue:slot block:^{ [to serverConfigString:index value:value]; }];
-    }
+    if (self.loading) return;   // the gamestate sent after loading carries it
+    NSData *msg = ConfigStringMessage(index, value);
+    for (ServerSlot *slot in _slots) if (slot.state != SlotFree) [slot.channel queueReliable:msg];
 }
 
 - (void)sendGamestate:(ServerSlot *)slot {
-    NSArray *cs = [_configStrings copy];
-    id<ServerClient> to = slot.client;
-    [self queue:slot block:^{ [to serverGamestate:cs]; }];
+    MsgWriter *w = [MsgWriter new];
+    [w u8:svc_gamestate];
+    [w u32:_spawnCount];
+    [slot.channel queueReliable:w.data];
+    for (int i = 0; i < MAX_CONFIGSTRINGS; i++)
+        if (_configStrings[i].length) [slot.channel queueReliable:ConfigStringMessage(i, _configStrings[i])];
+    w = [MsgWriter new];
+    [w u8:svc_gamestate_done];
+    [w u32:_spawnCount];
+    [slot.channel queueReliable:w.data];
 }
 
 - (void)spawnMission:(int)missionIndex {
     _running = NO;
+    for (NSUInteger i = 0; i < _slots.count; i++) {
+        ServerSlot *slot = _slots[i];
+        if (slot.state != SlotInGame) continue;
+        _ge->clientDisconnect((int)i);
+        slot.state = SlotConnected;
+    }
     for (int i = 0; i < MAX_CONFIGSTRINGS; i++) _configStrings[i] = @"";
     [_models removeAllObjects];
     _events.length = 0;
-    for (NSUInteger i = 0; i < _slots.count; i++) _slots[i].inGame = NO;
     _ge->spawnMission(missionIndex);
+    _spawnCount++;
     _accumulator = 0;
     _running = YES;
-    for (ServerSlot *slot in _slots) if (slot.client) [self sendGamestate:slot];
+    for (ServerSlot *slot in _slots) if (slot.state != SlotFree) [self sendGamestate:slot];
 }
 
 - (void)stop {
     _running = NO;
-    for (NSUInteger i = 0; i < _slots.count; i++) if (_slots[i].inGame) _ge->clientDisconnect((int)i);
-    for (ServerSlot *slot in _slots) slot.inGame = NO;
-}
-
-#pragma mark - Clients
-
-- (int)connect:(id<ServerClient>)client name:(NSString *)name {
     for (NSUInteger i = 0; i < _slots.count; i++) {
         ServerSlot *slot = _slots[i];
-        if (slot.client) continue;
-        if (!_ge->clientConnect((int)i, name.UTF8String)) return -1;
-        slot.client = client;
-        slot.name = name;
-        if (_running) [self sendGamestate:slot];
-        return (int)i;
+        if (slot.state != SlotInGame) continue;
+        _ge->clientDisconnect((int)i);
+        slot.state = SlotConnected;
     }
-    return -1;
 }
 
-- (void)begin:(int)i {
-    if (i < 0 || i >= (int)_slots.count || !_slots[i].client || !_running) return;
-    _slots[i].inGame = YES;
-    _ge->clientBegin(i);
+#pragma mark - Packets
+
+- (void)readPackets {
+    for (id<NetTransport> t in _transports) {
+        NetAddress *from = nil;
+        NSData *packet;
+        while ((packet = [t receiveFrom:&from])) {
+            NSString *oob = [NetChannel outOfBandText:packet];
+            if (oob) { [self connectionless:oob from:from transport:t]; continue; }
+            for (NSUInteger i = 0; i < _slots.count; i++) {
+                ServerSlot *slot = _slots[i];
+                if (slot.state == SlotFree || ![slot.channel.address isEqual:from]) continue;
+                NSData *payload = [slot.channel process:packet];
+                if (payload) [self parseClient:(int)i payload:payload];
+                break;
+            }
+        }
+    }
 }
 
-- (void)drop:(int)i {
-    if (i < 0 || i >= (int)_slots.count || !_slots[i].client) return;
-    if (_slots[i].inGame) _ge->clientDisconnect(i);
-    _slots[i].inGame = NO;
-    _slots[i].client = nil;
-    @synchronized (_slots[i].outbox) { [_slots[i].outbox removeAllObjects]; }
+- (void)connectionless:(NSString *)text from:(NetAddress *)from transport:(id<NetTransport>)t {
+    NSArray *args = [text componentsSeparatedByString:@" "];
+    NSString *cmd = args.firstObject;
+    if ([cmd isEqualToString:@"info"]) {
+        NSString *mission = _running ? _configStrings[CS_MISSION] : @"-";
+        [NetChannel sendOutOfBand:[NSString stringWithFormat:@"info_response %d %d %@ %@", self.clientCount, MAX_CLIENTS, mission, _name]
+                        transport:t to:from];
+    } else if ([cmd isEqualToString:@"connect"]) {
+        if (args.count < 2 || [args[1] intValue] != PROTOCOL_VERSION) {
+            [NetChannel sendOutOfBand:@"reject protocol" transport:t to:from];
+            return;
+        }
+        NSString *name = args.count > 2 ? [[args subarrayWithRange:NSMakeRange(2, args.count - 2)] componentsJoinedByString:@" "] : @"pilot";
+        // A client reconnecting from the same address takes its old slot.
+        int index = -1;
+        for (NSUInteger i = 0; i < _slots.count; i++)
+            if (_slots[i].state != SlotFree && [_slots[i].channel.address isEqual:from]) { [self drop:(int)i reason:nil]; index = (int)i; break; }
+        if (index < 0)
+            for (NSUInteger i = 0; i < _slots.count; i++) if (_slots[i].state == SlotFree) { index = (int)i; break; }
+        if (index < 0 || !_ge->clientConnect(index, name.UTF8String)) {
+            [NetChannel sendOutOfBand:@"reject full" transport:t to:from];
+            return;
+        }
+        ServerSlot *slot = _slots[index];
+        slot.state = SlotConnected;
+        slot.name = name;
+        slot.channel = [[NetChannel alloc] initWithTransport:t address:from];
+        slot.lastCommand = 0;
+        slot.deltaFrame = 0;
+        for (int i = 0; i < UPDATE_BACKUP; i++) { slot->frameNumbers[i] = 0; slot->frameEntities[i] = nil; }
+        NSLog(@"Server: %@ connected from %@ (slot %d)", name, from, index);
+        [NetChannel sendOutOfBand:[NSString stringWithFormat:@"client_connect %d", index] transport:t to:from];
+        if (_running) [self sendGamestate:slot];
+    }
 }
 
-- (void)slot:(int)i command:(const UserCmd *)cmd {
-    if (!_running || i < 0 || i >= (int)_slots.count || !_slots[i].inGame) return;
-    _ge->clientThink(i, cmd);
+- (void)parseClient:(int)index payload:(NSData *)payload {
+    ServerSlot *slot = _slots[index];
+    MsgReader *r = [[MsgReader alloc] initWithData:payload];
+    while (r.remaining && !r.overflow) {
+        uint8_t op = [r u8];
+        if (op == clc_nop) continue;
+        if (op == clc_move) {
+            uint32_t delta = [r u32];
+            NSUInteger count = [r u8];
+            slot.deltaFrame = delta;   // packets arrive in order: this is the client's newest
+            for (NSUInteger i = 0; i < count && !r.overflow; i++) {
+                UserCmd cmd;
+                ReadUserCmd(r, &cmd);
+                if (r.overflow || cmd.sequence <= slot.lastCommand) continue;   // already run (redundant copy)
+                slot.lastCommand = cmd.sequence;
+                if (slot.state == SlotInGame && _running) _ge->clientThink(index, &cmd);
+            }
+        } else if (op == clc_stringcmd) {
+            NSArray *args = [[r string] componentsSeparatedByString:@" "];
+            if ([args.firstObject isEqualToString:@"begin"]) {
+                if (_running && slot.state == SlotConnected && [args.lastObject intValue] == (int)_spawnCount) {
+                    slot.state = SlotInGame;
+                    slot.deltaFrame = 0;
+                    for (int i = 0; i < UPDATE_BACKUP; i++) { slot->frameNumbers[i] = 0; slot->frameEntities[i] = nil; }
+                    _ge->clientBegin(index);
+                }
+            } else if ([args.firstObject isEqualToString:@"disconnect"]) {
+                [self drop:index reason:nil];
+                return;
+            }
+        } else {
+            NSLog(@"Server: bad message %d from slot %d", op, index);
+            return;
+        }
+    }
+}
+
+- (void)drop:(int)index reason:(NSString *)reason {
+    ServerSlot *slot = _slots[index];
+    if (slot.state == SlotFree) return;
+    if (reason) {
+        MsgWriter *w = [MsgWriter new];
+        [w u8:svc_disconnect];
+        [w string:reason];
+        // Unreliable, three times: the client may be gone already.
+        for (int i = 0; i < 3; i++) [slot.channel transmit:w.data];
+    }
+    NSLog(@"Server: %@ dropped%@", slot.name, reason ? [@": " stringByAppendingString:reason] : @"");
+    _ge->clientDisconnect(index);
+    slot.state = SlotFree;
+    slot.channel = nil;
 }
 
 #pragma mark - Frame
 
+static int CompareEntities(const void *a, const void *b) {
+    return (int)((const EntityState *)a)->number - (int)((const EntityState *)b)->number;
+}
+
 - (void)frame:(double)dt {
+    if (self.loading) return;   // packets wait in the transports
+    [self readPackets];
     if (_running) {
         _accumulator = fmin(_accumulator + dt, 0.25);   // after a hitch, skip rather than spiral
         while (_accumulator >= TICK_DT) {
@@ -226,43 +344,62 @@ static void SV_Command(int client, int type, const char *a, const char *b, const
             [self sendSnapshots];
         }
     }
-    [self flush];
-}
-
-static int CompareEntities(const void *a, const void *b) {
-    return (int)((const EntityState *)a)->number - (int)((const EntityState *)b)->number;
+    double now = CACurrentMediaTime();
+    if (getenv("SF_NET_STATS") && now - _statsAt >= 5) {   // debug: outgoing bandwidth per client
+        double span = _statsAt > 0 ? now - _statsAt : 0;
+        _statsAt = now;
+        for (ServerSlot *slot in _slots) {
+            if (slot.state == SlotFree || span <= 0) continue;
+            NetChannel *c = slot.channel;
+            NSLog(@"Server: %@: %.1f kB/s, %.0f packets/s, %lu dropped by client",
+                  slot.name, c.bytesSent / span / 1024.0, c.packetsSent / span, (unsigned long)c.droppedPackets);
+            c.bytesSent = c.packetsSent = 0;
+        }
+    }
+    for (NSUInteger i = 0; i < _slots.count; i++) {
+        ServerSlot *slot = _slots[i];
+        if (slot.state == SlotFree) continue;
+        if (now - slot.channel.lastReceived > NET_TIMEOUT) { [self drop:(int)i reason:@"timed out"]; continue; }
+        // Keep the channel moving between snapshots: reliable data, acks.
+        if (slot.state != SlotInGame || !_running)
+            if (slot.channel.hasPendingReliable || now - slot.channel.lastSent > 0.25) [slot.channel transmit:nil];
+    }
 }
 
 - (void)sendSnapshots {
     const EntityState *ents = NULL;
     int n = _ge->entities(&ents);
     NSMutableData *entities = [NSMutableData dataWithBytes:ents length:(NSUInteger)n * sizeof(EntityState)];
-    qsort(entities.mutableBytes, (size_t)n, sizeof(EntityState), CompareEntities);
+    EntityState *e = entities.mutableBytes;
+    qsort(e, (size_t)n, sizeof(EntityState), CompareEntities);
+    for (int i = 0; i < n; i++) QuantizeEntity(&e[i]);
     NSData *events = [_events copy];
     _events.length = 0;
+
     for (NSUInteger i = 0; i < _slots.count; i++) {
         ServerSlot *slot = _slots[i];
-        if (!slot.inGame) continue;
-        Snapshot *s = [Snapshot new];
-        s.frame = _frame;
-        s.time = self.time;
+        if (slot.state != SlotInGame) continue;
         const PlayerState *ps = _ge->playerState((int)i);
-        if (ps) s.ps = *ps;
-        s.entities = entities;
-        s.events = events;
-        id<ServerClient> to = slot.client;
-        [self queue:slot block:^{ [to serverSnapshot:s]; }];
-    }
-}
+        // Delta against the newest frame the client has, if we still have it.
+        uint32_t base = slot.deltaFrame;
+        NSData *baseline = nil;
+        if (base && _frame - base < UPDATE_BACKUP && slot->frameNumbers[base % UPDATE_BACKUP] == base)
+            baseline = slot->frameEntities[base % UPDATE_BACKUP];
+        else
+            base = 0;
 
-- (void)flush {
-    for (ServerSlot *slot in _slots) {
-        NSArray *blocks;
-        @synchronized (slot.outbox) {
-            blocks = [slot.outbox copy];
-            [slot.outbox removeAllObjects];
-        }
-        for (dispatch_block_t b in blocks) b();
+        MsgWriter *w = [MsgWriter new];
+        [w u8:svc_frame];
+        [w u32:_frame];
+        [w u32:base];
+        PlayerState p = ps ? *ps : (PlayerState){0};
+        WritePlayerState(w, &p);
+        WritePacketEntities(w, baseline.bytes, baseline.length / sizeof(EntityState), e, (NSUInteger)n);
+        WriteEvents(w, events.bytes, events.length / sizeof(GameEvent));
+        [slot.channel transmit:w.data];
+
+        slot->frameNumbers[_frame % UPDATE_BACKUP] = _frame;
+        slot->frameEntities[_frame % UPDATE_BACKUP] = entities;
     }
 }
 

@@ -17,6 +17,7 @@ typedef NS_ENUM(NSInteger, BriefingCommand) {
 - (void)showBriefing:(NSUInteger)index;
 // results: one line per objective, prefixed "+" done, "x" failed, "-" not done.
 - (void)showDebrief:(NSUInteger)index success:(BOOL)success results:(NSArray<NSString *> *)results;
+- (void)queueClickAtFraction:(CGPoint)point;
 - (BriefingCommand)handle:(InputAction)actions;
 - (void)tick:(double)time;
 

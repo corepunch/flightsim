@@ -1,7 +1,5 @@
 #import "Loading.h"
-
-static NSColor *Ink(CGFloat a) { return [NSColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:a]; }
-static NSColor *Amber(CGFloat a) { return [NSColor colorWithRed:1.0 green:0.72 blue:0.3 alpha:a]; }
+#import "UIStyle.h"
 
 static SKLabelNode *Text(CGFloat size, NSColor *c, SKLabelHorizontalAlignmentMode h) {
     SKLabelNode *l = [SKLabelNode labelNodeWithFontNamed:@"Menlo"];
@@ -32,7 +30,7 @@ static NSArray<NSString *> *Tips(void) {
     CGSize _laidOut;
     NSString *_title, *_kicker, *_detail, *_status;
     SKLabelNode *_titleLabel, *_kickerLabel, *_detailLabel, *_statusLabel, *_percentLabel, *_tipLabel;
-    SKSpriteNode *_barFill;
+    SKShapeNode *_barFill;
     SKNode *_spinner;
     NSMutableArray<SKSpriteNode *> *_stars;
     CGFloat _barWidth;
@@ -97,7 +95,7 @@ static NSArray<NSString *> *Tips(void) {
     CGSize s = self.size;
     _laidOut = s;
 
-    SKSpriteNode *bg = [SKSpriteNode spriteNodeWithColor:[NSColor colorWithRed:0.012 green:0.018 blue:0.028 alpha:1] size:s];
+    SKSpriteNode *bg = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBackground, 1) size:s];
     bg.anchorPoint = CGPointZero;
     [_root addChild:bg];
 
@@ -106,7 +104,7 @@ static NSArray<NSString *> *Tips(void) {
     for (int i = 0; i < 220; i++) {
         CGFloat z = drand48();
         CGFloat r = 0.6 + z * z * 1.8;
-        SKSpriteNode *st = [SKSpriteNode spriteNodeWithColor:[NSColor colorWithWhite:1 alpha:1] size:CGSizeMake(r, r)];
+        SKSpriteNode *st = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIWhite, 1) size:CGSizeMake(r, r)];
         st.alpha = 0.15 + z * 0.6;
         st.position = CGPointMake(drand48() * s.width, drand48() * s.height);
         st.userData = [NSMutableDictionary dictionaryWithDictionary:@{ @"z": @(z), @"phase": @(drand48() * 6.28) }];
@@ -115,61 +113,59 @@ static NSArray<NSString *> *Tips(void) {
     }
 
     // Faint horizon band and scan rules, the same language as the briefing map.
-    SKSpriteNode *band = [SKSpriteNode spriteNodeWithColor:Ink(0.035) size:CGSizeMake(s.width, s.height * 0.34)];
+    SKSpriteNode *band = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.035) size:CGSizeMake(s.width, s.height * 0.34)];
     band.anchorPoint = CGPointZero;
     band.position = CGPointMake(0, s.height * 0.36);
     [_root addChild:band];
     for (int i = 0; i < 2; i++) {
-        SKSpriteNode *rule = [SKSpriteNode spriteNodeWithColor:Ink(0.25) size:CGSizeMake(s.width - 120, 1)];
+        SKSpriteNode *rule = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.25) size:CGSizeMake(s.width - 120, 1)];
         rule.anchorPoint = CGPointZero;
         rule.position = CGPointMake(60, s.height * (i ? 0.70 : 0.36));
         [_root addChild:rule];
     }
 
     CGFloat x = 60, mid = s.height * 0.53;
-    _kickerLabel = Text(15, Ink(0.6), SKLabelHorizontalAlignmentModeLeft);
+    _kickerLabel = Text(15, UIColorWithOpacity(UIInk, 0.6), SKLabelHorizontalAlignmentModeLeft);
     _kickerLabel.text = _kicker;
     _kickerLabel.position = CGPointMake(x, mid + 52);
     [_root addChild:_kickerLabel];
 
-    _titleLabel = Text(MIN(48, s.width / 22), Ink(1), SKLabelHorizontalAlignmentModeLeft);
+    _titleLabel = Text(MIN(48, s.width / 22), UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
     _titleLabel.fontName = @"Menlo-Bold";
     _titleLabel.text = _title;
     _titleLabel.position = CGPointMake(x, mid);
     [_root addChild:_titleLabel];
 
-    _detailLabel = Text(15, Amber(0.85), SKLabelHorizontalAlignmentModeLeft);
+    _detailLabel = Text(15, UIColorWithOpacity(UIAmber, 0.85), SKLabelHorizontalAlignmentModeLeft);
     _detailLabel.text = _detail;
     _detailLabel.position = CGPointMake(x, mid - 36);
     [_root addChild:_detailLabel];
 
     // Progress bar along the bottom.
-    _barWidth = MIN(720, s.width - 220);
+    _barWidth = MAX(1, MIN(720, s.width - 220));
     CGFloat barY = 104;
-    SKShapeNode *frame = [SKShapeNode shapeNodeWithRect:CGRectMake(x - 3, barY - 3, _barWidth + 6, 12) cornerRadius:2];
-    frame.strokeColor = Ink(0.45);
-    frame.fillColor = Ink(0.05);
-    frame.lineWidth = 1;
-    [_root addChild:frame];
-    _barFill = [SKSpriteNode spriteNodeWithColor:Ink(0.9) size:CGSizeMake(1, 6)];
-    _barFill.anchorPoint = CGPointZero;
+    [_root addChild:UISkewedShape(CGRectMake(x - 3, barY - 3, _barWidth + 6, 12),
+                                    UIColorWithOpacity(UIInk, 0.45), UIColorWithOpacity(UIInk, 0.05))];
+    _barFill = [SKShapeNode node];
+    _barFill.lineWidth = 0;
+    _barFill.fillColor = UIColorWithOpacity(UIInk, 0.9);
     _barFill.position = CGPointMake(x, barY);
     [_root addChild:_barFill];
     for (int i = 1; i < 10; i++) {   // tick marks every 10%
-        SKSpriteNode *t = [SKSpriteNode spriteNodeWithColor:Ink(0.3) size:CGSizeMake(1, 4)];
+        SKSpriteNode *t = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.3) size:CGSizeMake(1, 4)];
         t.position = CGPointMake(x + _barWidth * i / 10.0, barY - 7);
         [_root addChild:t];
     }
 
-    _statusLabel = Text(13, Ink(0.75), SKLabelHorizontalAlignmentModeLeft);
+    _statusLabel = Text(13, UIColorWithOpacity(UIInk, 0.75), SKLabelHorizontalAlignmentModeLeft);
     _statusLabel.text = _status;
     _statusLabel.position = CGPointMake(x, barY + 20);
     [_root addChild:_statusLabel];
-    _percentLabel = Text(13, Ink(0.75), SKLabelHorizontalAlignmentModeRight);
+    _percentLabel = Text(13, UIColorWithOpacity(UIInk, 0.75), SKLabelHorizontalAlignmentModeRight);
     _percentLabel.position = CGPointMake(x + _barWidth, barY + 20);
     [_root addChild:_percentLabel];
 
-    _tipLabel = Text(13, Ink(0.45), SKLabelHorizontalAlignmentModeLeft);
+    _tipLabel = Text(13, UIColorWithOpacity(UIInk, 0.45), SKLabelHorizontalAlignmentModeLeft);
     _tipLabel.numberOfLines = 0;
     _tipLabel.preferredMaxLayoutWidth = _barWidth;
     _tipLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
@@ -186,13 +182,13 @@ static NSArray<NSString *> *Tips(void) {
         CGPathAddArc(p, NULL, 0, 0, 22, a0, a0 + 1.4, false);
         SKShapeNode *arc = [SKShapeNode shapeNodeWithPath:p];
         CGPathRelease(p);
-        arc.strokeColor = i == 0 ? Amber(0.9) : Ink(0.7);
+        arc.strokeColor = i == 0 ? UIColorWithOpacity(UIAmber, 0.9) : UIColorWithOpacity(UIInk, 0.7);
         arc.lineWidth = 2.5;
         arc.lineCap = kCGLineCapRound;
         [_spinner addChild:arc];
     }
     SKShapeNode *inner = [SKShapeNode shapeNodeWithCircleOfRadius:12];
-    inner.strokeColor = Ink(0.25);
+    inner.strokeColor = UIColorWithOpacity(UIInk, 0.25);
     inner.lineWidth = 1;
     [_spinner addChild:inner];
     [_root addChild:_spinner];
@@ -201,7 +197,10 @@ static NSArray<NSString *> *Tips(void) {
 }
 
 - (void)applyProgress {
-    _barFill.size = CGSizeMake(fmax(1, _barWidth * _shown), 6);
+    _barFill.hidden = _shown <= 0;
+    CGPathRef path = UICreateSkewedPath(CGRectMake(0, 0, _barWidth * _shown, 6));
+    _barFill.path = path;
+    CGPathRelease(path);
     _percentLabel.text = [NSString stringWithFormat:@"%3d%%", (int)roundf(_shown * 100)];
 }
 
