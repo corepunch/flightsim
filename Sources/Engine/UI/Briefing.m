@@ -313,7 +313,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     [_root addChild:portrait];
 }
 
-- (CGFloat)captionHeightForLines:(NSArray<NSDictionary *> *)lines width:(CGFloat)width fontSize:(CGFloat)fontSize {
+- (CGFloat)captionTextHeightForLines:(NSArray<NSDictionary *> *)lines width:(CGFloat)width fontSize:(CGFloat)fontSize {
     SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), MAX(1, width - 32));
     speech.fontName = UIBodyFont;
     CGFloat height = 0;
@@ -321,7 +321,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         speech.text = line[@"text"];
         height = MAX(height, speech.frame.size.height);
     }
-    return MAX(72, height + 40);
+    return height;
 }
 
 - (void)addCaption:(NSDictionary *)line inRect:(CGRect)rect fontSize:(CGFloat)fontSize
@@ -368,16 +368,16 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     }
 
     CGFloat captionWidth = screen.size.width * 0.70;
-    CGFloat captionHeight = [self captionHeightForLines:_pages width:captionWidth fontSize:textSize];
-    // The painted lower bezel extends beyond the monitor's content rect.
-    CGFloat minGap = paintedBoard ? screen.size.height * 0.065 : 4;
-    CGFloat gap = MIN(24, size.height * 0.035);
-    gap = MAX(minGap, MIN(gap, CGRectGetMinY(screen) - floor - captionHeight));
-    CGFloat captionTop = CGRectGetMinY(screen) - gap;
-    while (captionHeight > captionTop - floor && textSize > 12) {
+    const CGFloat captionPadding = 44; // Speaker header and bottom inset.
+    CGFloat tallestCaption = [self captionTextHeightForLines:_pages width:captionWidth fontSize:textSize] + captionPadding;
+    // Overlap the lower bezel while keeping the caption below the tactical content.
+    // The painted line sits below the content rect, unlike the drawn panel's edge.
+    CGFloat captionTop = CGRectGetMinY(screen) + (paintedBoard ? -screen.size.height * 0.025 : 3);
+    while (tallestCaption > captionTop - floor && textSize > 12) {
         textSize = MAX(12, textSize - 1);
-        captionHeight = [self captionHeightForLines:_pages width:captionWidth fontSize:textSize];
+        tallestCaption = [self captionTextHeightForLines:_pages width:captionWidth fontSize:textSize] + captionPadding;
     }
+    CGFloat captionHeight = [self captionTextHeightForLines:@[page] width:captionWidth fontSize:textSize] + captionPadding;
     CGFloat captionBottom = MAX(floor, captionTop - captionHeight);
 
     _focusRing = nil;
@@ -391,7 +391,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     if (speakerOnRight) right = active;
     CGFloat wing = CGRectGetMinX(screen);
     if (narrow) {
-        CGFloat height = MAX(1, captionBottom + 6);
+        CGFloat height = MAX(floor, captionTop - tallestCaption) + 6;
         [self addPortrait:left facingRight:YES active:[left isEqualToString:active]
                    inRect:CGRectMake(0, 0, size.width * (right ? 0.55 : 1), height)];
         if (right) [self addPortrait:right facingRight:NO active:[right isEqualToString:active]
@@ -736,7 +736,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     if (_debriefBeat > 0 && _debriefBeat <= conversation.count) {
         NSDictionary *line = conversation[_debriefBeat - 1];
         [self addBackdrop:@"Bastion" raiseBoard:NO];
-        CGFloat captionHeight = [self captionHeightForLines:conversation width:width fontSize:fontSize];
+        CGFloat captionHeight = MAX(72, [self captionTextHeightForLines:conversation width:width fontSize:fontSize] + 40);
         BOOL compact = [self compactStoryLayout];
         CGFloat floor = compact ? (s.height - captionHeight) / 2 : 72;
         CGFloat bottom = compact ? 0 : floor + captionHeight - 8;
