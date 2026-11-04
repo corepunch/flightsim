@@ -3,5 +3,3 @@ fx/
 .DS_Store
 *.blend1
 Art/kit/*.blend
-Art/__pycache__/
-Art/BriefingRoom.blend

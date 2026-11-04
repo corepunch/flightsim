@@ -1,6 +1,5 @@
 #import <SpriteKit/SpriteKit.h>
 #import "Input.h"
-#import "BriefingRoom.h"
 
 typedef NS_ENUM(NSInteger, BriefingCommand) {
     BriefingCommandNone,
@@ -13,15 +12,6 @@ typedef NS_ENUM(NSInteger, BriefingCommand) {
 @interface Briefing : SKScene
 
 @property (nonatomic, readonly) NSUInteger selectedIndex;
-
-// The briefing room's screen (BriefingRoom.presentation). When set, the
-// dialogue and tactical briefing play in the room: their map is drawn on
-// the screen and the overlay leaves the room visible. nil: flat layout.
-@property (nonatomic, strong) SKScene *presentation;
-// What the room should show now; read by the host every frame.
-@property (nonatomic, readonly) BOOL inRoom;
-@property (nonatomic, readonly) RoomShot roomShot;
-@property (nonatomic, readonly) float roomLean;   // toward the speaker, -1..1
 
 - (void)showListSelecting:(NSUInteger)index;
 - (void)showBriefing:(NSUInteger)index;

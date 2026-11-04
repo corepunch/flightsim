@@ -52,9 +52,9 @@
         CGPoint p = [self convertPoint:event.locationInWindow fromView:nil];
         CGRect bounds = self.bounds;
         if (bounds.size.width > 0 && bounds.size.height > 0) {
-            [(Briefing *)overlay queueClickAtFraction:CGPointMake(
-                (p.x - CGRectGetMinX(bounds)) / bounds.size.width,
-                (p.y - CGRectGetMinY(bounds)) / bounds.size.height)];
+            CGFloat x = (p.x - CGRectGetMinX(bounds)) / bounds.size.width;
+            CGFloat y = (p.y - CGRectGetMinY(bounds)) / bounds.size.height;
+            [(Briefing *)overlay queueClickAtFraction:CGPointMake(x, self.isFlipped ? 1 - y : y)];
         }
         return;
     }

@@ -84,7 +84,6 @@ static int RunDedicated(int mission) {
         NSString *prefix = @(snap);
         for (int i = 1; i <= 3; i++) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((getenv("SF_SNAPGAP") ? atof(getenv("SF_SNAPGAP")) : 2.5) * i * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                if (getenv("SF_SNAPNOUI")) view.overlaySKScene = nil;   // the 3D scene alone
                 NSImage *img = [view snapshot];
                 CGImageRef cg = [img CGImageForProposedRect:NULL context:nil hints:nil];
                 NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithCGImage:cg];
