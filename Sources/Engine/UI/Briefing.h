@@ -4,6 +4,7 @@
 typedef NS_ENUM(NSInteger, BriefingCommand) {
     BriefingCommandNone,
     BriefingCommandLaunch,      // fly selectedIndex
+    BriefingCommandMainMenu,
 };
 
 // Full-screen campaign UI drawn over the 3D view: the mission list, the

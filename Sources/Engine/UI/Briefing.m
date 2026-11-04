@@ -38,6 +38,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     NSArray<NSDictionary *> *_pages;
     NSUInteger _page;
     CGRect _confirmRect, _previousRect, _backRect;
+    CGRect _missionRows;
+    CGFloat _missionRowHeight;
     NSValue *_queuedClick;
     NSMutableDictionary<NSString *, SKTexture *> *_art;
     SKNode *_root;
@@ -71,6 +73,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 - (void)rebuild {
     [_root removeAllChildren];
     _confirmRect = _previousRect = _backRect = CGRectZero;
+    _missionRows = CGRectZero;
     _laidOut = self.size;
     BOOL illustrated = _mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0);
     self.backgroundColor = illustrated ? UIColorWithOpacity(UIBackground, 1) : [NSColor clearColor];
@@ -109,8 +112,10 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
     NSArray *all = CampaignMissions();
     NSUInteger unlocked = ProgressUnlockedCount();
-    CGFloat rowH = MIN(30, (s.height - 220) / MAX(all.count, 1));
+    CGFloat rowH = MAX(1, MIN(30, (s.height - 220) / MAX(all.count, 1)));
     CGFloat listW = MIN(520, s.width * 0.42);
+    _missionRowHeight = rowH;
+    _missionRows = CGRectMake(50, top - 90 - all.count * rowH, listW, all.count * rowH);
     for (NSUInteger i = 0; i < all.count; i++) {
         BOOL open = i < unlocked, sel = i == _index;
         CGFloat y = top - 90 - i * rowH;
@@ -181,6 +186,11 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     CGRect rail = CGRectMake(inset - 10, 14, self.size.width - 2 * inset + 20, 52);
     [_root addChild:UIControlRail(rail, console)];
     CGFloat hintLeft = inset + 8;
+    if (_mode == ModeList) {
+        _backRect = CGRectMake(inset, 20, 140, 40);
+        [_root addChild:UIActionButton(_backRect, @"‹  MAIN MENU", UIInk)];
+        hintLeft = CGRectGetMaxX(_backRect) + 18;
+    }
     SKLabelNode *hint = Para(12, UIColorWithOpacity(UIInk, console ? 0.9 : 0.65),
                              MAX(1, self.size.width - inset - hintLeft - (action ? 200 : 0)));
     hint.text = text;
@@ -786,10 +796,18 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         if (CGRectContainsPoint(_confirmRect, point)) a |= InputActionConfirm;
         else if (CGRectContainsPoint(_previousRect, point)) a |= InputActionLeft;
         else if (CGRectContainsPoint(_backRect, point)) a |= InputActionBack;
+        else if (_mode == ModeList && CGRectContainsPoint(_missionRows, point)) {
+            NSUInteger row = (NSUInteger)((CGRectGetMaxY(_missionRows) - point.y) / _missionRowHeight);
+            if (row < CampaignMissions().count) {
+                if (row == _index) a |= InputActionConfirm;
+                else [self showListSelecting:row];
+            }
+        }
     }
     NSUInteger count = CampaignMissions().count;
     switch (_mode) {
         case ModeList:
+            if (a & InputActionBack) return BriefingCommandMainMenu;
             if (a & InputActionUp) [self showListSelecting:(_index + count - 1) % count];
             if (a & InputActionDown) [self showListSelecting:(_index + 1) % count];
             if ((a & InputActionConfirm) && _index < ProgressUnlockedCount()) [self showBriefing:_index];

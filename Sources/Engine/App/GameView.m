@@ -1,5 +1,6 @@
 #import "GameView.h"
 #import "Briefing.h"
+#import "HUD.h"
 #import <Carbon/Carbon.h>
 
 @implementation GameView
@@ -45,19 +46,25 @@
 - (void)keyUp:(NSEvent *)event { [self.input keyUp:event]; }
 - (void)flagsChanged:(NSEvent *)event { [self.input flagsChanged:event]; }
 
+- (void)setOverlaySKScene:(SKScene *)scene {
+    if (![scene isKindOfClass:HUD.class]) [self releaseMouse];
+    [super setOverlaySKScene:scene];
+}
+
 - (void)mouseDown:(NSEvent *)event {
     if (getenv("SF_SNAPSHOT")) return;
     SKScene *overlay = self.overlaySKScene;
-    if ([overlay isKindOfClass:[Briefing class]]) {
+    if ([overlay respondsToSelector:@selector(queueClickAtFraction:)]) {
         CGPoint p = [self convertPoint:event.locationInWindow fromView:nil];
         CGRect bounds = self.bounds;
         if (bounds.size.width > 0 && bounds.size.height > 0) {
             CGFloat x = (p.x - CGRectGetMinX(bounds)) / bounds.size.width;
             CGFloat y = (p.y - CGRectGetMinY(bounds)) / bounds.size.height;
-            [(Briefing *)overlay queueClickAtFraction:CGPointMake(x, self.isFlipped ? 1 - y : y)];
+            [(id)overlay queueClickAtFraction:CGPointMake(x, self.isFlipped ? 1 - y : y)];
         }
         return;
     }
+    if (![overlay isKindOfClass:HUD.class]) return;
     if (!self.input.mouseCaptured) { [self captureMouse]; return; }
     [self.input setMouseFire:YES];
 }

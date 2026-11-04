@@ -12,6 +12,7 @@ typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJ
 @property (nonatomic, copy) NSString *hostLine;     // "Hosting on port 27910", shown at the bottom
 
 - (void)showServers:(NSArray<LANServer *> *)servers;
+- (void)queueClickAtFraction:(CGPoint)point;
 - (BrowserCommand)handle:(InputAction)actions;
 - (void)setStatus:(NSString *)status;
 

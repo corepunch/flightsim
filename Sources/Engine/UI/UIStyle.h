@@ -32,11 +32,11 @@ static NSString * const UIBodyMediumFont = @"HelveticaNeue-Medium";
 static const CGFloat UISlant = 0.36;
 static const CGFloat UIReadoutChamfer = 9;
 
-static inline NSColor *UIColorWithOpacity(UIRGB color, CGFloat opacity) {
-    return [NSColor colorWithRed:color.r green:color.g blue:color.b alpha:opacity];
+static inline SKColor *UIColorWithOpacity(UIRGB color, CGFloat opacity) {
+    return [SKColor colorWithRed:color.r green:color.g blue:color.b alpha:opacity];
 }
 
-static inline SKLabelNode *UIMonoLabel(CGFloat size, NSColor *color, SKLabelHorizontalAlignmentMode horizontal,
+static inline SKLabelNode *UIMonoLabel(CGFloat size, SKColor *color, SKLabelHorizontalAlignmentMode horizontal,
                                       SKLabelVerticalAlignmentMode vertical) {
     SKLabelNode *label = [SKLabelNode labelNodeWithFontNamed:UIMonoFont];
     label.fontSize = size;
@@ -60,7 +60,7 @@ static inline CGPathRef UICreateSkewedPath(CGRect rect) CF_RETURNS_RETAINED {
     return path;
 }
 
-static inline SKShapeNode *UISkewedShape(CGRect rect, NSColor *stroke, NSColor *fill) {
+static inline SKShapeNode *UISkewedShape(CGRect rect, SKColor *stroke, SKColor *fill) {
     CGPathRef path = UICreateSkewedPath(rect);
     SKShapeNode *shape = [SKShapeNode shapeNodeWithPath:path];
     CGPathRelease(path);
@@ -87,7 +87,7 @@ static inline SKShapeNode *UIActionButton(CGRect rect, NSString *text, UIRGB acc
 }
 
 // Chamfer informational panels so their silhouette reads differently from an action.
-static inline SKShapeNode *UIReadoutPanel(CGRect rect, NSColor *stroke, NSColor *fill) {
+static inline SKShapeNode *UIReadoutPanel(CGRect rect, SKColor *stroke, SKColor *fill) {
     CGFloat left = CGRectGetMinX(rect), right = CGRectGetMaxX(rect);
     CGFloat bottom = CGRectGetMinY(rect), top = CGRectGetMaxY(rect);
     CGFloat cut = MIN(UIReadoutChamfer, MIN(CGRectGetWidth(rect), CGRectGetHeight(rect)) * 0.25);

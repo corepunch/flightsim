@@ -29,7 +29,7 @@ clang "${CFLAGS[@]}" "${ENGINE_INCLUDES[@]}" \
     -o "$APP/Contents/MacOS/SpaceFight"
 
 cp Resources/Info.plist "$APP/Contents/"
-cp -R Resources/Briefing Resources/Shaders Resources/Particles Resources/Textures Resources/Missions "$APP/Contents/Resources/"
+cp -R Resources/Briefing Resources/Menu Resources/Shaders Resources/Particles Resources/Textures Resources/Missions "$APP/Contents/Resources/"
 cp CREDITS.md "$APP/Contents/Resources/"
 
 # Models: the OBJs in Resources/Models are the sources (what Blender and

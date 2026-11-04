@@ -3,6 +3,7 @@
 #import "Client.h"
 #import "ClientView.h"
 #import "Briefing.h"
+#import "MainMenu.h"
 #import "Loading.h"
 #import "Progress.h"
 #import "NetTransport.h"
@@ -14,7 +15,7 @@
 #include "SharedMath.h"
 #import <stdatomic.h>
 
-typedef NS_ENUM(NSInteger, HostState) { HostStateLoading, HostStateMenu, HostStateFlying, HostStateOver, HostStateBrowser };
+typedef NS_ENUM(NSInteger, HostState) { HostStateLoading, HostStateMainMenu, HostStateMissions, HostStateFlying, HostStateOver, HostStateBrowser };
 
 // What the loading screen says while the background queue is on each step.
 typedef NS_ENUM(int, LoadStage) {
@@ -44,9 +45,10 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     Client *_client;
     ClientView *_clientView;
     Briefing *_briefing;
+    MainMenu *_mainMenu;
     Loading *_loading;
 
-    HostState _state;
+    HostState _state, _browserReturnState;
     NSUInteger _missionIndex;
     double _lastTime, _time;
 
@@ -70,6 +72,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _input = input;
         _loadQueue = dispatch_queue_create("SpaceFight.loading", DISPATCH_QUEUE_SERIAL);
         _briefing = [[Briefing alloc] initWithSize:view.bounds.size];
+        _mainMenu = [[MainMenu alloc] initWithSize:view.bounds.size];
         _loading = [[Loading alloc] initWithSize:view.bounds.size];
         [_loading showTitle:@"Kestrel Frontier" kicker:@"SPACE FIGHT"
                      detail:@"CNS BASTION  /  LANCER FLIGHT"];
@@ -131,10 +134,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 }
 
 - (void)showBrowser {
+    _browserReturnState = _state;
     _state = HostStateBrowser;
     if (!_lan) _lan = [LANBrowser new];
     [_browser setStatus:self.remote ? [NSString stringWithFormat:@"Connected to %@", _client.serverAddress] : @""];
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_browser; });
+    if (!_revealing) dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_browser; });
 }
 
 - (void)updateBrowser:(InputAction)actions {
@@ -147,8 +151,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         case BrowserCommandJoin: [self joinServer:_browser.selected.address]; break;
         case BrowserCommandBack: {
             if (self.remote && _client.state != ClientActive) { [_client disconnect]; [self connectLocal]; }
-            _state = HostStateMenu;
-            dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+            if (_browserReturnState == HostStateMainMenu) [self showMainMenu];
+            else {
+                _state = _browserReturnState;
+                dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+            }
             break;
         }
         default: break;
@@ -213,7 +220,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         view.scene = scene;
         view.pointOfView = camera;
     });
-    _state = HostStateMenu;
+    _state = HostStateMainMenu;
+    [self prepareMainMenu];
     const char *m = getenv("SF_MISSION");   // debug: fly mission N straight away
     if (m && atoi(m) >= 1) {
         [self startMission:(NSUInteger)atoi(m) - 1];
@@ -232,7 +240,10 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         NSLog(@"Host: cannot resolve %s", join);
     }
     const char *b = getenv("SF_BRIEFING");   // debug: open a briefing
-    if (b && atoi(b) >= 1) [_briefing showBriefing:(NSUInteger)atoi(b) - 1];
+    if (b && atoi(b) >= 1) {
+        _state = HostStateMissions;
+        [_briefing showBriefing:(NSUInteger)atoi(b) - 1];
+    }
     [self reveal:0.5];
 }
 
@@ -257,7 +268,10 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [_loading tick:_time];
     if (!_loading.faded) return;
     _revealing = NO;
-    SKScene *next = _state == HostStateFlying ? _clientView.hud : (_state == HostStateBrowser ? _browser : _briefing);
+    SKScene *next = _briefing;
+    if (_state == HostStateMainMenu) next = _mainMenu;
+    else if (_state == HostStateFlying) next = _clientView.hud;
+    else if (_state == HostStateBrowser) next = _browser;
     if (_state == HostStateFlying) [_clientView.hud showBanner:[CampaignMission(_missionIndex)[@"title"] uppercaseString] color:nil];
     dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = next; });
 }
@@ -333,6 +347,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _precaching = NO;
     [_clientView attachMission];
     [_client begin];
+    if (!self.remote) ProgressMarkStarted();
     _state = HostStateFlying;
     [self reveal:0.6];
 }
@@ -341,7 +356,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _precaching = NO;
     [_browser setStatus:reason];
     if (_state == HostStateFlying || _state == HostStateOver || (_state == HostStateLoading && _booted)) {
-        _state = HostStateMenu;
+        _state = HostStateMissions;
+        _revealing = NO;
         [_clientView clearMission];
         [_briefing showListSelecting:_missionIndex];
         dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
@@ -360,7 +376,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 }
 
 - (void)abortToMenu {
-    _state = HostStateMenu;
+    _state = HostStateMissions;
     [_server stop];
     [_client leaveGame];
     if (self.remote) { [_client disconnect]; [self connectLocal]; }
@@ -402,7 +418,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (_state == HostStateLoading) { [self updateLoading]; return; }
     if (_revealing) {
         [self updateReveal];
-        if (_state == HostStateMenu) actions = 0;   // the menu isn't visible yet
+        if (_state != HostStateFlying) return;
     }
     if (actions & InputActionToggleCamera) _clientView.cockpit = !_clientView.cockpit;
     if (actions & InputActionToggleHelp) [_clientView.hud toggleHelp];
@@ -413,7 +429,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     }
     if (_state != HostStateFlying) {
         if (actions & InputActionMultiplayer) { [self showBrowser]; return; }
-        [self updateMenu:actions];
+        if (_state == HostStateMainMenu) [self updateMainMenu:actions];
+        else [self updateBriefing:actions];
         return;
     }
     if ((actions & InputActionRestart) && !self.remote) { [self startMission:_missionIndex]; return; }
@@ -426,11 +443,51 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [_client drawWithControls:controls time:_time dt:dt];
 }
 
-- (void)updateMenu:(InputAction)actions {
+#pragma mark - Front end
+
+- (NSUInteger)campaignEntry {
+    return ProgressCampaignCompleted() ? 0 : ProgressUnlockedCount() - 1;
+}
+
+- (void)prepareMainMenu {
+    NSUInteger index = [self campaignEntry];
+    [_mainMenu showMission:index title:CampaignMission(index)[@"title"]
+                   started:ProgressHasStarted() || index > 0 completed:ProgressCampaignCompleted()];
+}
+
+- (void)showMainMenu {
+    _state = HostStateMainMenu;
+    [self prepareMainMenu];
+    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_mainMenu; });
+}
+
+- (void)updateMainMenu:(InputAction)actions {
+    switch ([_mainMenu handle:actions]) {
+        case MainMenuCommandCampaign:
+            [_briefing showBriefing:[self campaignEntry]];
+            break;
+        case MainMenuCommandMissions:
+            [_briefing showListSelecting:ProgressUnlockedCount() - 1];
+            break;
+        case MainMenuCommandMultiplayer:
+            [self showBrowser];
+            return;
+        case MainMenuCommandQuit:
+            dispatch_async(dispatch_get_main_queue(), ^{ [NSApp terminate:nil]; });
+            return;
+        case MainMenuCommandNone:
+            return;
+    }
+    _state = HostStateMissions;
+    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+}
+
+- (void)updateBriefing:(InputAction)actions {
     [_briefing tick:_time];
-    if ([_briefing handle:actions] == BriefingCommandLaunch) {
-        [self startMission:_briefing.selectedIndex];
-        return;
+    switch ([_briefing handle:actions]) {
+        case BriefingCommandLaunch: [self startMission:_briefing.selectedIndex]; return;
+        case BriefingCommandMainMenu: [self showMainMenu]; return;
+        case BriefingCommandNone: break;
     }
     [_clientView menuFrame:_time];   // slow drift through the sky behind the menus
 }

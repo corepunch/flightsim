@@ -52,7 +52,7 @@ static int RunDedicated(int mission) {
     NSMenu *appMenu = [NSMenu new];
     [appMenu addItemWithTitle:@"Toggle Full Screen" action:@selector(toggleFullScreen:) keyEquivalent:@"f"];
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Quit Space Fight" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenu addItemWithTitle:@"Quit Kestrel Frontier" action:@selector(terminate:) keyEquivalent:@"q"];
     appItem.submenu = appMenu;
     NSApp.mainMenu = bar;
 }
@@ -64,7 +64,8 @@ static int RunDedicated(int mission) {
                                               styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                                                         NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                                                 backing:NSBackingStoreBuffered defer:NO];
-    self.window.title = @"Space Fight";
+    self.window.title = @"Kestrel Frontier";
+    self.window.contentMinSize = NSMakeSize(640, 360);
     self.window.collectionBehavior = NSWindowCollectionBehaviorFullScreenPrimary;
     [self.window center];
 
