@@ -568,6 +568,9 @@ SETS = {
     "stealth": lambda: stealth("stealth", 41),
     "hex": lambda: hexes("hex", 53),
     "ribbed": lambda: ribbed("ribbed", 67),
+    # Interior bulkheads (the briefing room): big painted panels, few
+    # greebles, no windows.
+    "bulkhead": lambda: generate("bulkhead", 79, detail=0.25, paint=0.8, windows=0.0, big=True, tones=(0.55, 0.72)),
 }
 
 os.makedirs(OUT, exist_ok=True)

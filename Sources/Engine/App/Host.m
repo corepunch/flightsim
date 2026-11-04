@@ -3,6 +3,7 @@
 #import "Client.h"
 #import "ClientView.h"
 #import "Briefing.h"
+#import "BriefingRoom.h"
 #import "Loading.h"
 #import "Progress.h"
 #import "NetTransport.h"
@@ -44,6 +45,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     Client *_client;
     ClientView *_clientView;
     Briefing *_briefing;
+    BriefingRoom *_room;      // the scene behind the dialogue and tactical briefing
+    BOOL _roomShowing;
     Loading *_loading;
 
     HostState _state;
@@ -194,10 +197,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [SCNTransaction begin];
     [SCNTransaction setDisableActions:YES];
     [_clientView buildScene];
+    _room = [[BriefingRoom alloc] initWithDevice:_view.device];
     [SCNTransaction commit];
     [SCNTransaction flush];
     [self reportStage:LoadStageShaders progress:0.7f];
-    [self prepare:[_clientView warmupObjects] from:0.7f to:1.0f];
+    [self prepare:[[_clientView warmupObjects] arrayByAddingObjectsFromArray:[_room warmupObjects]] from:0.7f to:1.0f];
     [self reportStage:LoadStageReady progress:1];
     NSLog(@"Boot loaded in %.2f s", CACurrentMediaTime() - t0);
     atomic_store(&_loadDone, true);
@@ -206,6 +210,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 // Render thread, once the boot load is done and the bar is full.
 - (void)finishBoot {
     _booted = YES;
+    _briefing.presentation = _room.presentation;
     SCNView *view = _view;
     SCNScene *scene = _clientView.scene;
     SCNNode *camera = _clientView.cameraNode;
@@ -373,7 +378,34 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 - (void)renderer:(id<SCNSceneRenderer>)renderer willRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
     if (!_booted) return;   // the cockpit may still be under construction on the load queue
-    [_clientView renderDisplaysWithQueue:renderer.commandQueue time:time];
+    if (_roomShowing) [_room renderDisplaysWithQueue:renderer.commandQueue time:time];
+    else [_clientView renderDisplaysWithQueue:renderer.commandQueue time:time];
+}
+
+// The briefing room replaces the sky behind the menus while the dialogue
+// or tactical briefing is up: walk in from the doors, then follow the
+// briefing's shot (over the heads, or the screen up close).
+- (void)updateRoom {
+    BOOL want = _room && _state == HostStateMenu && !_revealing && _briefing.inRoom;
+    if (want != _roomShowing) {
+        _roomShowing = want;
+        if (want) {
+            [_room cutTo:RoomShotEnter];
+            [_room moveTo:_briefing.roomShot seconds:3.2];
+        }
+        SCNView *view = _view;
+        SCNScene *scene = want ? _room.scene : _clientView.scene;
+        SCNNode *pov = want ? _room.cameraNode : _clientView.cameraNode;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            view.scene = scene;
+            view.pointOfView = pov;
+        });
+    }
+    if (!want) return;
+    if (_briefing.roomShot != _room.shot) [_room moveTo:_briefing.roomShot seconds:1.8];
+    _room.lean = _briefing.roomLean;
+    CGSize s = _briefing.size;
+    [_room updateAtTime:_time aspect:s.height > 0 ? s.width / s.height : 16.0 / 9.0];
 }
 
 - (void)renderer:(id<SCNSceneRenderer>)renderer updateAtTime:(NSTimeInterval)time {
@@ -399,6 +431,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         [_client sendInput:(ControlState){ .hat = -1 } actions:0 dt:dt];
         [_server frame:dt];
     }
+    if (_roomShowing && _state != HostStateMenu) [self updateRoom];
     if (_state == HostStateLoading) { [self updateLoading]; return; }
     if (_revealing) {
         [self updateReveal];
@@ -433,6 +466,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         return;
     }
     [_clientView menuFrame:_time];   // slow drift through the sky behind the menus
+    [self updateRoom];
 }
 
 @end

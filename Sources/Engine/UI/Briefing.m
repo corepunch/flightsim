@@ -65,6 +65,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     SKNode *_mapLayer, *_routeLayer;
     SKShapeNode *_focusRing;
     CGRect _mapRect;
+    SKNode *_mapParent;      // _root, or the room's presentation
+    CGFloat _mapText;        // label scale on the map
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -85,16 +87,92 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     _confirmButton = nil;
     _laidOut = self.size;
     CGSize s = self.size;
-    // Dim the 3D scene behind the UI.
-    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.72) size:s];
-    shade.anchorPoint = CGPointZero;
-    [_root addChild:shade];
+    _mapParent = _root;
+    _mapText = 1;
+    if (self.inRoom) {
+        [_presentation removeAllChildren];
+        // The room shows through; only the text side of the tactical shot is dimmed.
+        if (_mode == ModeBriefing) [_root addChild:[self leftShade]];
+    } else {
+        // Dim the 3D scene behind the UI.
+        SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.72) size:s];
+        shade.anchorPoint = CGPointZero;
+        [_root addChild:shade];
+    }
     switch (_mode) {
         case ModeList: [self buildList]; break;
         case ModeBriefing: [self buildBriefing]; break;
         case ModeDialogue: [self buildDialogue]; break;
         case ModeDebrief: [self buildDebrief]; break;
     }
+}
+
+- (BOOL)inRoom { return _presentation && (_mode == ModeDialogue || _mode == ModeBriefing); }
+- (RoomShot)roomShot { return _mode == ModeBriefing ? RoomShotTactical : RoomShotWide; }
+- (float)roomLean {
+    if (_mode != ModeDialogue || !_dialogue.count) return 0;
+    NSArray *cast = _dialogueScene[@"cast"];
+    NSUInteger i = [cast indexOfObject:_dialogue[_line][@"portrait"] ?: @""];
+    return i == NSNotFound ? 0 : (i == 0 ? -1 : 1);
+}
+
+// Black fading out to the right, under the tactical briefing's text column.
+- (SKSpriteNode *)leftShade {
+    CGSize s = self.size;
+    CGFloat w = MAX(1, s.width * 0.5);
+    NSImage *img = [NSImage imageWithSize:NSMakeSize(256, 4) flipped:NO drawingHandler:^BOOL(NSRect r) {
+        NSGradient *g = [[NSGradient alloc] initWithColorsAndLocations:
+                         UIColorWithOpacity(UIBlack, 0.82), 0.0, UIColorWithOpacity(UIBlack, 0.7), 0.7,
+                         UIColorWithOpacity(UIBlack, 0.0), 1.0, nil];
+        [g drawInRect:r angle:0];
+        return YES;
+    }];
+    SKSpriteNode *n = [SKSpriteNode spriteNodeWithTexture:[SKTexture textureWithImage:img] size:CGSizeMake(w, s.height)];
+    n.anchorPoint = CGPointZero;
+    SKSpriteNode *bottom = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.55) size:CGSizeMake(s.width, 84)];
+    bottom.anchorPoint = CGPointZero;
+    [n addChild:bottom];
+    return n;
+}
+
+// The room's screen: grid ground and a header strip, then the map in `rect`
+// (presentation points). Returns the area below the header.
+- (CGRect)preparePresentation:(NSString *)title {
+    SKScene *p = _presentation;
+    CGSize s = p.size;
+    for (int i = 1; i < 28; i++) {
+        SKSpriteNode *v = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.035) size:CGSizeMake(1, s.height)];
+        v.anchorPoint = CGPointZero;
+        v.position = CGPointMake(s.width * i / 28, 0);
+        [p addChild:v];
+    }
+    for (int i = 1; i < 12; i++) {
+        SKSpriteNode *h = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.035) size:CGSizeMake(s.width, 1)];
+        h.anchorPoint = CGPointZero;
+        h.position = CGPointMake(0, s.height * i / 12);
+        [p addChild:h];
+    }
+    SKSpriteNode *bar = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIPanel, 0.95) size:CGSizeMake(s.width, 40)];
+    bar.anchorPoint = CGPointZero;
+    bar.position = CGPointMake(0, s.height - 40);
+    [p addChild:bar];
+    SKSpriteNode *rule = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.6) size:CGSizeMake(s.width, 2)];
+    rule.anchorPoint = CGPointZero;
+    rule.position = CGPointMake(0, s.height - 41);
+    [p addChild:rule];
+    SKLabelNode *l = Text(18, UIColorWithOpacity(UIInk, 0.95), SKLabelHorizontalAlignmentModeLeft);
+    l.fontName = @"Menlo-Bold";
+    l.text = @"CNS BASTION  /  TACTICAL";
+    l.position = CGPointMake(24, s.height - 10);
+    [p addChild:l];
+    SKLabelNode *r = Text(18, UIColorWithOpacity(UIAmber, 0.95), SKLabelHorizontalAlignmentModeRight);
+    r.fontName = @"Menlo-Bold";
+    r.text = title;
+    r.position = CGPointMake(s.width - 24, s.height - 10);
+    [p addChild:r];
+    _mapParent = p;
+    _mapText = 1.45;
+    return CGRectMake(0, 0, s.width, s.height - 42);
 }
 
 #pragma mark - Mission list
@@ -239,17 +317,21 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     CGFloat panelHeight = MAX(90, speech.frame.size.height + 58);
     CGFloat panelTop = panelBottom + panelHeight;
 
-    SKSpriteNode *room = [self artNamed:_dialogueScene[@"room"] ?: @"Bastion"];
-    if (room) {
+    NSString *missionTag = [NSString stringWithFormat:@"MISSION %02lu  /  %@", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]];
+    SKSpriteNode *room = self.inRoom ? nil : [self artNamed:_dialogueScene[@"room"] ?: @"Bastion"];
+    if (self.inRoom) {
+        CGRect area = [self preparePresentation:missionTag];
+        _mapRect = CGRectInset(area, 24, 18);
+    } else if (room) {
         [room setScale:MAX(size.width / room.size.width, size.height / room.size.height)];
         room.position = CGPointMake(size.width / 2, size.height / 2);
         [_root addChild:room];
     }
 
     CGFloat mapWidth = size.width * 0.40;
-    _mapRect = CGRectMake((size.width - mapWidth) / 2, size.height * 0.42,
-                         mapWidth, size.height * 0.40);
-    if (!room) [_root addChild:Frame(_mapRect, UIColorWithOpacity(UIInk, 0.55), UIColorWithOpacity(UIMap, 0.94))];
+    if (!self.inRoom) _mapRect = CGRectMake((size.width - mapWidth) / 2, size.height * 0.42,
+                                            mapWidth, size.height * 0.40);
+    if (!room && !self.inRoom) [_root addChild:Frame(_mapRect, UIColorWithOpacity(UIInk, 0.55), UIColorWithOpacity(UIMap, 0.94))];
     [self buildMap:mission];
     for (MapItem *item in _items.allValues) item.node.alpha = [item.identifier isEqualToString:_dialogueScene[@"focus"]] ? 1 : 0.15;
     _focusRing.hidden = YES;
@@ -339,18 +421,36 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     details.position = CGPointMake(50, y);
     [_root addChild:details];
 
-    // Right: the tactical map with the step caption under it.
-    CGFloat mx = s.width * 0.42 + 10, mw = s.width - mx - 50;
-    CGFloat mh = MAX(1, MIN(mw, s.height - 260));
-    _mapRect = CGRectMake(mx, s.height - 90 - mh, mw, mh);
-    [_root addChild:Frame(_mapRect, UIColorWithOpacity(UIInk, 0.5), UIColorWithOpacity(UIMap, 0.6))];
-    [self buildMap:m];
-    _stepLabel = Text(13, UIColorWithOpacity(UIAmber, 0.9), SKLabelHorizontalAlignmentModeLeft);
-    _stepLabel.position = CGPointMake(mx, _mapRect.origin.y - 14);
-    [_root addChild:_stepLabel];
-    _caption = Para(17, UIColorWithOpacity(UIInk, 1), mw);
-    _caption.position = CGPointMake(mx, _mapRect.origin.y - 36);
-    [_root addChild:_caption];
+    if (self.inRoom) {
+        // On the room's screen: the map, the step and its caption beside it.
+        CGRect area = [self preparePresentation:[NSString stringWithFormat:@"MISSION %02lu", (unsigned long)_index + 1]];
+        CGFloat cw = 360;
+        _mapRect = CGRectMake(20, 18, area.size.width - cw - 60, area.size.height - 36);
+        [_presentation addChild:Frame(_mapRect, UIColorWithOpacity(UIInk, 0.35), UIColorWithOpacity(UIMap, 0.5))];
+        [self buildMap:m];
+        CGFloat cx = CGRectGetMaxX(_mapRect) + 28;
+        _stepLabel = Text(17, UIColorWithOpacity(UIAmber, 0.95), SKLabelHorizontalAlignmentModeLeft);
+        _stepLabel.fontName = @"Menlo-Bold";
+        _stepLabel.position = CGPointMake(cx, area.size.height - 22);
+        [_presentation addChild:_stepLabel];
+        _caption = Para(23, UIColorWithOpacity(UIInk, 1), cw);
+        _caption.fontName = @"HelveticaNeue";
+        _caption.position = CGPointMake(cx, area.size.height - 62);
+        [_presentation addChild:_caption];
+    } else {
+        // Right: the tactical map with the step caption under it.
+        CGFloat mx = s.width * 0.42 + 10, mw = s.width - mx - 50;
+        CGFloat mh = MAX(1, MIN(mw, s.height - 260));
+        _mapRect = CGRectMake(mx, s.height - 90 - mh, mw, mh);
+        [_root addChild:Frame(_mapRect, UIColorWithOpacity(UIInk, 0.5), UIColorWithOpacity(UIMap, 0.6))];
+        [self buildMap:m];
+        _stepLabel = Text(13, UIColorWithOpacity(UIAmber, 0.9), SKLabelHorizontalAlignmentModeLeft);
+        _stepLabel.position = CGPointMake(mx, _mapRect.origin.y - 14);
+        [_root addChild:_stepLabel];
+        _caption = Para(17, UIColorWithOpacity(UIInk, 1), mw);
+        _caption.position = CGPointMake(mx, _mapRect.origin.y - 36);
+        [_root addChild:_caption];
+    }
     _steps = b[@"steps"];
     [self footer:@"← / →  Tactical steps     Esc  Missions" action:@"↵  NEXT"];
     [self applyStep];
@@ -359,7 +459,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
 - (void)buildMap:(NSDictionary *)m {
     _items = [NSMutableDictionary dictionary];
     _mapLayer = [SKNode node];
-    [_root addChild:_mapLayer];
+    [_mapParent ?: _root addChild:_mapLayer];
 
     // Gather everything with a position, then fit the x/z plane into the map.
     NSMutableArray<NSDictionary *> *things = [NSMutableArray array];
@@ -411,7 +511,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     sb.anchorPoint = CGPointMake(0, 0.5);
     sb.position = CGPointMake(_mapRect.origin.x + 16, _mapRect.origin.y + 18);
     [_mapLayer addChild:sb];
-    SKLabelNode *sl = Text(11, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeLeft);
+    SKLabelNode *sl = Text(11 * _mapText, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeLeft);
     sl.text = [NSString stringWithFormat:@"%.0f KM", bar / 1000];
     sl.position = CGPointMake(_mapRect.origin.x + 16, _mapRect.origin.y + 36);
     [_mapLayer addChild:sl];
@@ -484,12 +584,12 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
         SKNode *holder = [SKNode node];
         [holder addChild:icon];
         if ([t[@"label"] length] && ![kind isEqualToString:@"field"] && !([kind isEqualToString:@"capital"] && [t[@"group"] length])) {
-            SKLabelNode *l = Text(11, UIColorWithOpacity(UIInk, 0.85), SKLabelHorizontalAlignmentModeLeft);
+            SKLabelNode *l = Text(11 * _mapText, UIColorWithOpacity(UIInk, 0.85), SKLabelHorizontalAlignmentModeLeft);
             l.text = [t[@"label"] uppercaseString];
             l.position = CGPointMake(p.x + 12, p.y + 6);
             [holder addChild:l];
         } else if ([kind isEqualToString:@"field"]) {
-            SKLabelNode *l = Text(11, UIColorWithOpacity(UIRed, 0.9), SKLabelHorizontalAlignmentModeCenter);
+            SKLabelNode *l = Text(11 * _mapText, UIColorWithOpacity(UIRed, 0.9), SKLabelHorizontalAlignmentModeCenter);
             l.text = t[@"label"];
             l.position = CGPointMake(p.x, p.y - 6);
             [holder addChild:l];

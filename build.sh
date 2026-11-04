@@ -47,9 +47,9 @@ for src in Tools/*.(m|h); do
         break
     fi
 done
-# Capital ships and the cockpit are split into named parts by ObjLoader; the
+# Capital ships, the cockpit and the briefing room are split into named parts by ObjLoader; the
 # fighters go through SceneKit's own importer (see BakeModels.m).
-PARTS=(Resources/Models/Cockpit.obj Resources/Models/Capital/*.obj)
+PARTS=(Resources/Models/Cockpit.obj Resources/Models/BriefingRoom.obj Resources/Models/Capital/*.obj)
 for obj in Resources/Models/**/*.obj; do
     rel=${obj#Resources/}
     scn=$CACHE/${rel:r}.scn
