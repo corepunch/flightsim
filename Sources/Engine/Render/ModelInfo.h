@@ -2,7 +2,7 @@
 #import <simd/simd.h>
 #include "GameAPI.h"
 
-// A capital asset as loaded from Resources/Models/Capital/<asset>.obj: its
+// A capital asset as loaded from Resources/Models/Capital/<asset>.scn (baked from the .obj): its
 // parts, bounding radius and subsystems (children named Turret_*, Engine_*,
 // Shield_*, Core_*, in file order). Shared by the server, which traces
 // against it, and the renderer, which dresses copies of its geometry.

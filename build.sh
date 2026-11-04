@@ -29,8 +29,37 @@ clang "${CFLAGS[@]}" "${ENGINE_INCLUDES[@]}" \
     -o "$APP/Contents/MacOS/SpaceFight"
 
 cp Resources/Info.plist "$APP/Contents/"
-cp -R Resources/Models Resources/Shaders Resources/Particles Resources/Textures Resources/Missions "$APP/Contents/Resources/"
+cp -R Resources/Briefing Resources/Shaders Resources/Particles Resources/Textures Resources/Missions "$APP/Contents/Resources/"
 cp CREDITS.md "$APP/Contents/Resources/"
+
+# Models: the OBJs in Resources/Models are the sources (what Blender and
+# Art/*.py export); the app ships them baked to SceneKit .scn by
+# Tools/BakeModels. Bakes are cached in build/ModelCache and redone when the
+# OBJ is newer, or all of them when the baker changes.
+BAKER=build/tools/BakeModels
+CACHE=build/ModelCache
+mkdir -p build/tools
+for src in Tools/*.(m|h); do
+    if [[ ! -x $BAKER || $src -nt $BAKER ]]; then
+        clang -fobjc-arc -O2 -Wall -mmacosx-version-min=13.0 -ITools Tools/*.m \
+            -framework Cocoa -framework SceneKit -o $BAKER
+        rm -rf "$CACHE"
+        break
+    fi
+done
+# Capital ships and the cockpit are split into named parts by ObjLoader; the
+# fighters go through SceneKit's own importer (see BakeModels.m).
+PARTS=(Resources/Models/Cockpit.obj Resources/Models/Capital/*.obj)
+for obj in Resources/Models/**/*.obj; do
+    rel=${obj#Resources/}
+    scn=$CACHE/${rel:r}.scn
+    [[ -f $scn && ! $obj -nt $scn ]] && continue
+    mode=(--scenekit)
+    (( ${PARTS[(Ie)$obj]} )) && mode=()
+    $BAKER $mode "${scn:h}" $obj
+done
+rsync -a --exclude '*.obj' --exclude '*.mtl' Resources/Models "$APP/Contents/Resources/"
+rsync -a --include '*/' --include '*.scn' --exclude '*' "$CACHE/Models/" "$APP/Contents/Resources/Models/"
 codesign --force --sign - "$APP" >/dev/null 2>&1 || true
 
 echo "Built $APP"

@@ -1,12 +1,13 @@
 #import "HUD.h"
 #import "Exhaust.h"
+#import "UIStyle.h"
 
 #define MAX_TARGETS 64
 
-static NSColor *HUDColor(CGFloat a) { return [NSColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:a]; }
-static NSColor *EnemyColor(CGFloat a) { return [NSColor colorWithRed:1.0 green:0.42 blue:0.32 alpha:a]; }
-static NSColor *FriendColor(CGFloat a) { return [NSColor colorWithRed:0.4 green:0.95 blue:0.5 alpha:a]; }
-static NSColor *NeutralColor(CGFloat a) { return [NSColor colorWithRed:0.95 green:0.88 blue:0.45 alpha:a]; }
+static NSColor *HUDColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
+static NSColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
+static NSColor *FriendColor(CGFloat a) { return UIColorWithOpacity(UIFriendly, a); }
+static NSColor *NeutralColor(CGFloat a) { return UIColorWithOpacity(UIHUDNeutral, a); }
 static NSColor *KindColor(HUDKind k, CGFloat a) {
     switch (k) {
         case HUDKindEnemy: return EnemyColor(a);
@@ -169,7 +170,7 @@ static SKShapeNode *Bracket(void) {
     _throttleFill.strokeColor = [NSColor clearColor];
     [_throttleFrame addChild:_throttleFill];
     _boostFill = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 4, 1)];
-    _boostFill.fillColor = [NSColor colorWithRed:1 green:0.75 blue:0.3 alpha:0.9];
+    _boostFill.fillColor = UIColorWithOpacity(UIBoost, 0.9);
     _boostFill.strokeColor = [NSColor clearColor];
     [_throttleFrame addChild:_boostFill];
     _throttleLabel = Label(13, SKLabelHorizontalAlignmentModeLeft);
@@ -182,7 +183,7 @@ static SKShapeNode *Bracket(void) {
     _hullFill.strokeColor = [NSColor clearColor];
     [_root addChild:_hullFill];
     _shieldFill = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 1, 6)];
-    _shieldFill.fillColor = [NSColor colorWithRed:0.4 green:0.7 blue:1 alpha:0.85];
+    _shieldFill.fillColor = UIColorWithOpacity(UIShield, 0.85);
     _shieldFill.strokeColor = [NSColor clearColor];
     [_root addChild:_shieldFill];
     _hullLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
@@ -397,13 +398,13 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
 
     SetBar(_throttleFill, 12, 214 * MIN(f.throttle, 1.0f));
     _throttleFill.position = CGPointMake(3, 3);
-    _throttleFill.fillColor = f.boosting ? [NSColor colorWithRed:1 green:0.75 blue:0.3 alpha:0.9] : HUDColor(0.75);
+    _throttleFill.fillColor = f.boosting ? UIColorWithOpacity(UIBoost, 0.9) : HUDColor(0.75);
     SetBar(_boostFill, 3, 214 * f.boostEnergy);
     _boostFill.position = CGPointMake(-7, 3);
     _throttleLabel.text = [NSString stringWithFormat:@"THR %3d%%%@", (int)lroundf(f.throttle * 100), f.boosting ? @" BOOST" : @""];
     _speedLabel.text = [NSString stringWithFormat:@"%4d m/s", (int)lroundf(f.speed)];
-    SetBar(_hullFill, 200 * f.hull, 6);
-    SetBar(_shieldFill, 200 * f.shield, 6);
+    UISetSkewedBar(_hullFill, 200 * f.hull, 6);
+    UISetSkewedBar(_shieldFill, 200 * f.shield, 6);
     _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
     _scoreLabel.text = [NSString stringWithFormat:@"KILLS %d   DEATHS %d", f.kills, f.deaths];
     for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _torpLabel])

@@ -6,6 +6,10 @@ static const UIRGB UIInk = { 0.55, 0.95, 0.85 };
 static const UIRGB UIAmber = { 1.0, 0.72, 0.30 };
 static const UIRGB UIRed = { 1.0, 0.42, 0.32 };
 static const UIRGB UIBlue = { 0.45, 0.75, 1.0 };
+static const UIRGB UIFriendly = { 0.40, 0.95, 0.50 };
+static const UIRGB UIHUDNeutral = { 0.95, 0.88, 0.45 };
+static const UIRGB UIShield = { 0.40, 0.70, 1.0 };
+static const UIRGB UIBoost = { 1.0, 0.75, 0.30 };
 static const UIRGB UIYellow = { 0.95, 0.90, 0.45 };
 static const UIRGB UIBackground = { 0.012, 0.018, 0.028 };
 static const UIRGB UIPanel = { 0.018, 0.065, 0.085 };
@@ -40,4 +44,10 @@ static inline SKShapeNode *UISkewedShape(CGRect rect, NSColor *stroke, NSColor *
     shape.fillColor = fill;
     shape.lineWidth = 1;
     return shape;
+}
+
+static inline void UISetSkewedBar(SKShapeNode *bar, CGFloat width, CGFloat height) {
+    CGPathRef path = UICreateSkewedPath(CGRectMake(0, 0, MAX(0, width), height));
+    bar.path = path;
+    CGPathRelease(path);
 }

@@ -33,7 +33,7 @@ typedef struct {
     __unsafe_unretained NSString *objective;     // current objective, for the status display
 } CockpitFrame;
 
-// The player's cockpit: Resources/Models/Cockpit.obj (built by
+// The player's cockpit: Resources/Models/Cockpit.scn, baked from Cockpit.obj (built by
 // Art/build_cockpit.py) with live SpriteKit scenes on its displays and
 // emissive annunciators. Screens and lamps are found by material name.
 @interface Cockpit : NSObject

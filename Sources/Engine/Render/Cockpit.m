@@ -1,7 +1,7 @@
 #import "Cockpit.h"
 #import <SpriteKit/SpriteKit.h>
 #import <Metal/Metal.h>
-#import "ObjLoader.h"
+#import "SceneAsset.h"
 
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
@@ -291,8 +291,7 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
 }
 
 - (void)loadModel {
-    NSURL *url = [[NSBundle mainBundle] URLForResource:@"Cockpit" withExtension:@"obj" subdirectory:@"Models"];
-    NSArray<SCNNode *> *parts = [ObjLoader nodesFromURL:url];
+    NSArray<SCNNode *> *parts = SceneAssetNodes(@"Cockpit", @"Models");
     if (!parts.count) { NSLog(@"Cockpit: model missing"); return; }
     for (SCNNode *n in parts) {
         n.castsShadow = YES;

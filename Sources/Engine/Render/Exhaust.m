@@ -216,22 +216,25 @@ static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray
     ps.particleLifeSpan = 1.1;
     ps.particleLifeSpanVariation = 0.4;
     ps.emittingDirection = SCNVector3Make(0, 1, 0);
-    ps.spreadingAngle = 14;
+    // Many small, faint puffs rather than a few big ones: they overlap into
+    // a continuous stream instead of reading as separate clumps.
+    ps.spreadingAngle = 7;
     ps.particleVelocity = 6;
-    ps.particleVelocityVariation = 3;
-    ps.particleSize = r * 1.2;
-    ps.emitterShape = [SCNSphere sphereWithRadius:r * 0.4];
+    ps.particleVelocityVariation = 2;
+    ps.particleSize = r * 0.45;
+    ps.particleSizeVariation = r * 0.15;
+    ps.emitterShape = [SCNSphere sphereWithRadius:r * 0.25];
     ps.birthLocation = SCNParticleBirthLocationVolume;
-    ps.particleAngularVelocity = 30;
-    ps.particleAngularVelocityVariation = 60;
+    ps.particleAngularVelocity = 20;
+    ps.particleAngularVelocityVariation = 40;
     ps.particleAngleVariation = 180;
     NSColor *a = [NSColor colorWithRed:0.50 green:0.54 blue:0.62 alpha:0.0];
-    NSColor *b = [NSColor colorWithRed:0.42 green:0.45 blue:0.52 alpha:0.16];
+    NSColor *b = [NSColor colorWithRed:0.42 green:0.45 blue:0.52 alpha:0.06];
     NSColor *c = [NSColor colorWithRed:0.30 green:0.32 blue:0.38 alpha:0.0];
     SCNParticlePropertyController *cc = [SCNParticlePropertyController controllerWithAnimation:
-                                         OverLife(@"color", @[a, b, c], @[@0, @0.15, @1])];
+                                         OverLife(@"color", @[a, b, c], @[@0, @0.1, @1])];
     SCNParticlePropertyController *sc = [SCNParticlePropertyController controllerWithAnimation:
-                                         OverLife(@"size", @[@(r * 0.8), @(r * 2.4), @(r * 3.6)], @[@0, @0.4, @1])];
+                                         OverLife(@"size", @[@(r * 0.35), @(r * 0.9), @(r * 1.7)], @[@0, @0.4, @1])];
     ps.propertyControllers = @{ SCNParticlePropertyColor : cc, SCNParticlePropertySize : sc };
     ps.sortingMode = SCNParticleSortingModeNone;
     ps.lightingEnabled = NO;
@@ -336,7 +339,7 @@ static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray
     for (NSUInteger i = 0; i < _smoke.count; i++) {
         float r = _radii[i].floatValue;
         SCNParticleSystem *s = _smoke[i];
-        s.birthRate = L > 0.05f ? 1 + 16 * L : 0;
+        s.birthRate = L > 0.05f ? 30 + 270 * L : 0;
         s.particleVelocity = r * (2 + 20 * L);
     }
 }

@@ -92,29 +92,6 @@ static SCNNode *BuildNode(NSString *name, NSArray<NSString *> *mats, NSArray<NSM
 }
 
 + (NSArray<SCNNode *> *)nodesFromURL:(NSURL *)url {
-    NSURL *baked = [[url URLByDeletingPathExtension] URLByAppendingPathExtension:@"scn"];
-    if (baked && [baked checkResourceIsReachableAndReturnError:nil]) {
-        NSError *error = nil;
-        SCNScene *scene = [SCNScene sceneWithURL:baked options:nil error:&error];
-        if (scene) {
-            NSArray<SCNNode *> *nodes = [scene.rootNode.childNodes copy];
-            for (SCNNode *n in nodes) [n removeFromParentNode];
-            return nodes;
-        }
-        NSLog(@"ObjLoader: %@ unreadable (%@), parsing the OBJ", baked.lastPathComponent, error.localizedDescription);
-    }
-    return [self nodesFromOBJURL:url];
-}
-
-+ (BOOL)writeNodes:(NSArray<SCNNode *> *)nodes toSCNURL:(NSURL *)url {
-    SCNScene *scene = [SCNScene scene];
-    for (SCNNode *n in nodes) [scene.rootNode addChildNode:n];
-    BOOL ok = [scene writeToURL:url options:nil delegate:nil progressHandler:nil];
-    for (SCNNode *n in nodes) [n removeFromParentNode];
-    return ok;
-}
-
-+ (NSArray<SCNNode *> *)nodesFromOBJURL:(NSURL *)url {
     NSMutableData *data = url ? [NSMutableData dataWithContentsOfURL:url] : nil;
     if (!data) return @[];
     [data appendBytes:"" length:1];   // NUL guard so number parsing stops at the end

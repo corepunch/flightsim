@@ -48,6 +48,25 @@ static NSString *const kShieldFragment =
      "float a = (pow(f, 2.5) * 1.6 + 0.12) * ripple * level;\n"
      "_output.color = float4(float3(0.35, 0.65, 1.0) * a * 2.5, 1.0);\n";
 
+// Ceiling sits just under ClientView's bloomThreshold (0.9).
+static NSString *const kHullRolloff =
+    @"#pragma body\n"
+     "float3 emit = _surface.emission.rgb;\n"
+     "float3 lit = max(_output.color.rgb - emit, float3(0.0));\n"
+     "float peak = max(max(lit.r, lit.g), lit.b);\n"
+     "const float knee = 0.55, ceil = 0.85;\n"
+     "if (peak > knee) {\n"
+     "    float rolled = knee + (ceil - knee) * (1.0 - exp(-(peak - knee) / (ceil - knee)));\n"
+     "    lit *= rolled / peak;\n"
+     "}\n"
+     "_output.color.rgb = lit + emit;\n";
+
+void ApplyHullRolloff(SCNMaterial *m) {
+    NSMutableDictionary *mods = [m.shaderModifiers mutableCopy] ?: [NSMutableDictionary dictionary];
+    mods[SCNShaderModifierEntryPointFragment] = kHullRolloff;
+    m.shaderModifiers = mods;
+}
+
 @implementation ShipView {
     ShipSpec _spec;
     SCNNode *_shieldNode;
@@ -64,7 +83,7 @@ static NSString *const kShieldFragment =
     SCNGeometry *g = cache[spec.texture];
     if (g) return g;
 
-    NSURL *url = [[NSBundle mainBundle] URLForResource:spec.mesh withExtension:@"obj" subdirectory:@"Models"];
+    NSURL *url = [[NSBundle mainBundle] URLForResource:spec.mesh withExtension:@"scn" subdirectory:@"Models"];   // baked by build.sh
     SCNScene *scene = [SCNScene sceneWithURL:url options:nil error:nil];
     __block SCNGeometry *found = nil;
     [scene.rootNode enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
@@ -79,6 +98,7 @@ static NSString *const kShieldFragment =
     m.diffuse.maxAnisotropy = 8;
     m.metalness.contents = @0.55;
     m.roughness.contents = @0.42;
+    ApplyHullRolloff(m);
     g.materials = @[m];
     cache[spec.texture] = g;
     return g;

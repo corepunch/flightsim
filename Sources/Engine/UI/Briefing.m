@@ -45,11 +45,13 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     NSUInteger _index;
     BOOL _success;
     NSArray<NSString *> *_results;
+    NSDictionary *_dialogueScene;
     NSArray<NSDictionary *> *_dialogue;
     NSUInteger _line;
     SKShapeNode *_confirmButton;
     SKLabelNode *_confirmLabel;
     NSValue *_queuedClick;
+    NSMutableDictionary<NSString *, SKTexture *> *_art;
     SKNode *_root;
     CGSize _laidOut;
 
@@ -70,6 +72,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
         self.scaleMode = SKSceneScaleModeResizeFill;
         self.backgroundColor = [NSColor clearColor];
         _root = [SKNode node];
+        _art = [NSMutableDictionary dictionary];
         [self addChild:_root];
     }
     return self;
@@ -192,7 +195,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
 
 - (void)showBriefing:(NSUInteger)index {
     _index = MIN(index, CampaignMissions().count - 1);
-    _dialogue = CampaignMission(_index)[@"briefing"][@"dialogue"];
+    _dialogueScene = CampaignMission(_index)[@"briefing"][@"dialogue"];
+    _dialogue = _dialogueScene[@"lines"];
     _line = 0;
     _step = 0;
     if (_dialogue.count) {
@@ -210,9 +214,15 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
 }
 
 - (SKSpriteNode *)artNamed:(NSString *)name {
-    NSURL *url = [[NSBundle mainBundle] URLForResource:name withExtension:@"png" subdirectory:@"Briefing"];
-    NSImage *image = url ? [[NSImage alloc] initWithContentsOfURL:url] : nil;
-    return image ? [SKSpriteNode spriteNodeWithTexture:[SKTexture textureWithImage:image]] : nil;
+    SKTexture *texture = _art[name];
+    if (!texture) {
+        NSURL *url = [[NSBundle mainBundle] URLForResource:name withExtension:@"png" subdirectory:@"Briefing"];
+        NSImage *image = url ? [[NSImage alloc] initWithContentsOfURL:url] : nil;
+        if (!image) return nil;
+        texture = [SKTexture textureWithImage:image];
+        _art[name] = texture;
+    }
+    return [SKSpriteNode spriteNodeWithTexture:texture];
 }
 
 - (void)buildDialogue {
@@ -229,7 +239,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     CGFloat panelHeight = MAX(90, speech.frame.size.height + 58);
     CGFloat panelTop = panelBottom + panelHeight;
 
-    SKSpriteNode *room = [self artNamed:@"Bastion"];
+    SKSpriteNode *room = [self artNamed:_dialogueScene[@"room"] ?: @"Bastion"];
     if (room) {
         [room setScale:MAX(size.width / room.size.width, size.height / room.size.height)];
         room.position = CGPointMake(size.width / 2, size.height / 2);
@@ -239,22 +249,23 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeDialogue, ModeBriefing, ModeDeb
     CGFloat mapWidth = size.width * 0.40;
     _mapRect = CGRectMake((size.width - mapWidth) / 2, size.height * 0.42,
                          mapWidth, size.height * 0.40);
-    [_root addChild:Frame(_mapRect, UIColorWithOpacity(UIInk, 0.55), UIColorWithOpacity(UIMap, 0.94))];
+    if (!room) [_root addChild:Frame(_mapRect, UIColorWithOpacity(UIInk, 0.55), UIColorWithOpacity(UIMap, 0.94))];
     [self buildMap:mission];
-    for (MapItem *item in _items.allValues) item.node.alpha = [item.identifier isEqualToString:@"relay"] ? 1 : 0.15;
+    for (MapItem *item in _items.allValues) item.node.alpha = [item.identifier isEqualToString:_dialogueScene[@"focus"]] ? 1 : 0.15;
     _focusRing.hidden = YES;
 
-    NSArray<NSString *> *portraits = @[@"Varn", @"MiraCaptain"];
-    for (NSUInteger i = 0; i < portraits.count; i++) {
+    NSArray<NSString *> *portraits = _dialogueScene[@"cast"];
+    for (NSUInteger i = 0; i < MIN(portraits.count, 2); i++) {
         NSString *name = portraits[i];
         SKSpriteNode *portrait = [self artNamed:name];
         if (!portrait) continue;
-        CGFloat maxWidth = size.width * 0.37;
+        CGFloat maxWidth = size.width * 0.50;
         CGFloat maxHeight = MAX(1, size.height - panelTop - 68);
         [portrait setScale:MIN(maxWidth / portrait.size.width, maxHeight / portrait.size.height)];
         portrait.anchorPoint = CGPointMake(0.5, 0);
-        portrait.position = CGPointMake(size.width * (i == 0 ? 0.185 : 0.815), panelTop - 10);
-        portrait.alpha = [line[@"portrait"] isEqualToString:name] ? 1.0 : 0.82;
+        portrait.position = CGPointMake(size.width * (i == 0 ? 0.175 : 0.825), panelTop - 10);
+        portrait.color = UIColorWithOpacity(UIBackground, 1);
+        portrait.colorBlendFactor = [line[@"portrait"] isEqualToString:name] ? 0 : 0.20;
         [_root addChild:portrait];
     }
 

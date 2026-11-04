@@ -1,5 +1,5 @@
 #import "ModelInfo.h"
-#import "ObjLoader.h"
+#import "SceneAsset.h"
 
 @implementation ModelInfo {
     SCNNode *_root;                     // the parts, for hit tests (never in a scene)
@@ -31,8 +31,7 @@
 - (instancetype)initWithAsset:(NSString *)asset {
     if ((self = [super init])) {
         _asset = [asset copy];
-        NSURL *url = [[NSBundle mainBundle] URLForResource:asset withExtension:@"obj" subdirectory:@"Models/Capital"];
-        NSArray<SCNNode *> *parts = url ? [ObjLoader nodesFromURL:url] : @[];
+        NSArray<SCNNode *> *parts = SceneAssetNodes(asset, @"Models/Capital");
         if (!parts.count) {
             NSLog(@"ModelInfo: missing asset %@", asset);
             SCNNode *box = [SCNNode nodeWithGeometry:[SCNBox boxWithWidth:20 height:20 length:60 chamferRadius:2]];

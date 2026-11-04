@@ -1,6 +1,7 @@
 #import "CapitalView.h"
 #import <Cocoa/Cocoa.h>
 #import "Assets.h"
+#import "ShipView.h"
 
 #pragma mark - Materials
 
@@ -40,6 +41,7 @@ static SCNMaterial *TexturedMaterial(NSString *set, NSColor *tint, float normalS
         for (SCNMaterialProperty *p in props) p.contentsTransform = SCNMatrix4MakeScale(0.6, 0.6, 1);
     }
     for (SCNMaterialProperty *p in props) Repeat(p);
+    ApplyHullRolloff(m);
     return m;
 }
 
@@ -49,6 +51,7 @@ static SCNMaterial *PlainMaterial(NSColor *c, float rough, float metal) {
     m.diffuse.contents = c;
     m.roughness.contents = @(rough);
     m.metalness.contents = @(metal);
+    ApplyHullRolloff(m);
     return m;
 }
 

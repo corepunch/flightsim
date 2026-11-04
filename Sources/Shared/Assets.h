@@ -5,7 +5,7 @@
 #include "Protocol.h"
 
 typedef struct {
-    const char *mesh;           // Resources/Models/<mesh>.obj, also the model name
+    const char *mesh;           // Resources/Models/<mesh>.obj (shipped as .scn), also the model name
     const char *displayName;    // "Wasp"
     float radius;
     int gunCount;

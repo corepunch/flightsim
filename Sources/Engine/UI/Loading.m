@@ -198,9 +198,7 @@ static NSArray<NSString *> *Tips(void) {
 
 - (void)applyProgress {
     _barFill.hidden = _shown <= 0;
-    CGPathRef path = UICreateSkewedPath(CGRectMake(0, 0, _barWidth * _shown, 6));
-    _barFill.path = path;
-    CGPathRelease(path);
+    UISetSkewedBar(_barFill, _barWidth * _shown, 6);
     _percentLabel.text = [NSString stringWithFormat:@"%3d%%", (int)roundf(_shown * 100)];
 }
 
