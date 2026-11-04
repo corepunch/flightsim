@@ -1,16 +1,12 @@
 #import "ServerBrowser.h"
 #import "Assets.h"
+#import "UIStyle.h"
 
-static NSColor *Ink(CGFloat a) { return [NSColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:a]; }
-static NSColor *Amber(CGFloat a) { return [NSColor colorWithRed:1.0 green:0.72 blue:0.3 alpha:a]; }
+static NSColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
+static NSColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }
 
 static SKLabelNode *Text(CGFloat size, NSColor *c) {
-    SKLabelNode *l = [SKLabelNode labelNodeWithFontNamed:@"Menlo"];
-    l.fontSize = size;
-    l.fontColor = c;
-    l.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeLeft;
-    l.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
-    return l;
+    return UIMonoLabel(size, c, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
 }
 
 @implementation ServerBrowser {

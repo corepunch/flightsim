@@ -5,12 +5,7 @@
 #import <ImageIO/ImageIO.h>
 
 static SKLabelNode *Text(CGFloat size, NSColor *c, SKLabelHorizontalAlignmentMode h) {
-    SKLabelNode *l = [SKLabelNode labelNodeWithFontNamed:@"Menlo"];
-    l.fontSize = size;
-    l.fontColor = c;
-    l.horizontalAlignmentMode = h;
-    l.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
-    return l;
+    return UIMonoLabel(size, c, h, SKLabelVerticalAlignmentModeTop);
 }
 
 static SKLabelNode *Para(CGFloat size, NSColor *c, CGFloat width) {
@@ -19,37 +14,6 @@ static SKLabelNode *Para(CGFloat size, NSColor *c, CGFloat width) {
     l.preferredMaxLayoutWidth = width;
     l.lineBreakMode = NSLineBreakByWordWrapping;
     return l;
-}
-
-static SKShapeNode *Frame(CGRect r, NSColor *stroke, NSColor *fill) {
-    SKShapeNode *n = [SKShapeNode shapeNodeWithRect:r cornerRadius:4];
-    n.strokeColor = stroke;
-    n.fillColor = fill;
-    n.lineWidth = 1.5;
-    return n;
-}
-
-// The Bastion terminals use dark steel, copper edging and phosphor displays.
-static const UIRGB BastionSteel = { 0.055, 0.047, 0.041 };
-static const UIRGB BastionEdge = { 0.51, 0.31, 0.17 };
-static const UIRGB BastionGlass = { 0.014, 0.055, 0.058 };
-
-static SKShapeNode *ConsolePanel(CGRect rect, UIRGB fill, CGFloat opacity) {
-    CGFloat x = CGRectGetMinX(rect), y = CGRectGetMinY(rect);
-    CGFloat r = CGRectGetMaxX(rect), t = CGRectGetMaxY(rect);
-    CGFloat cut = MIN(9, MIN(rect.size.width, rect.size.height) * 0.25);
-    const CGPoint corners[] = {
-        {x + cut, y}, {r, y}, {r, t - cut}, {r - cut, t}, {x, t}, {x, y + cut}
-    };
-    CGMutablePathRef path = CGPathCreateMutable();
-    CGPathAddLines(path, NULL, corners, sizeof(corners) / sizeof(*corners));
-    CGPathCloseSubpath(path);
-    SKShapeNode *panel = [SKShapeNode shapeNodeWithPath:path];
-    CGPathRelease(path);
-    panel.fillColor = UIColorWithOpacity(fill, opacity);
-    panel.strokeColor = UIColorWithOpacity(BastionEdge, 0.95);
-    panel.lineWidth = 1.5;
-    return panel;
 }
 
 typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
@@ -134,7 +98,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     CGSize s = self.size;
     CGFloat top = s.height - 50;
     SKLabelNode *t = Text(30, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
-    t.fontName = @"Menlo-Bold";
+    t.fontName = UIMonoBoldFont;
     t.text = @"KESTREL FRONTIER";
     t.position = CGPointMake(60, top);
     [_root addChild:t];
@@ -164,9 +128,10 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     NSDictionary *m = all[_index];
     BOOL open = _index < unlocked;
     CGFloat px = listW + 100, pw = s.width - px - 60;
-    [_root addChild:Frame(CGRectMake(px - 20, 90, pw + 20, top - 160), UIColorWithOpacity(UIInk, 0.4), UIColorWithOpacity(UIBlack, 0.35))];
+    [_root addChild:UIReadoutPanel(CGRectMake(px - 20, 90, pw + 20, top - 160),
+                                  UIColorWithOpacity(UIInk, 0.4), UIColorWithOpacity(UIBlack, 0.35))];
     SKLabelNode *title = Text(24, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
-    title.fontName = @"Menlo-Bold";
+    title.fontName = UIMonoBoldFont;
     title.text = open ? [m[@"title"] uppercaseString] : @"CLASSIFIED";
     title.position = CGPointMake(px, top - 90);
     [_root addChild:title];
@@ -195,45 +160,37 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     [self footer:@"↑ / ↓  Select mission" action:open ? @"BRIEFING" : nil];
 }
 
-- (void)addButton:(NSString *)text inRect:(CGRect)rect console:(BOOL)console {
-    [_root addChild:UISkewedShape(rect, UIColorWithOpacity(console ? UIAmber : UIInk, 0.85),
-                                 UIColorWithOpacity(UIPanel, 0.96))];
-    SKLabelNode *label = Text(13, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeCenter);
-    label.fontName = @"Menlo-Bold";
-    label.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
-    label.position = CGPointMake(CGRectGetMidX(rect), CGRectGetMidY(rect));
-    label.text = text;
-    [_root addChild:label];
-}
-
 - (void)footer:(NSString *)text action:(NSString *)action {
     CGFloat inset = MIN(50, self.size.width * 0.05);
     BOOL console = _mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0);
     if ([self compactStoryLayout]) {
         CGFloat bottom = 16, height = 44;
         _backRect = CGRectMake(inset, bottom, 84, height);
-        [self addButton:@"MISSIONS" inRect:_backRect console:YES];
+        [_root addChild:UIActionButton(_backRect, @"MISSIONS", UIAmber)];
         BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
         if (hasPrevious) {
             _previousRect = CGRectMake(CGRectGetMaxX(_backRect) + 8, bottom, 44, height);
-            [self addButton:@"←" inRect:_previousRect console:YES];
+            [_root addChild:UIActionButton(_previousRect, @"←", UIAmber)];
         }
         CGFloat width = MIN(144, self.size.width * 0.38);
         _confirmRect = CGRectMake(self.size.width - inset - width, bottom, width, height);
-        [self addButton:[action stringByReplacingOccurrencesOfString:@"↵  " withString:@""]
-                inRect:_confirmRect console:YES];
+        NSString *label = [action stringByReplacingOccurrencesOfString:@"↵  " withString:@""];
+        [_root addChild:UIActionButton(_confirmRect, label, UIAmber)];
         return;
     }
-    if (console) [_root addChild:ConsolePanel(CGRectMake(inset - 10, 14, MAX(1, self.size.width - 2 * inset + 20), 52), BastionSteel, 0.91)];
+    CGRect rail = CGRectMake(inset - 10, 14, self.size.width - 2 * inset + 20, 52);
+    [_root addChild:UIControlRail(rail, console)];
+    CGFloat hintLeft = inset + 8;
     SKLabelNode *hint = Para(12, UIColorWithOpacity(UIInk, console ? 0.9 : 0.65),
-                             MAX(1, self.size.width - 2 * inset - (action ? 200 : 0)));
+                             MAX(1, self.size.width - inset - hintLeft - (action ? 200 : 0)));
     hint.text = text;
-    hint.position = CGPointMake(inset, 40);
+    hint.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
+    hint.position = CGPointMake(hintLeft, 40);
     [_root addChild:hint];
     if (!action) return;
 
     _confirmRect = CGRectMake(self.size.width - inset - 180, 20, 180, 40);
-    [self addButton:action inRect:_confirmRect console:console];
+    [_root addChild:UIActionButton(_confirmRect, action, console ? UIAmber : UIInk)];
 }
 
 #pragma mark - Briefing
@@ -304,13 +261,22 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
 // Return the painted monitor's position after an aspect-fill crop. The
 // coordinates describe the inside of the cyan bezel in Bastion.png.
-- (CGRect)addBackdrop:(NSString *)name {
+- (CGRect)addBackdrop:(NSString *)name raiseBoard:(BOOL)raiseBoard {
     CGSize size = self.size;
     SKSpriteNode *art = [self artNamed:name];
     if (!art) return CGRectZero;
-    CGFloat scale = MAX(size.width / art.size.width, size.height / art.size.height);
+    const CGFloat boardBottom = 0.465, boardHeight = 0.375;
+    CGFloat scale = MAX(size.width / art.size.width, size.height / art.size.height * (raiseBoard ? 1.15 : 1));
+    CGFloat centerY = size.height / 2;
+    if (raiseBoard) {
+        CGFloat artHeight = art.size.height * scale;
+        // Give the caption more room while keeping the top of the monitor visible.
+        CGFloat boardTop = artHeight * (boardBottom + boardHeight);
+        CGFloat originY = MIN(0, size.height * 0.96 - boardTop);
+        centerY = MAX(centerY, originY + artHeight / 2);
+    }
     [art setScale:scale];
-    art.position = CGPointMake(size.width / 2, size.height / 2);
+    art.position = CGPointMake(size.width / 2, centerY);
     [_root addChild:art];
     SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.12) size:size];
     shade.anchorPoint = CGPointZero;
@@ -318,8 +284,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
     CGRect frame = art.frame;
     return CGRectMake(frame.origin.x + frame.size.width * 0.25,
-                      frame.origin.y + frame.size.height * 0.465,
-                      frame.size.width * 0.50, frame.size.height * 0.375);
+                      frame.origin.y + frame.size.height * boardBottom,
+                      frame.size.width * 0.50, frame.size.height * boardHeight);
 }
 
 - (void)addPortrait:(NSString *)name facingRight:(BOOL)facingRight active:(BOOL)active inRect:(CGRect)area {
@@ -339,29 +305,35 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
 - (CGFloat)captionHeightForLines:(NSArray<NSDictionary *> *)lines width:(CGFloat)width fontSize:(CGFloat)fontSize {
     SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), MAX(1, width - 32));
-    speech.fontName = @"HelveticaNeue";
+    speech.fontName = UIBodyFont;
     CGFloat height = 0;
     for (NSDictionary *line in lines) {
         speech.text = line[@"text"];
         height = MAX(height, speech.frame.size.height);
     }
-    return MAX(72, height + 47);
+    return MAX(72, height + 40);
 }
 
-- (void)addCaption:(NSDictionary *)line inRect:(CGRect)rect fontSize:(CGFloat)fontSize {
-    [_root addChild:ConsolePanel(rect, BastionSteel, 0.95)];
+- (void)addCaption:(NSDictionary *)line inRect:(CGRect)rect fontSize:(CGFloat)fontSize
+      speakerOnRight:(BOOL)speakerOnRight {
+    [_root addChild:UIReadoutPanel(rect, UIColorWithOpacity(UIConsoleEdge, 0.95),
+                                  UIColorWithOpacity(UIConsoleSteel, 0.95))];
     CGFloat left = CGRectGetMinX(rect) + 16, top = CGRectGetMaxY(rect);
     CGFloat width = MAX(1, rect.size.width - 32);
-    SKLabelNode *speaker = Para(13, UIColorWithOpacity(UIAmber, 1), width);
-    speaker.fontName = @"Menlo-Bold";
-    speaker.numberOfLines = 1;
-    speaker.lineBreakMode = NSLineBreakByTruncatingTail;
+    SKLabelNode *speaker = Text(13, UIColorWithOpacity(UIAmber, 1),
+                               speakerOnRight ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeLeft);
+    speaker.fontName = UIMonoBoldFont;
     speaker.text = [line[@"speaker"] uppercaseString];
-    speaker.position = CGPointMake(left, top - 10);
+    if (speaker.frame.size.width > width) {
+        // Keep the name when the full rank and posting won't fit.
+        speaker.text = [speaker.text componentsSeparatedByString:@","].firstObject;
+        if (speaker.frame.size.width > width) speaker.fontSize *= width / speaker.frame.size.width;
+    }
+    speaker.position = CGPointMake(speakerOnRight ? CGRectGetMaxX(rect) - 16 : left, top - 10);
     [_root addChild:speaker];
 
     SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), width);
-    speech.fontName = @"HelveticaNeue";
+    speech.fontName = UIBodyFont;
     speech.text = line[@"text"];
     speech.position = CGPointMake(left, top - 32);
     [_root addChild:speech];
@@ -372,29 +344,31 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     NSDictionary *mission = CampaignMission(_index);
     NSDictionary *page = _pages[_page];
     CGFloat textSize = MIN(24, MAX(14, size.width / 60));
-    CGFloat floor = 70;
     BOOL narrow = size.width < size.height * 1.24;
     BOOL compact = [self compactStoryLayout];
+    CGFloat floor = compact ? 64 : 70;
 
-    CGRect screen = [self addBackdrop:_dialogueScene[@"room"] ?: @"Bastion"];
-    if (narrow || CGRectIsEmpty(screen)) {
+    CGRect screen = [self addBackdrop:_dialogueScene[@"room"] ?: @"Bastion" raiseBoard:compact && !narrow];
+    BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
+    if (!paintedBoard) {
         CGFloat margin = size.width * 0.06;
         screen = CGRectMake(margin, size.height * 0.59, size.width - margin * 2, size.height * 0.34);
-        [_root addChild:ConsolePanel(screen, BastionGlass, 1)];
+        [_root addChild:UIReadoutPanel(screen, UIColorWithOpacity(UIConsoleEdge, 0.95),
+                                      UIColorWithOpacity(UIConsoleGlass, 1))];
     }
 
-    CGFloat captionLeft = CGRectGetMinX(screen);
-    CGFloat captionWidth = screen.size.width;
+    CGFloat captionWidth = screen.size.width * 0.70;
     CGFloat captionHeight = [self captionHeightForLines:_pages width:captionWidth fontSize:textSize];
+    // The painted lower bezel extends beyond the monitor's content rect.
+    CGFloat minGap = paintedBoard ? screen.size.height * 0.065 : 4;
     CGFloat gap = MIN(24, size.height * 0.035);
-    CGFloat captionBottom = CGRectGetMinY(screen) - gap - captionHeight;
-    if (captionBottom < floor && !narrow) {
-        // On a short window, widen the caption before reducing the monitor.
-        captionLeft = MIN(28, size.width * 0.05);
-        captionWidth = size.width - 2 * captionLeft;
+    gap = MAX(minGap, MIN(gap, CGRectGetMinY(screen) - floor - captionHeight));
+    CGFloat captionTop = CGRectGetMinY(screen) - gap;
+    while (captionHeight > captionTop - floor && textSize > 12) {
+        textSize = MAX(12, textSize - 1);
         captionHeight = [self captionHeightForLines:_pages width:captionWidth fontSize:textSize];
-        captionBottom = floor;
     }
+    CGFloat captionBottom = MAX(floor, captionTop - captionHeight);
 
     _focusRing = nil;
     [self buildMonitor:screen mission:mission page:page];
@@ -403,7 +377,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     NSArray<NSString *> *cast = page[@"cast"] ?: @[active];
     NSString *left = cast.firstObject;
     NSString *right = cast.count > 1 ? cast[1] : nil;
-    if (![left isEqualToString:active] && ![right isEqualToString:active]) right = active;
+    BOOL speakerOnRight = ![left isEqualToString:active];
+    if (speakerOnRight) right = active;
     CGFloat wing = CGRectGetMinX(screen);
     if (narrow) {
         CGFloat height = MAX(1, captionBottom + 6);
@@ -422,7 +397,9 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
                               inRect:CGRectMake(size.width - center - width / 2, bottom, width, height)];
     }
 
-    [self addCaption:page inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight) fontSize:textSize];
+    CGFloat captionLeft = speakerOnRight ? CGRectGetMaxX(screen) - captionWidth : CGRectGetMinX(screen);
+    [self addCaption:page inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
+             fontSize:textSize speakerOnRight:speakerOnRight];
     [self footer:@"← / →  Briefing     Esc  Missions"
            action:_page + 1 == _pages.count ? @"↵  LAUNCH" : @"↵  CONTINUE"];
 }
@@ -435,7 +412,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     CGFloat width = MAX(1, right - left);
     CGFloat titleSize = MIN(21, MAX(12, width / 29));
     SKLabelNode *title = Para(titleSize, UIColorWithOpacity(UIInk, 1), width);
-    title.fontName = @"Menlo-Bold";
+    title.fontName = UIMonoBoldFont;
     title.text = [NSString stringWithFormat:@"%02lu  /  %@", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]];
     title.position = CGPointMake(left, top);
     [_root addChild:title];
@@ -447,7 +424,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
     CGFloat channelY = CGRectGetMinY(location.frame) - 10;
     SKLabelNode *channel = Text(12, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
-    channel.fontName = @"Menlo-Bold";
+    channel.fontName = UIMonoBoldFont;
     channel.text = page[@"channel"];
     channel.position = CGPointMake(left, channelY);
     [_root addChild:channel];
@@ -482,7 +459,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         NSString *lines = [@"›  " stringByAppendingString:[readout componentsJoinedByString:@"\n›  "]];
         CGFloat fontSize = MIN(20, MAX(12, width / 32));
         SKLabelNode *list = Para(fontSize, UIColorWithOpacity(UIInk, 0.96), width);
-        list.fontName = @"HelveticaNeue-Medium";
+        list.fontName = UIBodyMediumFont;
         list.text = lines;
         list.position = CGPointMake(left, contentTop - 8);
         while (list.fontSize > 10 && CGRectGetMinY(list.frame) < bottom) list.fontSize -= 1;
@@ -693,7 +670,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
                 SKLabelNode *l = (SKLabelNode *)c;
                 if (![l.userData[@"ink"] isKindOfClass:[NSColor class]]) l.userData = [@{ @"ink": l.fontColor } mutableCopy];
                 l.fontColor = focused ? UIColorWithOpacity(UIWhite, 1) : l.userData[@"ink"];
-                l.fontName = focused ? @"Menlo-Bold" : @"Menlo";
+                l.fontName = focused ? UIMonoBoldFont : UIMonoFont;
             } else {
                 c.xScale = c.yScale = focused ? 1.3 : 1.0;
             }
@@ -748,7 +725,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
     if (_debriefBeat > 0 && _debriefBeat <= conversation.count) {
         NSDictionary *line = conversation[_debriefBeat - 1];
-        [self addBackdrop:@"Bastion"];
+        [self addBackdrop:@"Bastion" raiseBoard:NO];
         CGFloat captionHeight = [self captionHeightForLines:conversation width:width fontSize:fontSize];
         BOOL compact = [self compactStoryLayout];
         CGFloat floor = compact ? (s.height - captionHeight) / 2 : 72;
@@ -756,7 +733,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         CGFloat height = compact ? floor + 6 : s.height - bottom - 26;
         [self addPortrait:line[@"portrait"] facingRight:YES active:YES
                    inRect:CGRectMake(inset, bottom, width, MAX(1, height))];
-        [self addCaption:line inRect:CGRectMake(inset, floor, width, captionHeight) fontSize:fontSize];
+        [self addCaption:line inRect:CGRectMake(inset, floor, width, captionHeight)
+                 fontSize:fontSize speakerOnRight:NO];
         [self footer:@"← / →  Conversation     Esc  Missions"
                action:_debriefBeat == conversation.count ? next : @"↵  CONTINUE"];
         return;
@@ -766,7 +744,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     SKLabelNode *title = Text(MIN(36, MAX(20, s.width / 30)),
                               _success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1),
                               SKLabelHorizontalAlignmentModeCenter);
-    title.fontName = @"Menlo-Bold";
+    title.fontName = UIMonoBoldFont;
     title.text = _success ? @"MISSION COMPLETE" : @"MISSION FAILED";
     title.position = CGPointMake(s.width / 2, top);
     [_root addChild:title];

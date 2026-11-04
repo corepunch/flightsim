@@ -2,12 +2,7 @@
 #import "UIStyle.h"
 
 static SKLabelNode *Text(CGFloat size, NSColor *c, SKLabelHorizontalAlignmentMode h) {
-    SKLabelNode *l = [SKLabelNode labelNodeWithFontNamed:@"Menlo"];
-    l.fontSize = size;
-    l.fontColor = c;
-    l.horizontalAlignmentMode = h;
-    l.verticalAlignmentMode = SKLabelVerticalAlignmentModeBaseline;
-    return l;
+    return UIMonoLabel(size, c, h, SKLabelVerticalAlignmentModeBaseline);
 }
 
 static NSArray<NSString *> *Tips(void) {
@@ -131,7 +126,7 @@ static NSArray<NSString *> *Tips(void) {
     [_root addChild:_kickerLabel];
 
     _titleLabel = Text(MIN(48, s.width / 22), UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
-    _titleLabel.fontName = @"Menlo-Bold";
+    _titleLabel.fontName = UIMonoBoldFont;
     _titleLabel.text = _title;
     _titleLabel.position = CGPointMake(x, mid);
     [_root addChild:_titleLabel];
