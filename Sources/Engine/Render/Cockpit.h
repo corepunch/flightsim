@@ -1,6 +1,6 @@
 #import <SceneKit/SceneKit.h>
 #import <simd/simd.h>
-#import "Ship.h"
+#import "ShipView.h"
 
 #define COCKPIT_MAX_CONTACTS 24
 

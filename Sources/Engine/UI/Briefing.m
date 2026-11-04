@@ -1,6 +1,6 @@
 #import "Briefing.h"
-#import "Mission.h"
-#import "Capital.h"
+#import "Assets.h"
+#import "Progress.h"
 
 static NSColor *Ink(CGFloat a) { return [NSColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:a]; }
 static NSColor *Amber(CGFloat a) { return [NSColor colorWithRed:1.0 green:0.72 blue:0.3 alpha:a]; }
@@ -95,7 +95,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
 - (void)showListSelecting:(NSUInteger)index {
     _mode = ModeList;
-    _index = MIN(index, [Mission all].count - 1);
+    _index = MIN(index, CampaignMissions().count - 1);
     [self rebuild];
 }
 
@@ -112,8 +112,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     sub.position = CGPointMake(60, top - 40);
     [_root addChild:sub];
 
-    NSArray *all = [Mission all];
-    NSUInteger unlocked = [Mission unlockedCount];
+    NSArray *all = CampaignMissions();
+    NSUInteger unlocked = ProgressUnlockedCount();
     CGFloat rowH = MIN(30, (s.height - 220) / MAX(all.count, 1));
     CGFloat listW = MIN(520, s.width * 0.42);
     for (NSUInteger i = 0; i < all.count; i++) {
@@ -183,7 +183,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
 - (void)buildBriefing {
     CGSize s = self.size;
-    NSDictionary *m = [Mission missionAtIndex:_index];
+    NSDictionary *m = CampaignMission(_index);
     NSDictionary *b = m[@"briefing"];
     CGFloat top = s.height - 40;
 
@@ -356,7 +356,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
             icon = n;
         } else {
             // Capital icon scaled to the real hull, pointing along its facing.
-            NSDictionary *info = [Capital infoForAsset:t[@"asset"]];
+            NSDictionary *info = AssetInfo(t[@"asset"]);
             BOOL prop = [info[@"prop"] boolValue];
             CGFloat len = prop ? 6 : MAX(12, MIN(60, [info[@"hp"] floatValue] * 0.9 + 10));
             SKShapeNode *n = prop ? [SKShapeNode shapeNodeWithRect:CGRectMake(-3, -3, 6, 6)]
@@ -457,7 +457,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     _success = success;
     [self rebuild];
     CGSize s = self.size;
-    NSDictionary *m = [Mission missionAtIndex:index];
+    NSDictionary *m = CampaignMission(index);
     SKLabelNode *t = Text(40, success ? Ink(1) : Red(1), SKLabelHorizontalAlignmentModeCenter);
     t.fontName = @"Menlo-Bold";
     t.text = success ? @"MISSION COMPLETE" : @"MISSION FAILED";
@@ -478,7 +478,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     r.text = lines;
     r.position = CGPointMake((s.width - w) / 2, p.position.y - p.frame.size.height - 40);
     [_root addChild:r];
-    BOOL more = success && index + 1 < [Mission all].count;
+    BOOL more = success && index + 1 < CampaignMissions().count;
     [self footer:success ? (more ? @"ENTER  next mission      R  fly again      ESC  missions" : @"ENTER  missions      R  fly again")
                          : @"ENTER / R  retry      ESC  missions"];
 }
@@ -486,12 +486,12 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 #pragma mark - Input & animation
 
 - (BriefingCommand)handle:(InputAction)a {
-    NSUInteger count = [Mission all].count;
+    NSUInteger count = CampaignMissions().count;
     switch (_mode) {
         case ModeList:
             if (a & InputActionUp) [self showListSelecting:(_index + count - 1) % count];
             if (a & InputActionDown) [self showListSelecting:(_index + 1) % count];
-            if ((a & InputActionConfirm) && _index < [Mission unlockedCount]) [self showBriefing:_index];
+            if ((a & InputActionConfirm) && _index < ProgressUnlockedCount()) [self showBriefing:_index];
             break;
         case ModeBriefing:
             if (a & InputActionBack) { [self showListSelecting:_index]; break; }

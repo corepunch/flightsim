@@ -1,4 +1,5 @@
-#import "Ship.h"
+#import "ShipView.h"
+#import "Assets.h"
 
 typedef struct {
     NSString *mesh;
@@ -6,8 +7,6 @@ typedef struct {
     float radius;
     int nozzleCount;
     simd_float4 nozzles[6];  // in OBJ space: +Z is the nose
-    int gunCount;
-    simd_float3 guns[2];
     simd_float3 exhaustColor;
 } ShipSpec;
 
@@ -19,20 +18,18 @@ static ShipSpec SpecFor(ShipClass c) {
             return (ShipSpec){ @"Executioner", @"Executioner_Blue", 5.0f, 4,
                 { {0.937f, -0.155f, -2.85f, 0.42f}, {-0.937f, -0.155f, -2.85f, 0.42f},
                   {4.379f, 0.161f, -3.0f, 0.55f}, {-4.379f, 0.161f, -3.0f, 0.55f} },
-                2, { {4.38f, 0.1f, 2.5f}, {-4.38f, 0.1f, 2.5f} },
                 {0.25f, 0.55f, 1.0f} };
         case ShipClassSpitfire:
             return (ShipSpec){ @"Spitfire", @"Spitfire_Red", 5.0f, 4,
                 { {4.506f, 0.135f, -2.2f, 0.6f}, {-4.506f, 0.135f, -2.2f, 0.6f},
                   {4.506f, -1.27f, -2.2f, 0.6f}, {-4.506f, -1.27f, -2.2f, 0.6f} },
-                2, { {1.2f, -0.2f, 3.5f}, {-1.2f, -0.2f, 3.5f} },
                 {1.0f, 0.38f, 0.18f} };
         case ShipClassInsurgent:
+        default:
             return (ShipSpec){ @"Insurgent", @"Insurgent_Red", 4.5f, 6,
                 { {0.758f, 0.273f, -3.2f, 0.5f}, {-0.758f, 0.273f, -3.2f, 0.5f},
                   {2.37f, -0.17f, -2.9f, 0.2f}, {-2.37f, -0.17f, -2.9f, 0.2f},
                   {1.686f, 0.699f, -3.0f, 0.16f}, {-1.686f, 0.699f, -3.0f, 0.16f} },
-                2, { {2.4f, -0.2f, 3.0f}, {-2.4f, -0.2f, 3.0f} },
                 {1.0f, 0.3f, 0.55f} };
     }
 }
@@ -51,12 +48,13 @@ static NSString *const kShieldFragment =
      "float a = (pow(f, 2.5) * 1.6 + 0.12) * ripple * level;\n"
      "_output.color = float4(float3(0.35, 0.65, 1.0) * a * 2.5, 1.0);\n";
 
-@implementation Ship {
+@implementation ShipView {
     ShipSpec _spec;
     SCNNode *_shieldNode;
     SCNMaterial *_shieldMaterial;
     float _shieldFlash;
-    BOOL _boostDepleted;   // set when energy runs dry; cleared once it recharges past 15%
+    float _hull;
+    BOOL _alive;
     SCNParticleSystem *_damageFire, *_damageSmoke;
 }
 
@@ -90,10 +88,14 @@ static NSString *const kShieldFragment =
     return [self geometryForSpec:SpecFor(shipClass)];
 }
 
-+ (NSString *)nameForClass:(ShipClass)shipClass { return SpecFor(shipClass).mesh; }
-
 + (instancetype)shipWithClass:(ShipClass)shipClass smoke:(BOOL)smoke {
     return [[self alloc] initWithClass:shipClass smoke:smoke];
+}
+
++ (instancetype)viewWithModel:(NSString *)model {
+    if (![model hasPrefix:@"ship:"]) return nil;
+    int c = FighterClassForMesh([model substringFromIndex:5]);
+    return c < 0 ? nil : [self shipWithClass:(ShipClass)c smoke:YES];
 }
 
 - (instancetype)initWithClass:(ShipClass)shipClass smoke:(BOOL)smoke {
@@ -102,7 +104,7 @@ static NSString *const kShieldFragment =
         _spec = SpecFor(shipClass);
         _radius = _spec.radius;
         _node = [SCNNode node];
-        _model = [SCNNode nodeWithGeometry:[Ship geometryForSpec:_spec]];
+        _model = [SCNNode nodeWithGeometry:[ShipView geometryForSpec:_spec]];
         _model.eulerAngles = SCNVector3Make(0, M_PI, 0);
         _model.castsShadow = YES;
         [_node addChildNode:_model];
@@ -114,11 +116,7 @@ static NSString *const kShieldFragment =
                                               color:_spec.exhaustColor parent:_node smoke:smoke];
         [self buildShield];
         [self buildDamageFx];
-        _maxSpeed = 150;
-        _turnRate = 1;
-        _boostEnergy = 1;
         _hull = 1;
-        _shield = 1;
         _alive = YES;
     }
     return self;
@@ -200,83 +198,18 @@ static NSString *const kShieldFragment =
     _damageSmoke.birthRate = dmg > 0 ? 10 + 60 * dmg : 0;
 }
 
-- (simd_float3)position { return _node.simdPosition; }
-- (void)setPosition:(simd_float3)p { _node.simdPosition = p; }
-- (simd_quatf)orientation { return _node.simdOrientation; }
-- (void)setOrientation:(simd_quatf)q { _node.simdOrientation = q; }
-- (simd_float3)forward { return simd_act(_node.simdOrientation, simd_make_float3(0, 0, -1)); }
-- (simd_float3)up { return simd_act(_node.simdOrientation, simd_make_float3(0, 1, 0)); }
-- (simd_float3)right { return simd_act(_node.simdOrientation, simd_make_float3(1, 0, 0)); }
-
-- (void)resetAt:(simd_float3)position facing:(simd_quatf)orientation {
-    self.position = position;
-    self.orientation = orientation;
-    _velocity = self.forward * 60;
-    _angularVelocity = 0;
-    _hull = 1;
-    _shield = 1;
-    _boostEnergy = 1;
-    _boostDepleted = NO;
-    _alive = YES;
-    _node.hidden = NO;
-    [_exhaust setEnabled:YES];
-}
-
-- (void)stepWithControls:(ControlState)c dt:(float)dt {
-    if (!_alive) return;
-
-    // Boost drains energy; it recharges when not boosting. Once drained it
-    // stays locked out until 15% has recharged (hysteresis). Without that,
-    // holding the button at empty would toggle boost every frame or two
-    // (recharge a bit, go over the threshold, drain, repeat), and the camera,
-    // exhaust and HUD would all flicker along with it.
-    if (_boostEnergy <= 0.02f) _boostDepleted = YES;
-    else if (_boostEnergy >= 0.15f) _boostDepleted = NO;
-    BOOL boost = c.boost && !_boostDepleted;
-    _boostEnergy = fminf(1, fmaxf(0, _boostEnergy + (boost ? -0.28f : 0.12f) * dt));
-    _boosting = boost;
-    _throttle = c.throttle;
-
-    // Angular rates chase the stick, giving a little weight to the controls.
-    simd_float3 target = simd_make_float3(c.pitch * 1.45f, -c.yaw * 0.85f, -c.roll * 2.6f) * _turnRate;
-    if (boost) target *= 0.7f;
-    _angularVelocity += (target - _angularVelocity) * (1.0f - expf(-5.5f * dt));
-    float w = simd_length(_angularVelocity);
-    if (w > 1e-5f) {
-        simd_quatf dq = simd_quaternion(w * dt, _angularVelocity / w);
-        _node.simdOrientation = simd_normalize(simd_mul(_node.simdOrientation, dq));
-    }
-
-    // Arcade space flight: velocity is pulled toward the nose, so hard turns
-    // drift before the engines catch up.
-    float speed = _throttle * _maxSpeed + (boost ? _maxSpeed * 0.9f : 0);
-    simd_float3 desired = self.forward * speed;
-    float grip = boost ? 2.2f : 1.4f;
-    _velocity += (desired - _velocity) * (1.0f - expf(-grip * dt));
-    _node.simdPosition += _velocity * dt;
-
-    // Shields regenerate slowly.
-    _shield = fminf(1, _shield + 0.06f * dt);
+- (void)updateThrottle:(float)throttle boost:(BOOL)boost hull:(float)hull alive:(BOOL)alive dt:(float)dt {
+    _hull = hull;
+    _alive = alive;
     [self updateFx:dt];
-
-    [_exhaust updateThrottle:_throttle boost:boost dt:dt];
+    [_exhaust updateThrottle:throttle boost:boost dt:dt];
 }
 
-- (simd_float3)nextGunWorldPosition {
-    simd_float3 local = ToShip(_spec.guns[_gunIndex % _spec.gunCount]);
-    _gunIndex++;
-    _lastGunLocal = local;
-    return _node.simdPosition + simd_act(_node.simdOrientation, local);
-}
-
-- (BOOL)takeDamage:(float)amount {
-    BOOL shielded = _shield > 0.02f;
-    if (shielded) [self flashShield];
-    float absorbed = fminf(_shield, amount);
-    _shield -= absorbed;
-    _hull -= (amount - absorbed) * 1.0f;
-    if (_hull <= 0) { _hull = 0; _alive = NO; [self updateFx:0]; }
-    return shielded;
+- (void)setAlive:(BOOL)alive {
+    _alive = alive;
+    _node.hidden = !alive;
+    [_exhaust setEnabled:alive];
+    [self updateFx:0];
 }
 
 @end

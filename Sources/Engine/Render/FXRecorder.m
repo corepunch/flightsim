@@ -3,7 +3,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <Metal/Metal.h>
 #import "Effects.h"
-#import "Ship.h"
+#import "ShipView.h"
 
 static const int kFPS = 60;
 static const CGSize kSize = { 1280, 720 };
@@ -104,11 +104,11 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
     [renderer prepareObjects:[fx warmupNodes] withCompletionHandler:nil];
 
     // Per-effect setup and per-frame driver.
-    Ship *ship = nil;
+    ShipView *ship = nil;
     SCNNode *bolt = nil;
     void (^tick)(double t, int frame) = nil;
     if ([effect isEqualToString:@"explosion"]) {
-        ship = [Ship shipWithClass:ShipClassSpitfire smoke:NO];
+        ship = [ShipView shipWithClass:ShipClassSpitfire smoke:NO];
         [scene.rootNode addChildNode:ship.node];
         ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.6f, simd_make_float3(0, 1, 0));
         __block BOOL done = NO;
@@ -116,9 +116,8 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             [ship.exhaust updateThrottle:0.6f boost:NO dt:1.0f / kFPS];
             if (!done && t >= 0.4) {
                 done = YES;
-                ship.node.hidden = YES;
-                [ship.exhaust setEnabled:NO];
-                [fx explosionAt:ship.position velocity:simd_make_float3(20, 0, 0) hullMaterial:ship.model.geometry.firstMaterial];
+                [ship setAlive:NO];
+                [fx explosionAt:ship.node.simdPosition velocity:simd_make_float3(20, 0, 0) hullMaterial:ship.model.geometry.firstMaterial];
             }
         };
     } else if ([effect isEqualToString:@"impact"]) {
@@ -129,20 +128,16 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             }
         };
     } else if ([effect isEqualToString:@"shield"]) {
-        ship = [Ship shipWithClass:ShipClassExecutioner smoke:NO];
+        ship = [ShipView shipWithClass:ShipClassExecutioner smoke:NO];
         [scene.rootNode addChildNode:ship.node];
         ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.75f, simd_make_float3(0, 1, 0));
         camera.simdPosition = simd_make_float3(0, 5, 22);
         [camera simdLookAt:simd_make_float3(0, 0, 0)];
         tick = ^(double t, int frame) {
-            ControlState c = {0};
-            c.throttle = 0.4f;
-            ship.velocity = 0;
-            [ship stepWithControls:c dt:1.0f / kFPS];
-            ship.node.simdPosition = 0;
+            [ship updateThrottle:0.4f boost:NO hull:1 alive:YES dt:1.0f / kFPS];
             if (frame % 40 == 10) {
-                [ship takeDamage:0.15f];
-                [fx impactAt:ship.position + simd_make_float3(0, 1.5f, 3.0f) player:NO shielded:YES];
+                [ship flashShield];
+                [fx impactAt:simd_make_float3(0, 1.5f, 3.0f) player:NO shielded:YES];
             }
         };
     } else if ([effect isEqualToString:@"bolt"]) {
@@ -160,7 +155,7 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             bolt2.simdPosition = simd_make_float3(-x, -3, x * 0.3f);
         };
     } else if ([effect isEqualToString:@"exhaust"]) {
-        ship = [Ship shipWithClass:ShipClassExecutioner smoke:YES];
+        ship = [ShipView shipWithClass:ShipClassExecutioner smoke:YES];
         [scene.rootNode addChildNode:ship.node];
         // Side-on, nose pointing left, so the flames trail to the right.
         ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.5f, simd_make_float3(0, 1, 0));

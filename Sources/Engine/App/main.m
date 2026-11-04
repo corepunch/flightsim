@@ -1,11 +1,11 @@
 #import <Cocoa/Cocoa.h>
 #import "GameView.h"
-#import "Game.h"
+#import "Host.h"
 #import "FXRecorder.h"
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @property (nonatomic, strong) NSWindow *window;
-@property (nonatomic, strong) Game *game;
+@property (nonatomic, strong) Host *host;
 @property (nonatomic, strong) Input *input;
 @end
 
@@ -38,7 +38,7 @@
     GameView *view = [[GameView alloc] initWithFrame:frame options:@{ SCNPreferredRenderingAPIKey : @(SCNRenderingAPIMetal) }];
     view.input = self.input;
     self.window.contentView = view;
-    self.game = [[Game alloc] initWithView:view input:self.input];
+    self.host = [[Host alloc] initWithView:view input:self.input];
 
     [self.window makeKeyAndOrderFront:nil];
     [self.window makeFirstResponder:view];

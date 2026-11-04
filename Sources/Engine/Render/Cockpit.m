@@ -177,7 +177,7 @@ static SCNNode *Hologram(NSColor *color, SCNNode * __strong *modelOut) {
 }
 
 static void SetHologramShip(SCNNode *model, ShipClass c) {
-    SCNGeometry *g = [[Ship geometryForClass:c] copy];
+    SCNGeometry *g = [[ShipView geometryForClass:c] copy];
     g.materials = @[[model valueForKey:@"holoMaterial"]];
     model.geometry = g;
 }

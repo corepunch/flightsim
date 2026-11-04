@@ -3,6 +3,19 @@
 
 typedef struct { int v, t, n; } Corner;
 
+// Reads up to n floats starting at p. strtof stops at the first character
+// that isn't part of a number, so it never scans past the line (sscanf would
+// strlen the whole rest of the file on every call: quadratic on big OBJs).
+static void ReadFloats(const char *p, const char *eol, float *out, int n) {
+    for (int i = 0; i < n && p < eol; i++) {
+        char *next;
+        float v = strtof(p, &next);
+        if (next == p || next > eol) break;
+        out[i] = v;
+        p = next;
+    }
+}
+
 @implementation ObjLoader
 
 // One object's faces, split by material. Every triangle corner becomes its
@@ -79,8 +92,32 @@ static SCNNode *BuildNode(NSString *name, NSArray<NSString *> *mats, NSArray<NSM
 }
 
 + (NSArray<SCNNode *> *)nodesFromURL:(NSURL *)url {
-    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
+    NSURL *baked = [[url URLByDeletingPathExtension] URLByAppendingPathExtension:@"scn"];
+    if (baked && [baked checkResourceIsReachableAndReturnError:nil]) {
+        NSError *error = nil;
+        SCNScene *scene = [SCNScene sceneWithURL:baked options:nil error:&error];
+        if (scene) {
+            NSArray<SCNNode *> *nodes = [scene.rootNode.childNodes copy];
+            for (SCNNode *n in nodes) [n removeFromParentNode];
+            return nodes;
+        }
+        NSLog(@"ObjLoader: %@ unreadable (%@), parsing the OBJ", baked.lastPathComponent, error.localizedDescription);
+    }
+    return [self nodesFromOBJURL:url];
+}
+
++ (BOOL)writeNodes:(NSArray<SCNNode *> *)nodes toSCNURL:(NSURL *)url {
+    SCNScene *scene = [SCNScene scene];
+    for (SCNNode *n in nodes) [scene.rootNode addChildNode:n];
+    BOOL ok = [scene writeToURL:url options:nil delegate:nil progressHandler:nil];
+    for (SCNNode *n in nodes) [n removeFromParentNode];
+    return ok;
+}
+
++ (NSArray<SCNNode *> *)nodesFromOBJURL:(NSURL *)url {
+    NSMutableData *data = url ? [NSMutableData dataWithContentsOfURL:url] : nil;
     if (!data) return @[];
+    [data appendBytes:"" length:1];   // NUL guard so number parsing stops at the end
     NSMutableData *pos = [NSMutableData data], *uv = [NSMutableData data], *nrm = [NSMutableData data];
     NSMutableArray<SCNNode *> *nodes = [NSMutableArray array];
     __block NSString *object = @"Object";
@@ -96,22 +133,22 @@ static SCNNode *BuildNode(NSString *name, NSArray<NSString *> *mats, NSArray<NSM
         current = -1;
     };
 
-    const char *p = data.bytes, *end = p + data.length;
+    const char *p = data.bytes, *end = p + data.length - 1;
     char word[256];
     while (p < end) {
         const char *eol = memchr(p, '\n', end - p) ?: end;
         size_t len = (size_t)(eol - p);
         if (len >= 2) {
             if (p[0] == 'v' && p[1] == ' ') {
-                float f[3] = { 0 }; sscanf(p + 2, "%f %f %f", &f[0], &f[1], &f[2]);
+                float f[3] = { 0 }; ReadFloats(p + 2, eol, f, 3);
                 simd_float3 v = simd_make_float3(f[0], f[1], f[2]);
                 [pos appendBytes:&v length:sizeof v];
             } else if (p[0] == 'v' && p[1] == 't') {
-                float f[2] = { 0 }; sscanf(p + 3, "%f %f", &f[0], &f[1]);
+                float f[2] = { 0 }; ReadFloats(p + 3, eol, f, 2);
                 simd_float2 v = simd_make_float2(f[0], f[1]);
                 [uv appendBytes:&v length:sizeof v];
             } else if (p[0] == 'v' && p[1] == 'n') {
-                float f[3] = { 0 }; sscanf(p + 3, "%f %f %f", &f[0], &f[1], &f[2]);
+                float f[3] = { 0 }; ReadFloats(p + 3, eol, f, 3);
                 simd_float3 v = simd_make_float3(f[0], f[1], f[2]);
                 [nrm appendBytes:&v length:sizeof v];
             } else if (p[0] == 'o' && p[1] == ' ') {

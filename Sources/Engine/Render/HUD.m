@@ -81,9 +81,13 @@ static SKShapeNode *Bracket(void) {
     _flares = [NSMutableArray array];
     SKTexture *starburst = [SKTexture textureWithImage:[Exhaust particleTexture:@"flare_01"]];
     SKTexture *ring = [SKTexture textureWithImage:[Exhaust particleTexture:@"circle_05"]];
-    SKTexture *glow = [SKTexture textureWithImage:[Exhaust particleTexture:@"light_01"]];
-    NSArray *sizes = @[@260, @40, @90, @22, @130, @34];
-    NSArray *colors = @[[NSColor colorWithRed:1 green:0.9 blue:0.7 alpha:1],
+    SKTexture *glow = [SKTexture textureWithImage:[Exhaust softDotImage]];
+    // 0-1: the flare at the sun itself, a hot white core plus the starburst,
+    // both at full strength so the flare is as bright as the disc it sits on.
+    // 2+: ghosts along the sun-to-centre line (clean soft discs and rings).
+    NSArray *sizes = @[@60, @260, @40, @90, @22, @130, @34];
+    NSArray *colors = @[[NSColor whiteColor],
+                        [NSColor colorWithRed:1 green:0.97 blue:0.9 alpha:1],
                         [NSColor colorWithRed:0.5 green:0.7 blue:1 alpha:1],
                         [NSColor colorWithRed:0.9 green:0.5 blue:1 alpha:1],
                         [NSColor colorWithRed:0.6 green:1 blue:0.8 alpha:1],
@@ -91,7 +95,7 @@ static SKShapeNode *Bracket(void) {
                         [NSColor colorWithRed:0.6 green:0.8 blue:1 alpha:1]];
     for (NSUInteger i = 0; i < sizes.count; i++) {
         CGFloat r = [sizes[i] doubleValue];
-        SKTexture *tex = i == 0 ? starburst : (i % 2 ? glow : ring);
+        SKTexture *tex = i == 0 ? glow : i == 1 ? starburst : (i % 2 ? ring : glow);
         SKSpriteNode *f = [SKSpriteNode spriteNodeWithTexture:tex size:CGSizeMake(r * 2, r * 2)];
         f.color = colors[i];
         f.colorBlendFactor = 1;
@@ -416,8 +420,8 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
 
     // Lens flare: ghosts along the line from the sun through screen centre.
     CGFloat vis = f.sunVisibility;
-    CGFloat ts[] = { 0.0, 0.45, 0.8, 1.15, 1.5, 1.9 };
-    CGFloat alphas[] = { 0.55, 0.12, 0.10, 0.16, 0.08, 0.10 };
+    CGFloat ts[] = { 0.0, 0.0, 0.45, 0.8, 1.15, 1.5, 1.9 };
+    CGFloat alphas[] = { 1.0, 1.0, 0.12, 0.10, 0.16, 0.08, 0.10 };
     _sunStreak.position = f.sun;
     _sunStreak.alpha = 0.45 * vis;
     for (NSUInteger i = 0; i < _flares.count; i++) {
