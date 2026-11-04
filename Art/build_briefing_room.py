@@ -145,10 +145,12 @@ def fixture(lo, hi, face, kind, cone, aim=(0, 0, -1)):
         at = Vector((c.x, c.y, hi.z + 0.25))
     LAMPS.append({"kind": kind, "at": [round(v, 3) for v in at], "aim": list(aim), "cone": cone})
 
-def anchor(kind, p, facing, scale=1.0):
+def anchor(kind, p, facing, scale=1.0, mirror=False):
     """A person: one upright quad, bottom edge on `p`, facing `facing`, with
     UVs 0..1 and material Sprite_<kind>_<n> for the game to texture. `scale`
-    varies their height; neighbours never share a variant."""
+    varies their height; neighbours never share a variant. `mirror` flips
+    the art left to right (the standing art looks to its left: on the
+    right-hand balcony it has to look the other way, toward the stage)."""
     p, f = Vector(p), Vector(facing).normalized()
     w, h = SPRITE_SIZE[kind]
     w, h = w * scale, h * scale
@@ -159,7 +161,8 @@ def anchor(kind, p, facing, scale=1.0):
     name = "Sprite_%s_%d" % (kind, n)
     if name not in MATS:
         MATS[name] = material(name, (0.02, 0.02, 0.025), 0.8)
-    quad(crowd, [p - right, p + right, p + right + up, p - right + up], name)
+    uv = ((1, 0), (0, 0), (0, 1), (1, 1)) if mirror else ((0, 0), (1, 0), (1, 1), (0, 1))
+    quad(crowd, [p - right, p + right, p + right + up, p - right + up], name, uv=uv)
     anchors.append(name)
 
 GREEBLES = ["plumbBlock", "checkBlock", "ventPortBlock", "tooCompBlock", "splitBlock", "falseBlock",
@@ -252,7 +255,7 @@ for side in (-1, 1):
     for z in (4.2, 8.4, 12.6):
         chamfer_box(room, (a0, FRONT - 0.3, z - 0.12), (a1, FRONT, z + 0.12), "Panel", c=0.05)
 
-# Under the screen: recessed panels with lamps.
+# Under the screen: recessed panels with vents.
 for i in range(6):
     cx = x0 + 0.6 + i * (x1 - x0 - 1.2) / 5
     chamfer_box(room, (cx - 1.2, FRONT - 0.3, STAGE_H + 0.5), (cx + 1.2, FRONT, z0 - 1.3), "Panel", c=0.08)
@@ -363,7 +366,7 @@ for side in (-1, 1):
                 # Facing the room, turned partly toward the back of the hall
                 # and toward the middle of their group.
                 f = Vector((-side, 0, 0)) + 0.6 * (VIEW - q).normalized() + Vector((0, (mid - my) * 0.9, 0))
-                anchor("Standing", q, f, scale=rng.uniform(0.92, 1.05))
+                anchor("Standing", q, f, scale=rng.uniform(0.92, 1.05), mirror=side > 0)
             y += rng.uniform(1.2, 3.6)
     # A lamp hung over the upper tier's rail, aimed back at the wall, so the
     # rail and the people throw their shadows on it.
