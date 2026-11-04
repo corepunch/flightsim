@@ -37,6 +37,10 @@ Mission events and tactical orders live in `Resources/Missions/missions.json`. E
 
 The cast speaks from the left. Lancer 1 stays on the right and has a reply in every briefing and in debriefs where he has something to add. The character he addresses stays in view during his reply. The desktop and tablet layouts flank the painted Bastion monitor, while compact phone layouts anchor the characters at the bottom edge.
 
+Dialogue beats can set `expression` for the speaker and `listenerExpression` for the other portrait. An expression such as `grieving` loads `Resources/Briefing/Expressions/Lancer1-grieving.png` for Lancer 1. Each variant shares the base portrait's canvas, facing direction and waistline so it can switch in place. A beat uses the base art by default.
+
+Lancer 1 and the supporting cast use variants with arm gestures. The earlier face-only passes are saved under `Art/Briefing/ExpressionArchive` for reuse. The game bundles the active sprites from `Resources/Briefing/Expressions`.
+
 Iron Wall's `casualty` records a scripted loss. The radio call goes out once, when Lancer 2 falls in combat or when the Iron Vow loses its shields. Hammerfall's flight roster reflects the loss.
 
 The cyan hulls and red subsystems in the tactical pages come from the shipped OBJ meshes. Regenerate those PNGs with `python3 Art/build_schematics.py` and Pillow after changing the source mesh or schematic cue. Building the app uses the checked-in PNGs.

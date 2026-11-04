@@ -182,7 +182,8 @@ kernel void composeSky(texturecube<half, access::write> out [[texture(0)]],
     float structure = saturate(0.55 + 0.9 * fbm(d * 6.0, 5, P.seed + 40u));
     float lane = smoothstep(-0.05, 0.25, fbm(d * 4.5 + float3(3.0), 4, P.seed + 41u))
                * exp(-lat * lat / (2.0 * 0.045 * 0.045));
-    float3 galaxy = (float3(0.50, 0.58, 0.78) * band * structure + float3(1.0, 0.78, 0.52) * bulge * 1.6) * 0.09;
+    // Keep the warm core subdued so it doesn't wash out the nearby sun streak.
+    float3 galaxy = (float3(0.50, 0.58, 0.78) * band * structure + float3(1.0, 0.78, 0.52) * bulge * 0.35) * 0.09;
     galaxy *= 1.0 - 0.9 * lane;
     col += galaxy;
 
@@ -231,13 +232,13 @@ kernel void composeSky(texturecube<half, access::write> out [[texture(0)]],
         }
     }
 
-    // Sun: HDR disc + tight corona + wide haze (feeds the camera bloom).
+    // Keep the sky glow close to the HDR sun. The HUD draws the horizontal flare.
     float ca = clamp(dot(d, P.sunDir.xyz), -1.0, 1.0);
     float ang = acos(ca);
     float rs = P.sunDir.w;
     float3 sunCol = float3(1.0, 0.93, 0.82);
     col += sunCol * smoothstep(rs, rs * 0.75, ang) * 80.0;
-    col += sunCol * (exp(-ang / 0.02) * 2.5 + exp(-ang / 0.2) * 0.12);
+    col += sunCol * exp(-ang / 0.02) * 2.5;
 
     out.write(half4(half3(col), 1.0h), gid, P.face);
 }

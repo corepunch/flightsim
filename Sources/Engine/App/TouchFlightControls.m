@@ -9,6 +9,8 @@ typedef NS_ENUM(NSInteger, TouchControl) {
 };
 
 static const CGFloat ThrottleHeight = 136, ThrottleTravel = 112;
+static const CGFloat StickRadius = 66, StickTravel = 132;
+static const CGFloat StickKnobTravel = 39, StickStretch = 36, StickDeadzone = 3;
 
 static SKShapeNode *Circle(CGFloat radius, UIRGB accent, CGFloat stroke, CGFloat fill) {
     SKShapeNode *node = [SKShapeNode shapeNodeWithCircleOfRadius:radius];
@@ -33,7 +35,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
 @implementation TouchFlightControls {
     Input *_input;
     SKNode *_art;
-    SKShapeNode *_stickKnob, *_throttleFill, *_throttleThumb;
+    SKShapeNode *_stickKnob, *_stickTether, *_throttleFill, *_throttleThumb;
     SKShapeNode *_faces[TouchControlCount];
     CGPoint _centers[TouchControlCount]; // UIKit points, from the top left
     CGFloat _radii[TouchControlCount];
@@ -65,9 +67,14 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
 }
 
 - (void)buildArt {
-    _radii[TouchControlStick] = 66;
-    _faces[TouchControlStick] = Circle(_radii[TouchControlStick], UIInk, 0.62, 0.6);
+    _radii[TouchControlStick] = StickRadius;
+    _faces[TouchControlStick] = Circle(StickRadius, UIInk, 0.62, 0.6);
     [_faces[TouchControlStick] addChild:Circle(49, UIInk, 0.24, 0)];
+    _stickTether = [SKShapeNode node];
+    _stickTether.strokeColor = UIColorWithOpacity(UIInk, 0.58);
+    _stickTether.lineWidth = 1.5;
+    _stickTether.hidden = YES;
+    [_faces[TouchControlStick] addChild:_stickTether];
     _stickKnob = Circle(24, UIInk, 0.9, 0.96);
     [_stickKnob addChild:Circle(17, UIInk, 0.32, 0)];
     [_faces[TouchControlStick] addChild:_stickKnob];
@@ -116,9 +123,11 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     [super layoutSubviews];
     CGRect safe = UIEdgeInsetsInsetRect(self.bounds, self.safeAreaInsets);
     CGFloat left = CGRectGetMinX(safe) + 12, right = CGRectGetMaxX(safe) - 12;
-    CGFloat anchor = self.traitCollection.userInterfaceIdiom == UIUserInterfaceIdiomPad ? 2.0 / 3.0 : 0.5;
-    CGFloat centerY = CGRectGetMinY(safe) + CGRectGetHeight(safe) * anchor;
-    _centers[TouchControlStick] = CGPointMake(left + _radii[TouchControlStick], centerY);
+    // Use the full viewport midpoint; the home indicator only insets one edge.
+    CGFloat centerY = CGRectGetMidY(self.bounds);
+    // Keep full leftward travel reachable on screens without a side inset.
+    CGFloat stickX = MAX(left + StickRadius, CGRectGetMinX(self.bounds) + StickTravel);
+    _centers[TouchControlStick] = CGPointMake(stickX, centerY);
     _centers[TouchControlThrottle] = CGPointMake(right - 147, centerY);
     _centers[TouchControlFire] = CGPointMake(right - 35, centerY);
     _centers[TouchControlTorpedo] = CGPointMake(right - 85, centerY - 53);
@@ -148,9 +157,16 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     return [super pointInside:point withEvent:event] && [self controlAt:point] != TouchControlNone;
 }
 
-- (void)displayStick:(CGPoint)vector {
-    CGFloat travel = _radii[TouchControlStick] - 27;
-    _stickKnob.position = CGPointMake(vector.x * travel, vector.y * travel);
+- (void)displayStick:(CGPoint)position stretched:(BOOL)stretched {
+    _stickKnob.position = position;
+    _stickTether.hidden = !stretched;
+    if (stretched) {
+        CGMutablePathRef path = CGPathCreateMutable();
+        CGPathMoveToPoint(path, NULL, 0, 0);
+        CGPathAddLineToPoint(path, NULL, position.x, position.y);
+        _stickTether.path = path;
+        CGPathRelease(path);
+    }
 }
 
 - (void)displayThrottle:(float)value {
@@ -165,10 +181,18 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     CGFloat dy = _centers[control].y - point.y;
     if (control == TouchControlStick) {
         CGFloat dx = point.x - _centers[control].x;
-        CGFloat scale = MAX(_radii[control] - 27, hypot(dx, dy));
-        CGPoint vector = CGPointMake(dx / scale, dy / scale);
-        [self displayStick:vector];
-        [_input setTouchStick:vector];
+        CGFloat distance = hypot(dx, dy);
+        CGPoint direction = distance > 0 ? CGPointMake(dx / distance, dy / distance) : CGPointZero;
+
+        // The knob resists stretching past the ring, while steering gain keeps rising.
+        CGFloat knobGain = StickKnobTravel / StickRadius;
+        CGFloat excess = MAX(0, distance - StickRadius) * knobGain;
+        CGFloat knobDistance = MIN(distance, StickRadius) * knobGain + StickStretch * excess / (StickStretch + excess);
+        [self displayStick:CGPointMake(direction.x * knobDistance, direction.y * knobDistance) stretched:excess > 0];
+
+        CGFloat travel = MAX(0, MIN(distance, StickTravel) - StickDeadzone) / (StickTravel - StickDeadzone);
+        CGFloat strength = pow(travel, 2.5);
+        [_input setTouchStick:CGPointMake(direction.x * strength, direction.y * strength)];
     } else if (control == TouchControlThrottle) {
         float value = fminf(1, fmaxf(0, 0.5 + dy / ThrottleTravel));
         [self displayThrottle:value];
@@ -210,7 +234,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
         if (!touch || ![touches containsObject:touch]) continue;
         _touches[control] = nil;
         if (control == TouchControlStick) {
-            [self displayStick:CGPointZero];
+            [self displayStick:CGPointZero stretched:NO];
             [_input setTouchStick:CGPointZero];
         } else if (control != TouchControlThrottle) {
             [self setPressed:NO control:control];
@@ -237,7 +261,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
         _touches[control] = nil;
         if (control >= TouchControlFire) [self setPressed:NO control:control];
     }
-    [self displayStick:CGPointZero];
+    [self displayStick:CGPointZero stretched:NO];
     [_input cancelTouchInput];
 }
 

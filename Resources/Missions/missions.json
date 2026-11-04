@@ -66,8 +66,8 @@
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Traffic control found fresh scan marks on the outer buoys. If you meet anyone out there, see what they were looking at." },
             { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Okafor", "text": "Any idea where they last showed up? I'd like to know when to stop admiring the view." },
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Near NAV 2. Keep your eyes out from the first buoy. They know the route as well as we do." },
-            { "speaker": "Lancer 2", "portrait": "Lancer2", "text": "I'll fly your wing. You take us through the buoys, Lancer. I'll watch for company." },
-            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer2", "text": "Good. Coffee's on me when we get back." }
+            { "speaker": "Lancer 2", "portrait": "Lancer2", "expression": "amused", "text": "I'll fly your wing. You take us through the buoys, Lancer. I'll watch for company." },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer2", "expression": "amused", "listenerExpression": "amused", "text": "Good. Coffee's on me when we get back." }
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -101,12 +101,12 @@
         { "id": "scouts", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [2300, 300, -3200], "spread": 120, "nav": "nav2", "order": "attack" }
       ],
       "objectives": [
-        { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "Fly the patrol route" },
-        { "id": "scouts", "type": "destroy", "targets": ["scouts"], "text": "Destroy the Skarn scouts" },
-        { "id": "rtb", "type": "reach", "navs": ["home"], "after": ["patrol", "scouts"], "text": "Return to the Bastion" }
+        { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "Patrol NAV 1, 2, 3 in order" },
+        { "id": "scouts", "type": "destroy", "targets": ["scouts"], "text": "Destroy 3 Wasp scouts" },
+        { "id": "rtb", "type": "reach", "navs": ["home"], "after": ["patrol", "scouts"], "text": "Fly to the BASTION nav marker" }
       ],
       "messages": [
-        { "at": 2, "from": "Bastion Control", "text": "Lancer 1, you are clear. Patrol route is on your nav display." },
+        { "at": 2, "from": "Bastion Control", "text": "Follow the cyan diamonds. Fly close to each to log it." },
         { "spawn": "scouts", "from": "Bastion Control", "text": "Contacts near NAV 2! Three Wasps. Engage." },
         { "after": "scouts", "from": "Bastion Control", "text": "Scopes are clean. Nice shooting, Lancer." }
       ],
@@ -130,8 +130,8 @@
           "cast": ["MiraCaptain", "Varn", "Lancer1"],
           "focus": "mira",
           "lines": [
-            { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Sen, freighter Mira. We haul medical filters and ration packs. Someone just tried to cancel our escort using the convoy's private call sign.", "channel": "FREIGHTER MIRA / UPLINK" },
-            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "text": "Can Tobin match your speed, Captain? Two ships are easier to cover if I can see them both." },
+            { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "expression": "worried", "text": "Sen, freighter Mira. We haul medical filters and ration packs. Someone just tried to cancel our escort using the convoy's private call sign.", "channel": "FREIGHTER MIRA / UPLINK" },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "listenerExpression": "worried", "text": "Can Tobin match your speed, Captain? Two ships are easier to cover if I can see them both." },
             { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "She's heavier than we are. I'll ease off and let her set the pace.", "channel": "FREIGHTER MIRA / UPLINK" },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Escort both ships first. We can investigate the leak once they're alive to answer questions." },
             { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "Understood. I'll keep Two with the freighters if the interceptors try to draw us off." }
@@ -165,12 +165,12 @@
         { "id": "wasps2", "ship": "Wasp", "count": 2, "team": "enemy", "pos": [0, 600, -3000], "spread": 120, "at": 80, "order": "attack" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "Both freighters must survive" },
-        { "id": "escort", "type": "escort", "targets": ["convoy"], "navs": ["gatenav"], "text": "Escort the convoy to the gate" },
+        { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "Keep Mira and Tobin intact" },
+        { "id": "escort", "type": "escort", "targets": ["convoy"], "navs": ["gatenav"], "text": "Escort both to Halden Gate" },
         { "id": "bombers", "type": "destroy", "targets": ["talons"], "optional": true, "text": "Destroy the Talon bombers" }
       ],
       "messages": [
-        { "at": 3, "from": "Mira", "text": "Convoy under way. Glad to have you along, Lancer." },
+        { "at": 3, "from": "Mira", "text": "Mira and Tobin are under way. Keep the Talons off us." },
         { "spawn": "talons", "from": "Lancer 2", "text": "Bombers inbound on the convoy, two o'clock low!" },
         { "after": "escort", "from": "Tobin", "text": "Gate lock. We owe you a drink, Lancer." }
       ],
@@ -178,7 +178,7 @@
         "win": "Both freighters made the jump. The fleet will eat this week.",
         "lose": "We lost cargo the fleet cannot replace.",
         "dialogue": [
-          { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "You saved my crew. At K-7 I heard a distress call nobody on the bridge wants to discuss. I'm coming to your briefing." }
+          { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "expression": "relieved", "text": "You saved my crew. At K-7 I heard a distress call nobody on the bridge wants to discuss. I'm coming to your briefing." }
         ]
       }
     },
@@ -227,8 +227,8 @@
         { "id": "b4", "ship": "Talon", "count": 3, "team": "enemy", "pos": [-200, -1200, 300], "spread": 90, "at": 120, "order": "strike:relay" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["relay"], "text": "Keep Relay K-7 alive" },
-        { "id": "hold", "type": "survive", "seconds": 150, "text": "Hold for 150 seconds" }
+        { "id": "protect", "type": "protect", "targets": ["relay"], "text": "Keep bombers off Relay K-7" },
+        { "id": "hold", "type": "survive", "seconds": 150, "text": "Hold 2:30 for K-7 to transmit" }
       ],
       "messages": [
         { "at": 2, "from": "Relay K-7", "text": "K-7 to fighter cover: transmitting backlog now. Two and a half minutes." },
@@ -284,11 +284,11 @@
         { "id": "escorts", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [400, 200, -2800], "spread": 140, "at": 0, "order": "escort:corvette" }
       ],
       "objectives": [
-        { "id": "kill", "type": "destroy", "targets": ["corvette"], "text": "Destroy the corvette" },
-        { "id": "escorts", "type": "destroy", "targets": ["escorts"], "optional": true, "text": "Destroy its escorts" }
+        { "id": "kill", "type": "destroy", "targets": ["corvette"], "text": "Destroy Corvette Vesk" },
+        { "id": "escorts", "type": "destroy", "targets": ["escorts"], "optional": true, "text": "Destroy Vesk's Wasp escorts" }
       ],
       "messages": [
-        { "at": 3, "from": "Bastion Control", "text": "Corvette is on your scope, Lancer. Good hunting." },
+        { "at": 3, "from": "Bastion Control", "text": "Select Vesk. Close to 1.5 km before launching torpedoes." },
         { "after": "kill", "from": "Bastion Control", "text": "Corvette destroyed! The belt is ours again." }
       ],
       "debrief": {
@@ -345,12 +345,12 @@
         { "id": "raiders", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [1400, 400, -2900], "spread": 100, "after": "scan", "order": "attack" }
       ],
       "objectives": [
-        { "id": "scan", "type": "scan", "targets": ["containers"], "range": 60, "text": "Scan all six containers" },
-        { "id": "contraband", "type": "destroy", "targets": ["c3", "c5"], "after": ["scan"], "text": "Destroy the contraband (3 and 5)" },
-        { "id": "cutter", "type": "destroy", "targets": ["cutter"], "after": ["scan"], "text": "Destroy the corsair cutter" }
+        { "id": "scan", "type": "scan", "targets": ["containers"], "range": 60, "text": "Scan 6 containers (60 m, 2 s)" },
+        { "id": "contraband", "type": "destroy", "targets": ["c3", "c5"], "after": ["scan"], "text": "Destroy only containers 3 & 5" },
+        { "id": "cutter", "type": "destroy", "targets": ["cutter"], "after": ["scan"], "text": "Destroy Corsair Cutter Rask" }
       ],
       "messages": [
-        { "at": 3, "from": "Okafor", "text": "Yard is quiet. Start scanning, Lancer." },
+        { "at": 3, "from": "Okafor", "text": "Fly close for two seconds per scan. Hold fire for now." },
         { "after": "scan", "from": "Okafor", "text": "Containers 3 and 5 are full of Skarn munitions. Burn them. And - incoming cutter!" }
       ],
       "debrief": {
@@ -408,8 +408,8 @@
         { "id": "r4", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, -1400, -900], "spread": 100, "at": 100, "order": "attack" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["corla", "depot"], "text": "Protect the Corla and the depot" },
-        { "id": "hold", "type": "survive", "seconds": 150, "text": "Hold until refuelling is done" }
+        { "id": "protect", "type": "protect", "targets": ["corla", "depot"], "text": "Defend Corla and Brenn Depot" },
+        { "id": "hold", "type": "survive", "seconds": 150, "text": "Cover refuelling for 2:30" }
       ],
       "messages": [
         { "at": 2, "from": "Corla", "text": "Hose connected. Keep them off us for a few minutes." },
@@ -436,7 +436,7 @@
           "cast": ["Imani", "Okafor", "Varn", "Lancer1"],
           "focus": "pods",
           "lines": [
-            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "The Ondine is gone. Mercy is tracking five beacons, and one pod is already reporting a pressure leak." },
+            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "expression": "concerned", "text": "The Ondine is gone. Mercy is tracking five beacons, and one pod is already reporting a pressure leak." },
             { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Imani", "text": "Can I take the pods at speed, Doctor, or do I have to stop alongside each one?" },
             { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "You can stay moving. Pass within thirty metres and your tractor will pick them up." },
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Ondine carried the original Tarn manifest. The survivors can tell us what they loaded. Get them aboard Mercy first." },
@@ -473,9 +473,9 @@
         { "id": "bombers", "ship": "Talon", "count": 3, "team": "enemy", "pos": [-1800, 0, 400], "spread": 100, "at": 70, "order": "strike:mercy" }
       ],
       "objectives": [
-        { "id": "rescue", "type": "collect", "targets": ["pods"], "range": 30, "text": "Pick up the escape pods" },
-        { "id": "protect", "type": "protect", "targets": ["mercy"], "text": "Protect the Mercy" },
-        { "id": "pods", "type": "protect", "targets": ["pods"], "text": "Don't let the pods be destroyed" }
+        { "id": "rescue", "type": "collect", "targets": ["pods"], "range": 30, "text": "Rescue 5 pods (within 30 m)" },
+        { "id": "protect", "type": "protect", "targets": ["mercy"], "text": "Defend hospital ship Mercy" },
+        { "id": "pods", "type": "protect", "targets": ["pods"], "text": "Keep unrescued pods intact" }
       ],
       "messages": [
         { "at": 2, "from": "Mercy", "text": "Beacons are on your scope, Lancer. Please hurry." },
@@ -486,8 +486,8 @@
         "win": "All of the Ondine's crew are aboard the Mercy. Every one of them.",
         "lose": "We did not get everyone out.",
         "dialogue": [
-          { "speaker": "Juno Vale", "portrait": "Juno", "text": "When my pod went dark I started counting breaths. I was at sixty when you found me. I'm Juno. I kept a copy of the cargo log." },
-          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Juno", "text": "I'm glad you kept counting, Juno. Give the log to Imani when you've had a chance to breathe."}
+          { "speaker": "Juno Vale", "portrait": "Juno", "expression": "shaken", "text": "When my pod went dark I started counting breaths. I was at sixty when you found me. I'm Juno. I kept a copy of the cargo log." },
+          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Juno", "listenerExpression": "shaken", "text": "I'm glad you kept counting, Juno. Give the log to Imani when you've had a chance to breathe."}
         ]
       }
     },
@@ -536,9 +536,9 @@
         { "id": "ambush3", "ship": "Talon", "count": 2, "team": "enemy", "pos": [0, 800, -3800], "spread": 100, "after": "escort", "order": "strike:halcyon" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["halcyon"], "text": "Protect the Halcyon" },
-        { "id": "escort", "type": "escort", "targets": ["halcyon"], "navs": ["survey"], "text": "Escort her to the survey point" },
-        { "id": "survey", "type": "survive", "seconds": 40, "after": ["escort"], "text": "Cover the survey (40 s)" }
+        { "id": "protect", "type": "protect", "targets": ["halcyon"], "text": "Protect Survey Ship Halcyon" },
+        { "id": "escort", "type": "escort", "targets": ["halcyon"], "navs": ["survey"], "text": "Escort Halcyon to SURVEY POINT" },
+        { "id": "survey", "type": "survive", "seconds": 40, "after": ["escort"], "text": "Cover Halcyon's 40-second scan" }
       ],
       "messages": [
         { "at": 3, "from": "Halcyon", "text": "Entering the field. Please keep the rocks and the corsairs off us." },
@@ -592,11 +592,11 @@
         { "id": "guards", "ship": "Wasp", "count": 2, "team": "enemy", "pos": [0, 200, -3400], "spread": 80, "at": 0, "order": "escort:layer" }
       ],
       "objectives": [
-        { "id": "layer", "type": "destroy", "targets": ["layer"], "text": "Destroy the minelayer" },
-        { "id": "mines", "type": "destroy", "targets": ["mines"], "text": "Clear all mines" }
+        { "id": "layer", "type": "destroy", "targets": ["layer"], "text": "Destroy the Skarn minelayer" },
+        { "id": "mines", "type": "destroy", "targets": ["mines"], "text": "Shoot all 16 mines from range" }
       ],
       "messages": [
-        { "at": 3, "from": "Bastion Control", "text": "Mines on your scope. Keep your distance, Lancer." },
+        { "at": 3, "from": "Bastion Control", "text": "Mines trigger within 60 metres. Shoot from a distance." },
         { "after": "mines", "from": "Bastion Control", "text": "Corridor clear. The Bastion is moving." }
       ],
       "debrief": {
@@ -618,9 +618,9 @@
           "cast": ["Rhea", "Varn", "Lancer3", "Lancer1"],
           "focus": "kestrel",
           "lines": [
-            { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "Bastion, this is Sol. We followed an evacuation order that led straight into two corvettes. The order was signed by someone in the Directorate. I kept it.", "channel": "CNS KESTREL / UPLINK" },
-            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Rhea", "text": "Captain, can you turn Kestrel away from either of those corvettes?" },
-            { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "We're drifting. I still have guns, but I can't change which way they face.", "channel": "CNS KESTREL / UPLINK" },
+            { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "expression": "strained", "text": "Bastion, this is Sol. We followed an evacuation order that led straight into two corvettes. The order was signed by someone in the Directorate. I kept it.", "channel": "CNS KESTREL / UPLINK" },
+            { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Rhea", "listenerExpression": "strained", "text": "Captain, can you turn Kestrel away from either of those corvettes?" },
+            { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "expression": "strained", "text": "We're drifting. I still have guns, but I can't change which way they face.", "channel": "CNS KESTREL / UPLINK" },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Save the frigate. Her crew can tell us who issued the order." },
             { "speaker": "Lancer 3", "portrait": "Lancer3", "text": "I'll help clear the fighters so you can get a clean torpedo run at those corvettes." },
             {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer3", "text": "Take any fighter that gets on my tail, Three. I'll make the turn back for the corvettes."}
@@ -652,8 +652,8 @@
         { "id": "talons", "ship": "Talon", "count": 2, "team": "enemy", "pos": [0, -900, -2900], "spread": 100, "at": 50, "order": "strike:kestrel" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["kestrel"], "text": "Keep the Kestrel alive" },
-        { "id": "corvettes", "type": "destroy", "targets": ["cv1", "cv2"], "text": "Destroy both corvettes" }
+        { "id": "protect", "type": "protect", "targets": ["kestrel"], "text": "Protect the damaged Kestrel" },
+        { "id": "corvettes", "type": "destroy", "targets": ["cv1", "cv2"], "text": "Destroy corvettes Ruun and Ilk" }
       ],
       "messages": [
         { "at": 2, "from": "CNS Kestrel", "text": "Kestrel to any Concord fighter - we are losing shields, please hurry!" },
@@ -711,11 +711,11 @@
         { "id": "w3", "ship": "Talon", "count": 3, "team": "enemy", "pos": [2400, 400, -3300], "spread": 120, "at": 120, "order": "strike:ring" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["ring"], "text": "Protect Tannhal station" },
-        { "id": "waves", "type": "destroy", "targets": ["w1", "w2", "w3", "cv"], "text": "Destroy all three attack waves" }
+        { "id": "protect", "type": "protect", "targets": ["ring"], "text": "Defend Tannhal through 3 waves" },
+        { "id": "waves", "type": "destroy", "targets": ["w1", "w2", "w3", "cv"], "text": "Defeat all 3 attack waves" }
       ],
       "messages": [
-        { "at": 3, "from": "Tannhal Control", "text": "Tannhal to Lancer flight, turrets are armed. We are counting on you." },
+        { "at": 3, "from": "Tannhal Control", "text": "Three waves incoming. Give the bombers priority." },
         { "spawn": "w2", "from": "Lancer 2", "text": "Bombers! Coming in from starboard, low!" },
         { "spawn": "cv", "from": "Tannhal Control", "text": "Corvette jumping in, bearing zero-nine-zero!" }
       ],
@@ -770,7 +770,7 @@
         { "id": "reinf", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, 600, -4200], "spread": 150, "at": 90, "order": "attack" }
       ],
       "objectives": [
-        { "id": "platforms", "type": "destroy", "targets": ["platforms"], "text": "Destroy the three platforms" }
+        { "id": "platforms", "type": "destroy", "targets": ["platforms"], "text": "Hit all 3 platform cores" }
       ],
       "messages": [
         { "at": 3, "from": "Okafor", "text": "Platforms ahead. Cores, Lancer, aim for the cores." },
@@ -832,11 +832,11 @@
         { "id": "scramble2", "ship": "Talon", "count": 2, "team": "enemy", "pos": [-600, 0, -5300], "spread": 100, "nav": "scanC", "order": "attack" }
       ],
       "objectives": [
-        { "id": "recon", "type": "reach", "navs": ["scanA", "scanB", "scanC"], "range": 200, "text": "Fly past sensor points A, B, C" },
-        { "id": "exit", "type": "reach", "navs": ["exit"], "after": ["recon"], "text": "Reach the exit point" }
+        { "id": "recon", "type": "reach", "navs": ["scanA", "scanB", "scanC"], "range": 200, "text": "Pass SENSOR A/B/C (200 m)" },
+        { "id": "exit", "type": "reach", "navs": ["exit"], "after": ["recon"], "text": "Fly to EXIT after the scan" }
       ],
       "messages": [
-        { "at": 3, "from": "Okafor", "text": "Recorders running. Low and fast, Lancer." },
+        { "at": 3, "from": "Okafor", "text": "Fly within 200 metres of A, B, then C. Keep moving." },
         { "nav": "scanA", "from": "Okafor", "text": "You have been spotted! Keep going!" },
         { "after": "recon", "from": "Okafor", "text": "Got it all. That hull is a dreadnought. Get out of there!" }
       ],
@@ -860,8 +860,8 @@
           "cast": ["Lusk", "Varn", "MiraCaptain", "Lancer6", "Lancer1"],
           "focus": "aurora",
           "lines": [
-            { "speaker": "Captain Lusk", "portrait": "Lusk", "text": "Six thousand civilians are aboard the Aurora Star. They keep asking whether home will still be there when we return." },
-            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lusk", "text": "Keep your passengers strapped in, Captain. If you have to turn, tell me first so I can cover the side you expose."},
+            { "speaker": "Captain Lusk", "portrait": "Lusk", "expression": "worried", "text": "Six thousand civilians are aboard the Aurora Star. They keep asking whether home will still be there when we return." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lusk", "listenerExpression": "worried", "text": "Keep your passengers strapped in, Captain. If you have to turn, tell me first so I can cover the side you expose."},
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "They get an answer after they're safe. Escort them through the gate." },
             { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Mira is carrying refugees on the other side. I'll be waiting for them." },
             { "speaker": "Lancer 6", "portrait": "Lancer6", "text": "I'll stay close to the Aurora Star. If the bombers get past you, I'll be there." }
@@ -896,8 +896,8 @@
         { "id": "t3", "ship": "Talon", "count": 3, "team": "enemy", "pos": [-1500, -300, -4800], "spread": 100, "at": 85, "order": "strike:aurora" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["aurora"], "text": "Protect the Aurora Star" },
-        { "id": "escort", "type": "escort", "targets": ["aurora"], "navs": ["gatenav"], "text": "Escort her to the gate" }
+        { "id": "protect", "type": "protect", "targets": ["aurora"], "text": "Keep bombers off Aurora Star" },
+        { "id": "escort", "type": "escort", "targets": ["aurora"], "navs": ["gatenav"], "text": "Escort Aurora to Halden Gate" }
       ],
       "messages": [
         { "at": 3, "from": "Aurora Star", "text": "This is Captain Lusk. We have children aboard, Lancer. Please." },
@@ -908,7 +908,7 @@
         "win": "Six thousand people are safe beyond the Halden gate.",
         "lose": "The Aurora Star never reached the gate.",
         "dialogue": [
-          { "speaker": "Captain Lusk", "portrait": "Lusk", "text": "Every passenger is across. When this is over, there will still be a colony to come home to because of you." }
+          { "speaker": "Captain Lusk", "portrait": "Lusk", "expression": "relieved", "text": "Every passenger is across. When this is over, there will still be a colony to come home to because of you." }
         ]
       }
     },
@@ -924,9 +924,9 @@
           "focus": "bastion",
           "lines": [
             { "speaker": "Chief Engineer Mae Orin", "portrait": "Orin", "text": "The destroyer has our new anchorage. We only sent those coordinates to three people. Director Hale, care to explain how they got them?" },
-            { "portrait": "Hale", "speaker": "Director Soren Hale", "text": "I traded a gate experiment for a ceasefire. Korr was supposed to demonstrate it at an empty gate. I gave her Corvid. I never gave her Halden.", "channel": "DIRECTORATE / SECURE LINK" },
-            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "You gave her a fleet and a working weapon. Clear this channel. Lancer, stop that destroyer before it closes on us." },
-            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "I'll hit the engines first. If I can slow her down, you'll have room to move Bastion clear."}
+            { "portrait": "Hale", "speaker": "Director Soren Hale", "expression": "defensive", "text": "I traded a gate experiment for a ceasefire. Korr was supposed to demonstrate it at an empty gate. I gave her Corvid. I never gave her Halden.", "channel": "DIRECTORATE / SECURE LINK" },
+            { "speaker": "Commander Ilse Varn", "portrait": "Varn", "expression": "angry", "text": "You gave her a fleet and a working weapon. Clear this channel. Lancer, stop that destroyer before it closes on us." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "listenerExpression": "angry", "text": "I'll hit the engines first. If I can slow her down, you'll have room to move Bastion clear."}
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
@@ -956,12 +956,12 @@
         { "id": "talons2", "ship": "Talon", "count": 2, "team": "enemy", "pos": [1500, 600, -1500], "spread": 100, "at": 100, "order": "strike:bastion" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect the Bastion" },
-        { "id": "engines", "type": "disable", "targets": ["destroyer"], "kind": "Engine", "text": "Destroy the destroyer's engines" },
-        { "id": "kill", "type": "destroy", "targets": ["destroyer"], "after": ["engines"], "text": "Destroy the destroyer" }
+        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Keep bombers off the Bastion" },
+        { "id": "engines", "type": "disable", "targets": ["destroyer"], "kind": "Engine", "text": "Hit Gorran's 3 stern engines" },
+        { "id": "kill", "type": "destroy", "targets": ["destroyer"], "after": ["engines"], "text": "Destroy the Skarn destroyer" }
       ],
       "messages": [
-        { "at": 2, "from": "Bastion Control", "text": "All fighters, stand by. Jump signature building." },
+        { "at": 2, "from": "Bastion Control", "text": "Jump signature ahead. Stay with Bastion and watch for bombers." },
         { "spawn": "destroyer", "from": "Bastion Control", "text": "Destroyer in the anchorage! Go for the engines!" },
         { "after": "engines", "from": "Commander Varn", "text": "It is dead in space. Finish it." }
       ],
@@ -984,8 +984,8 @@
           "cast": ["Kesh", "Okafor", "Varn", "Lancer1"],
           "focus": "barge",
           "lines": [
-            { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "I'm Kesh Ardan. I serviced the Hammer's firing circuit. They locked me up with your missing crews when I refused to arm it. I can prove where Korr means to fire.", "channel": "PRISON BARGE THAL / UPLINK" },
-            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Kesh", "text": "Kesh, keep everyone away from the gun decks. I'll make my passes on the turrets."},
+            { "speaker": "Kesh Ardan", "portrait": "Kesh", "expression": "wary", "text": "I'm Kesh Ardan. I serviced the Hammer's firing circuit. They locked me up with your missing crews when I refused to arm it. I can prove where Korr means to fire.", "channel": "PRISON BARGE THAL / UPLINK" },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Kesh", "listenerExpression": "wary", "text": "Kesh, keep everyone away from the gun decks. I'll make my passes on the turrets."},
             { "speaker": "Lt. Cmdr Daro Okafor", "portrait": "Okafor", "text": "Ardan spliced into a service transmitter. That's our window. Free the barge before they trace the call." },
             { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "Once the last gun goes quiet, who gets those people out?" },
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Kestrel will tow the barge. Take the turrets only, then cover it until she arrives." }
@@ -1016,9 +1016,9 @@
         { "id": "strikecover", "ship": "Wasp", "count": 2, "team": "enemy", "pos": [2100, 400, -3600], "spread": 100, "after": "turrets", "order": "attack" }
       ],
       "objectives": [
-        { "id": "turrets", "type": "disable", "targets": ["barge"], "kind": "Turret", "text": "Destroy all the barge's turrets", "onComplete": { "setTeam": { "barge": "friend" } } },
-        { "id": "protect", "type": "protect", "targets": ["barge"], "text": "The barge must not be destroyed" },
-        { "id": "hold", "type": "survive", "seconds": 70, "after": ["turrets"], "text": "Defend the barge until the Kestrel arrives" }
+        { "id": "turrets", "type": "disable", "targets": ["barge"], "kind": "Turret", "text": "Destroy Thal's 6 turrets only", "onComplete": { "setTeam": { "barge": "friend" } } },
+        { "id": "protect", "type": "protect", "targets": ["barge"], "text": "Keep the prison barge intact" },
+        { "id": "hold", "type": "survive", "seconds": 70, "after": ["turrets"], "text": "Cover Thal for 70 s until tow" }
       ],
       "messages": [
         { "at": 3, "from": "Okafor", "text": "Turrets only, Lancer. Steady hands." },
@@ -1078,11 +1078,11 @@
         { "id": "guards", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [1200, 300, -3000], "spread": 150, "at": 0, "order": "escort:ghost" }
       ],
       "objectives": [
-        { "id": "ghost", "type": "destroy", "targets": ["ghost"], "text": "Find and destroy the prototype" },
-        { "id": "buoys", "type": "reach", "navs": ["b1", "b2", "b3"], "optional": true, "range": 250, "text": "Check the sensor buoys" }
+        { "id": "ghost", "type": "destroy", "targets": ["ghost"], "text": "Destroy the stealth prototype" },
+        { "id": "buoys", "type": "reach", "navs": ["b1", "b2", "b3"], "optional": true, "range": 250, "text": "Search BUOY 1, 2, 3 in order" }
       ],
       "messages": [
-        { "at": 3, "from": "Okafor", "text": "It is out there somewhere. Watch for a contact that appears out of nowhere." },
+        { "at": 3, "from": "Okafor", "text": "Sweep the buoys. The prototype only shows up inside 700 metres." },
         { "after": "ghost", "from": "Okafor", "text": "Got it. They are blind again." }
       ],
       "debrief": {
@@ -1137,12 +1137,12 @@
         { "id": "raiders2", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, -500, -4400], "spread": 150, "at": 80, "order": "attack" }
       ],
       "objectives": [
-        { "id": "shields", "type": "disable", "targets": ["nest"], "kind": "Shield", "text": "Destroy the shield generators" },
-        { "id": "nest", "type": "destroy", "targets": ["nest"], "after": ["shields"], "text": "Destroy the reactor" },
-        { "id": "cutters", "type": "destroy", "targets": ["cutters"], "optional": true, "text": "Destroy the cutters" }
+        { "id": "shields", "type": "disable", "targets": ["nest"], "kind": "Shield", "text": "Destroy both shield generators" },
+        { "id": "nest", "type": "destroy", "targets": ["nest"], "after": ["shields"], "text": "Hit the reactor atop the dome" },
+        { "id": "cutters", "type": "destroy", "targets": ["cutters"], "optional": true, "text": "Destroy cutters Grist and Maw" }
       ],
       "messages": [
-        { "at": 3, "from": "Lancer 2", "text": "Hollow ahead. Ugly place." },
+        { "at": 3, "from": "Lancer 2", "text": "Hollow ahead. Hit the shield generators on the surface." },
         { "after": "shields", "from": "Commander Varn", "text": "Shields are down. Hit the reactor on the dome!" },
         { "after": "nest", "from": "Commander Varn", "text": "Hollow is gone. The Skarn just lost their friends." }
       ],
@@ -1166,10 +1166,10 @@
           "focus": "cruiser",
           "lines": [
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Fleet Command has Hale in custody. They want a copy of Sol's orders and Sen's manifest. They'll get both when we have a clear channel." },
-            { "portrait": "Korr", "speaker": "Admiral Korr", "text": "I buried two crews at Velan while your Directorate argued about whose map it was. By morning, Concord will have to negotiate for every gate it draws a line through.", "channel": "SKARN FLAGSHIP / OPEN CHANNEL" },
+            { "portrait": "Korr", "speaker": "Admiral Korr", "expression": "resentful", "text": "I buried two crews at Velan while your Directorate argued about whose map it was. By morning, Concord will have to negotiate for every gate it draws a line through.", "channel": "SKARN FLAGSHIP / OPEN CHANNEL" },
             { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "The Kestrel is with you, Commander. We held together because Lancer kept saving people." },
-            { "speaker": "Lancer 2", "portrait": "Lancer2", "text": "You still owe me a coffee from that first patrol, Lead. I'll collect when we land." },
-            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer2", "text": "I'll pour it myself this time, Two. Stay close until we've taken those shields down."},
+            { "speaker": "Lancer 2", "portrait": "Lancer2", "expression": "amused", "listenerExpression": "amused", "text": "You still owe me a coffee from that first patrol, Lead. I'll collect when we land." },
+            {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Lancer2", "expression": "amused", "listenerExpression": "amused", "text": "I'll pour it myself this time, Two. Stay close until we've taken those shields down."},
             { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Break the Iron Vow. Keep our ships alive for one final assault." }
           ]
         },
@@ -1201,12 +1201,12 @@
         { "id": "talons2", "ship": "Talon", "count": 3, "team": "enemy", "pos": [1600, 300, -2200], "spread": 120, "at": 110, "order": "strike:bastion" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect the Bastion" },
-        { "id": "shields", "type": "disable", "targets": ["cruiser"], "kind": "Shield", "text": "Destroy the cruiser's shield generators" },
-        { "id": "kill", "type": "destroy", "targets": ["cruiser"], "after": ["shields"], "text": "Destroy the heavy cruiser" }
+        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Keep bombers off the Bastion" },
+        { "id": "shields", "type": "disable", "targets": ["cruiser"], "kind": "Shield", "text": "Hit 2 shield gens on Iron Vow" },
+        { "id": "kill", "type": "destroy", "targets": ["cruiser"], "after": ["shields"], "text": "Destroy heavy cruiser Iron Vow" }
       ],
       "messages": [
-        { "at": 3, "from": "Commander Varn", "text": "Here it comes. Lancer flight, generators first." },
+        { "at": 3, "from": "Commander Varn", "text": "Go for the two shield generators on top of the Iron Vow." },
         { "after": "shields", "from": "CNS Kestrel", "text": "Its shields are down! All guns, fire!" },
         { "after": "kill", "from": "Commander Varn", "text": "The Iron Vow is gone. Lancer flight, return to Bastion." }
       ],
@@ -1215,9 +1215,9 @@
         "win": "The Iron Vow broke on the Bastion's defences. One ship is left: the dreadnought.",
         "lose": "The cruiser reached the Bastion.",
         "dialogue": [
-          { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Search and rescue found Two's fighter. He never got out. I'm sorry, Lancer." },
-          { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "text": "His mug's still next to mine. I told him I'd bring the coffee this time." },
-          { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "text": "The Iron Vow is broken. The fleet is standing by for your attack on the Hammer." }
+          { "speaker": "Commander Ilse Varn", "portrait": "Varn", "expression": "sympathetic", "listenerExpression": "grieving", "text": "Search and rescue found Two's fighter. He never got out. I'm sorry, Lancer." },
+          { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Varn", "expression": "grieving", "listenerExpression": "sympathetic", "text": "His mug's still next to mine. I told him I'd bring the coffee this time." },
+          { "speaker": "Captain Rhea Sol", "portrait": "Rhea", "listenerExpression": "grieving", "text": "The Iron Vow is broken. The fleet is standing by for your attack on the Hammer." }
         ]
       }
     },
@@ -1232,7 +1232,7 @@
           "cast": ["Imani", "Kesh", "Korr", "Varn", "Lancer4", "Lancer1"],
           "focus": "dread",
           "lines": [
-            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "text": "The Hammer is charging. Its shields cover the reactor trench. Take down the generators, kill its thrust and go straight for the core." },
+            { "speaker": "Dr. Sera Imani", "portrait": "Imani", "expression": "concerned", "text": "The Hammer is charging. Its shields cover the reactor trench. Take down the generators, kill its thrust and go straight for the core." },
             { "speaker": "Lancer 1", "portrait": "Lancer1", "listener": "Kesh", "text": "Kesh, will killing the engines buy us time, or can Korr fire from a dead stop?" },
             { "speaker": "Kesh Ardan", "portrait": "Kesh", "text": "She can fire from a dead stop. I designed that circuit. Hit the core in the trench and the charge dies. I'll be on this channel." },
             { "portrait": "Korr", "speaker": "Admiral Korr", "text": "Open channel to Bastion. Every ship that turns away now gets passage. The gate stays with me.", "channel": "SKARN FLAGSHIP / OPEN CHANNEL" },
@@ -1273,26 +1273,26 @@
         { "id": "t2", "ship": "Talon", "count": 4, "team": "enemy", "pos": [1800, -300, -2600], "spread": 150, "at": 150, "order": "strike:bastion" }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect the Bastion" },
-        { "id": "shields", "type": "disable", "targets": ["dread"], "kind": "Shield", "text": "Destroy the 4 shield generators" },
-        { "id": "engines", "type": "disable", "targets": ["dread"], "kind": "Engine", "after": ["shields"], "text": "Destroy the 4 engines" },
-        { "id": "core", "type": "destroy", "targets": ["dread"], "after": ["engines"], "text": "Destroy the reactor core" }
+        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect CNS Bastion" },
+        { "id": "shields", "type": "disable", "targets": ["dread"], "kind": "Shield", "text": "Hit 4 dorsal shield generators" },
+        { "id": "engines", "type": "disable", "targets": ["dread"], "kind": "Engine", "after": ["shields"], "text": "Destroy 4 engines at the stern" },
+        { "id": "core", "type": "destroy", "targets": ["dread"], "after": ["engines"], "text": "Hit the reactor in the trench" }
       ],
       "messages": [
         { "at": 3, "from": "Commander Varn", "text": "This is it. Every pilot, every gun. Hammerfall." },
         { "at": 8, "from": "Dr. Imani", "text": "I have its charging signal. Kesh and I will talk you through the run." },
         { "after": "shields", "from": "Okafor", "text": "Shields down! Now the engines at the stern!" },
-        { "after": "engines", "from": "Commander Varn", "text": "It is dead in space! Into the trench, Lancer, hit the reactor!" },
+        { "after": "engines", "from": "Commander Varn", "text": "Hit the reactor in the upper trench ahead of the tower." },
         { "after": "core", "from": "Commander Varn", "text": "It is breaking up... It is over. Bring them home." }
       ],
       "debrief": {
         "win": "The Hammer of Skarn broke up before it could fire. Halden Gate is still open.",
         "lose": "The assault failed. The Hammer still stands between the fleet and Halden Gate.",
         "dialogue": [
-          { "speaker": "Commander Ilse Varn", "portrait": "Varn", "text": "Halden reports a stable gate. The first ship home is Mercy. They want to know whether they can bring our people through." },
-          { "portrait": "Juno", "speaker": "Juno Vale", "text": "Tell them Berth Four is open. We cut the receiver out of the deck. We're putting a plaque where it used to be. I left room for Two's rook beside his name." },
-          { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "text": "Mira to Lancer. I'm bringing the first families home. Cargo manifest says blankets, coffee and a seat for you, if you ever want it." },
-          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "text": "Save me that seat, Captain. I'll bring Two's mug."}
+          { "speaker": "Commander Ilse Varn", "portrait": "Varn", "expression": "relieved", "text": "Halden reports a stable gate. The first ship home is Mercy. They want to know whether they can bring our people through." },
+          { "portrait": "Juno", "speaker": "Juno Vale", "expression": "wistful", "text": "Tell them Berth Four is open. We cut the receiver out of the deck. We're putting a plaque where it used to be. I left room for Two's rook beside his name." },
+          { "speaker": "Captain Elara Sen", "portrait": "MiraCaptain", "listenerExpression": "wistful", "expression": "relieved", "text": "Mira to Lancer. I'm bringing the first families home. Cargo manifest says blankets, coffee and a seat for you, if you ever want it." },
+          {"speaker": "Lancer 1", "portrait": "Lancer1", "listener": "MiraCaptain", "expression": "wistful", "listenerExpression": "relieved", "text": "Save me that seat, Captain. I'll bring Two's mug."}
         ]
       }
     }

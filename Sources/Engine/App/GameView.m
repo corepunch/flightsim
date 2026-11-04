@@ -87,6 +87,22 @@
 
 - (void)mouseExited:(NSEvent *)event { [self reportHoverAt:NSMakePoint(-1, -1)]; }
 
+- (void)scrollWheel:(NSEvent *)event {
+    SKScene *overlay = self.overlaySKScene;
+    if (![overlay isKindOfClass:Briefing.class]) {
+        [super scrollWheel:event];
+        return;
+    }
+    if (getenv("SF_SNAPSHOT")) return;
+    CGRect bounds = self.bounds;
+    CGPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+    if (!CGRectContainsPoint(bounds, point)) return;
+    CGFloat x = (point.x - CGRectGetMinX(bounds)) / CGRectGetWidth(bounds);
+    CGFloat y = (point.y - CGRectGetMinY(bounds)) / CGRectGetHeight(bounds);
+    CGFloat delta = -event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 1 : 12);
+    [(Briefing *)overlay queueScrollBy:delta atFraction:CGPointMake(x, self.isFlipped ? 1 - y : y)];
+}
+
 - (void)mouseDown:(NSEvent *)event {
     if (getenv("SF_SNAPSHOT")) return;
     SKScene *overlay = self.overlaySKScene;

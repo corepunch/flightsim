@@ -430,7 +430,8 @@ static NSString *const kRed = @"red";
             }
     }
     if (state == ObjectiveFailed && !o.optional) GCommand(nil, SVC_BANNER, @"OBJECTIVE FAILED", kRed, nil);
-    if (state == ObjectiveActive && _missionTime > 1) GCommand(nil, SVC_RADIO, o.text, @"New objective", nil);
+    if (state == ObjectiveActive && _missionTime > 1)
+        GCommand(nil, SVC_RADIO, o.text, o.optional ? @"Optional objective" : @"New objective", nil);
 }
 
 - (void)evaluate:(GObjective *)o dt:(float)dt {
@@ -452,9 +453,9 @@ static NSString *const kRed = @"red";
             if ([self playersNear:p range:range ?: 300].count) o.navIndex++;
             else break;
         }
+        o.progress = o.navs.count > 1 ? [NSString stringWithFormat:@"%lu/%lu", (unsigned long)o.navIndex, (unsigned long)o.navs.count] : @"";
         if (o.navIndex >= o.navs.count) { [self setObjective:o state:ObjectiveComplete]; return; }
         if (!_currentNav) _currentNav = o.navs[o.navIndex];
-        o.progress = o.navs.count > 1 ? [NSString stringWithFormat:@"%lu/%lu", (unsigned long)o.navIndex, (unsigned long)o.navs.count] : @"";
     } else if ([type isEqualToString:@"destroy"]) {
         NSUInteger dead = 0;
         for (id u in units) if (!BodyAlive(u)) dead++;
@@ -487,7 +488,9 @@ static NSString *const kRed = @"red";
         }
         if (units.count && arrived == units.count) [self setObjective:o state:ObjectiveComplete];
         if (!_currentNav) _currentNav = o.navs.firstObject;
-        if (units.count) {
+        if (units.count > 1) {
+            o.progress = [NSString stringWithFormat:@"%lu/%lu arrived", (unsigned long)arrived, (unsigned long)units.count];
+        } else if (units.count == 1) {
             GCapital *c = units.firstObject;
             o.progress = [NSString stringWithFormat:@"%.1fkm", simd_distance(c.position, nav) / 1000.0f];
         }

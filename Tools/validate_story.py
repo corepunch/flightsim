@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate campaign references and the art shipped with its story."""
 import json
+import re
 import struct
 from pathlib import Path
 
@@ -19,6 +20,15 @@ def check_art(path, transparent=False):
     assert width >= 256 and height >= 256, f"Undersized art: {path}"
     if transparent:
         assert header[25] in (4, 6), f"No alpha channel: {path}"
+    return width, height
+
+
+def check_expression(portrait, expression):
+    assert isinstance(expression, str) and re.fullmatch(r"[a-z]+(?:-[a-z]+)*", expression), expression
+    variant = ART / "Expressions" / f"{portrait}-{expression}.png"
+    assert check_art(variant, transparent=True) == check_art(ART / f"{portrait}.png"), (
+        f"Expression canvas differs from base portrait: {variant}"
+    )
 
 
 def validate_mission(mission):
@@ -38,6 +48,11 @@ def validate_mission(mission):
             assert line["speaker"].strip() and line["text"].strip(), (index, line)
             if line["portrait"] == "Lancer1":
                 assert line["listener"] in listeners, (index, line)
+            if "expression" in line:
+                check_expression(line["portrait"], line["expression"])
+            if "listenerExpression" in line:
+                listener = line["listener"] if line["portrait"] == "Lancer1" else "Lancer1"
+                check_expression(listener, line["listenerExpression"])
     assert all(mission["debrief"][key].strip() for key in ("win", "lose")), index
 
     entities = {entity["id"]: entity for entity in mission["entities"]}

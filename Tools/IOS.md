@@ -48,11 +48,13 @@ credentials, or set `BUNDLE_ID` to the identifier covered by your profile.
 `./build.sh ios-device` still creates the unsigned bundle at
 `build/iOS/iphoneos-arm64/SpaceFight.app`. Command-line builds share a model bake cache.
 
-The game runs in either landscape orientation. The flight controls sit halfway
-down the screen on iPhone and two-thirds down on iPad.
+The game runs in either landscape orientation. The flight controls are centered
+vertically on both iPhone and iPad.
 
-In a mission, drag the left stick to pitch and yaw. It returns to center when
-released. The throttle slider on the right holds its position. Hold **Fire**
+In a mission, drag the left stick to pitch and yaw. Stay inside the ring for
+fine adjustments, or pull past it for faster turns. The stick stretches past
+the ring and reaches full steering at twice the ring's radius. It returns to
+center when released. The throttle slider on the right holds its position. Hold **Fire**
 for guns, tap **Target** to cycle the selection, and tap **Torpedo** to fire at
 the selected target. **Missions** leaves the current mission.
 

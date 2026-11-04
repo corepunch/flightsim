@@ -42,6 +42,9 @@ typedef struct {
     Cockpit *_cockpitModel;
     Effects *_fx;
     ShipView *_playerView;
+#if TARGET_OS_IOS
+    UIImpactFeedbackGenerator *_weaponFeedback, *_damageFeedback;
+#endif
 
     NSMutableDictionary<NSNumber *, EntityView *> *_views;
     ClientBolt _bolts[MAX_BOLT_NODES];
@@ -62,6 +65,12 @@ typedef struct {
         _input = input;
         _hud = [[HUD alloc] initWithSize:view.bounds.size];
         _views = [NSMutableDictionary dictionary];
+#if TARGET_OS_IOS
+        if (UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
+            _weaponFeedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+            _damageFeedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleHeavy];
+        }
+#endif
     }
     return self;
 }
@@ -298,6 +307,13 @@ typedef struct {
 
 #pragma mark - Events
 
+#if TARGET_OS_IOS
+- (void)weaponFired {
+    [_weaponFeedback impactOccurred];
+    [_weaponFeedback prepare];
+}
+#endif
+
 - (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel team:(int)team id:(uint16_t)boltId {
     for (int i = 0; i < MAX_BOLT_NODES; i++) {
         if (_bolts[i].active) continue;
@@ -323,6 +339,10 @@ typedef struct {
 
 - (void)handleEvent:(const GameEvent *)e player:(const PlayerState *)ps {
     simd_float3 me = ps->move.origin;
+#if TARGET_OS_IOS
+    // The server confirms each shot once, even if its bolt was already drawn.
+    if (e->type == EV_BOLT && e->entity && e->entity == ps->entity) [self weaponFired];
+#endif
     if (_predictedEntity && e->entity == _predictedEntity) {
         if (e->type == EV_MUZZLE) return;      // already flashed
         if (e->type == EV_BOLT) {
@@ -360,6 +380,10 @@ typedef struct {
             if (e->entity && e->entity == ps->entity) {
                 _damageFlash = 1;
                 _shake = fmaxf(_shake, e->scale);
+#if TARGET_OS_IOS
+                [_damageFeedback impactOccurred];
+                [_damageFeedback prepare];
+#endif
             }
             break;
         case EV_EXPLOSION:

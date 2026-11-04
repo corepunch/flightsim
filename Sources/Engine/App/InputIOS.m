@@ -198,8 +198,9 @@ static float Deadzone(float value) {
             state = _pad;
             _throttle = fminf(fmaxf(_throttle + _throttleRate * 0.75f * dt, 0), 1);
         } else {
-            state.yaw = Deadzone(_touchStick.x);
-            state.pitch = Deadzone(_touchStick.y);
+            // The touch stick applies its deadzone and response curve radially.
+            state.yaw = _touchStick.x;
+            state.pitch = _touchStick.y;
             state.fire = _touchFire || _fireTapped;
             _fireTapped = NO;
         }

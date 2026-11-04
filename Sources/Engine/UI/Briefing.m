@@ -26,8 +26,16 @@ static SKLabelNode *Para(CGFloat size, SKColor *c, CGFloat width) {
 
 typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
+typedef struct {
+    CGPoint point;
+    CGFloat delta;
+} ScrollInput;
+
+static const CGFloat ScrollGutter = 10;
 static NSString *const PortraitDeparture = @"portraitDeparture";
 static NSString *const PlayerPortrait = @"Lancer1";
+// Reserve room for the widest portrait canvas (Mira) at the shared height.
+static const CGFloat MaxPortraitAspect = 1.04;
 static const CGFloat CaptionDrop = 42;
 static const CGFloat PortraitDepth = 1, CaptionDepth = 2, FooterDepth = 3;
 
@@ -105,6 +113,11 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGRect _missionRows;
     CGFloat _missionRowHeight;
     NSValue *_queuedClick;
+    NSMutableArray<NSValue *> *_queuedScrolls;
+    CGRect _scrollRect;
+    SKNode *_scrollContent;
+    SKSpriteNode *_scrollThumb;
+    CGFloat _scrollLimit, _scrollOffset;
     NSMutableDictionary<NSString *, SKTexture *> *_art;
     SKNode *_root;
     CGSize _laidOut;
@@ -163,6 +176,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
 - (NSUInteger)selectedIndex { return _index; }
 
+- (BOOL)hasNextBriefingPage { return _page + 1 < _pages.count; }
+
 - (BOOL)compactStoryLayout {
     return MIN(self.size.width, self.size.height) <= 500 &&
            (_mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0));
@@ -185,6 +200,14 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 }
 
 - (void)rebuild {
+    if (_transition != UITransitionNone) {
+        _scrollOffset = 0;
+        @synchronized (self) { _queuedScrolls = nil; }
+    }
+    _scrollRect = CGRectZero;
+    _scrollContent = nil;
+    _scrollThumb = nil;
+    _scrollLimit = 0;
     if (!_presented && _transition != UITransitionIntro) _transition = UITransitionNone;
     CGPoint centre = CGPointMake(self.size.width / 2, self.size.height / 2);
     _stage.position = centre;
@@ -275,6 +298,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     [self closeOldCaption];
     _shownMode = _mode;
     _transition = UITransitionNone;
+    [self scrollBy:0];
 }
 
 - (NSTimeInterval)closeOldCaption {
@@ -285,6 +309,48 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     _oldCaptionHolder = nil;
     _oldCaptionText = nil;
     return closing;
+}
+
+#pragma mark - Scrollable text
+
+// Measure before the reveal animations change the labels' frames.
+- (SKNode *)textViewport:(CGRect)rect content:(SKNode *)content {
+    SKNode *viewport = [SKNode node];
+    if (CGRectIsEmpty(rect)) return viewport;
+    SKCropNode *crop = [SKCropNode node];
+    SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:SKColor.whiteColor size:rect.size];
+    mask.position = CGPointMake(CGRectGetMidX(rect), CGRectGetMidY(rect));
+    crop.maskNode = mask;
+    [crop addChild:content];
+    [viewport addChild:crop];
+
+    CGFloat overflow = CGRectGetMinY(rect) - CGRectGetMinY([content calculateAccumulatedFrame]);
+    if (overflow <= 0.5) return viewport;
+    _scrollRect = rect;
+    _scrollContent = content;
+    _scrollLimit = overflow;
+    CGFloat height = CGRectGetHeight(rect), x = CGRectGetMaxX(rect) - 2;
+    SKSpriteNode *track = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.22)
+                                                      size:CGSizeMake(2, height)];
+    track.position = CGPointMake(x, CGRectGetMidY(rect));
+    [viewport addChild:track];
+    CGFloat thumbHeight = MIN(height, MAX(12, height * height / (height + overflow)));
+    _scrollThumb = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.8)
+                                               size:CGSizeMake(3, thumbHeight)];
+    _scrollThumb.position = CGPointMake(x, 0);
+    _scrollThumb.zPosition = 1;
+    [viewport addChild:_scrollThumb];
+    return viewport;
+}
+
+- (void)scrollBy:(CGFloat)delta {
+    _scrollOffset = MIN(_scrollLimit, MAX(0, _scrollOffset + delta));
+    if (!_scrollContent) return;
+    _scrollContent.position = CGPointMake(0, _scrollOffset);
+    CGFloat thumbHeight = _scrollThumb.size.height;
+    CGFloat y = CGRectGetMaxY(_scrollRect) - thumbHeight / 2
+              - (CGRectGetHeight(_scrollRect) - thumbHeight) * _scrollOffset / _scrollLimit;
+    _scrollThumb.position = CGPointMake(_scrollThumb.position.x, y);
 }
 
 #pragma mark - Mission list
@@ -340,35 +406,41 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGRect panelRect = CGRectMake(px - 20, 90, pw + 20, top - 160);
     SKShapeNode *panel = UIReadoutPanel(panelRect, UIColorWithOpacity(UIInk, 0.4), UIColorWithOpacity(UIBlack, 0.35));
     [_root addChild:panel];
-    SKLabelNode *title = Text(24, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
+    CGRect viewport = CGRectMake(px, CGRectGetMinY(panelRect) + 14,
+                                 MAX(0, pw - 14), MAX(0, panelRect.size.height - 34));
+    CGFloat width = MAX(1, viewport.size.width - ScrollGutter);
+    SKNode *preview = [SKNode node];
+    SKLabelNode *title = Para(24, UIColorWithOpacity(UIInk, 1), width);
     title.fontName = UIMonoBoldFont;
     title.text = open ? [m[@"title"] uppercaseString] : @"CLASSIFIED";
-    title.position = CGPointMake(px, top - 90);
-    [_root addChild:title];
+    title.position = CGPointMake(px, CGRectGetMaxY(viewport));
+    [preview addChild:title];
     SKLabelNode *loc = nil, *p, *objs = nil;
     if (open) {
         NSDictionary *b = m[@"briefing"];
-        loc = Text(15, UIColorWithOpacity(UIAmber, 0.9), SKLabelHorizontalAlignmentModeLeft);
+        loc = Para(15, UIColorWithOpacity(UIAmber, 0.9), width);
         loc.text = [NSString stringWithFormat:@"%@   /   SD %@", b[@"location"], b[@"stardate"]];
-        loc.position = CGPointMake(px, top - 128);
-        [_root addChild:loc];
-        p = Para(16, UIColorWithOpacity(UIInk, 0.8), pw - 20);
+        loc.position = CGPointMake(px, CGRectGetMinY(title.frame) - 12);
+        [preview addChild:loc];
+        p = Para(16, UIColorWithOpacity(UIInk, 0.8), width);
         p.text = [b[@"text"] firstObject];
-        p.position = CGPointMake(px, top - 165);
-        [_root addChild:p];
-        objs = Para(15, UIColorWithOpacity(UIInk, 0.65), pw - 20);
-        NSMutableString *o = [NSMutableString stringWithString:@"OBJECTIVES\n"];
-        for (NSDictionary *d in m[@"objectives"]) [o appendFormat:@"  %@ %@\n", [d[@"optional"] boolValue] ? @"o" : @">", d[@"text"]];
+        p.position = CGPointMake(px, CGRectGetMinY(loc.frame) - 16);
+        [preview addChild:p];
+        objs = Para(15, UIColorWithOpacity(UIInk, 0.65), width);
+        NSMutableString *o = [NSMutableString stringWithString:@"OBJECTIVES"];
+        for (NSDictionary *d in m[@"objectives"]) [o appendFormat:@"\n  %@ %@", [d[@"optional"] boolValue] ? @"o" : @">", d[@"text"]];
         objs.text = o;
-        objs.position = CGPointMake(px, p.position.y - p.frame.size.height - 30);
-        [_root addChild:objs];
+        objs.position = CGPointMake(px, CGRectGetMinY(p.frame) - 20);
+        [preview addChild:objs];
     } else {
-        p = Para(16, UIColorWithOpacity(UIInk, 0.5), pw - 20);
+        p = Para(16, UIColorWithOpacity(UIInk, 0.5), width);
         p.text = @"Complete the previous missions to unlock this briefing.";
-        p.position = CGPointMake(px, top - 130);
-        [_root addChild:p];
+        p.position = CGPointMake(px, CGRectGetMinY(title.frame) - 16);
+        [preview addChild:p];
     }
-    [self footer:@"↑ / ↓  Select mission" action:open ? @"BRIEFING" : nil];
+    [_root addChild:[self textViewport:viewport content:preview]];
+    [self footer:_scrollLimit > 0 ? @"↑ / ↓  Select mission     ← / →  Scroll preview" : @"↑ / ↓  Select mission"
+          action:open ? @"BRIEFING" : nil];
 
     CGFloat barY = top - 90 - _index * rowH;
     if ([self intro]) {
@@ -418,7 +490,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
             else UIMotionSlideIn(node, CGVectorMake(0, -44), 0.18 + 0.05 * i++, 0.32);
         }
     } else if ([self paging] && action && _shownAction && ![action isEqualToString:_shownAction] && confirm) {
-        // CONTINUE becomes LAUNCH: the button re-strikes.
+        // The footer action changed: the button re-strikes.
         for (SKNode *child in confirm.children)
             if ([child isKindOfClass:SKLabelNode.class]) UIMotionDecode((SKLabelNode *)child, 0, 0.3);
         UIMotionFlickerIn(confirm, 0);
@@ -528,7 +600,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     [self rebuild];
 }
 
-- (SKSpriteNode *)artNamed:(NSString *)name {
+- (SKTexture *)artTextureNamed:(NSString *)name {
     SKTexture *texture = _art[name];
     if (!texture) {
         NSString *subdirectory = [@"Briefing" stringByAppendingPathComponent:name.stringByDeletingLastPathComponent];
@@ -543,7 +615,12 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         CGImageRelease(image);
         _art[name] = texture;
     }
-    return [SKSpriteNode spriteNodeWithTexture:texture];
+    return texture;
+}
+
+- (SKSpriteNode *)artNamed:(NSString *)name {
+    SKTexture *texture = [self artTextureNamed:name];
+    return texture ? [SKSpriteNode spriteNodeWithTexture:texture] : nil;
 }
 
 // Return the painted monitor's position after an aspect-fill crop. The
@@ -583,12 +660,17 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
                       frame.size.width * 0.50, frame.size.height * boardHeight);
 }
 
-- (void)addPortrait:(NSString *)name facingRight:(BOOL)facingRight active:(BOOL)active inRect:(CGRect)area {
+- (void)addPortrait:(NSString *)name expression:(NSString *)expression facingRight:(BOOL)facingRight
+              active:(BOOL)active inRect:(CGRect)area {
+    SKTexture *texture = expression ? [self artTextureNamed:[NSString stringWithFormat:@"Expressions/%@-%@", name, expression]] : nil;
+    if (!texture) texture = [self artTextureNamed:name];
+    if (!texture) return;
     if (!_portraitLayer.parent) [_root addChild:_portraitLayer];
     CGFloat dim = active ? 0 : 0.38;
     CGPoint home = CGPointMake(CGRectGetMidX(area), CGRectGetMinY(area));
     SKSpriteNode *existing = (SKSpriteNode *)[_portraitLayer childNodeWithName:name];
     if (existing) {
+        existing.texture = texture;
         [_portraitsToDismiss removeObject:existing];
         if ([existing actionForKey:PortraitDeparture]) {
             [existing removeActionForKey:PortraitDeparture];
@@ -602,10 +684,11 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         return;
     }
 
-    SKSpriteNode *portrait = [self artNamed:name];
-    if (!portrait) return;
+    SKSpriteNode *portrait = [SKSpriteNode spriteNodeWithTexture:texture];
     portrait.name = name;
-    CGFloat scale = MIN(area.size.width / portrait.size.width, area.size.height / portrait.size.height);
+    // Both sides use the same height budget, regardless of the current cast.
+    CGFloat height = MIN(area.size.height, area.size.width / MaxPortraitAspect);
+    CGFloat scale = height / portrait.size.height;
     [portrait setScale:scale];
     BOOL sourceFacesRight = ![name isEqualToString:PlayerPortrait] &&
                             ![name isEqualToString:@"Lancer5"] && ![name isEqualToString:@"Lancer6"] &&
@@ -622,6 +705,20 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         portrait.alpha = 0;
         [portrait runAction:[SKAction fadeInWithDuration:UIMotionReduced() ? 0.1 : 0.25]];
     }
+}
+
+- (BOOL)addPortraitsForLine:(NSDictionary *)line speakerArea:(CGRect)speakerArea playerArea:(CGRect)playerArea {
+    BOOL playerSpeaking = [line[@"portrait"] isEqualToString:PlayerPortrait];
+    NSString *other = playerSpeaking ? line[@"listener"] : line[@"portrait"];
+    NSString *expression = line[@"expression"];
+    NSString *listenerExpression = line[@"listenerExpression"];
+    if (other) {
+        [self addPortrait:other expression:playerSpeaking ? listenerExpression : expression
+              facingRight:YES active:!playerSpeaking inRect:speakerArea];
+    }
+    [self addPortrait:PlayerPortrait expression:playerSpeaking ? expression : listenerExpression
+          facingRight:NO active:playerSpeaking inRect:playerArea];
+    return playerSpeaking;
 }
 
 - (CGFloat)captionTextHeightForLines:(NSArray<NSDictionary *> *)lines width:(CGFloat)width fontSize:(CGFloat)fontSize {
@@ -749,15 +846,12 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         speakerArea = CGRectMake(center - width / 2, bottom, width, height);
         playerArea = CGRectMake(size.width - center - width / 2, bottom, width, height);
     }
-    BOOL playerSpeaking = [page[@"portrait"] isEqualToString:PlayerPortrait];
-    NSString *other = playerSpeaking ? page[@"listener"] : page[@"portrait"];
-    if (other) [self addPortrait:other facingRight:YES active:!playerSpeaking inRect:speakerArea];
-    [self addPortrait:PlayerPortrait facingRight:NO active:playerSpeaking inRect:playerArea];
+    BOOL playerSpeaking = [self addPortraitsForLine:page speakerArea:speakerArea playerArea:playerArea];
 
     [self addCaption:page inRect:CGRectMake(CGRectGetMinX(screen), captionBottom, captionWidth, captionHeight)
              fontSize:textSize speakerOnRight:playerSpeaking];
-    [self footer:@"← / →  Briefing     Esc  Missions"
-           action:_page + 1 == _pages.count ? @"↵  LAUNCH" : @"↵  CONTINUE"];
+    [self footer:@"Click or ← / →  Browse briefing     Esc  Missions"
+           action:[self hasNextBriefingPage] ? @"SKIP" : @"↵  LAUNCH"];
 }
 
 - (void)buildMonitor:(CGRect)screen mission:(NSDictionary *)mission page:(NSDictionary *)page {
@@ -879,13 +973,15 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     if (readout.count) {
         NSString *lines = [@"›  " stringByAppendingString:[readout componentsJoinedByString:@"\n›  "]];
         CGFloat fontSize = MIN(20, MAX(12, width / 32));
-        SKLabelNode *list = Para(fontSize, UIColorWithOpacity(UIInk, 0.96), width);
+        SKLabelNode *list = Para(fontSize, UIColorWithOpacity(UIInk, 0.96), MAX(1, width - ScrollGutter));
         list.fontName = UIBodyMediumFont;
         list.text = lines;
-        list.position = CGPointMake(left, contentTop - 8);
-        while (list.fontSize > 10 && CGRectGetMinY(list.frame) < bottom) list.fontSize -= 1;
+        CGFloat top = contentTop - 4;
+        list.position = CGPointMake(left, top);
+        SKNode *content = [SKNode node];
+        [content addChild:list];
         *kind = [@"readout:" stringByAppendingString:lines];
-        return list;
+        return [self textViewport:CGRectMake(left, bottom, width, MAX(0, top - bottom)) content:content];
     }
 
     _mapRect = CGRectMake(left, bottom, width, MAX(1, contentTop - bottom));
@@ -1305,10 +1401,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         CGFloat bottom = compact ? 0 : floor + captionHeight - 8;
         CGFloat height = compact ? floor + 6 : s.height - bottom - 26;
         CGRect leftArea = CGRectMake(inset, bottom, width / 2, MAX(1, height));
-        BOOL playerSpeaking = [line[@"portrait"] isEqualToString:PlayerPortrait];
-        NSString *other = playerSpeaking ? line[@"listener"] : line[@"portrait"];
-        if (other) [self addPortrait:other facingRight:YES active:!playerSpeaking inRect:leftArea];
-        [self addPortrait:PlayerPortrait facingRight:NO active:playerSpeaking inRect:CGRectOffset(leftArea, width / 2, 0)];
+        BOOL playerSpeaking = [self addPortraitsForLine:line speakerArea:leftArea playerArea:CGRectOffset(leftArea, width / 2, 0)];
         CGFloat captionBottom = MAX(compact ? 64 : 70, floor - CaptionDrop);
         [self addCaption:line inRect:CGRectMake(inset, captionBottom, width, captionHeight)
                  fontSize:fontSize speakerOnRight:playerSpeaking];
@@ -1325,19 +1418,25 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     title.text = _success ? @"MISSION COMPLETE" : @"MISSION FAILED";
     title.position = CGPointMake(s.width / 2, top);
     [_root addChild:title];
-    SKLabelNode *name = Text(16, UIColorWithOpacity(UIAmber, 0.9), SKLabelHorizontalAlignmentModeCenter);
+    SKLabelNode *name = Para(16, UIColorWithOpacity(UIAmber, 0.9), width);
+    name.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeCenter;
     name.text = [NSString stringWithFormat:@"MISSION %02lu  /  %@", (unsigned long)_index + 1,
                  [mission[@"title"] uppercaseString]];
     name.position = CGPointMake(s.width / 2, CGRectGetMinY(title.frame) - 10);
     [_root addChild:name];
-    SKLabelNode *summary = Para(fontSize, UIColorWithOpacity(UIInk, 0.9), width);
+    SKNode *report = [SKNode node];
+    CGFloat reportTop = CGRectGetMinY(name.frame) - 24;
+    CGFloat reportBottom = 80; // Leave the footer clear.
+    SKLabelNode *summary = Para(fontSize, UIColorWithOpacity(UIInk, 0.9), MAX(1, width - ScrollGutter));
     summary.text = mission[@"debrief"][_success ? @"win" : @"lose"];
-    summary.position = CGPointMake(inset, CGRectGetMinY(name.frame) - 24);
-    [_root addChild:summary];
-    SKLabelNode *results = Para(16, UIColorWithOpacity(UIInk, 0.75), width);
+    summary.position = CGPointMake(inset, reportTop);
+    [report addChild:summary];
+    SKLabelNode *results = Para(16, UIColorWithOpacity(UIInk, 0.75), MAX(1, width - ScrollGutter));
     results.text = [@"OBJECTIVES\n" stringByAppendingString:[_results componentsJoinedByString:@"\n"] ?: @""];
     results.position = CGPointMake(inset, CGRectGetMinY(summary.frame) - 20);
-    [_root addChild:results];
+    [report addChild:results];
+    [_root addChild:[self textViewport:CGRectMake(inset, reportBottom, width, MAX(0, reportTop - reportBottom))
+                               content:report]];
     if ([self intro]) {
         // Success decodes cleanly; failure arrives as a corrupted signal.
         if (_success) UIMotionDecode(title, 0.1, 0.6);
@@ -1372,6 +1471,15 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     }
 }
 
+- (void)queueScrollBy:(CGFloat)delta atFraction:(CGPoint)point {
+    if (delta == 0) return;
+    ScrollInput input = {point, delta};
+    @synchronized (self) {
+        if (!_queuedScrolls) _queuedScrolls = [NSMutableArray array];
+        [_queuedScrolls addObject:[NSValue value:&input withObjCType:@encode(ScrollInput)]];
+    }
+}
+
 - (void)turnPage {
     _transition = UITransitionPage;
     [self rebuild];
@@ -1388,16 +1496,37 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 - (BriefingCommand)handle:(InputAction)a {
     [_hover updateInScene:self];
     NSValue *click;
+    NSArray<NSValue *> *scrolls;
     @synchronized (self) {
         click = _queuedClick;
         _queuedClick = nil;
+        scrolls = _queuedScrolls;
+        _queuedScrolls = nil;
     }
+    for (NSValue *value in scrolls) {
+        ScrollInput input;
+        [value getValue:&input size:sizeof(input)];
+        CGPoint point = CGPointMake(input.point.x * self.size.width, input.point.y * self.size.height);
+        if (CGRectContainsPoint(_scrollRect, point)) [self scrollBy:input.delta];
+    }
+    // Leave up/down for mission selection and left/right for story pages.
+    InputAction scrollUp = _mode == ModeList ? InputActionLeft : InputActionUp;
+    InputAction scrollDown = _mode == ModeList ? InputActionRight : InputActionDown;
+    if (a & scrollUp) [self scrollBy:-54];
+    if (a & scrollDown) [self scrollBy:54];
     if (click) {
         CGPoint point = UnboxPoint(click);
         point.x *= self.size.width;
         point.y *= self.size.height;
-        if (CGRectContainsPoint(_confirmRect, point)) a |= InputActionConfirm;
-        else if (CGRectContainsPoint(_previousRect, point)) a |= InputActionLeft;
+        if (CGRectContainsPoint(_confirmRect, point)) {
+            if (_mode == ModeBriefing && [self hasNextBriefingPage]) {
+                _page = _pages.count - 1;
+                [self turnPage];
+                UIMotionFinishTyping(_speech);
+                return BriefingCommandNone;
+            }
+            a |= InputActionConfirm;
+        } else if (CGRectContainsPoint(_previousRect, point)) a |= InputActionLeft;
         else if (CGRectContainsPoint(_backRect, point)) a |= InputActionBack;
         else if (_mode == ModeList && CGRectContainsPoint(_missionRows, point)) {
             NSUInteger row = (NSUInteger)((CGRectGetMaxY(_missionRows) - point.y) / _missionRowHeight);
@@ -1426,7 +1555,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
             } else if (a & (InputActionRight | InputActionConfirm)) {
                 // The first press lands a line that is still typing.
                 if (UIMotionIsTyping(_speech)) UIMotionFinishTyping(_speech);
-                else if (_page + 1 < _pages.count) { _page++; [self turnPage]; }
+                else if ([self hasNextBriefingPage]) { _page++; [self turnPage]; }
                 else if (a & InputActionConfirm) return BriefingCommandLaunch;
             }
             break;

@@ -9,6 +9,10 @@
 
 @implementation GameView {
     TouchFlightControls *_flightControls;
+    UITouch *_briefingTouch;
+    __weak Briefing *_touchBriefing;
+    CGPoint _touchStart, _touchLast;
+    BOOL _touchDragged;
 }
 
 - (void)setInput:(Input *)input {
@@ -70,15 +74,58 @@
     [_flightControls setNeedsLayout];
 }
 
+- (CGPoint)fractionForPoint:(CGPoint)point {
+    CGRect bounds = self.bounds;
+    return CGPointMake((point.x - CGRectGetMinX(bounds)) / CGRectGetWidth(bounds),
+                       1 - (point.y - CGRectGetMinY(bounds)) / CGRectGetHeight(bounds));
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    SKScene *overlay = self.overlaySKScene;
+    if (![overlay isKindOfClass:Briefing.class]) {
+        [super touchesBegan:touches withEvent:event];
+        return;
+    }
+    if (_briefingTouch) return;
+    _briefingTouch = touches.anyObject;
+    _touchBriefing = (Briefing *)overlay;
+    _touchStart = _touchLast = [_briefingTouch locationInView:self];
+    _touchDragged = NO;
+}
+
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    if (!_briefingTouch) {
+        [super touchesMoved:touches withEvent:event];
+        return;
+    }
+    if (![touches containsObject:_briefingTouch] || _touchBriefing != self.overlaySKScene) return;
+    CGPoint point = [_briefingTouch locationInView:self];
+    if (!_touchDragged && hypot(point.x - _touchStart.x, point.y - _touchStart.y) < 8) return;
+    _touchDragged = YES;
+    if (CGRectContainsPoint(self.bounds, _touchStart)) {
+        [_touchBriefing queueScrollBy:_touchLast.y - point.y atFraction:[self fractionForPoint:_touchStart]];
+    }
+    _touchLast = point;
+}
+
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     SKScene *overlay = self.overlaySKScene;
+    UITouch *touch = touches.anyObject;
+    if (_briefingTouch) {
+        if (![touches containsObject:_briefingTouch]) return;
+        touch = _briefingTouch;
+        _briefingTouch = nil;
+        if (_touchDragged || _touchBriefing != overlay) return;
+    }
     if (![overlay respondsToSelector:@selector(queueClickAtFraction:)]) return;
-    CGPoint point = [touches.anyObject locationInView:self];
-    CGRect bounds = self.bounds;
-    if (!CGRectContainsPoint(bounds, point)) return;
-    CGPoint fraction = CGPointMake((point.x - CGRectGetMinX(bounds)) / CGRectGetWidth(bounds),
-                                   1 - (point.y - CGRectGetMinY(bounds)) / CGRectGetHeight(bounds));
-    [(id)overlay queueClickAtFraction:fraction];
+    CGPoint point = [touch locationInView:self];
+    if (!CGRectContainsPoint(self.bounds, point)) return;
+    [(id)overlay queueClickAtFraction:[self fractionForPoint:point]];
+}
+
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    if (_briefingTouch && [touches containsObject:_briefingTouch]) _briefingTouch = nil;
+    [super touchesCancelled:touches withEvent:event];
 }
 @end
 #endif

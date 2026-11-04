@@ -32,6 +32,9 @@
 - (void)drawEntities:(const EntityState *)entities count:(NSUInteger)count player:(const PlayerState *)ps
             controls:(ControlState)controls time:(double)time dt:(float)dt;
 - (void)handleEvent:(const GameEvent *)event player:(const PlayerState *)ps;
+#if TARGET_OS_IOS
+- (void)weaponFired;
+#endif
 // Own ship under prediction: its bolts and muzzle flashes are drawn when the
 // player fires, and the server's copies of them are matched up, not redrawn.
 @property (nonatomic) uint16_t predictedEntity;

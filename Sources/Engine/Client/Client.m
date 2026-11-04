@@ -226,6 +226,16 @@ static const double kNetInterpDelay = TICK_DT * 3;
     s.events = events;
     _frames[frame % UPDATE_BACKUP] = s;
     if (frame <= _lastFrame) return;
+#if TARGET_OS_IOS
+    // Only a successful launch consumes ammo. Compare accepted snapshots for
+    // the same ship so a new mission or respawn cannot trigger feedback.
+    Snapshot *last = _snapshots.lastObject;
+    if (last && ps.entity) {
+        PlayerState previous = last.ps;
+        if (ps.entity == previous.entity && ps.stats[STAT_TORPEDOES] < previous.stats[STAT_TORPEDOES])
+            [_view weaponFired];
+    }
+#endif
     _lastFrame = frame;
     [_snapshots addObject:s];
     if (_snapshots.count > MAX_SNAPSHOTS) [_snapshots removeObjectAtIndex:0];
