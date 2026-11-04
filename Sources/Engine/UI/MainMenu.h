@@ -24,5 +24,7 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
 - (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed;
 - (void)queueClickAtFraction:(CGPoint)point;
 - (MainMenuCommand)handle:(InputAction)actions;
+// Exit by switching off like a tube (for quitting). Returns its length.
+- (NSTimeInterval)motionPowerDown;
 
 @end

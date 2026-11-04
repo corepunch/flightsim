@@ -2,6 +2,7 @@
 #import "Assets.h"
 #import "Progress.h"
 #import "UIStyle.h"
+#import "UIMotion.h"
 #import <ImageIO/ImageIO.h>
 
 static SKLabelNode *Text(CGFloat size, NSColor *c, SKLabelHorizontalAlignmentMode h) {
@@ -18,6 +19,10 @@ static SKLabelNode *Para(CGFloat size, NSColor *c, CGFloat width) {
 
 typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
+// How a tactical cue arrives: the map powering up, the map wiped in fresh,
+// the same map changing emphasis, or no motion.
+typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFresh, CueStyleTween };
+
 // One thing on the tactical map.
 @interface MapItem : NSObject
 @property (nonatomic, copy) NSString *identifier, *group;
@@ -26,6 +31,9 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 @property (nonatomic, strong) SKNode *node;
 @end
 @implementation MapItem
+@end
+
+@interface Briefing () <UIMotionScene>
 @end
 
 @implementation Briefing {
@@ -49,16 +57,47 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     NSMutableDictionary<NSString *, MapItem *> *_items;
     SKNode *_mapLayer, *_routeLayer;
     SKShapeNode *_focusRing;
+    SKNode *_focusLock;
     CGRect _mapRect;
+    NSArray<NSValue *> *_routePoints;
+    SKShapeNode *_routeLine;
+
+    // Motion. _stage sits at the scene centre so the screen can scale about
+    // it; _root and _ghost (outgoing content) undo the offset.
+    SKNode *_stage, *_ghost;
+    UITransition _transition;
+    BOOL _presented;
+    NSMutableArray<SKNode *> *_footerNodes;
+    // What the previous build put on screen, so the next one can animate
+    // from it rather than popping.
+    Mode _shownMode;
+    NSUInteger _shownIndex;
+    CGFloat _shownBarY;
+    NSArray<NSString *> *_shownCast;
+    NSString *_shownActive, *_shownChannel, *_shownContent, *_shownFocus, *_shownAction;
+    NSArray *_shownRoute;
+    NSMutableDictionary<NSString *, NSNumber *> *_shownAlpha;
+    // The speech bubble on screen, and the one being replaced.
+    SKNode *_captionHolder, *_oldCaptionHolder;
+    NSArray<SKNode *> *_captionText, *_oldCaptionText;
+    CGRect _captionRect, _oldCaptionRect;
+    BOOL _captionRight, _oldCaptionRight;
+    NSString *_captionSpeaker, *_oldCaptionSpeaker;
+    SKLabelNode *_speech;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
         self.scaleMode = SKSceneScaleModeResizeFill;
         self.backgroundColor = [NSColor clearColor];
+        self.speed = 1 / UIMotionTimeScale();
+        _stage = [SKNode node];
         _root = [SKNode node];
+        _ghost = [SKNode node];
         _art = [NSMutableDictionary dictionary];
-        [self addChild:_root];
+        [_stage addChild:_root];
+        [_stage addChild:_ghost];
+        [self addChild:_stage];
     }
     return self;
 }
@@ -70,28 +109,96 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
            (_mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0));
 }
 
+- (BOOL)intro { return _transition == UITransitionIntro; }
+- (BOOL)paging { return _transition == UITransitionPage; }
+
 - (void)rebuild {
+    if (!_presented && _transition != UITransitionIntro) _transition = UITransitionNone;
+    CGPoint centre = CGPointMake(self.size.width / 2, self.size.height / 2);
+    _stage.position = centre;
+    _root.position = _ghost.position = CGPointMake(-centre.x, -centre.y);
+    if (_transition == UITransitionIntro) {
+        [_stage removeAllActions];
+        _stage.alpha = 1;
+        [_stage setScale:1];
+        if (_presented) {
+            // Mode change on screen: the old layout dissolves under the new one.
+            for (SKNode *node in [_root.children copy]) {
+                [node removeFromParent];
+                [_ghost addChild:node];
+                UIMotionDismiss(node, CGVectorMake(0, 0), 0.24);
+            }
+        }
+        _shownCast = nil;
+        _shownActive = _shownChannel = _shownContent = _shownFocus = _shownAction = nil;
+        _shownRoute = nil;
+        _shownAlpha = nil;
+        _captionHolder = nil;
+        _captionText = nil;
+        _captionSpeaker = nil;
+    }
+    // Keep the outgoing speech bubble until the new one decides how to replace it.
+    _oldCaptionHolder = _captionHolder;
+    _oldCaptionText = _captionText;
+    _oldCaptionRect = _captionRect;
+    _oldCaptionRight = _captionRight;
+    _oldCaptionSpeaker = _captionSpeaker;
+    _captionHolder = nil;
+    _captionText = nil;
+    _captionSpeaker = nil;
+    _speech = nil;
+    if (_transition == UITransitionPage) {
+        for (SKNode *node in [_oldCaptionText arrayByAddingObject:_oldCaptionHolder ?: [SKNode node]]) {
+            [node removeFromParent];
+            [_ghost addChild:node];
+        }
+    } else {
+        _oldCaptionHolder = nil;
+        _oldCaptionText = nil;
+    }
+
     [_root removeAllChildren];
+    _footerNodes = [NSMutableArray array];
     _confirmRect = _previousRect = _backRect = CGRectZero;
     _missionRows = CGRectZero;
     _laidOut = self.size;
+    _focusLock = nil;
+    _routeLine = nil;
     BOOL illustrated = _mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0);
-    self.backgroundColor = illustrated ? UIColorWithOpacity(UIBackground, 1) : [NSColor clearColor];
-    if (!illustrated) {
-        SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.72) size:self.size];
-        shade.anchorPoint = CGPointZero;
-        [_root addChild:shade];
+    // Backgrounds are sprites, not the scene colour, so the screen can fade as a whole.
+    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:illustrated ? UIColorWithOpacity(UIBackground, 1)
+                                                           : UIColorWithOpacity(UIBlack, 0.72) size:self.size];
+    shade.anchorPoint = CGPointZero;
+    [_root addChild:shade];
+    if ([self intro] && (_shownMode != _mode || !illustrated || !_presented) && !UIMotionReduced()) {
+        shade.alpha = 0;
+        [shade runAction:[SKAction fadeInWithDuration:0.25]];
     }
     switch (_mode) {
         case ModeList: [self buildList]; break;
         case ModeBriefing: [self buildBriefing]; break;
         case ModeDebrief: [self buildDebrief]; break;
     }
+    // A bubble that has no successor closes where it stood.
+    [self closeOldCaption];
+    _shownMode = _mode;
+    _transition = UITransitionNone;
+}
+
+- (NSTimeInterval)closeOldCaption {
+    if (!_oldCaptionHolder && !_oldCaptionText) return 0;
+    for (SKNode *text in _oldCaptionText) UIMotionDismiss(text, CGVectorMake(0, 0), 0.1);
+    NSTimeInterval closing = _oldCaptionHolder
+        ? UIMotionClosePanel(_oldCaptionHolder, _oldCaptionRect, UIColorWithOpacity(UIAmber, 0.9), _oldCaptionRight) : 0.1;
+    _oldCaptionHolder = nil;
+    _oldCaptionText = nil;
+    return closing;
 }
 
 #pragma mark - Mission list
 
 - (void)showListSelecting:(NSUInteger)index {
+    _transition = _mode == ModeList && _presented ? UITransitionSelect : UITransitionIntro;
     _mode = ModeList;
     _index = MIN(index, CampaignMissions().count - 1);
     [self rebuild];
@@ -116,79 +223,147 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     CGFloat listW = MIN(520, s.width * 0.42);
     _missionRowHeight = rowH;
     _missionRows = CGRectMake(50, top - 90 - all.count * rowH, listW, all.count * rowH);
+    NSMutableArray<SKLabelNode *> *rows = [NSMutableArray array];
+    SKNode *bar = nil;
     for (NSUInteger i = 0; i < all.count; i++) {
         BOOL open = i < unlocked, sel = i == _index;
         CGFloat y = top - 90 - i * rowH;
         if (sel) {
-            SKShapeNode *bar = UISkewedShape(CGRectMake(50, y - rowH + 4, listW, rowH - 2), UIColorWithOpacity(UIInk, 0.8), UIColorWithOpacity(UIInk, 0.12));
-            [_root addChild:bar];
+            CGRect barRect = CGRectMake(50, y - rowH + 4, listW, rowH - 2);
+            SKShapeNode *shape = UISkewedShape(barRect, UIColorWithOpacity(UIInk, 0.8), UIColorWithOpacity(UIInk, 0.12));
+            [_root addChild:shape];
+            bar = UIMotionPivot(shape, CGPointMake(CGRectGetMinX(barRect), CGRectGetMidY(barRect)));
         }
         SKLabelNode *l = Text(MIN(17, rowH * 0.6), open ? (sel ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIInk, 0.75)) : UIColorWithOpacity(UIInk, 0.25), SKLabelHorizontalAlignmentModeLeft);
         l.text = [NSString stringWithFormat:@"%02lu   %@", (unsigned long)i + 1, open ? [all[i][@"title"] uppercaseString] : @"-- CLASSIFIED --"];
         l.position = CGPointMake(64, y - 4);
         [_root addChild:l];
+        [rows addObject:l];
     }
 
     // Preview of the selected mission.
     NSDictionary *m = all[_index];
     BOOL open = _index < unlocked;
     CGFloat px = listW + 100, pw = s.width - px - 60;
-    [_root addChild:UIReadoutPanel(CGRectMake(px - 20, 90, pw + 20, top - 160),
-                                  UIColorWithOpacity(UIInk, 0.4), UIColorWithOpacity(UIBlack, 0.35))];
+    CGRect panelRect = CGRectMake(px - 20, 90, pw + 20, top - 160);
+    SKShapeNode *panel = UIReadoutPanel(panelRect, UIColorWithOpacity(UIInk, 0.4), UIColorWithOpacity(UIBlack, 0.35));
+    [_root addChild:panel];
     SKLabelNode *title = Text(24, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
     title.fontName = UIMonoBoldFont;
     title.text = open ? [m[@"title"] uppercaseString] : @"CLASSIFIED";
     title.position = CGPointMake(px, top - 90);
     [_root addChild:title];
+    SKLabelNode *loc = nil, *p, *objs = nil;
     if (open) {
         NSDictionary *b = m[@"briefing"];
-        SKLabelNode *loc = Text(15, UIColorWithOpacity(UIAmber, 0.9), SKLabelHorizontalAlignmentModeLeft);
+        loc = Text(15, UIColorWithOpacity(UIAmber, 0.9), SKLabelHorizontalAlignmentModeLeft);
         loc.text = [NSString stringWithFormat:@"%@   /   SD %@", b[@"location"], b[@"stardate"]];
         loc.position = CGPointMake(px, top - 128);
         [_root addChild:loc];
-        SKLabelNode *p = Para(16, UIColorWithOpacity(UIInk, 0.8), pw - 20);
+        p = Para(16, UIColorWithOpacity(UIInk, 0.8), pw - 20);
         p.text = [b[@"text"] firstObject];
         p.position = CGPointMake(px, top - 165);
         [_root addChild:p];
-        SKLabelNode *objs = Para(15, UIColorWithOpacity(UIInk, 0.65), pw - 20);
+        objs = Para(15, UIColorWithOpacity(UIInk, 0.65), pw - 20);
         NSMutableString *o = [NSMutableString stringWithString:@"OBJECTIVES\n"];
         for (NSDictionary *d in m[@"objectives"]) [o appendFormat:@"  %@ %@\n", [d[@"optional"] boolValue] ? @"o" : @">", d[@"text"]];
         objs.text = o;
         objs.position = CGPointMake(px, p.position.y - p.frame.size.height - 30);
         [_root addChild:objs];
     } else {
-        SKLabelNode *p = Para(16, UIColorWithOpacity(UIInk, 0.5), pw - 20);
+        p = Para(16, UIColorWithOpacity(UIInk, 0.5), pw - 20);
         p.text = @"Complete the previous missions to unlock this briefing.";
         p.position = CGPointMake(px, top - 130);
         [_root addChild:p];
     }
     [self footer:@"↑ / ↓  Select mission" action:open ? @"BRIEFING" : nil];
+
+    CGFloat barY = top - 90 - _index * rowH;
+    if ([self intro]) {
+        UIMotionDecode(t, 0.05, 0.45);
+        UIMotionDecode(sub, 0.12, 0.5);
+        for (NSUInteger i = 0; i < rows.count; i++) {
+            UIMotionSlideIn(rows[i], CGVectorMake(-24, 0), 0.16 + i * 0.03, 0.28);
+            UIMotionDecode(rows[i], 0.16 + i * 0.03, 0.3);
+        }
+        if (bar && !UIMotionReduced()) {
+            bar.xScale = 0.001;
+            [bar runAction:UIAfter(0.28 + _index * 0.03, UIEased([SKAction scaleXTo:1 duration:0.3], UICurveOutExpo))];
+        }
+        NSTimeInterval ready = 0;
+        UIMotionDrawPanel(panel, panelRect, UIColorWithOpacity(UIInk, 0.8), NO, 0.2, &ready);
+        [self revealPreviewTitle:title location:loc text:p objectives:objs at:ready];
+    } else if (_transition == UITransitionSelect) {
+        // The highlight glides to the new row; the preview re-decodes.
+        if (bar && !UIMotionReduced() && _shownMode == ModeList) {
+            CGPoint home = bar.position;
+            bar.position = CGPointMake(home.x, home.y + (_shownBarY - barY));
+            [bar runAction:UIEased([SKAction moveTo:home duration:0.16], UICurveOut)];
+        }
+        if (_index < rows.count) UIMotionGlitchBurst(rows[_index], 0.16, 0.5, UIColorWithOpacity(UIAmber, 1));
+        UIMotionSweep(_root, CGRectInset(panelRect, 2, 2), UIColorWithOpacity(UIInk, 0.35), YES, 0, 0.4);
+        [self revealPreviewTitle:title location:loc text:p objectives:objs at:0];
+    }
+    _shownBarY = barY;
+    _shownIndex = _index;
+}
+
+- (void)revealPreviewTitle:(SKLabelNode *)title location:(SKLabelNode *)location text:(SKLabelNode *)text
+                objectives:(SKLabelNode *)objectives at:(NSTimeInterval)t {
+    UIMotionDecode(title, t, 0.32);
+    if (location) UIMotionDecode(location, t + 0.06, 0.32);
+    NSTimeInterval typed = UIMotionTypeOn(text, t + 0.1, 260);
+    if (objectives) UIMotionSlideIn(objectives, CGVectorMake(0, 8), MIN(typed, t + 0.45), 0.25);
 }
 
 - (void)footer:(NSString *)text action:(NSString *)action {
+    [self buildFooter:text action:action];
+    SKNode *confirm = action && [_footerNodes.lastObject isKindOfClass:SKShapeNode.class] ? _footerNodes.lastObject : nil;
+    if ([self intro]) {
+        NSUInteger i = 0;
+        for (SKNode *node in _footerNodes) {
+            if ([node isKindOfClass:SKLabelNode.class]) UIMotionFlickerIn(node, 0.45);
+            else UIMotionSlideIn(node, CGVectorMake(0, -44), 0.18 + 0.05 * i++, 0.32);
+        }
+    } else if ([self paging] && action && _shownAction && ![action isEqualToString:_shownAction] && confirm) {
+        // CONTINUE becomes LAUNCH: the button re-strikes.
+        for (SKNode *child in confirm.children)
+            if ([child isKindOfClass:SKLabelNode.class]) UIMotionDecode((SKLabelNode *)child, 0, 0.3);
+        UIMotionFlickerIn(confirm, 0);
+    }
+    _shownAction = action;
+}
+
+- (SKNode *)footerAdd:(SKNode *)node {
+    [_root addChild:node];
+    [_footerNodes addObject:node];
+    return node;
+}
+
+- (void)buildFooter:(NSString *)text action:(NSString *)action {
     CGFloat inset = MIN(50, self.size.width * 0.05);
     BOOL console = _mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0);
     if ([self compactStoryLayout]) {
         CGFloat bottom = 16, height = 44;
         _backRect = CGRectMake(inset, bottom, 84, height);
-        [_root addChild:UIActionButton(_backRect, @"MISSIONS", UIAmber)];
+        [self footerAdd:UIActionButton(_backRect, @"MISSIONS", UIAmber)];
         BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
         if (hasPrevious) {
             _previousRect = CGRectMake(CGRectGetMaxX(_backRect) + 8, bottom, 44, height);
-            [_root addChild:UIActionButton(_previousRect, @"←", UIAmber)];
+            [self footerAdd:UIActionButton(_previousRect, @"←", UIAmber)];
         }
         CGFloat width = MIN(144, self.size.width * 0.38);
         _confirmRect = CGRectMake(self.size.width - inset - width, bottom, width, height);
         NSString *label = [action stringByReplacingOccurrencesOfString:@"↵  " withString:@""];
-        [_root addChild:UIActionButton(_confirmRect, label, UIAmber)];
+        [self footerAdd:UIActionButton(_confirmRect, label, UIAmber)];
         return;
     }
     CGRect rail = CGRectMake(inset - 10, 14, self.size.width - 2 * inset + 20, 52);
-    [_root addChild:UIControlRail(rail, console)];
+    [self footerAdd:UIControlRail(rail, console)];
     CGFloat hintLeft = inset + 8;
     if (_mode == ModeList) {
         _backRect = CGRectMake(inset, 20, 140, 40);
-        [_root addChild:UIActionButton(_backRect, @"‹  MAIN MENU", UIInk)];
+        [self footerAdd:UIActionButton(_backRect, @"‹  MAIN MENU", UIInk)];
         hintLeft = CGRectGetMaxX(_backRect) + 18;
     }
     SKLabelNode *hint = Para(12, UIColorWithOpacity(UIInk, console ? 0.9 : 0.65),
@@ -196,11 +371,11 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     hint.text = text;
     hint.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
     hint.position = CGPointMake(hintLeft, 40);
-    [_root addChild:hint];
+    [self footerAdd:hint];
     if (!action) return;
 
     _confirmRect = CGRectMake(self.size.width - inset - 180, 20, 180, 40);
-    [_root addChild:UIActionButton(_confirmRect, action, console ? UIAmber : UIInk)];
+    [self footerAdd:UIActionButton(_confirmRect, action, console ? UIAmber : UIInk)];
 }
 
 #pragma mark - Briefing
@@ -248,6 +423,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     const char *startPage = getenv("SF_BRIEFING_PAGE");   // debug: open on page N
     _page = startPage && atoi(startPage) >= 1 ? MIN((NSUInteger)atoi(startPage) - 1, pages.count - 1) : 0;
     _mode = ModeBriefing;
+    _transition = UITransitionIntro;
     [self rebuild];
 }
 
@@ -288,6 +464,14 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     [art setScale:scale];
     art.position = CGPointMake(size.width / 2, centerY);
     [_root addChild:art];
+    if ([self intro] && !UIMotionReduced()) {
+        art.alpha = 0;
+        [art setScale:scale * 1.04];
+        [art runAction:[SKAction group:@[
+            UIEased([SKAction fadeInWithDuration:0.5], UICurveOut),
+            UIEased([SKAction scaleTo:scale duration:0.9], UICurveOut),
+        ]]];
+    }
     SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.12) size:size];
     shade.anchorPoint = CGPointZero;
     [_root addChild:shade];
@@ -309,8 +493,23 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     portrait.anchorPoint = CGPointMake(0.5, 0);
     portrait.position = CGPointMake(CGRectGetMidX(area), CGRectGetMinY(area));
     portrait.color = UIColorWithOpacity(UIBackground, 1);
-    portrait.colorBlendFactor = active ? 0 : 0.38;
+    CGFloat dim = active ? 0 : 0.38;
+    portrait.colorBlendFactor = dim;
     [_root addChild:portrait];
+    if (UIMotionReduced() || !([self intro] || [self paging])) return;
+    if (![_shownCast containsObject:name]) {
+        // A new face walks in from its own side of the room.
+        UIMotionSlideIn(portrait, CGVectorMake(facingRight ? -70 : 70, 0), [self intro] ? 0.15 : 0, 0.5);
+    } else if ([_shownActive isEqualToString:name] != active) {
+        // The speaker steps up into the light; the listener drops back.
+        portrait.colorBlendFactor = active ? 0.38 : 0;
+        [portrait runAction:[SKAction colorizeWithColorBlendFactor:dim duration:0.25]];
+        if (active) {
+            CGPoint home = portrait.position;
+            portrait.position = CGPointMake(home.x, home.y - 8);
+            [portrait runAction:UIEased([SKAction moveTo:home duration:0.3], UICurveOut)];
+        }
+    }
 }
 
 - (CGFloat)captionTextHeightForLines:(NSArray<NSDictionary *> *)lines width:(CGFloat)width fontSize:(CGFloat)fontSize {
@@ -326,8 +525,9 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
 - (void)addCaption:(NSDictionary *)line inRect:(CGRect)rect fontSize:(CGFloat)fontSize
       speakerOnRight:(BOOL)speakerOnRight {
-    [_root addChild:UIReadoutPanel(rect, UIColorWithOpacity(UIConsoleEdge, 0.95),
-                                  UIColorWithOpacity(UIConsoleSteel, 0.95))];
+    SKShapeNode *panel = UIReadoutPanel(rect, UIColorWithOpacity(UIConsoleEdge, 0.95),
+                                        UIColorWithOpacity(UIConsoleSteel, 0.95));
+    [_root addChild:panel];
     CGFloat left = CGRectGetMinX(rect) + 16, top = CGRectGetMaxY(rect);
     CGFloat width = MAX(1, rect.size.width - 32);
     SKLabelNode *speaker = Text(13, UIColorWithOpacity(UIAmber, 1),
@@ -347,6 +547,44 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     speech.text = line[@"text"];
     speech.position = CGPointMake(left, top - 32);
     [_root addChild:speech];
+
+    // The bubble hangs from its top edge, which stays put between lines.
+    SKNode *holder;
+    const CGFloat charsPerSecond = 80;
+    BOOL continuing = [self paging] && _oldCaptionHolder && _oldCaptionRight == speakerOnRight &&
+                      [_oldCaptionSpeaker isEqualToString:line[@"speaker"]] &&
+                      fabs(CGRectGetMaxY(_oldCaptionRect) - top) < 1 && fabs(_oldCaptionRect.size.width - rect.size.width) < 1;
+    if (continuing) {
+        // Same voice, next line: the bubble resizes in place and the new line types in.
+        holder = UIMotionPivot(panel, CGPointMake(CGRectGetMidX(rect), top));
+        if (!UIMotionReduced()) {
+            holder.yScale = _oldCaptionRect.size.height / MAX(1, rect.size.height);
+            [holder runAction:UIEased([SKAction scaleYTo:1 duration:0.2], UICurveOut)];
+        }
+        [_oldCaptionHolder removeFromParent];
+        [_oldCaptionText.firstObject removeFromParent];
+        if (_oldCaptionText.count > 1) UIMotionDismiss(_oldCaptionText.lastObject, CGVectorMake(0, 0), 0.1);
+        _oldCaptionHolder = nil;
+        _oldCaptionText = nil;
+        UIMotionTypeOn(speech, 0.06, charsPerSecond);
+    } else if ([self intro] || [self paging]) {
+        // A new voice: the old bubble folds away, then a beam draws the new
+        // one out from the speaker's side.
+        NSTimeInterval closing = [self closeOldCaption];
+        NSTimeInterval ready = 0;
+        holder = UIMotionDrawPanel(panel, rect, UIColorWithOpacity(UIAmber, 0.9), speakerOnRight,
+                                   [self intro] ? 0.45 : closing * 0.8, &ready);
+        UIMotionDecode(speaker, ready, 0.3);
+        UIMotionTypeOn(speech, ready + 0.05, charsPerSecond);
+    } else {
+        holder = UIMotionPivot(panel, CGPointMake(CGRectGetMidX(rect), top));
+    }
+    _captionHolder = holder;
+    _captionText = @[speaker, speech];
+    _captionRect = rect;
+    _captionRight = speakerOnRight;
+    _captionSpeaker = line[@"speaker"];
+    _speech = speech;
 }
 
 - (void)buildBriefing {
@@ -410,6 +648,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     CGFloat captionLeft = speakerOnRight ? CGRectGetMaxX(screen) - captionWidth : CGRectGetMinX(screen);
     [self addCaption:page inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
              fontSize:textSize speakerOnRight:speakerOnRight];
+    _shownCast = right ? @[left, right] : @[left];
+    _shownActive = active;
     [self footer:@"← / →  Briefing     Esc  Missions"
            action:_page + 1 == _pages.count ? @"↵  LAUNCH" : @"↵  CONTINUE"];
 }
@@ -445,23 +685,62 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
 
     CGFloat contentTop = CGRectGetMinY(channel.frame) - 8;
     CGFloat bottom = CGRectGetMinY(screen) + 4;
+    CGRect contentRect = CGRectMake(CGRectGetMinX(screen), bottom, screen.size.width, MAX(1, contentTop - bottom));
+    NSString *kind = nil;
+    SKNode *content = [self buildMonitorContent:mission page:page left:left right:right top:contentTop
+                                         bottom:bottom kind:&kind];
+    BOOL map = [kind hasPrefix:@"map"];
+    BOOL fresh = ![kind isEqualToString:_shownContent];
+
+    if ([self intro]) {
+        UIMotionSweep(_root, screen, UIColorWithOpacity(UIInk, 0.5), YES, 0.1, 0.6);
+        UIMotionDecode(title, 0.25, 0.5);
+        UIMotionDecode(location, 0.32, 0.45);
+        UIMotionDecode(channel, 0.4, 0.35);
+        UIMotionDecode(counter, 0.4, 0.35);
+        if (!map && content) UIMotionWipe(content, contentRect, UIColorWithOpacity(UIInk, 0.7), 0.45, 0.45);
+    } else if ([self paging]) {
+        if (![page[@"channel"] isEqual:_shownChannel]) UIMotionDecode(channel, 0, 0.3);
+        UIMotionDecode(counter, 0, 0.2);
+        if (fresh && content) UIMotionWipe(content, contentRect, UIColorWithOpacity(UIInk, 0.7), 0.04, 0.38);
+    }
+    if (map) {
+        NSDictionary *step = page[@"tactical"];
+        NSString *dialogueFocus = _dialogueScene[@"focus"];
+        if (!step && page[@"cast"] && dialogueFocus) step = @{ @"show": @[dialogueFocus], @"focus": dialogueFocus };
+        CueStyle style = [self intro] ? CueStyleIntro : (![self paging] ? CueStyleStill : (fresh ? CueStyleFresh : CueStyleTween));
+        [self applyTacticalCue:step style:style];
+    }
+    _shownContent = kind;
+    _shownChannel = page[@"channel"];
+}
+
+// The tactical map, a ship schematic or a readout list. kind names what was
+// drawn so the next page can tell whether the content changed.
+- (SKNode *)buildMonitorContent:(NSDictionary *)mission page:(NSDictionary *)page left:(CGFloat)left
+                          right:(CGFloat)right top:(CGFloat)contentTop bottom:(CGFloat)bottom
+                           kind:(NSString **)kind {
+    CGFloat width = MAX(1, right - left);
     NSDictionary *step = page[@"tactical"];
-    NSString *kind = step[@"schematic"];
-    if (kind && contentTop > bottom + 20) {
+    NSString *schematicKind = step[@"schematic"];
+    if (schematicKind && contentTop > bottom + 20) {
         for (NSDictionary *entity in mission[@"entities"]) {
             if (![entity[@"id"] isEqualToString:step[@"focus"]]) continue;
-            NSString *key = [NSString stringWithFormat:@"Schematics/%@-%@", entity[@"asset"], kind];
+            NSString *key = [NSString stringWithFormat:@"Schematics/%@-%@", entity[@"asset"], schematicKind];
             SKSpriteNode *schematic = [self artNamed:key];
             if (!schematic) break;
+            SKNode *group = [SKNode node];
             CGFloat height = contentTop - bottom - 14;
             [schematic setScale:MIN(width / schematic.size.width, height / schematic.size.height)];
             schematic.position = CGPointMake((left + right) / 2, bottom + 14 + height / 2);
-            [_root addChild:schematic];
+            [group addChild:schematic];
             SKLabelNode *legend = Text(10, UIColorWithOpacity(UIRed, 1), SKLabelHorizontalAlignmentModeLeft);
-            legend.text = [NSString stringWithFormat:@"RED  /  %@", kind.uppercaseString];
+            legend.text = [NSString stringWithFormat:@"RED  /  %@", schematicKind.uppercaseString];
             legend.position = CGPointMake(left, bottom + 12);
-            [_root addChild:legend];
-            return;
+            [group addChild:legend];
+            [_root addChild:group];
+            *kind = key;
+            return group;
         }
     }
     NSArray<NSString *> *readout = page[@"readout"];
@@ -474,19 +753,16 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         list.position = CGPointMake(left, contentTop - 8);
         while (list.fontSize > 10 && CGRectGetMinY(list.frame) < bottom) list.fontSize -= 1;
         [_root addChild:list];
-        return;
+        *kind = [@"readout:" stringByAppendingString:lines];
+        return list;
     }
 
     _mapRect = CGRectMake(left, bottom, width, MAX(1, contentTop - bottom));
-    [self buildMap:mission];
-    NSString *dialogueFocus = _dialogueScene[@"focus"];
-    if (!step && page[@"cast"] && dialogueFocus) {
-        step = @{ @"show": @[dialogueFocus], @"focus": dialogueFocus };
-    }
-    [self applyTacticalCue:step];
+    *kind = [NSString stringWithFormat:@"map:%lu", (unsigned long)_index];
+    return [self buildMap:mission];
 }
 
-- (void)buildMap:(NSDictionary *)m {
+- (SKNode *)buildMap:(NSDictionary *)m {
     _items = [NSMutableDictionary dictionary];
     SKCropNode *display = [SKCropNode node];
     SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:[NSColor whiteColor] size:_mapRect.size];
@@ -536,8 +812,10 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         CGFloat gx = _mapRect.origin.x + _mapRect.size.width * i / 8, gy = _mapRect.origin.y + _mapRect.size.height * i / 8;
         SKSpriteNode *v = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.07) size:CGSizeMake(1, _mapRect.size.height)];
         v.position = CGPointMake(gx, CGRectGetMidY(_mapRect));
+        v.name = @"grid-v";
         SKSpriteNode *h = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.07) size:CGSizeMake(_mapRect.size.width, 1)];
         h.position = CGPointMake(CGRectGetMidX(_mapRect), gy);
+        h.name = @"grid-h";
         [_mapLayer addChild:v];
         [_mapLayer addChild:h];
     }
@@ -545,10 +823,12 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     SKSpriteNode *sb = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.7) size:CGSizeMake(bar * scale, 2)];
     sb.anchorPoint = CGPointMake(0, 0.5);
     sb.position = CGPointMake(_mapRect.origin.x + 16, _mapRect.origin.y + 18);
+    sb.name = @"scale";
     [_mapLayer addChild:sb];
     SKLabelNode *sl = Text(11, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeLeft);
     sl.text = [NSString stringWithFormat:@"%.0f KM", bar / 1000];
     sl.position = CGPointMake(_mapRect.origin.x + 16, _mapRect.origin.y + 36);
+    sl.name = @"scale-label";
     [_mapLayer addChild:sl];
 
     for (NSDictionary *t in things) {
@@ -562,6 +842,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
             field.strokeColor = UIColorWithOpacity(UIField, 0.25);
             field.fillColor = UIColorWithOpacity(UIField, 0.06);
             field.position = p;
+            field.name = @"rocks";
             [_mapLayer addChild:field];
             continue;
         } else if ([kind isEqualToString:@"player"]) {
@@ -655,13 +936,31 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     }
     _routeLayer = [SKNode node];
     [_mapLayer addChild:_routeLayer];
+    // The focus marker: a pulsing ring inside slowly turning lock brackets.
+    _focusLock = [SKNode node];
+    [_mapLayer addChild:_focusLock];
     _focusRing = [SKShapeNode shapeNodeWithCircleOfRadius:18];
     _focusRing.strokeColor = UIColorWithOpacity(UIAmber, 1);
     _focusRing.lineWidth = 2;
-    [_mapLayer addChild:_focusRing];
+    [_focusLock addChild:_focusRing];
+    CGMutablePathRef corners = CGPathCreateMutable();
+    const CGFloat r = 27, arm = 7;
+    for (int i = 0; i < 4; i++) {
+        CGFloat sx = (i & 1) ? 1 : -1, sy = (i & 2) ? 1 : -1;
+        CGPathMoveToPoint(corners, NULL, sx * r, sy * (r - arm));
+        CGPathAddLineToPoint(corners, NULL, sx * r, sy * r);
+        CGPathAddLineToPoint(corners, NULL, sx * (r - arm), sy * r);
+    }
+    SKShapeNode *brackets = [SKShapeNode shapeNodeWithPath:corners];
+    CGPathRelease(corners);
+    brackets.strokeColor = UIColorWithOpacity(UIAmber, 0.75);
+    brackets.lineWidth = 1.5;
+    [_focusLock addChild:brackets];
+    if (!UIMotionReduced()) [brackets runAction:[SKAction repeatActionForever:[SKAction rotateByAngle:-M_PI_2 duration:4]]];
+    return display;
 }
 
-- (void)applyTacticalCue:(NSDictionary *)st {
+- (void)applyTacticalCue:(NSDictionary *)st style:(CueStyle)style {
     NSSet *show = [NSSet setWithArray:st[@"show"] ?: @[]];
     // Lit: named in the step, or a member of a group named in the step.
     for (MapItem *it in _items.allValues) {
@@ -706,11 +1005,139 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         [_routeLayer addChild:line];
         CGPathRelease(dashed);
         CGPathRelease(path);
+        NSMutableArray<NSValue *> *points = [NSMutableArray array];
+        for (NSString *rid in route) if (_items[rid]) [points addObject:[NSValue valueWithPoint:_items[rid].point]];
+        _routePoints = points;
+        _routeLine = line;
     }
     MapItem *focus = _items[st[@"focus"] ?: @""];
-    _focusRing.hidden = !focus;
-    if (focus) _focusRing.position = focus.point;
+    _focusLock.hidden = !focus;
+    if (focus) _focusLock.position = focus.point;
+    [self animateCue:st style:style];
 }
+
+- (void)animateCue:(NSDictionary *)st style:(CueStyle)style {
+    NSMutableDictionary<NSString *, NSNumber *> *alphas = [NSMutableDictionary dictionary];
+    for (MapItem *it in _items.allValues) if (!it.container) alphas[it.identifier] = @(it.node.alpha);
+    NSString *focus = st[@"focus"] ?: @"";
+    NSArray *route = st[@"route"] ?: @[];
+    if (style == CueStyleIntro && !UIMotionReduced()) {
+        // The plot powers up: grid lines draw out from the centre, then
+        // contacts strike in a ring spreading from the middle of the map.
+        NSUInteger n = 0;
+        for (SKNode *child in _mapLayer.children) {
+            BOOL vertical = [child.name isEqualToString:@"grid-v"];
+            if (!vertical && ![child.name isEqualToString:@"grid-h"]) continue;
+            if (vertical) child.yScale = 0.001; else child.xScale = 0.001;
+            SKAction *grow = vertical ? [SKAction scaleYTo:1 duration:0.45] : [SKAction scaleXTo:1 duration:0.45];
+            [child runAction:UIAfter(0.3 + 0.025 * n++, UIEased(grow, UICurveOut))];
+        }
+        SKNode *scale = [_mapLayer childNodeWithName:@"scale"];
+        scale.xScale = 0.001;
+        [scale runAction:UIAfter(0.6, UIEased([SKAction scaleXTo:1 duration:0.3], UICurveOutExpo))];
+        UIMotionFlickerIn([_mapLayer childNodeWithName:@"scale-label"], 0.7);
+        CGPoint mid = CGPointMake(CGRectGetMidX(_mapRect), CGRectGetMidY(_mapRect));
+        CGFloat reach = MAX(1, hypot(_mapRect.size.width, _mapRect.size.height) / 2);
+        for (MapItem *it in _items.allValues) {
+            if (it.container) continue;
+            CGFloat d = MIN(1, hypot(it.point.x - mid.x, it.point.y - mid.y) / reach);
+            UIMotionFlickerIn(it.node, 0.45 + d * 0.45);
+        }
+        for (SKNode *child in _mapLayer.children)
+            if ([child.name isEqualToString:@"rocks"]) UIMotionFlickerIn(child, 0.5);
+        [self lockFocus:0.95];
+        [self plotRoute:0.85];
+    } else if (style == CueStyleTween) {
+        // Same plot, new emphasis: contacts brighten or recede, the lock
+        // jumps to the new focus and a changed route is redrawn.
+        for (MapItem *it in _items.allValues) {
+            NSNumber *was = _shownAlpha[it.identifier];
+            if (it.container || !was || fabs(was.doubleValue - it.node.alpha) < 0.01) continue;
+            CGFloat target = it.node.alpha;
+            it.node.alpha = was.doubleValue;
+            [it.node runAction:UIEased([SKAction fadeAlphaTo:target duration:0.3], UICurveOut)];
+        }
+        if (![focus isEqualToString:_shownFocus ?: @""]) [self lockFocus:0.05];
+        if (![route isEqualToArray:_shownRoute ?: @[]]) [self plotRoute:0.1];
+    } else if (style == CueStyleFresh) {
+        [self lockFocus:0.3];
+        [self plotRoute:0.25];
+    }
+    _shownAlpha = alphas;
+    _shownFocus = focus;
+    _shownRoute = route;
+}
+
+- (void)lockFocus:(NSTimeInterval)delay {
+    if (!_focusLock || _focusLock.hidden || UIMotionReduced()) return;
+    _focusLock.alpha = 0;
+    [_focusLock setScale:2.6];
+    _focusLock.zRotation = M_PI_2;
+    [_focusLock runAction:UIAfter(delay, [SKAction group:@[
+        [SKAction fadeInWithDuration:0.12],
+        UIEased([SKAction scaleTo:1 duration:0.45], UICurveOutExpo),
+        UIEased([SKAction rotateToAngle:0 duration:0.45], UICurveOutExpo),
+    ]])];
+}
+
+// Dashed route up to fraction of its length; head is where it ends.
+static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction, CGPoint *head) CF_RETURNS_RETAINED {
+    CGFloat total = 0;
+    for (NSUInteger i = 1; i < points.count; i++) {
+        CGPoint a = points[i - 1].pointValue, b = points[i].pointValue;
+        total += hypot(b.x - a.x, b.y - a.y);
+    }
+    CGFloat want = MAX(0.5, total * fraction);
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPoint start = points.firstObject.pointValue;
+    CGPathMoveToPoint(path, NULL, start.x, start.y);
+    *head = start;
+    for (NSUInteger i = 1; i < points.count && want > 0; i++) {
+        CGPoint a = points[i - 1].pointValue, b = points[i].pointValue;
+        CGFloat len = hypot(b.x - a.x, b.y - a.y);
+        CGFloat k = len > 0 ? MIN(1, want / len) : 1;
+        *head = CGPointMake(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k);
+        CGPathAddLineToPoint(path, NULL, head->x, head->y);
+        want -= len;
+    }
+    CGFloat dash[] = { 8, 6 };
+    CGPathRef dashed = CGPathCreateCopyByDashingPath(path, NULL, 0, dash, 2);
+    CGPathRelease(path);
+    return dashed;
+}
+
+- (void)plotRoute:(NSTimeInterval)delay {
+    if (!_routeLine || _routePoints.count < 2 || UIMotionReduced()) return;
+    SKShapeNode *line = _routeLine;
+    NSArray<NSValue *> *points = _routePoints;
+    SKShapeNode *dot = [SKShapeNode shapeNodeWithCircleOfRadius:3.5];
+    dot.fillColor = UIColorWithOpacity(UIAmber, 1);
+    dot.strokeColor = UIColorWithOpacity(UIAmber, 0.4);
+    dot.lineWidth = 4;
+    dot.position = points.firstObject.pointValue;
+    dot.alpha = 0;
+    [_routeLayer addChild:dot];
+    line.hidden = YES;
+    const NSTimeInterval duration = 0.7;
+    SKAction *plot = [SKAction customActionWithDuration:duration actionBlock:^(SKNode *node, CGFloat elapsed) {
+        CGFloat t = MIN(1, elapsed / duration);
+        t = 1 - pow(1 - t, 3);
+        CGPoint head;
+        CGPathRef path = CreatePartialRoute(points, t, &head);
+        line.path = path;
+        line.hidden = NO;
+        CGPathRelease(path);
+        dot.position = head;
+        dot.alpha = 1;
+    }];
+    [line runAction:UIAfter(delay, plot)];
+    [dot runAction:UIAfter(delay + duration, [SKAction sequence:@[
+        [SKAction group:@[[SKAction scaleTo:2.2 duration:0.3], [SKAction fadeOutWithDuration:0.3]]],
+        [SKAction removeFromParent],
+    ]])];
+}
+
+
 
 #pragma mark - Debrief
 
@@ -720,6 +1147,7 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     _success = success;
     _results = [results copy];
     _debriefBeat = 0;
+    _transition = UITransitionIntro;
     [self rebuild];
 }
 
@@ -745,6 +1173,8 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
                    inRect:CGRectMake(inset, bottom, width, MAX(1, height))];
         [self addCaption:line inRect:CGRectMake(inset, floor, width, captionHeight)
                  fontSize:fontSize speakerOnRight:NO];
+        _shownCast = @[line[@"portrait"]];
+        _shownActive = line[@"portrait"];
         [self footer:@"← / →  Conversation     Esc  Missions"
                action:_debriefBeat == conversation.count ? next : @"↵  CONTINUE"];
         return;
@@ -771,6 +1201,26 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     results.text = [@"OBJECTIVES\n" stringByAppendingString:[_results componentsJoinedByString:@"\n"] ?: @""];
     results.position = CGPointMake(inset, CGRectGetMinY(summary.frame) - 20);
     [_root addChild:results];
+    if ([self intro]) {
+        // Success decodes cleanly; failure arrives as a corrupted signal.
+        if (_success) UIMotionDecode(title, 0.1, 0.6);
+        else UIMotionGlitchIn(title, 0.1, 0.7, UIColorWithOpacity(UIRed, 1));
+        if (!UIMotionReduced()) {
+            SKColor *glow = _success ? UIColorWithOpacity(UIInk, 0.9) : UIColorWithOpacity(UIRed, 0.9);
+            CGFloat y = CGRectGetMinY(title.frame) - 4, reach = MIN(s.width * 0.32, 420);
+            for (int side = -1; side <= 1; side += 2) {
+                SKSpriteNode *beam = UIMotionBeam(_root, s.width / 2, s.width / 2 + side * reach, y, glow);
+                beam.xScale = 0;
+                [beam runAction:UIAfter(0.15, [SKAction sequence:@[
+                    UIEased([SKAction scaleXTo:1 duration:0.45], UICurveOutExpo),
+                    [SKAction fadeOutWithDuration:0.6], [SKAction removeFromParent],
+                ]])];
+            }
+        }
+        UIMotionDecode(name, 0.3, 0.45);
+        NSTimeInterval typed = UIMotionTypeOn(summary, 0.5, 160);
+        UIMotionTypeOn(results, MAX(0.7, typed - 0.2), 200);
+    }
     [self footer:@"R  Fly again     Esc  Missions"
            action:conversation.count ? @"↵  CONTINUE STORY" : (_success ? next : @"↵  RETRY")];
 }
@@ -781,6 +1231,19 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
     @synchronized (self) {
         _queuedClick = [NSValue valueWithPoint:point];
     }
+}
+
+- (void)turnPage {
+    _transition = UITransitionPage;
+    [self rebuild];
+}
+
+// The summary and the conversation are different layouts; beats within the
+// conversation are pages.
+- (void)turnBeat {
+    BOOL conversation = _debriefBeat > 0 && _shownMode == ModeDebrief && _captionHolder;
+    _transition = conversation ? UITransitionPage : UITransitionIntro;
+    [self rebuild];
 }
 
 - (BriefingCommand)handle:(InputAction)a {
@@ -815,9 +1278,11 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
         case ModeBriefing:
             if (a & InputActionBack) { [self showListSelecting:_index]; break; }
             if (a & InputActionLeft) {
-                if (_page > 0) { _page--; [self rebuild]; }
+                if (_page > 0) { _page--; [self turnPage]; }
             } else if (a & (InputActionRight | InputActionConfirm)) {
-                if (_page + 1 < _pages.count) { _page++; [self rebuild]; }
+                // The first press lands a line that is still typing.
+                if (UIMotionIsTyping(_speech)) UIMotionFinishTyping(_speech);
+                else if (_page + 1 < _pages.count) { _page++; [self turnPage]; }
                 else if (a & InputActionConfirm) return BriefingCommandLaunch;
             }
             break;
@@ -825,16 +1290,17 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
             if (a & InputActionBack) [self showListSelecting:_index];
             else if (a & InputActionRestart) return BriefingCommandLaunch;
             else if (a & InputActionLeft) {
-                if (_debriefBeat > 0) { _debriefBeat--; [self rebuild]; }
+                if (_debriefBeat > 0) { _debriefBeat--; [self turnBeat]; }
             } else if (a & (InputActionRight | InputActionConfirm)) {
                 if (!_success) {
                     if (a & InputActionConfirm) return BriefingCommandLaunch;
                     break;
                 }
                 NSArray *conversation = CampaignMission(_index)[@"debrief"][@"dialogue"];
-                if (_debriefBeat < conversation.count) {
+                if (UIMotionIsTyping(_speech)) UIMotionFinishTyping(_speech);
+                else if (_debriefBeat < conversation.count) {
                     _debriefBeat++;
-                    [self rebuild];
+                    [self turnBeat];
                 } else if (a & InputActionConfirm) {
                     if (_index + 1 < count) [self showBriefing:_index + 1];
                     else [self showListSelecting:_index];
@@ -843,6 +1309,47 @@ typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
             break;
     }
     return BriefingCommandNone;
+}
+
+#pragma mark - Scene motion
+
+- (void)motionEnter {
+    @synchronized (self) { _queuedClick = nil; }
+    _transition = UITransitionIntro;
+    _presented = NO;
+    [self rebuild];
+    _presented = YES;
+}
+
+- (NSTimeInterval)motionExit {
+    _presented = NO;
+    if (UIMotionReduced()) {
+        [_stage runAction:[SKAction fadeOutWithDuration:0.15]];
+        return 0.15;
+    }
+    UIMotionFinishTyping(_speech);
+    _oldCaptionHolder = _captionHolder;
+    _oldCaptionText = _captionText;
+    _oldCaptionRect = _captionRect;
+    _oldCaptionRight = _captionRight;
+    _captionHolder = nil;
+    _captionText = nil;
+    NSTimeInterval caption = [self closeOldCaption];
+    NSUInteger i = 0;
+    for (SKNode *node in _footerNodes) {
+        [node runAction:UIAfter(i++ * 0.03, [SKAction group:@[
+            UIEased([SKAction moveByX:0 y:-40 duration:0.2], UICurveIn), [SKAction fadeOutWithDuration:0.2],
+        ]])];
+    }
+    NSTimeInterval hold = MAX(caption, 0.16);
+    [_stage runAction:UIAfter(hold * 0.6, [SKAction group:@[
+        UIEased([SKAction scaleTo:1.025 duration:0.22], UICurveIn),
+        [SKAction sequence:@[
+            [SKAction fadeAlphaTo:0.45 duration:0.04], [SKAction fadeAlphaTo:0.85 duration:0.03],
+            [SKAction fadeOutWithDuration:0.15],
+        ]],
+    ]])];
+    return hold * 0.6 + 0.22;
 }
 
 - (void)tick:(double)time {

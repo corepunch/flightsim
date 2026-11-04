@@ -1,6 +1,7 @@
 #import "ServerBrowser.h"
 #import "Assets.h"
 #import "UIStyle.h"
+#import "UIMotion.h"
 
 static NSColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static NSColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }
@@ -9,8 +10,12 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
     return UIMonoLabel(size, c, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
 }
 
+@interface ServerBrowser () <UIMotionScene>
+@end
+
 @implementation ServerBrowser {
-    SKNode *_root;
+    SKNode *_stage, *_root;
+    UITransition _transition;
     NSArray<LANServer *> *_servers;
     NSUInteger _index;
     NSString *_status;
@@ -26,8 +31,11 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
     if ((self = [super initWithSize:size])) {
         self.scaleMode = SKSceneScaleModeResizeFill;
         self.backgroundColor = [NSColor clearColor];
+        self.speed = 1 / UIMotionTimeScale();
+        _stage = [SKNode node];
         _root = [SKNode node];
-        [self addChild:_root];
+        [_stage addChild:_root];
+        [self addChild:_stage];
         _servers = @[];
     }
     return self;
@@ -61,9 +69,14 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
 }
 
 - (void)rebuild {
+    BOOL intro = _transition == UITransitionIntro;
+    _transition = UITransitionNone;
     [_root removeAllChildren];
     _laidOut = self.size;
     CGSize s = self.size;
+    _stage.position = CGPointMake(s.width / 2, s.height / 2);
+    _root.position = CGPointMake(-s.width / 2, -s.height / 2);
+    NSMutableArray<SKLabelNode *> *rows = [NSMutableArray array], *notes = [NSMutableArray array];
     SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[NSColor colorWithWhite:0 alpha:0.72] size:s];
     shade.anchorPoint = CGPointZero;
     [_root addChild:shade];
@@ -101,6 +114,7 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
         l.lineBreakMode = NSLineBreakByTruncatingTail;
         l.position = CGPointMake(x, y - (i - _firstVisible) * rowHeight);
         [_root addChild:l];
+        [rows addObject:l];
     }
 
     NSArray *lines = @[
@@ -116,11 +130,56 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
         l.lineBreakMode = NSLineBreakByTruncatingTail;
         l.position = CGPointMake(x, 130 - i * 20);
         [_root addChild:l];
+        [notes addObject:l];
     }
     _backRect = CGRectMake(x, 20, 145, 44);
     _joinRect = self.selected ? CGRectMake(s.width - x - 145, 20, 145, 44) : CGRectZero;
-    [_root addChild:UIActionButton(_backRect, @"‹  BACK", UIInk)];
-    if (self.selected) [_root addChild:UIActionButton(_joinRect, @"JOIN GAME  ›", UIAmber)];
+    SKNode *back = UIActionButton(_backRect, @"‹  BACK", UIInk);
+    [_root addChild:back];
+    SKNode *join = self.selected ? UIActionButton(_joinRect, @"JOIN GAME  ›", UIAmber) : nil;
+    if (join) [_root addChild:join];
+    if (!intro) return;
+    UIMotionFlickerIn(shade, 0);
+    UIMotionDecode(kicker, 0.05, 0.4);
+    UIMotionDecode(title, 0.12, 0.45);
+    for (NSUInteger i = 0; i < rows.count; i++) {
+        UIMotionSlideIn(rows[i], CGVectorMake(-24, 0), 0.25 + i * 0.04, 0.28);
+        UIMotionDecode(rows[i], 0.25 + i * 0.04, 0.35);
+    }
+    for (SKLabelNode *note in notes) UIMotionFlickerIn(note, 0.4);
+    UIMotionSlideIn(back, CGVectorMake(0, -44), 0.25, 0.32);
+    if (join) UIMotionSlideIn(join, CGVectorMake(0, -44), 0.3, 0.32);
+    if (!rows.count) for (SKNode *child in _root.children)
+        if ([child isKindOfClass:SKLabelNode.class] && [((SKLabelNode *)child).text hasPrefix:@"Searching"]) {
+            UIMotionDecode((SKLabelNode *)child, 0.25, 0.5);
+            [child runAction:UIAfter(0.8, [SKAction repeatActionForever:[SKAction sequence:@[
+                [SKAction fadeAlphaTo:0.35 duration:0.8], [SKAction fadeAlphaTo:1 duration:0.8],
+            ]]])];
+        }
+}
+
+- (void)motionEnter {
+    @synchronized (self) { _hasPendingPoint = NO; }
+    [_stage removeAllActions];
+    _stage.alpha = 1;
+    [_stage setScale:1];
+    _transition = UITransitionIntro;
+    [self rebuild];
+}
+
+- (NSTimeInterval)motionExit {
+    if (UIMotionReduced()) {
+        [_stage runAction:[SKAction fadeOutWithDuration:0.15]];
+        return 0.15;
+    }
+    [_stage runAction:[SKAction group:@[
+        UIEased([SKAction scaleTo:1.025 duration:0.24], UICurveIn),
+        [SKAction sequence:@[
+            [SKAction fadeAlphaTo:0.45 duration:0.04], [SKAction fadeAlphaTo:0.85 duration:0.03],
+            [SKAction fadeOutWithDuration:0.17],
+        ]],
+    ]]];
+    return 0.24;
 }
 
 - (void)update:(NSTimeInterval)currentTime {

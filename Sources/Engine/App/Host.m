@@ -11,6 +11,7 @@
 #import "LANBrowser.h"
 #import "NetProtocol.h"
 #import "ServerBrowser.h"
+#import "UIMotion.h"
 #import "Assets.h"
 #include "SharedMath.h"
 #import <stdatomic.h>
@@ -64,6 +65,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     UDPTransport *_serverUDP, *_clientUDP;
     LANBrowser *_lan;
     ServerBrowser *_browser;
+
+    // Overlay changes wait for the outgoing screen's exit animation.
+    SKScene *_shownOverlay;
+    double _exitDeadline;
+    void (^_afterExit)(void);
 }
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
@@ -102,6 +108,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         placeholder.background.contents = [NSColor blackColor];
         view.scene = placeholder;
         view.overlaySKScene = _loading;
+        _shownOverlay = _loading;
         view.delegate = self;
         view.playing = YES;
         view.loops = YES;
@@ -138,7 +145,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _state = HostStateBrowser;
     if (!_lan) _lan = [LANBrowser new];
     [_browser setStatus:self.remote ? [NSString stringWithFormat:@"Connected to %@", _client.serverAddress] : @""];
-    if (!_revealing) dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_browser; });
+    if (!_revealing) [self presentOverlay:_browser];
 }
 
 - (void)updateBrowser:(InputAction)actions {
@@ -154,7 +161,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             if (_browserReturnState == HostStateMainMenu) [self showMainMenu];
             else {
                 _state = _browserReturnState;
-                dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+                [self presentOverlay:_briefing];
             }
             break;
         }
@@ -273,7 +280,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     else if (_state == HostStateFlying) next = _clientView.hud;
     else if (_state == HostStateBrowser) next = _browser;
     if (_state == HostStateFlying) [_clientView.hud showBanner:[CampaignMission(_missionIndex)[@"title"] uppercaseString] color:nil];
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = next; });
+    [self presentOverlay:next];
 }
 
 #pragma mark - Missions
@@ -311,7 +318,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     atomic_store(&_loadDone, false);
     _loadStartedAt = _time;
     [self reportStage:LoadStageFleet progress:0.05f];
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_loading; });
+    [self presentOverlay:_loading];
 }
 
 // Render thread: the server has sent a mission (ours or a remote host's).
@@ -360,7 +367,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _revealing = NO;
         [_clientView clearMission];
         [_briefing showListSelecting:_missionIndex];
-        dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+        [self presentOverlay:_briefing];
     }
     [self connectLocal];   // back to our own server
 }
@@ -372,7 +379,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (!self.remote) [_server stop];   // a remote host decides what comes next
     [_client leaveGame];
     [_briefing showDebrief:_missionIndex success:success results:results];
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+    [self presentOverlay:_briefing];
 }
 
 - (void)abortToMenu {
@@ -382,7 +389,42 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (self.remote) { [_client disconnect]; [self connectLocal]; }
     [_clientView clearMission];
     [_briefing showListSelecting:_missionIndex];
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+    [self presentOverlay:_briefing];
+}
+
+#pragma mark - Overlays
+
+// Render thread. Show next once the current screen has played its exit; if
+// another change arrives meanwhile, the newest one wins.
+- (void)presentOverlay:(SKScene *)next {
+    if (next == _shownOverlay && _exitDeadline == 0) return;
+    __weak Host *weak = self;
+    void (^show)(void) = ^{ [weak showOverlayNow:next]; };
+    if (_exitDeadline > 0) { _afterExit = show; return; }
+    NSTimeInterval exit = [_shownOverlay conformsToProtocol:@protocol(UIMotionScene)]
+        ? [(id<UIMotionScene>)_shownOverlay motionExit] : 0;
+    [self afterExit:exit then:show];
+}
+
+- (void)afterExit:(NSTimeInterval)seconds then:(void (^)(void))then {
+    if (seconds <= 0) { _exitDeadline = 0; _afterExit = nil; then(); return; }
+    _afterExit = then;
+    _exitDeadline = _time + seconds * UIMotionTimeScale() + 0.02;
+}
+
+- (void)showOverlayNow:(SKScene *)next {
+    _shownOverlay = next;
+    if ([next conformsToProtocol:@protocol(UIMotionScene)]) [(id<UIMotionScene>)next motionEnter];
+    SCNView *view = _view;
+    dispatch_async(dispatch_get_main_queue(), ^{ view.overlaySKScene = next; });
+}
+
+- (void)pumpOverlay {
+    if (_exitDeadline <= 0 || _time < _exitDeadline) return;
+    void (^then)(void) = _afterExit;
+    _exitDeadline = 0;
+    _afterExit = nil;
+    if (then) then();
 }
 
 #pragma mark - Loop
@@ -397,8 +439,10 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _lastTime = time;
     dt = clampf(dt, 0.0005f, 1.0f / 20.0f);
     _time += dt;
+    [self pumpOverlay];
 
     InputAction actions = [_input consumeActions];
+    if (_exitDeadline > 0 && _state != HostStateFlying) actions = 0;   // a screen is on its way out
     ControlState controls = [_input poll:dt];
     if (getenv("SF_TESTINPUT")) {   // debug: a pilot who weaves and fires, for testing prediction
         float t = (float)_time;
@@ -458,7 +502,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (void)showMainMenu {
     _state = HostStateMainMenu;
     [self prepareMainMenu];
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_mainMenu; });
+    [self presentOverlay:_mainMenu];
 }
 
 - (void)updateMainMenu:(InputAction)actions {
@@ -473,13 +517,15 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             [self showBrowser];
             return;
         case MainMenuCommandQuit:
-            dispatch_async(dispatch_get_main_queue(), ^{ [NSApp terminate:nil]; });
+            [self afterExit:[_mainMenu motionPowerDown] then:^{
+                dispatch_async(dispatch_get_main_queue(), ^{ [NSApp terminate:nil]; });
+            }];
             return;
         case MainMenuCommandNone:
             return;
     }
     _state = HostStateMissions;
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+    [self presentOverlay:_briefing];
 }
 
 - (void)updateBriefing:(InputAction)actions {
