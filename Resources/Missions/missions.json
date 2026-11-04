@@ -14,39 +14,230 @@
           "You will fly the outer patrol: three navigation buoys, in order. If you meet those scouts, nobody goes home to report on us. Then come back to the Bastion."
         ],
         "steps": [
-          { "caption": "You launch from the CNS Bastion, our fleet carrier and your home for this campaign.", "show": ["bastion", "start"], "focus": "bastion" },
-          { "caption": "Fly the patrol route: NAV 1, NAV 2 and NAV 3, in that order.", "show": ["nav1", "nav2", "nav3"], "route": ["start", "nav1", "nav2", "nav3"] },
-          { "caption": "Scouts were last seen near NAV 2. Expect three Skarn Wasp interceptors.", "show": ["nav2", "scouts"], "focus": "nav2" },
-          { "caption": "When the route is clear, return to the Bastion's approach point.", "show": ["home", "bastion"], "route": ["nav3", "home"] }
+          {
+            "caption": "You launch from the CNS Bastion, our fleet carrier and your home for this campaign.",
+            "show": [
+              "bastion",
+              "start"
+            ],
+            "focus": "bastion"
+          },
+          {
+            "caption": "Fly the patrol route: NAV 1, NAV 2 and NAV 3, in that order.",
+            "show": [
+              "nav1",
+              "nav2",
+              "nav3"
+            ],
+            "route": [
+              "start",
+              "nav1",
+              "nav2",
+              "nav3"
+            ]
+          },
+          {
+            "caption": "Scouts were last seen near NAV 2. Expect three Skarn Wasp interceptors.",
+            "show": [
+              "nav2",
+              "scouts"
+            ],
+            "focus": "nav2"
+          },
+          {
+            "caption": "When the route is clear, return to the Bastion's approach point.",
+            "show": [
+              "home",
+              "bastion"
+            ],
+            "route": [
+              "nav3",
+              "home"
+            ]
+          }
         ],
-        "intel": ["Hostile: 3x Skarn Wasp interceptor (light, fast, weak shields)", "Friendly: CNS Bastion, fleet carrier", "Craft: Executioner heavy fighter, twin lasers"]
+        "intel": [
+          "Hostile: 3x Skarn Wasp interceptor (light, fast, weak shields)",
+          "Friendly: CNS Bastion, fleet carrier",
+          "Craft: Executioner heavy fighter, twin lasers"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Varn",
+            "Okafor"
+          ],
+          "lines": [
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Three buoys, one clean orbit. Your first patrol should be the most boring hour of your life."
+            },
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "The scouts aren't attacking our ships. They're photographing the navigation buoys. I want to know why."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 2 },
-      "player": { "pos": [0, 0, 600], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 2
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          600
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "bastion", "asset": "Carrier", "team": "friend", "name": "CNS Bastion", "pos": [0, -60, 1500], "facing": [0, 0, -1] }
+        {
+          "id": "bastion",
+          "asset": "Carrier",
+          "team": "friend",
+          "name": "CNS Bastion",
+          "pos": [
+            0,
+            -60,
+            1500
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ]
+        }
       ],
       "navs": [
-        { "id": "nav1", "name": "NAV 1", "pos": [0, 0, -1600] },
-        { "id": "nav2", "name": "NAV 2", "pos": [1800, 250, -2600] },
-        { "id": "nav3", "name": "NAV 3", "pos": [2600, -150, -400] },
-        { "id": "home", "name": "BASTION", "pos": [300, 0, 900] }
+        {
+          "id": "nav1",
+          "name": "NAV 1",
+          "pos": [
+            0,
+            0,
+            -1600
+          ]
+        },
+        {
+          "id": "nav2",
+          "name": "NAV 2",
+          "pos": [
+            1800,
+            250,
+            -2600
+          ]
+        },
+        {
+          "id": "nav3",
+          "name": "NAV 3",
+          "pos": [
+            2600,
+            -150,
+            -400
+          ]
+        },
+        {
+          "id": "home",
+          "name": "BASTION",
+          "pos": [
+            300,
+            0,
+            900
+          ]
+        }
       ],
-      "fields": [ { "type": "buoys", "navs": ["nav1", "nav2", "nav3"] } ],
+      "fields": [
+        {
+          "type": "buoys",
+          "navs": [
+            "nav1",
+            "nav2",
+            "nav3"
+          ]
+        }
+      ],
       "waves": [
-        { "id": "scouts", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [2300, 300, -3200], "spread": 120, "nav": "nav2", "order": "attack" }
+        {
+          "id": "scouts",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            2300,
+            300,
+            -3200
+          ],
+          "spread": 120,
+          "nav": "nav2",
+          "order": "attack"
+        }
       ],
       "objectives": [
-        { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "Fly the patrol route" },
-        { "id": "scouts", "type": "destroy", "targets": ["scouts"], "text": "Destroy the Skarn scouts" },
-        { "id": "rtb", "type": "reach", "navs": ["home"], "after": ["patrol", "scouts"], "text": "Return to the Bastion" }
+        {
+          "id": "patrol",
+          "type": "reach",
+          "navs": [
+            "nav1",
+            "nav2",
+            "nav3"
+          ],
+          "text": "Fly the patrol route"
+        },
+        {
+          "id": "scouts",
+          "type": "destroy",
+          "targets": [
+            "scouts"
+          ],
+          "text": "Destroy the Skarn scouts"
+        },
+        {
+          "id": "rtb",
+          "type": "reach",
+          "navs": [
+            "home"
+          ],
+          "after": [
+            "patrol",
+            "scouts"
+          ],
+          "text": "Return to the Bastion"
+        }
       ],
       "messages": [
-        { "at": 2, "from": "Bastion Control", "text": "Lancer 1, you are clear. Patrol route is on your nav display." },
-        { "spawn": "scouts", "from": "Bastion Control", "text": "Contacts near NAV 2! Three Wasps. Engage." },
-        { "after": "scouts", "from": "Bastion Control", "text": "Scopes are clean. Nice shooting, Lancer." }
+        {
+          "at": 2,
+          "from": "Bastion Control",
+          "text": "Lancer 1, you are clear. Patrol route is on your nav display."
+        },
+        {
+          "spawn": "scouts",
+          "from": "Bastion Control",
+          "text": "Contacts near NAV 2! Three Wasps. Engage."
+        },
+        {
+          "after": "scouts",
+          "from": "Bastion Control",
+          "text": "Scopes are clean. Nice shooting, Lancer."
+        }
       ],
-      "debrief": { "win": "Three scouts down and the picket line holds. The Skarn now know we are watching.", "lose": "We lost you on the patrol. Without that report, the Skarn will know exactly where the Bastion is." }
+      "debrief": {
+        "win": "Three scouts down and the picket line holds. The Skarn now know we are watching.",
+        "lose": "We lost you on the patrol. Without that report, the Skarn will know exactly where the Bastion is.",
+        "dialogue": [
+          {
+            "speaker": "Lt. Cmdr Daro Okafor",
+            "portrait": "Okafor",
+            "text": "The scout recorder contained our convoy's departure schedule. That's not something the Skarn could have guessed."
+          }
+        ]
+      }
     },
     {
       "id": 2,
@@ -61,37 +252,267 @@
           "Keep the bombers away from the cargo. Interceptors are a nuisance; Talons are the real threat."
         ],
         "steps": [
-          { "caption": "The freighters Mira and Tobin start here, heading for the gate.", "show": ["mira", "tobin"], "focus": "mira" },
-          { "caption": "The Halden jump gate, four kilometres down the lane. Once they reach it, they are safe.", "show": ["gate"], "route": ["mira", "gate"] },
-          { "caption": "Expect interceptors from the flank first, then Talon bombers going for the freighters.", "show": ["wasps1", "talons"], "focus": "talons" }
+          {
+            "caption": "The freighters Mira and Tobin start here, heading for the gate.",
+            "show": [
+              "mira",
+              "tobin"
+            ],
+            "focus": "mira"
+          },
+          {
+            "caption": "The Halden jump gate, four kilometres down the lane. Once they reach it, they are safe.",
+            "show": [
+              "gate"
+            ],
+            "route": [
+              "mira",
+              "gate"
+            ]
+          },
+          {
+            "caption": "Expect interceptors from the flank first, then Talon bombers going for the freighters.",
+            "show": [
+              "wasps1",
+              "talons"
+            ],
+            "focus": "talons"
+          }
         ],
-        "intel": ["Escort: 2x freighter (slow, unarmed)", "Hostile: Skarn Wasp interceptors, Skarn Talon bombers", "Wingman: Lancer 2"]
+        "intel": [
+          "Escort: 2x freighter (slow, unarmed)",
+          "Hostile: Skarn Wasp interceptors, Skarn Talon bombers",
+          "Wingman: Lancer 2"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "MiraCaptain",
+            "Varn"
+          ],
+          "lines": [
+            {
+              "speaker": "Captain Elara Sen",
+              "portrait": "MiraCaptain",
+              "text": "This is Elara Sen of the Mira. My crew is hauling medical filters, not guns. Whoever told the raiders our departure time knew our cargo manifest."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Escort both ships first. We can investigate the leak once they're alive to answer questions."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 2 },
-      "player": { "pos": [0, 40, 400], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 2
+      },
+      "player": {
+        "pos": [
+          0,
+          40,
+          400
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "mira", "asset": "Freighter", "team": "friend", "name": "Freighter Mira", "pos": [-120, 0, 0], "facing": [0, 0, -1], "path": [[-120, 0, -4100]], "speed": 42, "group": "convoy" },
-        { "id": "tobin", "asset": "Freighter", "team": "friend", "name": "Freighter Tobin", "pos": [120, 20, 250], "facing": [0, 0, -1], "path": [[120, 20, -3900]], "speed": 42, "group": "convoy" },
-        { "id": "gate", "asset": "JumpGate", "team": "neutral", "name": "Halden Gate", "pos": [0, 0, -4300], "facing": [0, 0, -1] }
+        {
+          "id": "mira",
+          "asset": "Freighter",
+          "team": "friend",
+          "name": "Freighter Mira",
+          "pos": [
+            -120,
+            0,
+            0
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ],
+          "path": [
+            [
+              -120,
+              0,
+              -4100
+            ]
+          ],
+          "speed": 42,
+          "group": "convoy"
+        },
+        {
+          "id": "tobin",
+          "asset": "Freighter",
+          "team": "friend",
+          "name": "Freighter Tobin",
+          "pos": [
+            120,
+            20,
+            250
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ],
+          "path": [
+            [
+              120,
+              20,
+              -3900
+            ]
+          ],
+          "speed": 42,
+          "group": "convoy"
+        },
+        {
+          "id": "gate",
+          "asset": "JumpGate",
+          "team": "neutral",
+          "name": "Halden Gate",
+          "pos": [
+            0,
+            0,
+            -4300
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ]
+        }
       ],
-      "navs": [ { "id": "gatenav", "name": "GATE", "pos": [0, 0, -4100] } ],
+      "navs": [
+        {
+          "id": "gatenav",
+          "name": "GATE",
+          "pos": [
+            0,
+            0,
+            -4100
+          ]
+        }
+      ],
       "waves": [
-        { "id": "wingman", "ship": "Executioner", "count": 1, "team": "friend", "pos": [60, 40, 450], "order": "escort:convoy", "name": "Lancer 2" },
-        { "id": "wasps1", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [-1800, 200, -1200], "spread": 150, "at": 20, "order": "attack" },
-        { "id": "talons", "ship": "Talon", "count": 2, "team": "enemy", "pos": [1600, -100, -2400], "spread": 100, "at": 50, "order": "strike:convoy" },
-        { "id": "wasps2", "ship": "Wasp", "count": 2, "team": "enemy", "pos": [0, 600, -3000], "spread": 120, "at": 80, "order": "attack" }
+        {
+          "id": "wingman",
+          "ship": "Executioner",
+          "count": 1,
+          "team": "friend",
+          "pos": [
+            60,
+            40,
+            450
+          ],
+          "order": "escort:convoy",
+          "name": "Lancer 2"
+        },
+        {
+          "id": "wasps1",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            -1800,
+            200,
+            -1200
+          ],
+          "spread": 150,
+          "at": 20,
+          "order": "attack"
+        },
+        {
+          "id": "talons",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            1600,
+            -100,
+            -2400
+          ],
+          "spread": 100,
+          "at": 50,
+          "order": "strike:convoy"
+        },
+        {
+          "id": "wasps2",
+          "ship": "Wasp",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            0,
+            600,
+            -3000
+          ],
+          "spread": 120,
+          "at": 80,
+          "order": "attack"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "Both freighters must survive" },
-        { "id": "escort", "type": "escort", "targets": ["convoy"], "navs": ["gatenav"], "text": "Escort the convoy to the gate" },
-        { "id": "bombers", "type": "destroy", "targets": ["talons"], "optional": true, "text": "Destroy the Talon bombers" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "convoy"
+          ],
+          "text": "Both freighters must survive"
+        },
+        {
+          "id": "escort",
+          "type": "escort",
+          "targets": [
+            "convoy"
+          ],
+          "navs": [
+            "gatenav"
+          ],
+          "text": "Escort the convoy to the gate"
+        },
+        {
+          "id": "bombers",
+          "type": "destroy",
+          "targets": [
+            "talons"
+          ],
+          "optional": true,
+          "text": "Destroy the Talon bombers"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Mira", "text": "Convoy under way. Glad to have you along, Lancer." },
-        { "spawn": "talons", "from": "Lancer 2", "text": "Bombers inbound on the convoy, two o'clock low!" },
-        { "after": "escort", "from": "Tobin", "text": "Gate lock. We owe you a drink, Lancer." }
+        {
+          "at": 3,
+          "from": "Mira",
+          "text": "Convoy under way. Glad to have you along, Lancer."
+        },
+        {
+          "spawn": "talons",
+          "from": "Lancer 2",
+          "text": "Bombers inbound on the convoy, two o'clock low!"
+        },
+        {
+          "after": "escort",
+          "from": "Tobin",
+          "text": "Gate lock. We owe you a drink, Lancer."
+        }
       ],
-      "debrief": { "win": "Both freighters made the jump. The fleet will eat this week.", "lose": "We lost cargo the fleet cannot replace." }
+      "debrief": {
+        "win": "Both freighters made the jump. The fleet will eat this week.",
+        "lose": "We lost cargo the fleet cannot replace.",
+        "dialogue": [
+          {
+            "speaker": "Captain Elara Sen",
+            "portrait": "MiraCaptain",
+            "text": "You saved my crew. At K-7 I heard a distress call nobody on the bridge wants to discuss. I'm coming to your briefing."
+          }
+        ]
+      }
     },
     {
       "id": 3,
@@ -101,12 +522,26 @@
         "stardate": "2716.111",
         "dialogue": {
           "room": "Bastion",
-          "cast": ["Varn", "MiraCaptain"],
-          "focus": "relay",
+          "cast": [
+            "MiraCaptain",
+            "Okafor"
+          ],
           "lines": [
-            { "portrait": "MiraCaptain", "speaker": "Mira’s captain", "text": "We heard K-7 calling for help before the bombers showed up. I asked your escort to go back." },
-            { "portrait": "Varn", "speaker": "Cmdr Ilse Varn", "text": "And I ordered them to stay with you. That’s why both your ships are here." },
-            { "portrait": "MiraCaptain", "speaker": "Mira’s captain", "text": "I know. I’m asking you to go back now." }
+            {
+              "speaker": "Captain Elara Sen",
+              "portrait": "MiraCaptain",
+              "text": "K-7 sent a distress call before the convoy attack. The voice said they were ordered to shut down their own transmitter."
+            },
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "That order carried a valid Concord command seal. Someone inside our network silenced the relay."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "First we save the relay. Then we find whose seal that was."
+            }
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
@@ -116,35 +551,198 @@
           "Hold for two and a half minutes. By then the relay will have sent its backlog and the frigate Kestrel can take over the watch."
         ],
         "steps": [
-          { "caption": "Comm relay K-7. Its core is fragile - keep the bombers off it.", "show": ["relay"], "focus": "relay" },
-          { "caption": "Bomber waves will come from different directions. Watch the scanner.", "show": ["b1", "b2", "b3"], "focus": "relay" },
-          { "caption": "Survive 150 seconds with the relay intact.", "show": ["relay", "start"] }
+          {
+            "caption": "Comm relay K-7. Its core is fragile - keep the bombers off it.",
+            "show": [
+              "relay"
+            ],
+            "focus": "relay"
+          },
+          {
+            "caption": "Bomber waves will come from different directions. Watch the scanner.",
+            "show": [
+              "b1",
+              "b2",
+              "b3"
+            ],
+            "focus": "relay"
+          },
+          {
+            "caption": "Survive 150 seconds with the relay intact.",
+            "show": [
+              "relay",
+              "start"
+            ]
+          }
         ],
-        "intel": ["Defend: Relay K-7 (one turret, fragile core)", "Hostile: 4 waves of Talon bombers with Wasp cover"]
+        "intel": [
+          "Defend: Relay K-7 (one turret, fragile core)",
+          "Hostile: 4 waves of Talon bombers with Wasp cover"
+        ]
       },
-      "loadout": { "torpedoes": 0 },
-      "player": { "pos": [0, 50, -300], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 0
+      },
+      "player": {
+        "pos": [
+          0,
+          50,
+          -300
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "relay", "asset": "CommRelay", "team": "friend", "name": "Relay K-7", "pos": [0, -40, -900], "facing": [0, 0, -1] }
+        {
+          "id": "relay",
+          "asset": "CommRelay",
+          "team": "friend",
+          "name": "Relay K-7",
+          "pos": [
+            0,
+            -40,
+            -900
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ]
+        }
       ],
       "waves": [
-        { "id": "b1", "ship": "Talon", "count": 2, "team": "enemy", "pos": [-1600, 100, -1800], "spread": 80, "at": 8, "order": "strike:relay" },
-        { "id": "c1", "ship": "Wasp", "count": 2, "team": "enemy", "pos": [-1500, 300, -1600], "spread": 80, "at": 12, "order": "attack" },
-        { "id": "b2", "ship": "Talon", "count": 3, "team": "enemy", "pos": [1700, -200, -400], "spread": 90, "at": 50, "order": "strike:relay" },
-        { "id": "b3", "ship": "Talon", "count": 2, "team": "enemy", "pos": [0, 1500, -2000], "spread": 90, "at": 90, "order": "strike:relay" },
-        { "id": "c3", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [200, 1400, -2100], "spread": 90, "at": 95, "order": "attack" },
-        { "id": "b4", "ship": "Talon", "count": 3, "team": "enemy", "pos": [-200, -1200, 300], "spread": 90, "at": 120, "order": "strike:relay" }
+        {
+          "id": "b1",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            -1600,
+            100,
+            -1800
+          ],
+          "spread": 80,
+          "at": 8,
+          "order": "strike:relay"
+        },
+        {
+          "id": "c1",
+          "ship": "Wasp",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            -1500,
+            300,
+            -1600
+          ],
+          "spread": 80,
+          "at": 12,
+          "order": "attack"
+        },
+        {
+          "id": "b2",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            1700,
+            -200,
+            -400
+          ],
+          "spread": 90,
+          "at": 50,
+          "order": "strike:relay"
+        },
+        {
+          "id": "b3",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            0,
+            1500,
+            -2000
+          ],
+          "spread": 90,
+          "at": 90,
+          "order": "strike:relay"
+        },
+        {
+          "id": "c3",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            200,
+            1400,
+            -2100
+          ],
+          "spread": 90,
+          "at": 95,
+          "order": "attack"
+        },
+        {
+          "id": "b4",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            -200,
+            -1200,
+            300
+          ],
+          "spread": 90,
+          "at": 120,
+          "order": "strike:relay"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["relay"], "text": "Keep Relay K-7 alive" },
-        { "id": "hold", "type": "survive", "seconds": 150, "text": "Hold for 150 seconds" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "relay"
+          ],
+          "text": "Keep Relay K-7 alive"
+        },
+        {
+          "id": "hold",
+          "type": "survive",
+          "seconds": 150,
+          "text": "Hold for 150 seconds"
+        }
       ],
       "messages": [
-        { "at": 2, "from": "Relay K-7", "text": "K-7 to fighter cover: transmitting backlog now. Two and a half minutes." },
-        { "spawn": "b2", "from": "Relay K-7", "text": "New bombers on scope, from starboard!" },
-        { "spawn": "b4", "from": "Relay K-7", "text": "Last wave, coming from below. Almost done!" }
+        {
+          "at": 2,
+          "from": "Relay K-7",
+          "text": "K-7 to fighter cover: transmitting backlog now. Two and a half minutes."
+        },
+        {
+          "spawn": "b2",
+          "from": "Relay K-7",
+          "text": "New bombers on scope, from starboard!"
+        },
+        {
+          "spawn": "b4",
+          "from": "Relay K-7",
+          "text": "Last wave, coming from below. Almost done!"
+        }
       ],
-      "debrief": { "win": "K-7 finished its transmission. Fleet Command knows what is happening at Kestrel.", "lose": "K-7 is gone. We are deaf and mute until it can be rebuilt." }
+      "debrief": {
+        "win": "K-7 finished its transmission. Fleet Command knows what is happening at Kestrel.",
+        "lose": "K-7 is gone. We are deaf and mute until it can be rebuilt.",
+        "dialogue": [
+          {
+            "speaker": "Lt. Cmdr Daro Okafor",
+            "portrait": "Okafor",
+            "text": "We recovered a Concord command seal in the relay logs. I'll trace its owner."
+          }
+        ]
+      }
     },
     {
       "id": 4,
@@ -159,31 +757,196 @@
           "Find it, kill it, come home."
         ],
         "steps": [
-          { "caption": "The corvette patrols a loop through the belt.", "show": ["corvette"], "route": ["corvette", "p2"], "focus": "corvette" },
-          { "caption": "Four Wasps fly escort. Thin them out or they will chase you off your attack run.", "show": ["escorts"], "focus": "corvette" },
-          { "caption": "Torpedoes: target the corvette (T) and fire (G) from inside 1.5 km.", "show": ["corvette", "start"] }
+          {
+            "caption": "The corvette patrols a loop through the belt.",
+            "show": [
+              "corvette"
+            ],
+            "route": [
+              "corvette",
+              "p2"
+            ],
+            "focus": "corvette"
+          },
+          {
+            "caption": "Four Wasps fly escort. Thin them out or they will chase you off your attack run.",
+            "show": [
+              "escorts"
+            ],
+            "focus": "corvette"
+          },
+          {
+            "caption": "Torpedoes: target the corvette (T) and fire (G) from inside 1.5 km.",
+            "show": [
+              "corvette",
+              "start"
+            ]
+          }
         ],
-        "intel": ["Target: Skarn corvette (2 turrets)", "Hostile: 4x Wasp escort", "Torpedoes home on the selected target"]
+        "intel": [
+          "Target: Skarn corvette (2 turrets)",
+          "Hostile: 4x Wasp escort",
+          "Torpedoes home on the selected target"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Okafor",
+            "Varn"
+          ],
+          "lines": [
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "The Vesk has been destroying survey drones, not ships. Every lost drone was mapping the Corvid jump corridor."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Whatever they're hiding there, we need eyes on it. Bring me the corvette's black box if you can."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 4 },
-      "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 4
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "corvette", "asset": "Corvette", "team": "enemy", "name": "Skarn Corvette Vesk", "pos": [400, 100, -3000], "facing": [-1, 0, 0], "path": [[-600, 100, -3200], [-400, 0, -4200], [600, -100, -4000], [400, 100, -3000]], "speed": 30, "loop": true }
+        {
+          "id": "corvette",
+          "asset": "Corvette",
+          "team": "enemy",
+          "name": "Skarn Corvette Vesk",
+          "pos": [
+            400,
+            100,
+            -3000
+          ],
+          "facing": [
+            -1,
+            0,
+            0
+          ],
+          "path": [
+            [
+              -600,
+              100,
+              -3200
+            ],
+            [
+              -400,
+              0,
+              -4200
+            ],
+            [
+              600,
+              -100,
+              -4000
+            ],
+            [
+              400,
+              100,
+              -3000
+            ]
+          ],
+          "speed": 30,
+          "loop": true
+        }
       ],
-      "navs": [ { "id": "p2", "name": "BELT", "pos": [-400, 0, -4200] } ],
-      "fields": [ { "type": "asteroids", "center": [0, 0, -3600], "radius": 1800, "count": 26, "seed": 4 } ],
+      "navs": [
+        {
+          "id": "p2",
+          "name": "BELT",
+          "pos": [
+            -400,
+            0,
+            -4200
+          ]
+        }
+      ],
+      "fields": [
+        {
+          "type": "asteroids",
+          "center": [
+            0,
+            0,
+            -3600
+          ],
+          "radius": 1800,
+          "count": 26,
+          "seed": 4
+        }
+      ],
       "waves": [
-        { "id": "escorts", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [400, 200, -2800], "spread": 140, "at": 0, "order": "escort:corvette" }
+        {
+          "id": "escorts",
+          "ship": "Wasp",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            400,
+            200,
+            -2800
+          ],
+          "spread": 140,
+          "at": 0,
+          "order": "escort:corvette"
+        }
       ],
       "objectives": [
-        { "id": "kill", "type": "destroy", "targets": ["corvette"], "text": "Destroy the corvette" },
-        { "id": "escorts", "type": "destroy", "targets": ["escorts"], "optional": true, "text": "Destroy its escorts" }
+        {
+          "id": "kill",
+          "type": "destroy",
+          "targets": [
+            "corvette"
+          ],
+          "text": "Destroy the corvette"
+        },
+        {
+          "id": "escorts",
+          "type": "destroy",
+          "targets": [
+            "escorts"
+          ],
+          "optional": true,
+          "text": "Destroy its escorts"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Bastion Control", "text": "Corvette is on your scope, Lancer. Good hunting." },
-        { "after": "kill", "from": "Bastion Control", "text": "Corvette destroyed! The belt is ours again." }
+        {
+          "at": 3,
+          "from": "Bastion Control",
+          "text": "Corvette is on your scope, Lancer. Good hunting."
+        },
+        {
+          "after": "kill",
+          "from": "Bastion Control",
+          "text": "Corvette destroyed! The belt is ours again."
+        }
       ],
-      "debrief": { "win": "The corvette Vesk is debris. Survey drones are flying again.", "lose": "The corvette got away, and it will be back." }
+      "debrief": {
+        "win": "The corvette Vesk is debris. Survey drones are flying again.",
+        "lose": "The corvette got away, and it will be back.",
+        "dialogue": [
+          {
+            "speaker": "Lt. Cmdr Daro Okafor",
+            "portrait": "Okafor",
+            "text": "The corvette's chart marks Tarn as a resupply point. It's in our territory."
+          }
+        ]
+      }
     },
     {
       "id": 5,
@@ -198,36 +961,271 @@
           "Destroy the contraband. The corsairs who left it may come back to collect. If they do, they are fair game."
         ],
         "steps": [
-          { "caption": "Six cargo containers drift at the yard.", "show": ["containers"], "focus": "c1" },
-          { "caption": "Scan each one by flying within 60 m of it.", "show": ["c1", "c2", "c3", "c4", "c5", "c6"], "route": ["start", "c1", "c2", "c3", "c4", "c5", "c6"] },
-          { "caption": "Expect a corsair cutter and its fighters once the scan is done.", "show": ["cutter"], "focus": "cutter" }
+          {
+            "caption": "Six cargo containers drift at the yard.",
+            "show": [
+              "containers"
+            ],
+            "focus": "c1"
+          },
+          {
+            "caption": "Scan each one by flying within 60 m of it.",
+            "show": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "route": [
+              "start",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ]
+          },
+          {
+            "caption": "Expect a corsair cutter and its fighters once the scan is done.",
+            "show": [
+              "cutter"
+            ],
+            "focus": "cutter"
+          }
         ],
-        "intel": ["Scan: 6 cargo containers", "Hostile (probable): corsair cutter, Wasp fighters", "Neutral: do not destroy clean cargo"]
+        "intel": [
+          "Scan: 6 cargo containers",
+          "Hostile (probable): corsair cutter, Wasp fighters",
+          "Neutral: do not destroy clean cargo"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Okafor",
+            "MiraCaptain"
+          ],
+          "lines": [
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "The Vesk's cargo records point to Tarn. Someone is purchasing Skarn weapons with Concord military credits."
+            },
+            {
+              "speaker": "Captain Elara Sen",
+              "portrait": "MiraCaptain",
+              "text": "I saw those container codes on my own manifests. Somebody is using legitimate freighters to move contraband."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Scan before you fire. We are not starting a war with our own civilians."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 2 },
-      "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 2
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "c1", "asset": "Container", "team": "neutral", "name": "Container 1", "pos": [-120, 10, -1400], "group": "containers", "spin": 6 },
-        { "id": "c2", "asset": "Container", "team": "neutral", "name": "Container 2", "pos": [60, -30, -1520], "group": "containers", "spin": -4 },
-        { "id": "c3", "asset": "Container", "team": "neutral", "name": "Container 3", "pos": [200, 40, -1650], "group": "containers", "spin": 5 },
-        { "id": "c4", "asset": "Container", "team": "neutral", "name": "Container 4", "pos": [-40, 80, -1780], "group": "containers", "spin": -7 },
-        { "id": "c5", "asset": "Container", "team": "neutral", "name": "Container 5", "pos": [-220, -60, -1700], "group": "containers", "spin": 3 },
-        { "id": "c6", "asset": "Container", "team": "neutral", "name": "Container 6", "pos": [110, 120, -1900], "group": "containers", "spin": 8 },
-        { "id": "cutter", "asset": "CorsairCutter", "team": "enemy", "style": "corsair", "name": "Corsair Cutter Rask", "pos": [1500, 300, -3000], "facing": [-1, 0, 1], "path": [[300, 100, -1800], [-600, 0, -1600]], "speed": 40, "loop": true, "after": "scan" }
+        {
+          "id": "c1",
+          "asset": "Container",
+          "team": "neutral",
+          "name": "Container 1",
+          "pos": [
+            -120,
+            10,
+            -1400
+          ],
+          "group": "containers",
+          "spin": 6
+        },
+        {
+          "id": "c2",
+          "asset": "Container",
+          "team": "neutral",
+          "name": "Container 2",
+          "pos": [
+            60,
+            -30,
+            -1520
+          ],
+          "group": "containers",
+          "spin": -4
+        },
+        {
+          "id": "c3",
+          "asset": "Container",
+          "team": "neutral",
+          "name": "Container 3",
+          "pos": [
+            200,
+            40,
+            -1650
+          ],
+          "group": "containers",
+          "spin": 5
+        },
+        {
+          "id": "c4",
+          "asset": "Container",
+          "team": "neutral",
+          "name": "Container 4",
+          "pos": [
+            -40,
+            80,
+            -1780
+          ],
+          "group": "containers",
+          "spin": -7
+        },
+        {
+          "id": "c5",
+          "asset": "Container",
+          "team": "neutral",
+          "name": "Container 5",
+          "pos": [
+            -220,
+            -60,
+            -1700
+          ],
+          "group": "containers",
+          "spin": 3
+        },
+        {
+          "id": "c6",
+          "asset": "Container",
+          "team": "neutral",
+          "name": "Container 6",
+          "pos": [
+            110,
+            120,
+            -1900
+          ],
+          "group": "containers",
+          "spin": 8
+        },
+        {
+          "id": "cutter",
+          "asset": "CorsairCutter",
+          "team": "enemy",
+          "style": "corsair",
+          "name": "Corsair Cutter Rask",
+          "pos": [
+            1500,
+            300,
+            -3000
+          ],
+          "facing": [
+            -1,
+            0,
+            1
+          ],
+          "path": [
+            [
+              300,
+              100,
+              -1800
+            ],
+            [
+              -600,
+              0,
+              -1600
+            ]
+          ],
+          "speed": 40,
+          "loop": true,
+          "after": "scan"
+        }
       ],
       "waves": [
-        { "id": "raiders", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [1400, 400, -2900], "spread": 100, "after": "scan", "order": "attack" }
+        {
+          "id": "raiders",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            1400,
+            400,
+            -2900
+          ],
+          "spread": 100,
+          "after": "scan",
+          "order": "attack"
+        }
       ],
       "objectives": [
-        { "id": "scan", "type": "scan", "targets": ["containers"], "range": 60, "text": "Scan all six containers" },
-        { "id": "contraband", "type": "destroy", "targets": ["c3", "c5"], "after": ["scan"], "text": "Destroy the contraband (3 and 5)" },
-        { "id": "cutter", "type": "destroy", "targets": ["cutter"], "after": ["scan"], "text": "Destroy the corsair cutter" }
+        {
+          "id": "scan",
+          "type": "scan",
+          "targets": [
+            "containers"
+          ],
+          "range": 60,
+          "text": "Scan all six containers"
+        },
+        {
+          "id": "contraband",
+          "type": "destroy",
+          "targets": [
+            "c3",
+            "c5"
+          ],
+          "after": [
+            "scan"
+          ],
+          "text": "Destroy the contraband (3 and 5)"
+        },
+        {
+          "id": "cutter",
+          "type": "destroy",
+          "targets": [
+            "cutter"
+          ],
+          "after": [
+            "scan"
+          ],
+          "text": "Destroy the corsair cutter"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Okafor", "text": "Yard is quiet. Start scanning, Lancer." },
-        { "after": "scan", "from": "Okafor", "text": "Containers 3 and 5 are full of Skarn munitions. Burn them. And - incoming cutter!" }
+        {
+          "at": 3,
+          "from": "Okafor",
+          "text": "Yard is quiet. Start scanning, Lancer."
+        },
+        {
+          "after": "scan",
+          "from": "Okafor",
+          "text": "Containers 3 and 5 are full of Skarn munitions. Burn them. And - incoming cutter!"
+        }
       ],
-      "debrief": { "win": "We cut a supply line, and the corsairs now know we are onto them.", "lose": "The contraband reached the Skarn." }
+      "debrief": {
+        "win": "We cut a supply line, and the corsairs now know we are onto them.",
+        "lose": "The contraband reached the Skarn.",
+        "dialogue": [
+          {
+            "speaker": "Captain Elara Sen",
+            "portrait": "MiraCaptain",
+            "text": "My manifest was forged by a Concord officer. I'll help identify the shipper."
+          }
+        ]
+      }
     },
     {
       "id": 6,
@@ -242,35 +1240,221 @@
           "Keep them alive. If the depot goes up while the Corla is docked, we lose both."
         ],
         "steps": [
-          { "caption": "Brenn depot, a cluster of fuel spheres.", "show": ["depot"], "focus": "depot" },
-          { "caption": "Tanker Corla, docked at the depot's spine.", "show": ["corla"], "focus": "corla" },
-          { "caption": "Raiders come in from several sides. Hold for 150 seconds.", "show": ["r1", "r2", "r3"], "focus": "depot" }
+          {
+            "caption": "Brenn depot, a cluster of fuel spheres.",
+            "show": [
+              "depot"
+            ],
+            "focus": "depot"
+          },
+          {
+            "caption": "Tanker Corla, docked at the depot's spine.",
+            "show": [
+              "corla"
+            ],
+            "focus": "corla"
+          },
+          {
+            "caption": "Raiders come in from several sides. Hold for 150 seconds.",
+            "show": [
+              "r1",
+              "r2",
+              "r3"
+            ],
+            "focus": "depot"
+          }
         ],
-        "intel": ["Defend: tanker Corla, Brenn fuel depot (2 turrets)", "Hostile: mixed Wasp and Talon raids", "Wingman: Lancer 2"]
+        "intel": [
+          "Defend: tanker Corla, Brenn fuel depot (2 turrets)",
+          "Hostile: mixed Wasp and Talon raids",
+          "Wingman: Lancer 2"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Orin",
+            "Varn"
+          ],
+          "lines": [
+            {
+              "speaker": "Chief Engineer Mae Orin",
+              "portrait": "Orin",
+              "text": "The Corla carries enough fuel to move Bastion out of this system. Without her, our fleet stays where the enemy wants it."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Hold the depot. We need the tanker more than another victory tally."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 0 },
-      "player": { "pos": [0, 80, -200], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 0
+      },
+      "player": {
+        "pos": [
+          0,
+          80,
+          -200
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "depot", "asset": "FuelDepot", "team": "friend", "name": "Brenn Depot", "pos": [0, 0, -1300], "facing": [0, 0, -1], "spin": 2 },
-        { "id": "corla", "asset": "Tanker", "team": "friend", "name": "Tanker Corla", "pos": [0, 40, -1100], "facing": [0, 0, -1] }
+        {
+          "id": "depot",
+          "asset": "FuelDepot",
+          "team": "friend",
+          "name": "Brenn Depot",
+          "pos": [
+            0,
+            0,
+            -1300
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ],
+          "spin": 2
+        },
+        {
+          "id": "corla",
+          "asset": "Tanker",
+          "team": "friend",
+          "name": "Tanker Corla",
+          "pos": [
+            0,
+            40,
+            -1100
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ]
+        }
       ],
       "waves": [
-        { "id": "wingman", "ship": "Executioner", "count": 1, "team": "friend", "pos": [60, 80, -150], "order": "escort:corla", "name": "Lancer 2" },
-        { "id": "r1", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [-1700, 0, -1500], "spread": 100, "at": 10, "order": "attack" },
-        { "id": "r2", "ship": "Talon", "count": 3, "team": "enemy", "pos": [1500, 200, -2400], "spread": 100, "at": 45, "order": "strike:corla" },
-        { "id": "r3", "ship": "Talon", "count": 2, "team": "enemy", "pos": [0, -1500, -800], "spread": 100, "at": 95, "order": "strike:depot" },
-        { "id": "r4", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, -1400, -900], "spread": 100, "at": 100, "order": "attack" }
+        {
+          "id": "wingman",
+          "ship": "Executioner",
+          "count": 1,
+          "team": "friend",
+          "pos": [
+            60,
+            80,
+            -150
+          ],
+          "order": "escort:corla",
+          "name": "Lancer 2"
+        },
+        {
+          "id": "r1",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            -1700,
+            0,
+            -1500
+          ],
+          "spread": 100,
+          "at": 10,
+          "order": "attack"
+        },
+        {
+          "id": "r2",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            1500,
+            200,
+            -2400
+          ],
+          "spread": 100,
+          "at": 45,
+          "order": "strike:corla"
+        },
+        {
+          "id": "r3",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            0,
+            -1500,
+            -800
+          ],
+          "spread": 100,
+          "at": 95,
+          "order": "strike:depot"
+        },
+        {
+          "id": "r4",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            0,
+            -1400,
+            -900
+          ],
+          "spread": 100,
+          "at": 100,
+          "order": "attack"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["corla", "depot"], "text": "Protect the Corla and the depot" },
-        { "id": "hold", "type": "survive", "seconds": 150, "text": "Hold until refuelling is done" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "corla",
+            "depot"
+          ],
+          "text": "Protect the Corla and the depot"
+        },
+        {
+          "id": "hold",
+          "type": "survive",
+          "seconds": 150,
+          "text": "Hold until refuelling is done"
+        }
       ],
       "messages": [
-        { "at": 2, "from": "Corla", "text": "Hose connected. Keep them off us for a few minutes." },
-        { "at": 75, "from": "Corla", "text": "Halfway there." },
-        { "after": "hold", "from": "Corla", "text": "Tanks full, undocking. Thanks, Lancer." }
+        {
+          "at": 2,
+          "from": "Corla",
+          "text": "Hose connected. Keep them off us for a few minutes."
+        },
+        {
+          "at": 75,
+          "from": "Corla",
+          "text": "Halfway there."
+        },
+        {
+          "after": "hold",
+          "from": "Corla",
+          "text": "Tanks full, undocking. Thanks, Lancer."
+        }
       ],
-      "debrief": { "win": "The Corla is fuelled and on its way to the fleet.", "lose": "Brenn depot burned. The fleet will be rationing fuel." }
+      "debrief": {
+        "win": "The Corla is fuelled and on its way to the fleet.",
+        "lose": "Brenn depot burned. The fleet will be rationing fuel.",
+        "dialogue": [
+          {
+            "speaker": "Chief Engineer Mae Orin",
+            "portrait": "Orin",
+            "text": "We have fuel to move. The next convoy won't be so lucky unless we learn where the raiders keep coming from."
+          }
+        ]
+      }
     },
     {
       "id": 7,
@@ -285,39 +1469,274 @@
           "Skarn fighters are hunting the pods. Get there first."
         ],
         "steps": [
-          { "caption": "Hospital ship Mercy, waiting for the survivors.", "show": ["mercy"], "focus": "mercy" },
-          { "caption": "Five escape pods are scattered around the wreck site.", "show": ["pods"], "focus": "pod3" },
-          { "caption": "Fly within 30 m of a pod to pick it up.", "show": ["pod1", "pod2", "pod3", "pod4", "pod5"], "route": ["start", "pod1", "pod2", "pod3", "pod4", "pod5"] },
-          { "caption": "Later, bombers will go for the Mercy itself. Do not let her be hit.", "show": ["bombers", "mercy"], "focus": "mercy" }
+          {
+            "caption": "Hospital ship Mercy, waiting for the survivors.",
+            "show": [
+              "mercy"
+            ],
+            "focus": "mercy"
+          },
+          {
+            "caption": "Five escape pods are scattered around the wreck site.",
+            "show": [
+              "pods"
+            ],
+            "focus": "pod3"
+          },
+          {
+            "caption": "Fly within 30 m of a pod to pick it up.",
+            "show": [
+              "pod1",
+              "pod2",
+              "pod3",
+              "pod4",
+              "pod5"
+            ],
+            "route": [
+              "start",
+              "pod1",
+              "pod2",
+              "pod3",
+              "pod4",
+              "pod5"
+            ]
+          },
+          {
+            "caption": "Later, bombers will go for the Mercy itself. Do not let her be hit.",
+            "show": [
+              "bombers",
+              "mercy"
+            ],
+            "focus": "mercy"
+          }
         ],
-        "intel": ["Rescue: 5 escape pods", "Defend: hospital ship Mercy (unarmed)", "Hostile: Wasp hunters, then Talon bombers"]
+        "intel": [
+          "Rescue: 5 escape pods",
+          "Defend: hospital ship Mercy (unarmed)",
+          "Hostile: Wasp hunters, then Talon bombers"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Imani",
+            "Okafor"
+          ],
+          "lines": [
+            {
+              "speaker": "Dr. Sera Imani",
+              "portrait": "Imani",
+              "text": "The Ondine's escape pods are broadcasting a medical priority. One passenger is carrying a stolen intelligence core."
+            },
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "Forget the core until the pods are safe. Survivors are not evidence to be collected."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Bring every pod home. Every one."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 0 },
-      "player": { "pos": [0, 0, -200], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 0
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          -200
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "mercy", "asset": "HospitalShip", "team": "friend", "name": "Hospital Ship Mercy", "pos": [0, -40, -700], "facing": [1, 0, -1] },
-        { "id": "pod1", "asset": "EscapePod", "team": "neutral", "name": "Pod 1", "pos": [-900, 120, -1800], "group": "pods", "spin": 20 },
-        { "id": "pod2", "asset": "EscapePod", "team": "neutral", "name": "Pod 2", "pos": [-300, -200, -2500], "group": "pods", "spin": -25 },
-        { "id": "pod3", "asset": "EscapePod", "team": "neutral", "name": "Pod 3", "pos": [500, 300, -2900], "group": "pods", "spin": 15 },
-        { "id": "pod4", "asset": "EscapePod", "team": "neutral", "name": "Pod 4", "pos": [1300, 0, -2100], "group": "pods", "spin": -18 },
-        { "id": "pod5", "asset": "EscapePod", "team": "neutral", "name": "Pod 5", "pos": [1500, -250, -1100], "group": "pods", "spin": 22 }
+        {
+          "id": "mercy",
+          "asset": "HospitalShip",
+          "team": "friend",
+          "name": "Hospital Ship Mercy",
+          "pos": [
+            0,
+            -40,
+            -700
+          ],
+          "facing": [
+            1,
+            0,
+            -1
+          ]
+        },
+        {
+          "id": "pod1",
+          "asset": "EscapePod",
+          "team": "neutral",
+          "name": "Pod 1",
+          "pos": [
+            -900,
+            120,
+            -1800
+          ],
+          "group": "pods",
+          "spin": 20
+        },
+        {
+          "id": "pod2",
+          "asset": "EscapePod",
+          "team": "neutral",
+          "name": "Pod 2",
+          "pos": [
+            -300,
+            -200,
+            -2500
+          ],
+          "group": "pods",
+          "spin": -25
+        },
+        {
+          "id": "pod3",
+          "asset": "EscapePod",
+          "team": "neutral",
+          "name": "Pod 3",
+          "pos": [
+            500,
+            300,
+            -2900
+          ],
+          "group": "pods",
+          "spin": 15
+        },
+        {
+          "id": "pod4",
+          "asset": "EscapePod",
+          "team": "neutral",
+          "name": "Pod 4",
+          "pos": [
+            1300,
+            0,
+            -2100
+          ],
+          "group": "pods",
+          "spin": -18
+        },
+        {
+          "id": "pod5",
+          "asset": "EscapePod",
+          "team": "neutral",
+          "name": "Pod 5",
+          "pos": [
+            1500,
+            -250,
+            -1100
+          ],
+          "group": "pods",
+          "spin": 22
+        }
       ],
-      "fields": [ { "type": "asteroids", "center": [200, 0, -2300], "radius": 900, "count": 8, "seed": 7, "small": true } ],
+      "fields": [
+        {
+          "type": "asteroids",
+          "center": [
+            200,
+            0,
+            -2300
+          ],
+          "radius": 900,
+          "count": 8,
+          "seed": 7,
+          "small": true
+        }
+      ],
       "waves": [
-        { "id": "hunters", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [200, 400, -3800], "spread": 150, "at": 15, "order": "strike:pods" },
-        { "id": "bombers", "ship": "Talon", "count": 3, "team": "enemy", "pos": [-1800, 0, 400], "spread": 100, "at": 70, "order": "strike:mercy" }
+        {
+          "id": "hunters",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            200,
+            400,
+            -3800
+          ],
+          "spread": 150,
+          "at": 15,
+          "order": "strike:pods"
+        },
+        {
+          "id": "bombers",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            -1800,
+            0,
+            400
+          ],
+          "spread": 100,
+          "at": 70,
+          "order": "strike:mercy"
+        }
       ],
       "objectives": [
-        { "id": "rescue", "type": "collect", "targets": ["pods"], "range": 30, "text": "Pick up the escape pods" },
-        { "id": "protect", "type": "protect", "targets": ["mercy"], "text": "Protect the Mercy" },
-        { "id": "pods", "type": "protect", "targets": ["pods"], "text": "Don't let the pods be destroyed" }
+        {
+          "id": "rescue",
+          "type": "collect",
+          "targets": [
+            "pods"
+          ],
+          "range": 30,
+          "text": "Pick up the escape pods"
+        },
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "mercy"
+          ],
+          "text": "Protect the Mercy"
+        },
+        {
+          "id": "pods",
+          "type": "protect",
+          "targets": [
+            "pods"
+          ],
+          "text": "Don't let the pods be destroyed"
+        }
       ],
       "messages": [
-        { "at": 2, "from": "Mercy", "text": "Beacons are on your scope, Lancer. Please hurry." },
-        { "spawn": "hunters", "from": "Mercy", "text": "Skarn fighters going for the pods!" },
-        { "spawn": "bombers", "from": "Mercy", "text": "Bombers on our tail! Help!" }
+        {
+          "at": 2,
+          "from": "Mercy",
+          "text": "Beacons are on your scope, Lancer. Please hurry."
+        },
+        {
+          "spawn": "hunters",
+          "from": "Mercy",
+          "text": "Skarn fighters going for the pods!"
+        },
+        {
+          "spawn": "bombers",
+          "from": "Mercy",
+          "text": "Bombers on our tail! Help!"
+        }
       ],
-      "debrief": { "win": "All of the Ondine's crew are aboard the Mercy. Every one of them.", "lose": "We did not get everyone out." }
+      "debrief": {
+        "win": "All of the Ondine's crew are aboard the Mercy. Every one of them.",
+        "lose": "We did not get everyone out.",
+        "dialogue": [
+          {
+            "speaker": "Juno Vale",
+            "portrait": "Juno",
+            "text": "You came back for us. I saw the cargo logs before the Ondine exploded. Let me show your scientists what was aboard."
+          }
+        ]
+      }
     },
     {
       "id": 8,
@@ -332,35 +1751,233 @@
           "Corsairs like to hide in fields like this. Watch the rocks."
         ],
         "steps": [
-          { "caption": "Survey ship Halcyon, with its big sensor dish.", "show": ["halcyon"], "focus": "halcyon" },
-          { "caption": "Her path runs through the Corvid field to the survey point.", "show": ["survey"], "route": ["halcyon", "survey"] },
-          { "caption": "Corsair ambushers are likely waiting in the rocks near the middle.", "show": ["ambush1"], "focus": "survey" }
+          {
+            "caption": "Survey ship Halcyon, with its big sensor dish.",
+            "show": [
+              "halcyon"
+            ],
+            "focus": "halcyon"
+          },
+          {
+            "caption": "Her path runs through the Corvid field to the survey point.",
+            "show": [
+              "survey"
+            ],
+            "route": [
+              "halcyon",
+              "survey"
+            ]
+          },
+          {
+            "caption": "Corsair ambushers are likely waiting in the rocks near the middle.",
+            "show": [
+              "ambush1"
+            ],
+            "focus": "survey"
+          }
         ],
-        "intel": ["Escort: survey ship Halcyon", "Hazard: dense asteroid field - collisions hurt", "Hostile: corsair Wasp fighters"]
+        "intel": [
+          "Escort: survey ship Halcyon",
+          "Hazard: dense asteroid field - collisions hurt",
+          "Hostile: corsair Wasp fighters"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Juno",
+            "Imani"
+          ],
+          "lines": [
+            {
+              "speaker": "Juno Vale",
+              "portrait": "Juno",
+              "text": "I was on the Ondine. Our cargo wasn't weapons. It was gate calibration equipment, marked for destruction. Somebody wanted it hidden."
+            },
+            {
+              "speaker": "Dr. Sera Imani",
+              "portrait": "Imani",
+              "text": "Those calibrators can turn a jump gate into a resonant transmitter. The Corvid field is the ideal place to test one."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Escort the Halcyon. Let's see what the field is concealing."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 0 },
-      "player": { "pos": [0, 60, 300], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 0
+      },
+      "player": {
+        "pos": [
+          0,
+          60,
+          300
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "halcyon", "asset": "ResearchVessel", "team": "friend", "name": "Survey Ship Halcyon", "pos": [0, 0, 0], "facing": [0, 0, -1], "path": [[200, 100, -1600], [0, 0, -3400]], "speed": 38 }
+        {
+          "id": "halcyon",
+          "asset": "ResearchVessel",
+          "team": "friend",
+          "name": "Survey Ship Halcyon",
+          "pos": [
+            0,
+            0,
+            0
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ],
+          "path": [
+            [
+              200,
+              100,
+              -1600
+            ],
+            [
+              0,
+              0,
+              -3400
+            ]
+          ],
+          "speed": 38
+        }
       ],
-      "navs": [ { "id": "survey", "name": "SURVEY POINT", "pos": [0, 0, -3400] } ],
-      "fields": [ { "type": "asteroids", "center": [0, 0, -2000], "radius": 1600, "count": 55, "seed": 8 } ],
+      "navs": [
+        {
+          "id": "survey",
+          "name": "SURVEY POINT",
+          "pos": [
+            0,
+            0,
+            -3400
+          ]
+        }
+      ],
+      "fields": [
+        {
+          "type": "asteroids",
+          "center": [
+            0,
+            0,
+            -2000
+          ],
+          "radius": 1600,
+          "count": 55,
+          "seed": 8
+        }
+      ],
       "waves": [
-        { "id": "ambush1", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [-800, 0, -1700], "spread": 100, "at": 25, "order": "strike:halcyon" },
-        { "id": "ambush2", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [700, 200, -2600], "spread": 100, "at": 60, "order": "attack" },
-        { "id": "ambush3", "ship": "Talon", "count": 2, "team": "enemy", "pos": [0, 800, -3800], "spread": 100, "after": "escort", "order": "strike:halcyon" }
+        {
+          "id": "ambush1",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            -800,
+            0,
+            -1700
+          ],
+          "spread": 100,
+          "at": 25,
+          "order": "strike:halcyon"
+        },
+        {
+          "id": "ambush2",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            700,
+            200,
+            -2600
+          ],
+          "spread": 100,
+          "at": 60,
+          "order": "attack"
+        },
+        {
+          "id": "ambush3",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            0,
+            800,
+            -3800
+          ],
+          "spread": 100,
+          "after": "escort",
+          "order": "strike:halcyon"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["halcyon"], "text": "Protect the Halcyon" },
-        { "id": "escort", "type": "escort", "targets": ["halcyon"], "navs": ["survey"], "text": "Escort her to the survey point" },
-        { "id": "survey", "type": "survive", "seconds": 40, "after": ["escort"], "text": "Cover the survey (40 s)" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "halcyon"
+          ],
+          "text": "Protect the Halcyon"
+        },
+        {
+          "id": "escort",
+          "type": "escort",
+          "targets": [
+            "halcyon"
+          ],
+          "navs": [
+            "survey"
+          ],
+          "text": "Escort her to the survey point"
+        },
+        {
+          "id": "survey",
+          "type": "survive",
+          "seconds": 40,
+          "after": [
+            "escort"
+          ],
+          "text": "Cover the survey (40 s)"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Halcyon", "text": "Entering the field. Please keep the rocks and the corsairs off us." },
-        { "after": "escort", "from": "Halcyon", "text": "On station. Starting deep scan." },
-        { "after": "survey", "from": "Okafor", "text": "That is a shipyard. A Skarn shipyard, inside our space." }
+        {
+          "at": 3,
+          "from": "Halcyon",
+          "text": "Entering the field. Please keep the rocks and the corsairs off us."
+        },
+        {
+          "after": "escort",
+          "from": "Halcyon",
+          "text": "On station. Starting deep scan."
+        },
+        {
+          "after": "survey",
+          "from": "Okafor",
+          "text": "That is a shipyard. A Skarn shipyard, inside our space."
+        }
       ],
-      "debrief": { "win": "The Halcyon's scan found a Skarn shipyard hidden behind the field. That changes everything.", "lose": "The Halcyon is lost, and with her whatever is hiding in Corvid." }
+      "debrief": {
+        "win": "The Halcyon's scan found a Skarn shipyard hidden behind the field. That changes everything.",
+        "lose": "The Halcyon is lost, and with her whatever is hiding in Corvid.",
+        "dialogue": [
+          {
+            "speaker": "Dr. Sera Imani",
+            "portrait": "Imani",
+            "text": "We found the shipyard. More important, there's a gate transmitter inside the unfinished hull."
+          }
+        ]
+      }
     },
     {
       "id": 9,
@@ -375,30 +1992,175 @@
           "The minelayer is still working at the far end. Kill it before it lays any more, then clear every mine."
         ],
         "steps": [
-          { "caption": "The jump corridor, full of mines.", "show": ["mines"], "focus": "mines" },
-          { "caption": "The minelayer is at the far end, still laying.", "show": ["layer"], "focus": "layer" },
-          { "caption": "Mines explode when anything comes within 60 m. Shoot them from range.", "show": ["mines", "start"] }
+          {
+            "caption": "The jump corridor, full of mines.",
+            "show": [
+              "mines"
+            ],
+            "focus": "mines"
+          },
+          {
+            "caption": "The minelayer is at the far end, still laying.",
+            "show": [
+              "layer"
+            ],
+            "focus": "layer"
+          },
+          {
+            "caption": "Mines explode when anything comes within 60 m. Shoot them from range.",
+            "show": [
+              "mines",
+              "start"
+            ]
+          }
         ],
-        "intel": ["Target: Skarn minelayer (1 turret)", "Hazard: 16 proximity mines", "Hostile: 2x Wasp escort"]
+        "intel": [
+          "Target: Skarn minelayer (1 turret)",
+          "Hazard: 16 proximity mines",
+          "Hostile: 2x Wasp escort"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Orin",
+            "Okafor"
+          ],
+          "lines": [
+            {
+              "speaker": "Chief Engineer Mae Orin",
+              "portrait": "Orin",
+              "text": "The mine pattern matches an old Concord exclusion diagram. The Skarn shouldn't have access to our own deployment grid."
+            },
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "Someone has been feeding them our routes. Clear the corridor so Bastion can move before the next betrayal."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 2 },
-      "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 2
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "layer", "asset": "Minelayer", "team": "enemy", "name": "Skarn Minelayer", "pos": [0, 0, -3600], "facing": [1, 0, 0], "path": [[600, 0, -3600], [-600, 0, -3600]], "speed": 15, "loop": true }
+        {
+          "id": "layer",
+          "asset": "Minelayer",
+          "team": "enemy",
+          "name": "Skarn Minelayer",
+          "pos": [
+            0,
+            0,
+            -3600
+          ],
+          "facing": [
+            1,
+            0,
+            0
+          ],
+          "path": [
+            [
+              600,
+              0,
+              -3600
+            ],
+            [
+              -600,
+              0,
+              -3600
+            ]
+          ],
+          "speed": 15,
+          "loop": true
+        }
       ],
-      "fields": [ { "type": "mines", "group": "mines", "center": [0, 0, -2000], "size": [800, 400, 1600], "count": 16, "seed": 9 } ],
+      "fields": [
+        {
+          "type": "mines",
+          "group": "mines",
+          "center": [
+            0,
+            0,
+            -2000
+          ],
+          "size": [
+            800,
+            400,
+            1600
+          ],
+          "count": 16,
+          "seed": 9
+        }
+      ],
       "waves": [
-        { "id": "guards", "ship": "Wasp", "count": 2, "team": "enemy", "pos": [0, 200, -3400], "spread": 80, "at": 0, "order": "escort:layer" }
+        {
+          "id": "guards",
+          "ship": "Wasp",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            0,
+            200,
+            -3400
+          ],
+          "spread": 80,
+          "at": 0,
+          "order": "escort:layer"
+        }
       ],
       "objectives": [
-        { "id": "layer", "type": "destroy", "targets": ["layer"], "text": "Destroy the minelayer" },
-        { "id": "mines", "type": "destroy", "targets": ["mines"], "text": "Clear all mines" }
+        {
+          "id": "layer",
+          "type": "destroy",
+          "targets": [
+            "layer"
+          ],
+          "text": "Destroy the minelayer"
+        },
+        {
+          "id": "mines",
+          "type": "destroy",
+          "targets": [
+            "mines"
+          ],
+          "text": "Clear all mines"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Bastion Control", "text": "Mines on your scope. Keep your distance, Lancer." },
-        { "after": "mines", "from": "Bastion Control", "text": "Corridor clear. The Bastion is moving." }
+        {
+          "at": 3,
+          "from": "Bastion Control",
+          "text": "Mines on your scope. Keep your distance, Lancer."
+        },
+        {
+          "after": "mines",
+          "from": "Bastion Control",
+          "text": "Corridor clear. The Bastion is moving."
+        }
       ],
-      "debrief": { "win": "The corridor is clear and the Bastion moved to the new anchorage.", "lose": "The corridor is still mined. The Bastion is trapped." }
+      "debrief": {
+        "win": "The corridor is clear and the Bastion moved to the new anchorage.",
+        "lose": "The corridor is still mined. The Bastion is trapped.",
+        "dialogue": [
+          {
+            "speaker": "Lt. Cmdr Daro Okafor",
+            "portrait": "Okafor",
+            "text": "Every mine location matched a leaked Concord chart. I have narrowed the leak to the Directorate."
+          }
+        ]
+      }
     },
     {
       "id": 10,
@@ -413,33 +2175,246 @@
           "Lancer 2 and 3 are with you."
         ],
         "steps": [
-          { "caption": "CNS Kestrel, already damaged and drifting.", "show": ["kestrel"], "focus": "kestrel" },
-          { "caption": "Two Skarn corvettes are attacking her from the flanks.", "show": ["cv1", "cv2"], "focus": "kestrel" },
-          { "caption": "Destroy both corvettes, and keep the Kestrel alive.", "show": ["cv1", "cv2", "kestrel", "start"] }
+          {
+            "caption": "CNS Kestrel, already damaged and drifting.",
+            "show": [
+              "kestrel"
+            ],
+            "focus": "kestrel"
+          },
+          {
+            "caption": "Two Skarn corvettes are attacking her from the flanks.",
+            "show": [
+              "cv1",
+              "cv2"
+            ],
+            "focus": "kestrel"
+          },
+          {
+            "caption": "Destroy both corvettes, and keep the Kestrel alive.",
+            "show": [
+              "cv1",
+              "cv2",
+              "kestrel",
+              "start"
+            ]
+          }
         ],
-        "intel": ["Defend: CNS Kestrel, frigate (damaged, 4 turrets)", "Targets: 2x Skarn corvette", "Wingmen: Lancer 2, Lancer 3"]
+        "intel": [
+          "Defend: CNS Kestrel, frigate (damaged, 4 turrets)",
+          "Targets: 2x Skarn corvette",
+          "Wingmen: Lancer 2, Lancer 3"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Rhea",
+            "Varn"
+          ],
+          "lines": [
+            {
+              "speaker": "Captain Rhea Sol",
+              "portrait": "Rhea",
+              "text": "Kestrel here. We tracked a forged evacuation order to a Concord relay, and two corvettes came to erase us."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Save the frigate. Her crew can tell us who issued the order."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 4 },
-      "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 4
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "kestrel", "asset": "Frigate", "team": "friend", "name": "CNS Kestrel", "pos": [0, 0, -1600], "facing": [1, 0, -0.3], "hullFraction": 0.55 },
-        { "id": "cv1", "asset": "Corvette", "team": "enemy", "name": "Skarn Corvette Ruun", "pos": [-700, 100, -2200], "facing": [1, 0, 0.6], "path": [[-400, 100, -1900], [-600, -100, -1300], [-700, 100, -2200]], "speed": 25, "loop": true },
-        { "id": "cv2", "asset": "Corvette", "team": "enemy", "name": "Skarn Corvette Ilk", "pos": [800, -80, -2100], "facing": [-1, 0, 0.5], "path": [[500, 0, -1800], [700, 200, -1200], [800, -80, -2100]], "speed": 25, "loop": true }
+        {
+          "id": "kestrel",
+          "asset": "Frigate",
+          "team": "friend",
+          "name": "CNS Kestrel",
+          "pos": [
+            0,
+            0,
+            -1600
+          ],
+          "facing": [
+            1,
+            0,
+            -0.3
+          ],
+          "hullFraction": 0.55
+        },
+        {
+          "id": "cv1",
+          "asset": "Corvette",
+          "team": "enemy",
+          "name": "Skarn Corvette Ruun",
+          "pos": [
+            -700,
+            100,
+            -2200
+          ],
+          "facing": [
+            1,
+            0,
+            0.6
+          ],
+          "path": [
+            [
+              -400,
+              100,
+              -1900
+            ],
+            [
+              -600,
+              -100,
+              -1300
+            ],
+            [
+              -700,
+              100,
+              -2200
+            ]
+          ],
+          "speed": 25,
+          "loop": true
+        },
+        {
+          "id": "cv2",
+          "asset": "Corvette",
+          "team": "enemy",
+          "name": "Skarn Corvette Ilk",
+          "pos": [
+            800,
+            -80,
+            -2100
+          ],
+          "facing": [
+            -1,
+            0,
+            0.5
+          ],
+          "path": [
+            [
+              500,
+              0,
+              -1800
+            ],
+            [
+              700,
+              200,
+              -1200
+            ],
+            [
+              800,
+              -80,
+              -2100
+            ]
+          ],
+          "speed": 25,
+          "loop": true
+        }
       ],
       "waves": [
-        { "id": "wing", "ship": "Executioner", "count": 2, "team": "friend", "pos": [80, 30, 100], "spread": 60, "order": "attack", "name": "Lancer" },
-        { "id": "screen", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, 300, -2600], "spread": 120, "at": 0, "order": "attack" },
-        { "id": "talons", "ship": "Talon", "count": 2, "team": "enemy", "pos": [0, -900, -2900], "spread": 100, "at": 50, "order": "strike:kestrel" }
+        {
+          "id": "wing",
+          "ship": "Executioner",
+          "count": 2,
+          "team": "friend",
+          "pos": [
+            80,
+            30,
+            100
+          ],
+          "spread": 60,
+          "order": "attack",
+          "name": "Lancer"
+        },
+        {
+          "id": "screen",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            0,
+            300,
+            -2600
+          ],
+          "spread": 120,
+          "at": 0,
+          "order": "attack"
+        },
+        {
+          "id": "talons",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            0,
+            -900,
+            -2900
+          ],
+          "spread": 100,
+          "at": 50,
+          "order": "strike:kestrel"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["kestrel"], "text": "Keep the Kestrel alive" },
-        { "id": "corvettes", "type": "destroy", "targets": ["cv1", "cv2"], "text": "Destroy both corvettes" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "kestrel"
+          ],
+          "text": "Keep the Kestrel alive"
+        },
+        {
+          "id": "corvettes",
+          "type": "destroy",
+          "targets": [
+            "cv1",
+            "cv2"
+          ],
+          "text": "Destroy both corvettes"
+        }
       ],
       "messages": [
-        { "at": 2, "from": "CNS Kestrel", "text": "Kestrel to any Concord fighter - we are losing shields, please hurry!" },
-        { "after": "corvettes", "from": "CNS Kestrel", "text": "That was the last of them. Thank you, Lancer." }
+        {
+          "at": 2,
+          "from": "CNS Kestrel",
+          "text": "Kestrel to any Concord fighter - we are losing shields, please hurry!"
+        },
+        {
+          "after": "corvettes",
+          "from": "CNS Kestrel",
+          "text": "That was the last of them. Thank you, Lancer."
+        }
       ],
-      "debrief": { "win": "The Kestrel limped home. She will fly again.", "lose": "The Kestrel is lost with most of her crew." }
+      "debrief": {
+        "win": "The Kestrel limped home. She will fly again.",
+        "lose": "The Kestrel is lost with most of her crew.",
+        "dialogue": [
+          {
+            "speaker": "Captain Rhea Sol",
+            "portrait": "Rhea",
+            "text": "Someone wanted the Kestrel silenced before she reached you. We brought their signed orders."
+          }
+        ]
+      }
     },
     {
       "id": 11,
@@ -454,35 +2429,227 @@
           "Lancer 2 and 3 are with you. Do not let them hit the ring."
         ],
         "steps": [
-          { "caption": "Tannhal station: a rotating ring with a central hub. Its own turrets will help.", "show": ["ring"], "focus": "ring" },
-          { "caption": "Wave one: interceptors to clear the way.", "show": ["w1"], "focus": "ring" },
-          { "caption": "Wave two: Talon bombers going for the station.", "show": ["w2"], "focus": "ring" },
-          { "caption": "Wave three: a corvette with more bombers. Kill it before it gets close.", "show": ["cv", "w3"], "focus": "cv" }
+          {
+            "caption": "Tannhal station: a rotating ring with a central hub. Its own turrets will help.",
+            "show": [
+              "ring"
+            ],
+            "focus": "ring"
+          },
+          {
+            "caption": "Wave one: interceptors to clear the way.",
+            "show": [
+              "w1"
+            ],
+            "focus": "ring"
+          },
+          {
+            "caption": "Wave two: Talon bombers going for the station.",
+            "show": [
+              "w2"
+            ],
+            "focus": "ring"
+          },
+          {
+            "caption": "Wave three: a corvette with more bombers. Kill it before it gets close.",
+            "show": [
+              "cv",
+              "w3"
+            ],
+            "focus": "cv"
+          }
         ],
-        "intel": ["Defend: Tannhal orbital ring (6 turrets)", "Hostile: 3 waves - Wasps, Talons, corvette + Talons", "Wingmen: Lancer 2, Lancer 3"]
+        "intel": [
+          "Defend: Tannhal orbital ring (6 turrets)",
+          "Hostile: 3 waves - Wasps, Talons, corvette + Talons",
+          "Wingmen: Lancer 2, Lancer 3"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Juno",
+            "Imani"
+          ],
+          "lines": [
+            {
+              "speaker": "Juno Vale",
+              "portrait": "Juno",
+              "text": "Tannhal's ring station has a resonance array beneath its civilian docks. The plans say it was decommissioned."
+            },
+            {
+              "speaker": "Dr. Sera Imani",
+              "portrait": "Imani",
+              "text": "If that array fires with the Corvid device, the jump lanes could collapse with every ship inside."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Forty thousand people live there. Hold the ring. We will find the machine later."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 3 },
-      "player": { "pos": [0, 100, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 3
+      },
+      "player": {
+        "pos": [
+          0,
+          100,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "ring", "asset": "RingStation", "team": "friend", "name": "Tannhal Station", "pos": [0, -100, -1500], "spin": 1.5 },
-        { "id": "cv", "asset": "Corvette", "team": "enemy", "name": "Skarn Corvette Harrow", "pos": [2500, 300, -3500], "facing": [-1, 0, 0.6], "path": [[600, 100, -1700]], "speed": 35, "at": 120 }
+        {
+          "id": "ring",
+          "asset": "RingStation",
+          "team": "friend",
+          "name": "Tannhal Station",
+          "pos": [
+            0,
+            -100,
+            -1500
+          ],
+          "spin": 1.5
+        },
+        {
+          "id": "cv",
+          "asset": "Corvette",
+          "team": "enemy",
+          "name": "Skarn Corvette Harrow",
+          "pos": [
+            2500,
+            300,
+            -3500
+          ],
+          "facing": [
+            -1,
+            0,
+            0.6
+          ],
+          "path": [
+            [
+              600,
+              100,
+              -1700
+            ]
+          ],
+          "speed": 35,
+          "at": 120
+        }
       ],
       "waves": [
-        { "id": "wing", "ship": "Executioner", "count": 2, "team": "friend", "pos": [80, 120, 100], "spread": 60, "order": "attack", "name": "Lancer" },
-        { "id": "w1", "ship": "Wasp", "count": 5, "team": "enemy", "pos": [-2000, 200, -2500], "spread": 150, "at": 10, "order": "attack" },
-        { "id": "w2", "ship": "Talon", "count": 4, "team": "enemy", "pos": [1800, -300, -500], "spread": 120, "at": 60, "order": "strike:ring" },
-        { "id": "w3", "ship": "Talon", "count": 3, "team": "enemy", "pos": [2400, 400, -3300], "spread": 120, "at": 120, "order": "strike:ring" }
+        {
+          "id": "wing",
+          "ship": "Executioner",
+          "count": 2,
+          "team": "friend",
+          "pos": [
+            80,
+            120,
+            100
+          ],
+          "spread": 60,
+          "order": "attack",
+          "name": "Lancer"
+        },
+        {
+          "id": "w1",
+          "ship": "Wasp",
+          "count": 5,
+          "team": "enemy",
+          "pos": [
+            -2000,
+            200,
+            -2500
+          ],
+          "spread": 150,
+          "at": 10,
+          "order": "attack"
+        },
+        {
+          "id": "w2",
+          "ship": "Talon",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            1800,
+            -300,
+            -500
+          ],
+          "spread": 120,
+          "at": 60,
+          "order": "strike:ring"
+        },
+        {
+          "id": "w3",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            2400,
+            400,
+            -3300
+          ],
+          "spread": 120,
+          "at": 120,
+          "order": "strike:ring"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["ring"], "text": "Protect Tannhal station" },
-        { "id": "waves", "type": "destroy", "targets": ["w1", "w2", "w3", "cv"], "text": "Destroy all three attack waves" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "ring"
+          ],
+          "text": "Protect Tannhal station"
+        },
+        {
+          "id": "waves",
+          "type": "destroy",
+          "targets": [
+            "w1",
+            "w2",
+            "w3",
+            "cv"
+          ],
+          "text": "Destroy all three attack waves"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Tannhal Control", "text": "Tannhal to Lancer flight, turrets are armed. We are counting on you." },
-        { "spawn": "w2", "from": "Lancer 2", "text": "Bombers! Coming in from starboard, low!" },
-        { "spawn": "cv", "from": "Tannhal Control", "text": "Corvette jumping in, bearing zero-nine-zero!" }
+        {
+          "at": 3,
+          "from": "Tannhal Control",
+          "text": "Tannhal to Lancer flight, turrets are armed. We are counting on you."
+        },
+        {
+          "spawn": "w2",
+          "from": "Lancer 2",
+          "text": "Bombers! Coming in from starboard, low!"
+        },
+        {
+          "spawn": "cv",
+          "from": "Tannhal Control",
+          "text": "Corvette jumping in, bearing zero-nine-zero!"
+        }
       ],
-      "debrief": { "win": "Tannhal holds. Forty thousand people are sleeping tonight because you held the line.", "lose": "Tannhal was hit hard. The casualty count is still rising." }
+      "debrief": {
+        "win": "Tannhal holds. Forty thousand people are sleeping tonight because you held the line.",
+        "lose": "Tannhal was hit hard. The casualty count is still rising.",
+        "dialogue": [
+          {
+            "speaker": "Juno Vale",
+            "portrait": "Juno",
+            "text": "The ring was built with a hidden receiver. Tannhal may have been the first target all along."
+          }
+        ]
+      }
     },
     {
       "id": 12,
@@ -497,32 +2664,187 @@
           "Wasps patrol between them. Use your torpedoes on the cores."
         ],
         "steps": [
-          { "caption": "Three Skarn defence platforms guard the approach to Corvid.", "show": ["plat1", "plat2", "plat3"], "focus": "plat2" },
-          { "caption": "Each one has five turrets and a reactor core in the middle.", "show": ["plat1"], "focus": "plat1" },
-          { "caption": "Wasps patrol between them.", "show": ["patrol"], "focus": "plat2" }
+          {
+            "caption": "Three Skarn defence platforms guard the approach to Corvid.",
+            "show": [
+              "plat1",
+              "plat2",
+              "plat3"
+            ],
+            "focus": "plat2"
+          },
+          {
+            "caption": "Each one has five turrets and a reactor core in the middle.",
+            "show": [
+              "plat1"
+            ],
+            "focus": "plat1"
+          },
+          {
+            "caption": "Wasps patrol between them.",
+            "show": [
+              "patrol"
+            ],
+            "focus": "plat2"
+          }
         ],
-        "intel": ["Targets: 3x defence platform (5 turrets each, core)", "Hostile: Wasp patrol", "Tip: torpedoes on the cores"]
+        "intel": [
+          "Targets: 3x defence platform (5 turrets each, core)",
+          "Hostile: Wasp patrol",
+          "Tip: torpedoes on the cores"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Okafor",
+            "Varn"
+          ],
+          "lines": [
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "We've traced the false orders to the Directorate Continuity Office. Its director, Soren Hale, claims this is a classified counter-Skarn operation."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Classified does not mean lawful. Disable the platforms and bring our scout ship through."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 6 },
-      "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 6
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "plat1", "asset": "DefensePlatform", "team": "enemy", "name": "Platform Alpha", "pos": [-900, 0, -2600], "spin": 4, "group": "platforms" },
-        { "id": "plat2", "asset": "DefensePlatform", "team": "enemy", "name": "Platform Beta", "pos": [0, 250, -3000], "spin": -4, "group": "platforms" },
-        { "id": "plat3", "asset": "DefensePlatform", "team": "enemy", "name": "Platform Gamma", "pos": [900, -150, -2600], "spin": 4, "group": "platforms" }
+        {
+          "id": "plat1",
+          "asset": "DefensePlatform",
+          "team": "enemy",
+          "name": "Platform Alpha",
+          "pos": [
+            -900,
+            0,
+            -2600
+          ],
+          "spin": 4,
+          "group": "platforms"
+        },
+        {
+          "id": "plat2",
+          "asset": "DefensePlatform",
+          "team": "enemy",
+          "name": "Platform Beta",
+          "pos": [
+            0,
+            250,
+            -3000
+          ],
+          "spin": -4,
+          "group": "platforms"
+        },
+        {
+          "id": "plat3",
+          "asset": "DefensePlatform",
+          "team": "enemy",
+          "name": "Platform Gamma",
+          "pos": [
+            900,
+            -150,
+            -2600
+          ],
+          "spin": 4,
+          "group": "platforms"
+        }
       ],
-      "fields": [ { "type": "asteroids", "center": [0, 0, -3800], "radius": 1500, "count": 20, "seed": 12 } ],
+      "fields": [
+        {
+          "type": "asteroids",
+          "center": [
+            0,
+            0,
+            -3800
+          ],
+          "radius": 1500,
+          "count": 20,
+          "seed": 12
+        }
+      ],
       "waves": [
-        { "id": "patrol", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [0, 100, -2500], "spread": 200, "at": 0, "order": "attack" },
-        { "id": "reinf", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, 600, -4200], "spread": 150, "at": 90, "order": "attack" }
+        {
+          "id": "patrol",
+          "ship": "Wasp",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            0,
+            100,
+            -2500
+          ],
+          "spread": 200,
+          "at": 0,
+          "order": "attack"
+        },
+        {
+          "id": "reinf",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            0,
+            600,
+            -4200
+          ],
+          "spread": 150,
+          "at": 90,
+          "order": "attack"
+        }
       ],
       "objectives": [
-        { "id": "platforms", "type": "destroy", "targets": ["platforms"], "text": "Destroy the three platforms" }
+        {
+          "id": "platforms",
+          "type": "destroy",
+          "targets": [
+            "platforms"
+          ],
+          "text": "Destroy the three platforms"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Okafor", "text": "Platforms ahead. Cores, Lancer, aim for the cores." },
-        { "after": "platforms", "from": "Okafor", "text": "The way into Corvid is open." }
+        {
+          "at": 3,
+          "from": "Okafor",
+          "text": "Platforms ahead. Cores, Lancer, aim for the cores."
+        },
+        {
+          "after": "platforms",
+          "from": "Okafor",
+          "text": "The way into Corvid is open."
+        }
       ],
-      "debrief": { "win": "The outer defences are down. The shipyard is exposed.", "lose": "The platforms still hold the approach." }
+      "debrief": {
+        "win": "The outer defences are down. The shipyard is exposed.",
+        "lose": "The platforms still hold the approach.",
+        "dialogue": [
+          {
+            "speaker": "Lt. Cmdr Daro Okafor",
+            "portrait": "Okafor",
+            "text": "The Continuity Office paid for the platforms. Hale was not preparing for an invasion. He was arranging one."
+          }
+        ]
+      }
     },
     {
       "id": 13,
@@ -537,38 +2859,235 @@
           "Do not try to destroy the yard. You are there to look, not to fight. Get the data home."
         ],
         "steps": [
-          { "caption": "The Skarn shipyard: a lattice frame around a half-built hull.", "show": ["yard"], "focus": "yard" },
-          { "caption": "Fly past sensor points A, B and C, close to the frame.", "show": ["scanA", "scanB", "scanC"], "route": ["start", "scanA", "scanB", "scanC"] },
-          { "caption": "Then leave through the exit point. Fighters will scramble once you are spotted.", "show": ["exit"], "route": ["scanC", "exit"] }
+          {
+            "caption": "The Skarn shipyard: a lattice frame around a half-built hull.",
+            "show": [
+              "yard"
+            ],
+            "focus": "yard"
+          },
+          {
+            "caption": "Fly past sensor points A, B and C, close to the frame.",
+            "show": [
+              "scanA",
+              "scanB",
+              "scanC"
+            ],
+            "route": [
+              "start",
+              "scanA",
+              "scanB",
+              "scanC"
+            ]
+          },
+          {
+            "caption": "Then leave through the exit point. Fighters will scramble once you are spotted.",
+            "show": [
+              "exit"
+            ],
+            "route": [
+              "scanC",
+              "exit"
+            ]
+          }
         ],
-        "intel": ["Recon: 3 sensor points at the yard", "Hostile: yard turrets, scrambled Wasps and Talons", "Do not stay - speed is your armour"]
+        "intel": [
+          "Recon: 3 sensor points at the yard",
+          "Hostile: yard turrets, scrambled Wasps and Talons",
+          "Do not stay - speed is your armour"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Imani",
+            "Juno"
+          ],
+          "lines": [
+            {
+              "speaker": "Dr. Sera Imani",
+              "portrait": "Imani",
+              "text": "That hull is the Hammer of Skarn. But the central chamber isn't an engine. It's a gate-resonance weapon."
+            },
+            {
+              "speaker": "Juno Vale",
+              "portrait": "Juno",
+              "text": "Hale's signature is on the core assembly. Our own Directorate paid to build it."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Then we have two enemies: the Skarn admiral holding the weapon, and the officer who gave it to him."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 2 },
-      "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 2
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "yard", "asset": "Shipyard", "team": "enemy", "name": "Skarn Shipyard Corvid", "pos": [0, 0, -4500], "facing": [1, 0, 0], "invulnerable": true }
+        {
+          "id": "yard",
+          "asset": "Shipyard",
+          "team": "enemy",
+          "name": "Skarn Shipyard Corvid",
+          "pos": [
+            0,
+            0,
+            -4500
+          ],
+          "facing": [
+            1,
+            0,
+            0
+          ],
+          "invulnerable": true
+        }
       ],
       "navs": [
-        { "id": "scanA", "name": "SENSOR A", "pos": [-350, 150, -4200] },
-        { "id": "scanB", "name": "SENSOR B", "pos": [0, -200, -4500] },
-        { "id": "scanC", "name": "SENSOR C", "pos": [350, 150, -4800] },
-        { "id": "exit", "name": "EXIT", "pos": [2500, 0, -2000] }
+        {
+          "id": "scanA",
+          "name": "SENSOR A",
+          "pos": [
+            -350,
+            150,
+            -4200
+          ]
+        },
+        {
+          "id": "scanB",
+          "name": "SENSOR B",
+          "pos": [
+            0,
+            -200,
+            -4500
+          ]
+        },
+        {
+          "id": "scanC",
+          "name": "SENSOR C",
+          "pos": [
+            350,
+            150,
+            -4800
+          ]
+        },
+        {
+          "id": "exit",
+          "name": "EXIT",
+          "pos": [
+            2500,
+            0,
+            -2000
+          ]
+        }
       ],
-      "fields": [ { "type": "asteroids", "center": [0, 0, -4500], "radius": 2200, "count": 30, "seed": 13 } ],
+      "fields": [
+        {
+          "type": "asteroids",
+          "center": [
+            0,
+            0,
+            -4500
+          ],
+          "radius": 2200,
+          "count": 30,
+          "seed": 13
+        }
+      ],
       "waves": [
-        { "id": "scramble1", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [0, 300, -5200], "spread": 150, "nav": "scanA", "order": "attack" },
-        { "id": "scramble2", "ship": "Talon", "count": 2, "team": "enemy", "pos": [-600, 0, -5300], "spread": 100, "nav": "scanC", "order": "attack" }
+        {
+          "id": "scramble1",
+          "ship": "Wasp",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            0,
+            300,
+            -5200
+          ],
+          "spread": 150,
+          "nav": "scanA",
+          "order": "attack"
+        },
+        {
+          "id": "scramble2",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            -600,
+            0,
+            -5300
+          ],
+          "spread": 100,
+          "nav": "scanC",
+          "order": "attack"
+        }
       ],
       "objectives": [
-        { "id": "recon", "type": "reach", "navs": ["scanA", "scanB", "scanC"], "range": 200, "text": "Fly past sensor points A, B, C" },
-        { "id": "exit", "type": "reach", "navs": ["exit"], "after": ["recon"], "text": "Reach the exit point" }
+        {
+          "id": "recon",
+          "type": "reach",
+          "navs": [
+            "scanA",
+            "scanB",
+            "scanC"
+          ],
+          "range": 200,
+          "text": "Fly past sensor points A, B, C"
+        },
+        {
+          "id": "exit",
+          "type": "reach",
+          "navs": [
+            "exit"
+          ],
+          "after": [
+            "recon"
+          ],
+          "text": "Reach the exit point"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Okafor", "text": "Recorders running. Low and fast, Lancer." },
-        { "nav": "scanA", "from": "Okafor", "text": "You have been spotted! Keep going!" },
-        { "after": "recon", "from": "Okafor", "text": "Got it all. That hull is a dreadnought. Get out of there!" }
+        {
+          "at": 3,
+          "from": "Okafor",
+          "text": "Recorders running. Low and fast, Lancer."
+        },
+        {
+          "nav": "scanA",
+          "from": "Okafor",
+          "text": "You have been spotted! Keep going!"
+        },
+        {
+          "after": "recon",
+          "from": "Okafor",
+          "text": "Got it all. That hull is a dreadnought. Get out of there!"
+        }
       ],
-      "debrief": { "win": "The recordings show a Skarn dreadnought nearly finished. Fleet Command has ordered the evacuation of the Kestrel colonies.", "lose": "The recordings were lost with your fighter." }
+      "debrief": {
+        "win": "The recordings show a Skarn dreadnought nearly finished. Fleet Command has ordered the evacuation of the Kestrel colonies.",
+        "lose": "The recordings were lost with your fighter.",
+        "dialogue": [
+          {
+            "speaker": "Dr. Sera Imani",
+            "portrait": "Imani",
+            "text": "The dreadnought can collapse a jump gate. Hale used the Skarn fleet as cover for the weapon."
+          }
+        ]
+      }
     },
     {
       "id": 14,
@@ -583,37 +3102,260 @@
           "Every Skarn fighter in the system will be after her. Lancer 2 is with you. Get her to the gate."
         ],
         "steps": [
-          { "caption": "Liner Aurora Star, full of evacuees.", "show": ["aurora"], "focus": "aurora" },
-          { "caption": "Her route to the Halden gate, five kilometres away.", "show": ["gate"], "route": ["aurora", "gate"] },
-          { "caption": "Attacks from every side. Bombers have priority.", "show": ["t1", "t2", "t3"], "focus": "aurora" }
+          {
+            "caption": "Liner Aurora Star, full of evacuees.",
+            "show": [
+              "aurora"
+            ],
+            "focus": "aurora"
+          },
+          {
+            "caption": "Her route to the Halden gate, five kilometres away.",
+            "show": [
+              "gate"
+            ],
+            "route": [
+              "aurora",
+              "gate"
+            ]
+          },
+          {
+            "caption": "Attacks from every side. Bombers have priority.",
+            "show": [
+              "t1",
+              "t2",
+              "t3"
+            ],
+            "focus": "aurora"
+          }
         ],
-        "intel": ["Escort: liner Aurora Star (unarmed, 6000 aboard)", "Hostile: repeated Wasp and Talon attacks", "Wingman: Lancer 2"]
+        "intel": [
+          "Escort: liner Aurora Star (unarmed, 6000 aboard)",
+          "Hostile: repeated Wasp and Talon attacks",
+          "Wingman: Lancer 2"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Lusk",
+            "Varn"
+          ],
+          "lines": [
+            {
+              "speaker": "Captain Lusk",
+              "portrait": "Lusk",
+              "text": "Six thousand civilians are aboard the Aurora Star. They keep asking whether home will still be there when we return."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "They get an answer after they're safe. Escort them through the gate."
+            },
+            {
+              "speaker": "Captain Elara Sen",
+              "portrait": "MiraCaptain",
+              "text": "Mira is carrying refugees on the other side. I'll be waiting for them."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 0 },
-      "player": { "pos": [0, 60, 300], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 0
+      },
+      "player": {
+        "pos": [
+          0,
+          60,
+          300
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "aurora", "asset": "Liner", "team": "friend", "name": "Liner Aurora Star", "pos": [0, 0, 0], "facing": [0, 0, -1], "path": [[0, 0, -5000]], "speed": 50 },
-        { "id": "gate", "asset": "JumpGate", "team": "neutral", "name": "Halden Gate", "pos": [0, 0, -5300] }
+        {
+          "id": "aurora",
+          "asset": "Liner",
+          "team": "friend",
+          "name": "Liner Aurora Star",
+          "pos": [
+            0,
+            0,
+            0
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ],
+          "path": [
+            [
+              0,
+              0,
+              -5000
+            ]
+          ],
+          "speed": 50
+        },
+        {
+          "id": "gate",
+          "asset": "JumpGate",
+          "team": "neutral",
+          "name": "Halden Gate",
+          "pos": [
+            0,
+            0,
+            -5300
+          ]
+        }
       ],
-      "navs": [ { "id": "gatenav", "name": "GATE", "pos": [0, 0, -5100] } ],
+      "navs": [
+        {
+          "id": "gatenav",
+          "name": "GATE",
+          "pos": [
+            0,
+            0,
+            -5100
+          ]
+        }
+      ],
       "waves": [
-        { "id": "wingman", "ship": "Executioner", "count": 1, "team": "friend", "pos": [60, 60, 350], "order": "escort:aurora", "name": "Lancer 2" },
-        { "id": "w1", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [-1600, 300, -1500], "spread": 120, "at": 12, "order": "attack" },
-        { "id": "t1", "ship": "Talon", "count": 2, "team": "enemy", "pos": [1600, 0, -1800], "spread": 100, "at": 25, "order": "strike:aurora" },
-        { "id": "t2", "ship": "Talon", "count": 3, "team": "enemy", "pos": [0, 1500, -3000], "spread": 100, "at": 55, "order": "strike:aurora" },
-        { "id": "w2", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, -1400, -3500], "spread": 120, "at": 70, "order": "attack" },
-        { "id": "t3", "ship": "Talon", "count": 3, "team": "enemy", "pos": [-1500, -300, -4800], "spread": 100, "at": 85, "order": "strike:aurora" }
+        {
+          "id": "wingman",
+          "ship": "Executioner",
+          "count": 1,
+          "team": "friend",
+          "pos": [
+            60,
+            60,
+            350
+          ],
+          "order": "escort:aurora",
+          "name": "Lancer 2"
+        },
+        {
+          "id": "w1",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            -1600,
+            300,
+            -1500
+          ],
+          "spread": 120,
+          "at": 12,
+          "order": "attack"
+        },
+        {
+          "id": "t1",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            1600,
+            0,
+            -1800
+          ],
+          "spread": 100,
+          "at": 25,
+          "order": "strike:aurora"
+        },
+        {
+          "id": "t2",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            0,
+            1500,
+            -3000
+          ],
+          "spread": 100,
+          "at": 55,
+          "order": "strike:aurora"
+        },
+        {
+          "id": "w2",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            0,
+            -1400,
+            -3500
+          ],
+          "spread": 120,
+          "at": 70,
+          "order": "attack"
+        },
+        {
+          "id": "t3",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            -1500,
+            -300,
+            -4800
+          ],
+          "spread": 100,
+          "at": 85,
+          "order": "strike:aurora"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["aurora"], "text": "Protect the Aurora Star" },
-        { "id": "escort", "type": "escort", "targets": ["aurora"], "navs": ["gatenav"], "text": "Escort her to the gate" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "aurora"
+          ],
+          "text": "Protect the Aurora Star"
+        },
+        {
+          "id": "escort",
+          "type": "escort",
+          "targets": [
+            "aurora"
+          ],
+          "navs": [
+            "gatenav"
+          ],
+          "text": "Escort her to the gate"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Aurora Star", "text": "This is Captain Lusk. We have children aboard, Lancer. Please." },
-        { "spawn": "t2", "from": "Lancer 2", "text": "Bombers above us, diving on the liner!" },
-        { "after": "escort", "from": "Aurora Star", "text": "Gate lock... we are through. God bless you, Lancer." }
+        {
+          "at": 3,
+          "from": "Aurora Star",
+          "text": "This is Captain Lusk. We have children aboard, Lancer. Please."
+        },
+        {
+          "spawn": "t2",
+          "from": "Lancer 2",
+          "text": "Bombers above us, diving on the liner!"
+        },
+        {
+          "after": "escort",
+          "from": "Aurora Star",
+          "text": "Gate lock... we are through. God bless you, Lancer."
+        }
       ],
-      "debrief": { "win": "Six thousand people are safe beyond the Halden gate.", "lose": "The Aurora Star never reached the gate." }
+      "debrief": {
+        "win": "Six thousand people are safe beyond the Halden gate.",
+        "lose": "The Aurora Star never reached the gate.",
+        "dialogue": [
+          {
+            "speaker": "Captain Lusk",
+            "portrait": "Lusk",
+            "text": "Every passenger is across. When this is over, there will still be a colony to come home to because of you."
+          }
+        ]
+      }
     },
     {
       "id": 15,
@@ -628,36 +3370,240 @@
           "Knock out the three engine pods at the stern, then kill the ship."
         ],
         "steps": [
-          { "caption": "The Bastion, holding position.", "show": ["bastion"], "focus": "bastion" },
-          { "caption": "The destroyer jumps in here and closes on the Bastion.", "show": ["destroyer"], "route": ["destroyer", "bastion"], "focus": "destroyer" },
-          { "caption": "Its three engine pods are at the stern. Destroy them to stop it.", "show": ["destroyer"], "focus": "destroyer" },
-          { "caption": "Talon bombers will launch at the Bastion. Do not ignore them.", "show": ["talons", "bastion"], "focus": "bastion" }
+          {
+            "caption": "The Bastion, holding position.",
+            "show": [
+              "bastion"
+            ],
+            "focus": "bastion"
+          },
+          {
+            "caption": "The destroyer jumps in here and closes on the Bastion.",
+            "show": [
+              "destroyer"
+            ],
+            "route": [
+              "destroyer",
+              "bastion"
+            ],
+            "focus": "destroyer"
+          },
+          {
+            "caption": "Its three engine pods are at the stern. Destroy them to stop it.",
+            "show": [
+              "destroyer"
+            ],
+            "focus": "destroyer"
+          },
+          {
+            "caption": "Talon bombers will launch at the Bastion. Do not ignore them.",
+            "show": [
+              "talons",
+              "bastion"
+            ],
+            "focus": "bastion"
+          }
         ],
-        "intel": ["Target: Skarn destroyer (6 turrets, 3 engine pods)", "Defend: CNS Bastion", "Hostile: Talon bombers, Wasps", "Wingmen: Lancer 2, Lancer 3"]
+        "intel": [
+          "Target: Skarn destroyer (6 turrets, 3 engine pods)",
+          "Defend: CNS Bastion",
+          "Hostile: Talon bombers, Wasps",
+          "Wingmen: Lancer 2, Lancer 3"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Orin",
+            "Varn"
+          ],
+          "lines": [
+            {
+              "speaker": "Chief Engineer Mae Orin",
+              "portrait": "Orin",
+              "text": "That destroyer has our anchorage coordinates. Hale is still giving the enemy our position."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Bastion is the last carrier left here. Disable the destroyer's engines before it reaches us."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 6 },
-      "player": { "pos": [0, 0, 200], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 6
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          200
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "bastion", "asset": "Carrier", "team": "friend", "name": "CNS Bastion", "pos": [0, -60, 1300], "facing": [1, 0, 0] },
-        { "id": "destroyer", "asset": "Destroyer", "team": "enemy", "name": "Skarn Destroyer Gorran", "pos": [1800, 200, -2200], "facing": [-0.6, 0, 1], "path": [[700, 0, 400]], "speed": 22, "at": 12 }
+        {
+          "id": "bastion",
+          "asset": "Carrier",
+          "team": "friend",
+          "name": "CNS Bastion",
+          "pos": [
+            0,
+            -60,
+            1300
+          ],
+          "facing": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "destroyer",
+          "asset": "Destroyer",
+          "team": "enemy",
+          "name": "Skarn Destroyer Gorran",
+          "pos": [
+            1800,
+            200,
+            -2200
+          ],
+          "facing": [
+            -0.6,
+            0,
+            1
+          ],
+          "path": [
+            [
+              700,
+              0,
+              400
+            ]
+          ],
+          "speed": 22,
+          "at": 12
+        }
       ],
       "waves": [
-        { "id": "wing", "ship": "Executioner", "count": 2, "team": "friend", "pos": [60, 30, 300], "spread": 60, "order": "attack", "name": "Lancer" },
-        { "id": "talons", "ship": "Talon", "count": 3, "team": "enemy", "pos": [1700, 300, -2000], "spread": 120, "at": 25, "order": "strike:bastion" },
-        { "id": "wasps", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [1800, -200, -2300], "spread": 150, "at": 30, "order": "attack" },
-        { "id": "talons2", "ship": "Talon", "count": 2, "team": "enemy", "pos": [1500, 600, -1500], "spread": 100, "at": 100, "order": "strike:bastion" }
+        {
+          "id": "wing",
+          "ship": "Executioner",
+          "count": 2,
+          "team": "friend",
+          "pos": [
+            60,
+            30,
+            300
+          ],
+          "spread": 60,
+          "order": "attack",
+          "name": "Lancer"
+        },
+        {
+          "id": "talons",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            1700,
+            300,
+            -2000
+          ],
+          "spread": 120,
+          "at": 25,
+          "order": "strike:bastion"
+        },
+        {
+          "id": "wasps",
+          "ship": "Wasp",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            1800,
+            -200,
+            -2300
+          ],
+          "spread": 150,
+          "at": 30,
+          "order": "attack"
+        },
+        {
+          "id": "talons2",
+          "ship": "Talon",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            1500,
+            600,
+            -1500
+          ],
+          "spread": 100,
+          "at": 100,
+          "order": "strike:bastion"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect the Bastion" },
-        { "id": "engines", "type": "disable", "targets": ["destroyer"], "kind": "Engine", "text": "Destroy the destroyer's engines" },
-        { "id": "kill", "type": "destroy", "targets": ["destroyer"], "after": ["engines"], "text": "Destroy the destroyer" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "bastion"
+          ],
+          "text": "Protect the Bastion"
+        },
+        {
+          "id": "engines",
+          "type": "disable",
+          "targets": [
+            "destroyer"
+          ],
+          "kind": "Engine",
+          "text": "Destroy the destroyer's engines"
+        },
+        {
+          "id": "kill",
+          "type": "destroy",
+          "targets": [
+            "destroyer"
+          ],
+          "after": [
+            "engines"
+          ],
+          "text": "Destroy the destroyer"
+        }
       ],
       "messages": [
-        { "at": 2, "from": "Bastion Control", "text": "All fighters, stand by. Jump signature building." },
-        { "spawn": "destroyer", "from": "Bastion Control", "text": "Destroyer in the anchorage! Go for the engines!" },
-        { "after": "engines", "from": "Commander Varn", "text": "It is dead in space. Finish it." }
+        {
+          "at": 2,
+          "from": "Bastion Control",
+          "text": "All fighters, stand by. Jump signature building."
+        },
+        {
+          "spawn": "destroyer",
+          "from": "Bastion Control",
+          "text": "Destroyer in the anchorage! Go for the engines!"
+        },
+        {
+          "after": "engines",
+          "from": "Commander Varn",
+          "text": "It is dead in space. Finish it."
+        }
       ],
-      "debrief": { "win": "The destroyer Gorran is gone. The Bastion took hits, but she is still the Bastion.", "lose": "The Bastion is badly damaged. The fleet has lost its carrier." }
+      "debrief": {
+        "win": "The destroyer Gorran is gone. The Bastion took hits, but she is still the Bastion.",
+        "lose": "The Bastion is badly damaged. The fleet has lost its carrier.",
+        "dialogue": [
+          {
+            "speaker": "Chief Engineer Mae Orin",
+            "portrait": "Orin",
+            "text": "Bastion will fly. Give me an hour and whatever spare metal you can find."
+          }
+        ]
+      }
     },
     {
       "id": 16,
@@ -672,34 +3618,227 @@
           "When it is defenceless, the guards will surrender and the barge will be ours. Then the Skarn will come to destroy it rather than lose it. Hold until the Kestrel arrives to tow it."
         ],
         "steps": [
-          { "caption": "The prison barge: six turrets, four hundred prisoners. Do NOT destroy the hull.", "show": ["barge"], "focus": "barge" },
-          { "caption": "Destroy all six turrets.", "show": ["barge"], "focus": "barge" },
-          { "caption": "Then defend the barge until CNS Kestrel arrives to tow it.", "show": ["kestrel", "barge"], "route": ["kestrel", "barge"] }
+          {
+            "caption": "The prison barge: six turrets, four hundred prisoners. Do NOT destroy the hull.",
+            "show": [
+              "barge"
+            ],
+            "focus": "barge"
+          },
+          {
+            "caption": "Destroy all six turrets.",
+            "show": [
+              "barge"
+            ],
+            "focus": "barge"
+          },
+          {
+            "caption": "Then defend the barge until CNS Kestrel arrives to tow it.",
+            "show": [
+              "kestrel",
+              "barge"
+            ],
+            "route": [
+              "kestrel",
+              "barge"
+            ]
+          }
         ],
-        "intel": ["Disable: prison barge turrets (6)", "Do not destroy: prison barge hull", "Hostile: Wasp guards, then a Talon strike", "Support: CNS Kestrel (arrives later)"]
+        "intel": [
+          "Disable: prison barge turrets (6)",
+          "Do not destroy: prison barge hull",
+          "Hostile: Wasp guards, then a Talon strike",
+          "Support: CNS Kestrel (arrives later)"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Kesh",
+            "Okafor"
+          ],
+          "lines": [
+            {
+              "speaker": "Kesh Ardan",
+              "portrait": "Kesh",
+              "text": "I am Kesh Ardan. The Skarn held me on the Thal because I refused the admiral's orders. The Hammer is meant to rupture the Halden gate and ignite the whole lane."
+            },
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "Our missing crews are on the same barge. Free them and Kesh can explain the launch codes."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Turrets only. Four hundred lives depend on your aim."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 0 },
-      "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 0
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "barge", "asset": "PrisonBarge", "team": "enemy", "name": "Prison Barge Thal", "pos": [0, 0, -2200], "facing": [1, 0, 0], "noHullDamage": true },
-        { "id": "kestrel", "asset": "Frigate", "team": "friend", "name": "CNS Kestrel", "pos": [-2500, 100, -500], "facing": [1, 0, -0.6], "path": [[-400, 50, -1900]], "speed": 45, "after": "turrets" }
+        {
+          "id": "barge",
+          "asset": "PrisonBarge",
+          "team": "enemy",
+          "name": "Prison Barge Thal",
+          "pos": [
+            0,
+            0,
+            -2200
+          ],
+          "facing": [
+            1,
+            0,
+            0
+          ],
+          "noHullDamage": true
+        },
+        {
+          "id": "kestrel",
+          "asset": "Frigate",
+          "team": "friend",
+          "name": "CNS Kestrel",
+          "pos": [
+            -2500,
+            100,
+            -500
+          ],
+          "facing": [
+            1,
+            0,
+            -0.6
+          ],
+          "path": [
+            [
+              -400,
+              50,
+              -1900
+            ]
+          ],
+          "speed": 45,
+          "after": "turrets"
+        }
       ],
       "waves": [
-        { "id": "guards", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, 300, -2000], "spread": 150, "at": 0, "order": "escort:barge" },
-        { "id": "strike", "ship": "Talon", "count": 4, "team": "enemy", "pos": [2000, 200, -3500], "spread": 120, "after": "turrets", "order": "strike:barge" },
-        { "id": "strikecover", "ship": "Wasp", "count": 2, "team": "enemy", "pos": [2100, 400, -3600], "spread": 100, "after": "turrets", "order": "attack" }
+        {
+          "id": "guards",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            0,
+            300,
+            -2000
+          ],
+          "spread": 150,
+          "at": 0,
+          "order": "escort:barge"
+        },
+        {
+          "id": "strike",
+          "ship": "Talon",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            2000,
+            200,
+            -3500
+          ],
+          "spread": 120,
+          "after": "turrets",
+          "order": "strike:barge"
+        },
+        {
+          "id": "strikecover",
+          "ship": "Wasp",
+          "count": 2,
+          "team": "enemy",
+          "pos": [
+            2100,
+            400,
+            -3600
+          ],
+          "spread": 100,
+          "after": "turrets",
+          "order": "attack"
+        }
       ],
       "objectives": [
-        { "id": "turrets", "type": "disable", "targets": ["barge"], "kind": "Turret", "text": "Destroy all the barge's turrets", "onComplete": { "setTeam": { "barge": "friend" } } },
-        { "id": "protect", "type": "protect", "targets": ["barge"], "text": "The barge must not be destroyed" },
-        { "id": "hold", "type": "survive", "seconds": 70, "after": ["turrets"], "text": "Defend the barge until the Kestrel arrives" }
+        {
+          "id": "turrets",
+          "type": "disable",
+          "targets": [
+            "barge"
+          ],
+          "kind": "Turret",
+          "text": "Destroy all the barge's turrets",
+          "onComplete": {
+            "setTeam": {
+              "barge": "friend"
+            }
+          }
+        },
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "barge"
+          ],
+          "text": "The barge must not be destroyed"
+        },
+        {
+          "id": "hold",
+          "type": "survive",
+          "seconds": 70,
+          "after": [
+            "turrets"
+          ],
+          "text": "Defend the barge until the Kestrel arrives"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Okafor", "text": "Turrets only, Lancer. Steady hands." },
-        { "after": "turrets", "from": "Barge Thal", "text": "This is the barge. The guards have surrendered! Skarn bombers are coming for us!" },
-        { "after": "hold", "from": "CNS Kestrel", "text": "Tow lines attached. We are taking them home." }
+        {
+          "at": 3,
+          "from": "Okafor",
+          "text": "Turrets only, Lancer. Steady hands."
+        },
+        {
+          "after": "turrets",
+          "from": "Barge Thal",
+          "text": "This is the barge. The guards have surrendered! Skarn bombers are coming for us!"
+        },
+        {
+          "after": "hold",
+          "from": "CNS Kestrel",
+          "text": "Tow lines attached. We are taking them home."
+        }
       ],
-      "debrief": { "win": "Four hundred of our people are free. Many of them are already asking to fly.", "lose": "The barge was lost with everyone aboard." }
+      "debrief": {
+        "win": "Four hundred of our people are free. Many of them are already asking to fly.",
+        "lose": "The barge was lost with everyone aboard.",
+        "dialogue": [
+          {
+            "speaker": "Kesh Ardan",
+            "portrait": "Kesh",
+            "text": "Korr intends to fire the Hammer through Halden. He won't stop after destroying this fleet."
+          }
+        ]
+      }
     },
     {
       "id": 17,
@@ -714,35 +3853,213 @@
           "Find it and kill it. It is fragile once you have found it, but its escorts are not."
         ],
         "steps": [
-          { "caption": "Sensor buoys mark where the prototype was last seen.", "show": ["b1", "b2", "b3"], "focus": "b2" },
-          { "caption": "It follows a loop through this area. It only appears on scanners within 700 m.", "show": ["ghost"], "focus": "ghost" },
-          { "caption": "Four Wasps guard it. Kill the prototype first if you can.", "show": ["guards"], "focus": "ghost" }
+          {
+            "caption": "Sensor buoys mark where the prototype was last seen.",
+            "show": [
+              "b1",
+              "b2",
+              "b3"
+            ],
+            "focus": "b2"
+          },
+          {
+            "caption": "It follows a loop through this area. It only appears on scanners within 700 m.",
+            "show": [
+              "ghost"
+            ],
+            "focus": "ghost"
+          },
+          {
+            "caption": "Four Wasps guard it. Kill the prototype first if you can.",
+            "show": [
+              "guards"
+            ],
+            "focus": "ghost"
+          }
         ],
-        "intel": ["Target: Skarn stealth prototype (radar range 700 m)", "Hostile: 4x Wasp", "Visit the buoys to narrow the search"]
+        "intel": [
+          "Target: Skarn stealth prototype (radar range 700 m)",
+          "Hostile: 4x Wasp",
+          "Visit the buoys to narrow the search"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Kesh",
+            "Imani"
+          ],
+          "lines": [
+            {
+              "speaker": "Kesh Ardan",
+              "portrait": "Kesh",
+              "text": "Admiral Korr's stealth ship carries the firing cipher. Without it, the Hammer can still launch, but not activate on command."
+            },
+            {
+              "speaker": "Dr. Sera Imani",
+              "portrait": "Imani",
+              "text": "Destroy the prototype's transmitter. I'll decode the cipher from the debris."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 2 },
-      "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 2
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "ghost", "asset": "Prototype", "team": "enemy", "name": "Skarn Prototype", "pos": [1200, 100, -3000], "facing": [-1, 0, 0], "path": [[0, 200, -4200], [-1200, 0, -3000], [0, -150, -1900], [1200, 100, -3000]], "speed": 55, "loop": true, "stealth": 700 }
+        {
+          "id": "ghost",
+          "asset": "Prototype",
+          "team": "enemy",
+          "name": "Skarn Prototype",
+          "pos": [
+            1200,
+            100,
+            -3000
+          ],
+          "facing": [
+            -1,
+            0,
+            0
+          ],
+          "path": [
+            [
+              0,
+              200,
+              -4200
+            ],
+            [
+              -1200,
+              0,
+              -3000
+            ],
+            [
+              0,
+              -150,
+              -1900
+            ],
+            [
+              1200,
+              100,
+              -3000
+            ]
+          ],
+          "speed": 55,
+          "loop": true,
+          "stealth": 700
+        }
       ],
       "navs": [
-        { "id": "b1", "name": "BUOY 1", "pos": [-1000, 100, -2200] },
-        { "id": "b2", "name": "BUOY 2", "pos": [0, 0, -3000] },
-        { "id": "b3", "name": "BUOY 3", "pos": [1000, -100, -3800] }
+        {
+          "id": "b1",
+          "name": "BUOY 1",
+          "pos": [
+            -1000,
+            100,
+            -2200
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "BUOY 2",
+          "pos": [
+            0,
+            0,
+            -3000
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "BUOY 3",
+          "pos": [
+            1000,
+            -100,
+            -3800
+          ]
+        }
       ],
-      "fields": [ { "type": "buoys", "navs": ["b1", "b2", "b3"] } ],
+      "fields": [
+        {
+          "type": "buoys",
+          "navs": [
+            "b1",
+            "b2",
+            "b3"
+          ]
+        }
+      ],
       "waves": [
-        { "id": "guards", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [1200, 300, -3000], "spread": 150, "at": 0, "order": "escort:ghost" }
+        {
+          "id": "guards",
+          "ship": "Wasp",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            1200,
+            300,
+            -3000
+          ],
+          "spread": 150,
+          "at": 0,
+          "order": "escort:ghost"
+        }
       ],
       "objectives": [
-        { "id": "ghost", "type": "destroy", "targets": ["ghost"], "text": "Find and destroy the prototype" },
-        { "id": "buoys", "type": "reach", "navs": ["b1", "b2", "b3"], "optional": true, "range": 250, "text": "Check the sensor buoys" }
+        {
+          "id": "ghost",
+          "type": "destroy",
+          "targets": [
+            "ghost"
+          ],
+          "text": "Find and destroy the prototype"
+        },
+        {
+          "id": "buoys",
+          "type": "reach",
+          "navs": [
+            "b1",
+            "b2",
+            "b3"
+          ],
+          "optional": true,
+          "range": 250,
+          "text": "Check the sensor buoys"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Okafor", "text": "It is out there somewhere. Watch for a contact that appears out of nowhere." },
-        { "after": "ghost", "from": "Okafor", "text": "Got it. They are blind again." }
+        {
+          "at": 3,
+          "from": "Okafor",
+          "text": "It is out there somewhere. Watch for a contact that appears out of nowhere."
+        },
+        {
+          "after": "ghost",
+          "from": "Okafor",
+          "text": "Got it. They are blind again."
+        }
       ],
-      "debrief": { "win": "The prototype is destroyed. The Skarn have lost their eyes on our fleet.", "lose": "The ghost is still out there, watching us." }
+      "debrief": {
+        "win": "The prototype is destroyed. The Skarn have lost their eyes on our fleet.",
+        "lose": "The ghost is still out there, watching us.",
+        "dialogue": [
+          {
+            "speaker": "Dr. Sera Imani",
+            "portrait": "Imani",
+            "text": "The cipher is cracked. We can see the Hammer's charging sequence now."
+          }
+        ]
+      }
     },
     {
       "id": 18,
@@ -757,37 +4074,282 @@
           "Cutters patrol the nest. Torpedoes are loaded."
         ],
         "steps": [
-          { "caption": "Asteroid Hollow, the corsair base.", "show": ["nest"], "focus": "nest" },
-          { "caption": "Two shield generators on the surface protect it. Destroy them first.", "show": ["nest"], "focus": "nest" },
-          { "caption": "Then the reactor on top of the dome. It kills the whole base.", "show": ["nest"], "focus": "nest" },
-          { "caption": "Corsair cutters and fighters defend it.", "show": ["cut1", "cut2", "raiders"], "focus": "nest" }
+          {
+            "caption": "Asteroid Hollow, the corsair base.",
+            "show": [
+              "nest"
+            ],
+            "focus": "nest"
+          },
+          {
+            "caption": "Two shield generators on the surface protect it. Destroy them first.",
+            "show": [
+              "nest"
+            ],
+            "focus": "nest"
+          },
+          {
+            "caption": "Then the reactor on top of the dome. It kills the whole base.",
+            "show": [
+              "nest"
+            ],
+            "focus": "nest"
+          },
+          {
+            "caption": "Corsair cutters and fighters defend it.",
+            "show": [
+              "cut1",
+              "cut2",
+              "raiders"
+            ],
+            "focus": "nest"
+          }
         ],
-        "intel": ["Target: corsair base (2 shield generators, reactor, 6 turrets)", "Hostile: 2 corsair cutters, Wasps", "Wingmen: Lancer 2, Lancer 3"]
+        "intel": [
+          "Target: corsair base (2 shield generators, reactor, 6 turrets)",
+          "Hostile: 2 corsair cutters, Wasps",
+          "Wingmen: Lancer 2, Lancer 3"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "MiraCaptain",
+            "Okafor"
+          ],
+          "lines": [
+            {
+              "speaker": "Captain Elara Sen",
+              "portrait": "MiraCaptain",
+              "text": "The corsairs took our supply ships and sold parts to the Skarn. Their asteroid base holds the last replacement resonance coils."
+            },
+            {
+              "speaker": "Lt. Cmdr Daro Okafor",
+              "portrait": "Okafor",
+              "text": "Cut off the coils and the Hammer gets one shot. We intend to make sure it misses."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 6 },
-      "player": { "pos": [0, 200, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 6
+      },
+      "player": {
+        "pos": [
+          0,
+          200,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "nest", "asset": "CorsairBase", "team": "enemy", "style": "corsair", "name": "Asteroid Hollow", "pos": [0, 0, -3800], "spin": 1 },
-        { "id": "cut1", "asset": "CorsairCutter", "team": "enemy", "style": "corsair", "name": "Cutter Grist", "pos": [-600, 200, -3200], "path": [[600, 300, -3200], [600, -300, -4400], [-600, -300, -4400], [-600, 200, -3200]], "speed": 45, "loop": true, "group": "cutters" },
-        { "id": "cut2", "asset": "CorsairCutter", "team": "enemy", "style": "corsair", "name": "Cutter Maw", "pos": [600, -300, -4400], "path": [[-600, -300, -4400], [-600, 200, -3200], [600, 300, -3200], [600, -300, -4400]], "speed": 45, "loop": true, "group": "cutters" }
+        {
+          "id": "nest",
+          "asset": "CorsairBase",
+          "team": "enemy",
+          "style": "corsair",
+          "name": "Asteroid Hollow",
+          "pos": [
+            0,
+            0,
+            -3800
+          ],
+          "spin": 1
+        },
+        {
+          "id": "cut1",
+          "asset": "CorsairCutter",
+          "team": "enemy",
+          "style": "corsair",
+          "name": "Cutter Grist",
+          "pos": [
+            -600,
+            200,
+            -3200
+          ],
+          "path": [
+            [
+              600,
+              300,
+              -3200
+            ],
+            [
+              600,
+              -300,
+              -4400
+            ],
+            [
+              -600,
+              -300,
+              -4400
+            ],
+            [
+              -600,
+              200,
+              -3200
+            ]
+          ],
+          "speed": 45,
+          "loop": true,
+          "group": "cutters"
+        },
+        {
+          "id": "cut2",
+          "asset": "CorsairCutter",
+          "team": "enemy",
+          "style": "corsair",
+          "name": "Cutter Maw",
+          "pos": [
+            600,
+            -300,
+            -4400
+          ],
+          "path": [
+            [
+              -600,
+              -300,
+              -4400
+            ],
+            [
+              -600,
+              200,
+              -3200
+            ],
+            [
+              600,
+              300,
+              -3200
+            ],
+            [
+              600,
+              -300,
+              -4400
+            ]
+          ],
+          "speed": 45,
+          "loop": true,
+          "group": "cutters"
+        }
       ],
-      "fields": [ { "type": "asteroids", "center": [0, 0, -3500], "radius": 2200, "count": 40, "seed": 18 } ],
+      "fields": [
+        {
+          "type": "asteroids",
+          "center": [
+            0,
+            0,
+            -3500
+          ],
+          "radius": 2200,
+          "count": 40,
+          "seed": 18
+        }
+      ],
       "waves": [
-        { "id": "wing", "ship": "Executioner", "count": 2, "team": "friend", "pos": [80, 230, 100], "spread": 60, "order": "attack", "name": "Lancer" },
-        { "id": "raiders", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [0, 400, -3200], "spread": 200, "at": 0, "order": "attack" },
-        { "id": "raiders2", "ship": "Wasp", "count": 3, "team": "enemy", "pos": [0, -500, -4400], "spread": 150, "at": 80, "order": "attack" }
+        {
+          "id": "wing",
+          "ship": "Executioner",
+          "count": 2,
+          "team": "friend",
+          "pos": [
+            80,
+            230,
+            100
+          ],
+          "spread": 60,
+          "order": "attack",
+          "name": "Lancer"
+        },
+        {
+          "id": "raiders",
+          "ship": "Wasp",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            0,
+            400,
+            -3200
+          ],
+          "spread": 200,
+          "at": 0,
+          "order": "attack"
+        },
+        {
+          "id": "raiders2",
+          "ship": "Wasp",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            0,
+            -500,
+            -4400
+          ],
+          "spread": 150,
+          "at": 80,
+          "order": "attack"
+        }
       ],
       "objectives": [
-        { "id": "shields", "type": "disable", "targets": ["nest"], "kind": "Shield", "text": "Destroy the shield generators" },
-        { "id": "nest", "type": "destroy", "targets": ["nest"], "after": ["shields"], "text": "Destroy the reactor" },
-        { "id": "cutters", "type": "destroy", "targets": ["cutters"], "optional": true, "text": "Destroy the cutters" }
+        {
+          "id": "shields",
+          "type": "disable",
+          "targets": [
+            "nest"
+          ],
+          "kind": "Shield",
+          "text": "Destroy the shield generators"
+        },
+        {
+          "id": "nest",
+          "type": "destroy",
+          "targets": [
+            "nest"
+          ],
+          "after": [
+            "shields"
+          ],
+          "text": "Destroy the reactor"
+        },
+        {
+          "id": "cutters",
+          "type": "destroy",
+          "targets": [
+            "cutters"
+          ],
+          "optional": true,
+          "text": "Destroy the cutters"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Lancer 2", "text": "Hollow ahead. Ugly place." },
-        { "after": "shields", "from": "Commander Varn", "text": "Shields are down. Hit the reactor on the dome!" },
-        { "after": "nest", "from": "Commander Varn", "text": "Hollow is gone. The Skarn just lost their friends." }
+        {
+          "at": 3,
+          "from": "Lancer 2",
+          "text": "Hollow ahead. Ugly place."
+        },
+        {
+          "after": "shields",
+          "from": "Commander Varn",
+          "text": "Shields are down. Hit the reactor on the dome!"
+        },
+        {
+          "after": "nest",
+          "from": "Commander Varn",
+          "text": "Hollow is gone. The Skarn just lost their friends."
+        }
       ],
-      "debrief": { "win": "Asteroid Hollow is rubble. The shipyard has lost its suppliers.", "lose": "The corsairs are still in business." }
+      "debrief": {
+        "win": "Asteroid Hollow is rubble. The shipyard has lost its suppliers.",
+        "lose": "The corsairs are still in business.",
+        "dialogue": [
+          {
+            "speaker": "Captain Elara Sen",
+            "portrait": "MiraCaptain",
+            "text": "The last coil is gone. Whatever Korr has aboard the Hammer is all he gets."
+          }
+        ]
+      }
     },
     {
       "id": 19,
@@ -802,37 +4364,267 @@
           "The Kestrel will support you. Everyone else who can fly is in the air."
         ],
         "steps": [
-          { "caption": "The Bastion and the frigate Kestrel hold the anchorage.", "show": ["bastion", "kestrel"], "focus": "bastion" },
-          { "caption": "A Skarn heavy cruiser is advancing on us.", "show": ["cruiser"], "route": ["cruiser", "bastion"], "focus": "cruiser" },
-          { "caption": "Two shield generators on its back. Destroy them, then the cruiser.", "show": ["cruiser"], "focus": "cruiser" },
-          { "caption": "Bombers will try to slip past while you are busy.", "show": ["talons"], "focus": "bastion" }
+          {
+            "caption": "The Bastion and the frigate Kestrel hold the anchorage.",
+            "show": [
+              "bastion",
+              "kestrel"
+            ],
+            "focus": "bastion"
+          },
+          {
+            "caption": "A Skarn heavy cruiser is advancing on us.",
+            "show": [
+              "cruiser"
+            ],
+            "route": [
+              "cruiser",
+              "bastion"
+            ],
+            "focus": "cruiser"
+          },
+          {
+            "caption": "Two shield generators on its back. Destroy them, then the cruiser.",
+            "show": [
+              "cruiser"
+            ],
+            "focus": "cruiser"
+          },
+          {
+            "caption": "Bombers will try to slip past while you are busy.",
+            "show": [
+              "talons"
+            ],
+            "focus": "bastion"
+          }
         ],
-        "intel": ["Target: Skarn heavy cruiser (8 turrets, 2 shield generators)", "Defend: CNS Bastion", "Support: CNS Kestrel, Lancer 2, Lancer 3"]
+        "intel": [
+          "Target: Skarn heavy cruiser (8 turrets, 2 shield generators)",
+          "Defend: CNS Bastion",
+          "Support: CNS Kestrel, Lancer 2, Lancer 3"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Varn",
+            "Rhea"
+          ],
+          "lines": [
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Hale has been arrested by Concord internal security. His last transmission ordered Admiral Korr to launch immediately."
+            },
+            {
+              "speaker": "Captain Rhea Sol",
+              "portrait": "Rhea",
+              "text": "The Kestrel is with you, Commander. We held together because Lancer kept saving people."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "Break the Iron Vow. Keep our ships alive for one final assault."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 8 },
-      "player": { "pos": [0, 0, 200], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 8
+      },
+      "player": {
+        "pos": [
+          0,
+          0,
+          200
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "bastion", "asset": "Carrier", "team": "friend", "name": "CNS Bastion", "pos": [0, -60, 1500], "facing": [0, 0, -1] },
-        { "id": "kestrel", "asset": "Frigate", "team": "friend", "name": "CNS Kestrel", "pos": [-400, 80, 600], "facing": [0, 0, -1], "path": [[-300, 80, -600]], "speed": 15 },
-        { "id": "cruiser", "asset": "Cruiser", "team": "enemy", "name": "Skarn Cruiser Iron Vow", "pos": [0, 100, -3800], "facing": [0, 0, 1], "path": [[0, 50, -900]], "speed": 16 }
+        {
+          "id": "bastion",
+          "asset": "Carrier",
+          "team": "friend",
+          "name": "CNS Bastion",
+          "pos": [
+            0,
+            -60,
+            1500
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ]
+        },
+        {
+          "id": "kestrel",
+          "asset": "Frigate",
+          "team": "friend",
+          "name": "CNS Kestrel",
+          "pos": [
+            -400,
+            80,
+            600
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ],
+          "path": [
+            [
+              -300,
+              80,
+              -600
+            ]
+          ],
+          "speed": 15
+        },
+        {
+          "id": "cruiser",
+          "asset": "Cruiser",
+          "team": "enemy",
+          "name": "Skarn Cruiser Iron Vow",
+          "pos": [
+            0,
+            100,
+            -3800
+          ],
+          "facing": [
+            0,
+            0,
+            1
+          ],
+          "path": [
+            [
+              0,
+              50,
+              -900
+            ]
+          ],
+          "speed": 16
+        }
       ],
       "waves": [
-        { "id": "wing", "ship": "Executioner", "count": 2, "team": "friend", "pos": [80, 30, 300], "spread": 60, "order": "attack", "name": "Lancer" },
-        { "id": "screen", "ship": "Wasp", "count": 5, "team": "enemy", "pos": [0, 300, -3300], "spread": 200, "at": 5, "order": "attack" },
-        { "id": "talons", "ship": "Talon", "count": 3, "team": "enemy", "pos": [-1600, -200, -2000], "spread": 120, "at": 40, "order": "strike:bastion" },
-        { "id": "talons2", "ship": "Talon", "count": 3, "team": "enemy", "pos": [1600, 300, -2200], "spread": 120, "at": 110, "order": "strike:bastion" }
+        {
+          "id": "wing",
+          "ship": "Executioner",
+          "count": 2,
+          "team": "friend",
+          "pos": [
+            80,
+            30,
+            300
+          ],
+          "spread": 60,
+          "order": "attack",
+          "name": "Lancer"
+        },
+        {
+          "id": "screen",
+          "ship": "Wasp",
+          "count": 5,
+          "team": "enemy",
+          "pos": [
+            0,
+            300,
+            -3300
+          ],
+          "spread": 200,
+          "at": 5,
+          "order": "attack"
+        },
+        {
+          "id": "talons",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            -1600,
+            -200,
+            -2000
+          ],
+          "spread": 120,
+          "at": 40,
+          "order": "strike:bastion"
+        },
+        {
+          "id": "talons2",
+          "ship": "Talon",
+          "count": 3,
+          "team": "enemy",
+          "pos": [
+            1600,
+            300,
+            -2200
+          ],
+          "spread": 120,
+          "at": 110,
+          "order": "strike:bastion"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect the Bastion" },
-        { "id": "shields", "type": "disable", "targets": ["cruiser"], "kind": "Shield", "text": "Destroy the cruiser's shield generators" },
-        { "id": "kill", "type": "destroy", "targets": ["cruiser"], "after": ["shields"], "text": "Destroy the heavy cruiser" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "bastion"
+          ],
+          "text": "Protect the Bastion"
+        },
+        {
+          "id": "shields",
+          "type": "disable",
+          "targets": [
+            "cruiser"
+          ],
+          "kind": "Shield",
+          "text": "Destroy the cruiser's shield generators"
+        },
+        {
+          "id": "kill",
+          "type": "destroy",
+          "targets": [
+            "cruiser"
+          ],
+          "after": [
+            "shields"
+          ],
+          "text": "Destroy the heavy cruiser"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Commander Varn", "text": "Here it comes. Lancer flight, generators first." },
-        { "after": "shields", "from": "CNS Kestrel", "text": "Its shields are down! All guns, fire!" },
-        { "after": "kill", "from": "Commander Varn", "text": "The Iron Vow is gone. Well done, all of you." }
+        {
+          "at": 3,
+          "from": "Commander Varn",
+          "text": "Here it comes. Lancer flight, generators first."
+        },
+        {
+          "after": "shields",
+          "from": "CNS Kestrel",
+          "text": "Its shields are down! All guns, fire!"
+        },
+        {
+          "after": "kill",
+          "from": "Commander Varn",
+          "text": "The Iron Vow is gone. Well done, all of you."
+        }
       ],
-      "debrief": { "win": "The Iron Vow broke on the Bastion's defences. One ship is left: the dreadnought.", "lose": "The cruiser reached the Bastion." }
+      "debrief": {
+        "win": "The Iron Vow broke on the Bastion's defences. One ship is left: the dreadnought.",
+        "lose": "The cruiser reached the Bastion.",
+        "dialogue": [
+          {
+            "speaker": "Captain Rhea Sol",
+            "portrait": "Rhea",
+            "text": "The Iron Vow is broken. The fleet is standing by for your attack on the Hammer."
+          }
+        ]
+      }
     },
     {
       "id": 20,
@@ -847,43 +4639,422 @@
           "This is everything we have. Lancer, bring it down."
         ],
         "steps": [
-          { "caption": "The Skarn dreadnought, nine hundred metres long, advancing on the Bastion.", "show": ["dread"], "route": ["dread", "bastion"], "focus": "dread" },
-          { "caption": "Step one: four shield generators on the dorsal superstructure.", "show": ["dread"], "focus": "dread" },
-          { "caption": "Step two: its four engines at the stern.", "show": ["dread"], "focus": "dread" },
-          { "caption": "Step three: the reactor in the dorsal trench forward of the tower.", "show": ["dread"], "focus": "dread" },
-          { "caption": "Two corvettes and its fighters screen it. The Bastion and Kestrel will hold back the bombers.", "show": ["cv1", "cv2", "bastion", "kestrel"], "focus": "bastion" }
+          {
+            "caption": "The Skarn dreadnought, nine hundred metres long, advancing on the Bastion.",
+            "show": [
+              "dread"
+            ],
+            "route": [
+              "dread",
+              "bastion"
+            ],
+            "focus": "dread"
+          },
+          {
+            "caption": "Step one: four shield generators on the dorsal superstructure.",
+            "show": [
+              "dread"
+            ],
+            "focus": "dread"
+          },
+          {
+            "caption": "Step two: its four engines at the stern.",
+            "show": [
+              "dread"
+            ],
+            "focus": "dread"
+          },
+          {
+            "caption": "Step three: the reactor in the dorsal trench forward of the tower.",
+            "show": [
+              "dread"
+            ],
+            "focus": "dread"
+          },
+          {
+            "caption": "Two corvettes and its fighters screen it. The Bastion and Kestrel will hold back the bombers.",
+            "show": [
+              "cv1",
+              "cv2",
+              "bastion",
+              "kestrel"
+            ],
+            "focus": "bastion"
+          }
         ],
-        "intel": ["Target: Skarn dreadnought (22 turrets, 4 shield gens, 4 engines, reactor)", "Hostile: 2 corvettes, many Wasps and Talons", "Support: CNS Bastion, CNS Kestrel, Lancer 2-4"]
+        "intel": [
+          "Target: Skarn dreadnought (22 turrets, 4 shield gens, 4 engines, reactor)",
+          "Hostile: 2 corvettes, many Wasps and Talons",
+          "Support: CNS Bastion, CNS Kestrel, Lancer 2-4"
+        ],
+        "dialogue": {
+          "room": "Bastion",
+          "cast": [
+            "Imani",
+            "Kesh"
+          ],
+          "lines": [
+            {
+              "speaker": "Dr. Sera Imani",
+              "portrait": "Imani",
+              "text": "The Hammer's core is charging. Destroy its exposed weapon systems, then the dreadnought itself, before the Halden gate resonates."
+            },
+            {
+              "speaker": "Kesh Ardan",
+              "portrait": "Kesh",
+              "text": "Korr believes the frontier is expendable. Show him the people here aren't."
+            },
+            {
+              "speaker": "Commander Ilse Varn",
+              "portrait": "Varn",
+              "text": "This began with three navigation buoys. It ends with every crew we've brought home fighting together. Lancer, bring down the Hammer."
+            }
+          ]
+        }
       },
-      "loadout": { "torpedoes": 10 },
-      "player": { "pos": [0, 100, 0], "facing": [0, 0, -1] },
+      "loadout": {
+        "torpedoes": 10
+      },
+      "player": {
+        "pos": [
+          0,
+          100,
+          0
+        ],
+        "facing": [
+          0,
+          0,
+          -1
+        ]
+      },
       "entities": [
-        { "id": "bastion", "asset": "Carrier", "team": "friend", "name": "CNS Bastion", "pos": [0, -100, 1800], "facing": [0, 0, -1] },
-        { "id": "kestrel", "asset": "Frigate", "team": "friend", "name": "CNS Kestrel", "pos": [500, 80, 900], "facing": [0, 0, -1], "path": [[400, 80, -500]], "speed": 15 },
-        { "id": "dread", "asset": "Dreadnought", "team": "enemy", "name": "Skarn Dreadnought Hammer of Skarn", "pos": [0, 0, -4500], "facing": [0, 0, 1], "path": [[0, 0, -1200]], "speed": 10 },
-        { "id": "cv1", "asset": "Corvette", "team": "enemy", "name": "Skarn Corvette Teeth", "pos": [-700, 150, -3500], "facing": [0, 0, 1], "path": [[-500, 100, -800], [-800, 0, -2500]], "speed": 30, "loop": true },
-        { "id": "cv2", "asset": "Corvette", "team": "enemy", "name": "Skarn Corvette Claw", "pos": [700, -150, -3500], "facing": [0, 0, 1], "path": [[500, -100, -800], [800, 0, -2500]], "speed": 30, "loop": true }
+        {
+          "id": "bastion",
+          "asset": "Carrier",
+          "team": "friend",
+          "name": "CNS Bastion",
+          "pos": [
+            0,
+            -100,
+            1800
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ]
+        },
+        {
+          "id": "kestrel",
+          "asset": "Frigate",
+          "team": "friend",
+          "name": "CNS Kestrel",
+          "pos": [
+            500,
+            80,
+            900
+          ],
+          "facing": [
+            0,
+            0,
+            -1
+          ],
+          "path": [
+            [
+              400,
+              80,
+              -500
+            ]
+          ],
+          "speed": 15
+        },
+        {
+          "id": "dread",
+          "asset": "Dreadnought",
+          "team": "enemy",
+          "name": "Skarn Dreadnought Hammer of Skarn",
+          "pos": [
+            0,
+            0,
+            -4500
+          ],
+          "facing": [
+            0,
+            0,
+            1
+          ],
+          "path": [
+            [
+              0,
+              0,
+              -1200
+            ]
+          ],
+          "speed": 10
+        },
+        {
+          "id": "cv1",
+          "asset": "Corvette",
+          "team": "enemy",
+          "name": "Skarn Corvette Teeth",
+          "pos": [
+            -700,
+            150,
+            -3500
+          ],
+          "facing": [
+            0,
+            0,
+            1
+          ],
+          "path": [
+            [
+              -500,
+              100,
+              -800
+            ],
+            [
+              -800,
+              0,
+              -2500
+            ]
+          ],
+          "speed": 30,
+          "loop": true
+        },
+        {
+          "id": "cv2",
+          "asset": "Corvette",
+          "team": "enemy",
+          "name": "Skarn Corvette Claw",
+          "pos": [
+            700,
+            -150,
+            -3500
+          ],
+          "facing": [
+            0,
+            0,
+            1
+          ],
+          "path": [
+            [
+              500,
+              -100,
+              -800
+            ],
+            [
+              800,
+              0,
+              -2500
+            ]
+          ],
+          "speed": 30,
+          "loop": true
+        }
       ],
       "waves": [
-        { "id": "wing", "ship": "Executioner", "count": 3, "team": "friend", "pos": [80, 130, 100], "spread": 70, "order": "attack", "name": "Lancer" },
-        { "id": "screen", "ship": "Wasp", "count": 6, "team": "enemy", "pos": [0, 400, -3800], "spread": 250, "at": 5, "order": "attack" },
-        { "id": "t1", "ship": "Talon", "count": 4, "team": "enemy", "pos": [-1800, 0, -2500], "spread": 150, "at": 50, "order": "strike:bastion" },
-        { "id": "w2", "ship": "Wasp", "count": 4, "team": "enemy", "pos": [1800, 300, -3000], "spread": 150, "at": 100, "order": "attack" },
-        { "id": "t2", "ship": "Talon", "count": 4, "team": "enemy", "pos": [1800, -300, -2600], "spread": 150, "at": 150, "order": "strike:bastion" }
+        {
+          "id": "wing",
+          "ship": "Executioner",
+          "count": 3,
+          "team": "friend",
+          "pos": [
+            80,
+            130,
+            100
+          ],
+          "spread": 70,
+          "order": "attack",
+          "name": "Lancer"
+        },
+        {
+          "id": "screen",
+          "ship": "Wasp",
+          "count": 6,
+          "team": "enemy",
+          "pos": [
+            0,
+            400,
+            -3800
+          ],
+          "spread": 250,
+          "at": 5,
+          "order": "attack"
+        },
+        {
+          "id": "t1",
+          "ship": "Talon",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            -1800,
+            0,
+            -2500
+          ],
+          "spread": 150,
+          "at": 50,
+          "order": "strike:bastion"
+        },
+        {
+          "id": "w2",
+          "ship": "Wasp",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            1800,
+            300,
+            -3000
+          ],
+          "spread": 150,
+          "at": 100,
+          "order": "attack"
+        },
+        {
+          "id": "t2",
+          "ship": "Talon",
+          "count": 4,
+          "team": "enemy",
+          "pos": [
+            1800,
+            -300,
+            -2600
+          ],
+          "spread": 150,
+          "at": 150,
+          "order": "strike:bastion"
+        }
       ],
       "objectives": [
-        { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect the Bastion" },
-        { "id": "shields", "type": "disable", "targets": ["dread"], "kind": "Shield", "text": "Destroy the 4 shield generators" },
-        { "id": "engines", "type": "disable", "targets": ["dread"], "kind": "Engine", "after": ["shields"], "text": "Destroy the 4 engines" },
-        { "id": "core", "type": "destroy", "targets": ["dread"], "after": ["engines"], "text": "Destroy the reactor core" }
+        {
+          "id": "protect",
+          "type": "protect",
+          "targets": [
+            "bastion"
+          ],
+          "text": "Protect the Bastion"
+        },
+        {
+          "id": "shields",
+          "type": "disable",
+          "targets": [
+            "dread"
+          ],
+          "kind": "Shield",
+          "text": "Destroy the 4 shield generators"
+        },
+        {
+          "id": "engines",
+          "type": "disable",
+          "targets": [
+            "dread"
+          ],
+          "kind": "Engine",
+          "after": [
+            "shields"
+          ],
+          "text": "Destroy the 4 engines"
+        },
+        {
+          "id": "core",
+          "type": "destroy",
+          "targets": [
+            "dread"
+          ],
+          "after": [
+            "engines"
+          ],
+          "text": "Destroy the reactor core"
+        }
       ],
       "messages": [
-        { "at": 3, "from": "Commander Varn", "text": "This is it. Every pilot, every gun. Hammerfall." },
-        { "after": "shields", "from": "Okafor", "text": "Shields down! Now the engines at the stern!" },
-        { "after": "engines", "from": "Commander Varn", "text": "It is dead in space! Into the trench, Lancer, hit the reactor!" },
-        { "after": "core", "from": "Commander Varn", "text": "It is breaking up... It is over. Bring them home." }
+        {
+          "at": 3,
+          "from": "Commander Varn",
+          "text": "This is it. Every pilot, every gun. Hammerfall."
+        },
+        {
+          "after": "shields",
+          "from": "Okafor",
+          "text": "Shields down! Now the engines at the stern!"
+        },
+        {
+          "after": "engines",
+          "from": "Commander Varn",
+          "text": "It is dead in space! Into the trench, Lancer, hit the reactor!"
+        },
+        {
+          "after": "core",
+          "from": "Commander Varn",
+          "text": "It is breaking up... It is over. Bring them home."
+        }
       ],
-      "debrief": { "win": "The Hammer of Skarn is gone. Without it, the Skarn offensive is over. The Kestrel Frontier is free, and every pilot aboard the Bastion knows who struck the final blow.", "lose": "The dreadnought reached Kestrel Prime. The frontier has fallen." }
+      "debrief": {
+        "win": "The Hammer of Skarn is gone. Without it, the Skarn offensive is over. The Kestrel Frontier is free, and every pilot aboard the Bastion knows who struck the final blow.",
+        "lose": "The dreadnought reached Kestrel Prime. The frontier has fallen.",
+        "dialogue": [
+          {
+            "speaker": "Commander Ilse Varn",
+            "portrait": "Varn",
+            "text": "The gate is stable. The colonies are safe. And the people you saved along the way are still here to tell their stories."
+          },
+          {
+            "speaker": "Captain Elara Sen",
+            "portrait": "MiraCaptain",
+            "text": "Next time you escort the Mira, Lancer, I promise it really will be a routine cargo run."
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "story": {
+    "title": "THE QUIET ENGINE",
+    "logline": "A routine border patrol exposes a manufactured invasion and a gate-killing superweapon, one rescued witness at a time.",
+    "antagonists": [
+      "Director Soren Hale, Concord Continuity Office",
+      "Admiral Korr, Skarn Dominion"
+    ],
+    "chapters": [
+      {
+        "title": "Strange Orders",
+        "missions": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      {
+        "title": "The People We Save",
+        "missions": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      {
+        "title": "The Machine at Corvid",
+        "missions": [
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "title": "The Quiet Engine",
+        "missions": [
+          16,
+          17,
+          18,
+          19,
+          20
+        ]
+      }
+    ]
+  }
 }
