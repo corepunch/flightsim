@@ -2,14 +2,19 @@
 #import <simd/simd.h>
 #import "Ship.h"
 
-#define COCKPIT_MAX_CONTACTS 12
+#define COCKPIT_MAX_CONTACTS 24
 
 typedef struct {
     simd_float3 local;          // position in player ship space (-Z forward), metres
     simd_quatf orientation;     // relative to the player ship
     float hull, shield;
-    ShipClass shipClass;
+    Team team;
+    BOOL capital;               // a big ship or station (bigger scanner blip)
+    BOOL shielded;              // capital with its shield generators up
     BOOL attacking;             // in an attack run on the player
+    __unsafe_unretained SCNGeometry *geometry;   // for the target hologram
+    float holoScale;            // metres of hologram per metre of ship
+    __unsafe_unretained NSString *name, *className;
 } CockpitContact;
 
 typedef struct {
@@ -23,7 +28,9 @@ typedef struct {
     float closingSpeed;         // towards the target, m/s
     BOOL lock;                  // lead marker under the boresight
     BOOL six;                   // someone attacking from behind
-    float nearest;              // distance to the closest contact, metres
+    float nearest;              // distance to the closest hostile, metres
+    int torpedoes;
+    __unsafe_unretained NSString *objective;     // current objective, for the status display
 } CockpitFrame;
 
 // The player's cockpit: Resources/Models/Cockpit.obj (built by

@@ -1,6 +1,7 @@
 #import "Cockpit.h"
 #import <SpriteKit/SpriteKit.h>
 #import <Metal/Metal.h>
+#import "ObjLoader.h"
 
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
@@ -181,6 +182,21 @@ static void SetHologramShip(SCNNode *model, ShipClass c) {
     model.geometry = g;
 }
 
+// Any mesh as a hologram. Fighter meshes are in OBJ space (+Z nose) and
+// need the half turn; capital meshes were exported in ship space.
+static void SetHologramGeometry(SCNNode *model, SCNGeometry *source, float scale, BOOL fighter) {
+    SCNGeometry *g = [source copy];
+    g.materials = @[[model valueForKey:@"holoMaterial"]];
+    model.geometry = g;
+    model.eulerAngles = SCNVector3Make(0, fighter ? M_PI : 0, 0);
+    model.simdScale = simd_make_float3(scale, scale, scale);
+}
+
+static NSColor *TeamColor(Team t, CGFloat a) {
+    return t == TeamEnemy ? EnemyColor(a) : (t == TeamFriend ? [NSColor colorWithRed:0.4 green:1 blue:0.55 alpha:a]
+                                                             : [NSColor colorWithRed:0.95 green:0.88 blue:0.45 alpha:a]);
+}
+
 #pragma mark - Lamps
 
 // Annunciator face: legend over a tinted tile. The lit version feeds the
@@ -248,7 +264,8 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
     SKNode *_targetInfo;
     SKLabelNode *_noTarget, *_targetName, *_targetRange, *_targetClosing, *_targetMode, *_targetHullPct, *_targetShieldPct;
     Bar *_targetHull, *_targetShield;
-    int _targetClass;
+    SCNGeometry *_targetGeometry;
+    SKLabelNode *_targetTeam, *_targetClassLabel;
 
     // Status
     SKLabelNode *_killsLabel, *_deathsLabel, *_clockLabel, *_messageLabel;
@@ -267,7 +284,6 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
         _node = [SCNNode node];
         _node.name = @"Cockpit";
         _lamps = [NSMutableDictionary dictionary];
-        _targetClass = -1;
         [self buildDisplays];
         [self loadModel];
     }
@@ -276,16 +292,9 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
 
 - (void)loadModel {
     NSURL *url = [[NSBundle mainBundle] URLForResource:@"Cockpit" withExtension:@"obj" subdirectory:@"Models"];
-    SCNScene *scene = [SCNScene sceneWithURL:url options:nil error:nil];
-    if (!scene) { NSLog(@"Cockpit: model missing"); return; }
-    NSMutableArray<SCNNode *> *parts = [NSMutableArray array];
-    [scene.rootNode enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
-        if (child.geometry) [parts addObject:child];
-    }];
-    for (SCNNode *part in parts) {
-        SCNNode *n = [SCNNode nodeWithGeometry:part.geometry];
-        n.name = part.name;
-        n.transform = part.worldTransform;
+    NSArray<SCNNode *> *parts = [ObjLoader nodesFromURL:url];
+    if (!parts.count) { NSLog(@"Cockpit: model missing"); return; }
+    for (SCNNode *n in parts) {
         n.castsShadow = YES;
         [_node addChildNode:n];
         for (SCNMaterial *m in n.geometry.materials) [self styleMaterial:m];
@@ -372,7 +381,8 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
         m.diffuse.contents = [NSColor colorWithRed:0.3 green:0.9 blue:0.7 alpha:1];
         m.roughness.contents = @0.05;
         m.metalness.contents = @0;
-        m.transparency = 0.1;
+        m.transparent.contents = [NSColor colorWithWhite:1 alpha:0.1];
+        m.transparencyMode = SCNTransparencyModeAOne;
         m.blendMode = SCNBlendModeAlpha;
         m.writesToDepthBuffer = NO;
         m.doubleSided = YES;
@@ -602,16 +612,18 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     pad.position = CGPointMake(kHoloSpot.x, kHoloSpot.y - 90);
     [_targetInfo addChild:pad];
 
-    SKLabelNode *hostile = Text(22, SKLabelHorizontalAlignmentModeRight, EnemyColor(1));
-    hostile.text = @"HOSTILE";
-    hostile.position = CGPointMake(588, 450);
-    [_targetInfo addChild:hostile];
+    _targetTeam = Text(22, SKLabelHorizontalAlignmentModeRight, EnemyColor(1));
+    _targetTeam.position = CGPointMake(588, 450);
+    [_targetInfo addChild:_targetTeam];
 
-    _targetName = Text(30, SKLabelHorizontalAlignmentModeLeft, EnemyColor(1));
-    _targetName.position = CGPointMake(330, 386);
+    _targetName = Text(24, SKLabelHorizontalAlignmentModeLeft, EnemyColor(1));
+    _targetName.position = CGPointMake(330, 392);
     [_targetInfo addChild:_targetName];
+    _targetClassLabel = Text(18, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.7));
+    _targetClassLabel.position = CGPointMake(330, 366);
+    [_targetInfo addChild:_targetClassLabel];
     _targetRange = Text(24, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.95));
-    _targetRange.position = CGPointMake(330, 340);
+    _targetRange.position = CGPointMake(330, 334);
     [_targetInfo addChild:_targetRange];
     _targetClosing = Text(24, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.95));
     _targetClosing.position = CGPointMake(330, 306);
@@ -635,11 +647,11 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
 - (void)buildStatus {
     CGSize size = CGSizeMake(440, 260);
     _status = MakeScreen(size, nil);
-    _killsLabel = Text(30, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.95));
-    _killsLabel.position = CGPointMake(20, 220);
+    _killsLabel = Text(28, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.95));
+    _killsLabel.position = CGPointMake(20, 222);
     [_status addChild:_killsLabel];
-    _deathsLabel = Text(30, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.75));
-    _deathsLabel.position = CGPointMake(20, 178);
+    _deathsLabel = Text(20, SKLabelHorizontalAlignmentModeLeft, WarnColor(0.95));
+    _deathsLabel.position = CGPointMake(20, 176);
     [_status addChild:_deathsLabel];
     _clockLabel = Text(30, SKLabelHorizontalAlignmentModeRight, ScreenColor(0.75));
     _clockLabel.position = CGPointMake(420, 220);
@@ -751,9 +763,10 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
         BOOL above = c.local.y >= 0;
         CGFloat a = outside ? 0.45 : 1.0;
         if (c.attacking && !Blink(f.time, 2.5)) a *= 0.55;
-        b.strokeColor = EnemyColor(a);
-        b.fillColor = above ? EnemyColor(a * 0.8) : [NSColor clearColor];
-        s.strokeColor = EnemyColor(a * 0.6);
+        b.strokeColor = TeamColor(c.team, a);
+        b.fillColor = above ? TeamColor(c.team, a * 0.8) : [NSColor clearColor];
+        s.strokeColor = TeamColor(c.team, a * 0.6);
+        b.xScale = b.yScale = c.capital ? 1.8 : 1.0;
         if ((int)i == f.target) {
             _radarTargetMark.hidden = NO;
             _radarTargetMark.position = tip;
@@ -797,11 +810,20 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     _noTarget.alpha = Blink(f.time, 1) ? 0.8 : 0.35;
     if (!has) return;
     CockpitContact c = contacts[f.target];
-    if ((int)c.shipClass != _targetClass) {
-        _targetClass = (int)c.shipClass;
-        SetHologramShip(_targetModel, c.shipClass);
-        _targetName.text = [[Ship nameForClass:c.shipClass] uppercaseString];
+    if (c.geometry != _targetGeometry) {
+        _targetGeometry = c.geometry;
+        BOOL fighter = !c.capital && fabsf(c.holoScale - 0.0075f) < 1e-5f;
+        // The mount is scaled for fighters (0.0075); scale relative to it.
+        SetHologramGeometry(_targetModel, c.geometry, c.holoScale / 0.0075f, fighter);
     }
+    NSString *name = [c.name uppercaseString] ?: @"";
+    if (name.length > 17) name = [name substringToIndex:17];
+    _targetName.text = name;
+    _targetClassLabel.text = [c.className uppercaseString];
+    _targetName.fontColor = TeamColor(c.team, 1);
+    _targetTeam.text = c.team == TeamEnemy ? @"HOSTILE" : (c.team == TeamFriend ? @"FRIENDLY" : @"NEUTRAL");
+    _targetTeam.fontColor = TeamColor(c.team, 1);
+    ((SCNMaterial *)[_targetModel valueForKey:@"holoMaterial"]).diffuse.contents = TeamColor(c.team, 0.55);
     // The hologram shows the target's attitude as seen from our cockpit.
     _targetHolder.simdOrientation = c.orientation;
     float d = simd_length(c.local);
@@ -814,13 +836,17 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     _targetShieldPct.text = [NSString stringWithFormat:@"%d%%", (int)lroundf(c.shield * 100)];
     _targetHullPct.text = [NSString stringWithFormat:@"%d%%", (int)lroundf(c.hull * 100)];
     if (f.lock) { _targetMode.text = Blink(f.time, 4) ? @"[ LOCK ]" : @"  LOCK  "; _targetMode.fontColor = [NSColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]; }
+    else if (c.capital) { _targetMode.text = c.shielded ? @"SHIELDED" : @"VULNERABLE"; _targetMode.fontColor = c.shielded ? ShieldColor(1) : WarnColor(1); }
     else if (c.attacking) { _targetMode.text = @"ATTACKING"; _targetMode.fontColor = EnemyColor(1); }
+    else if (c.team != TeamEnemy) { _targetMode.text = @""; }
     else { _targetMode.text = @"EVADING"; _targetMode.fontColor = WarnColor(1); }
 }
 
 - (void)updateStatus:(CockpitFrame)f {
-    _killsLabel.text = [NSString stringWithFormat:@"KILLS  %d", f.kills];
-    _deathsLabel.text = [NSString stringWithFormat:@"LOSSES %d", f.deaths];
+    _killsLabel.text = [NSString stringWithFormat:@"KILLS %d  TORP %d", f.kills, f.torpedoes];
+    NSString *obj = [f.objective uppercaseString] ?: @"";
+    if (obj.length > 30) obj = [[obj substringToIndex:29] stringByAppendingString:@"."];
+    _deathsLabel.text = obj;
     int secs = (int)f.time;
     _clockLabel.text = [NSString stringWithFormat:@"%02d:%02d", secs / 60, secs % 60];
     BOOL show = _message && f.time < _messageUntil;

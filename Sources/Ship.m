@@ -56,6 +56,7 @@ static NSString *const kShieldFragment =
     SCNNode *_shieldNode;
     SCNMaterial *_shieldMaterial;
     float _shieldFlash;
+    BOOL _boostDepleted;   // set when energy runs dry; cleared once it recharges past 15%
     SCNParticleSystem *_damageFire, *_damageSmoke;
 }
 
@@ -215,6 +216,7 @@ static NSString *const kShieldFragment =
     _hull = 1;
     _shield = 1;
     _boostEnergy = 1;
+    _boostDepleted = NO;
     _alive = YES;
     _node.hidden = NO;
     [_exhaust setEnabled:YES];
@@ -223,8 +225,14 @@ static NSString *const kShieldFragment =
 - (void)stepWithControls:(ControlState)c dt:(float)dt {
     if (!_alive) return;
 
-    // Boost drains energy; it recharges when not boosting.
-    BOOL boost = c.boost && _boostEnergy > 0.02f;
+    // Boost drains energy; it recharges when not boosting. Once drained it
+    // stays locked out until 15% has recharged (hysteresis). Without that,
+    // holding the button at empty would toggle boost every frame or two
+    // (recharge a bit, go over the threshold, drain, repeat), and the camera,
+    // exhaust and HUD would all flicker along with it.
+    if (_boostEnergy <= 0.02f) _boostDepleted = YES;
+    else if (_boostEnergy >= 0.15f) _boostDepleted = NO;
+    BOOL boost = c.boost && !_boostDepleted;
     _boostEnergy = fminf(1, fmaxf(0, _boostEnergy + (boost ? -0.28f : 0.12f) * dt));
     _boosting = boost;
     _throttle = c.throttle;

@@ -36,7 +36,7 @@
 
 - (void)keyDown:(NSEvent *)event {
     if (getenv("SF_SNAPSHOT")) return;  // debug snapshot runs ignore the keyboard
-    if (event.keyCode == kVK_Escape) { [self releaseMouse]; return; }
+    if (event.keyCode == kVK_Escape && self.input.mouseCaptured) { [self releaseMouse]; return; }
     if (event.modifierFlags & NSEventModifierFlagCommand) { [super keyDown:event]; return; }
     [self.input keyDown:event];
 }

@@ -2,6 +2,7 @@
 #import <simd/simd.h>
 #import "Input.h"
 #import "Exhaust.h"
+#import "Capital.h"
 
 typedef NS_ENUM(NSInteger, ShipClass) {
     ShipClassExecutioner,   // player
@@ -20,12 +21,16 @@ typedef NS_ENUM(NSInteger, ShipClass) {
 @property (nonatomic, readonly) Exhaust *exhaust;
 @property (nonatomic, readonly) ShipClass shipClass;
 @property (nonatomic, readonly) float radius;
+@property (nonatomic) Team team;
 
 @property (nonatomic) simd_float3 velocity;
 @property (nonatomic) simd_float3 angularVelocity;  // local: pitch, -yaw, -roll (rad/s about X,Y,Z)
 @property (nonatomic) float throttle;
+/// YES while boost is actually firing this step (button held and energy available).
+/// After the energy runs dry, boost stays off until it recharges to 15%
+/// (hysteresis), so this doesn't flicker on and off at empty.
 @property (nonatomic) BOOL boosting;
-@property (nonatomic) float boostEnergy;            // 0..1
+@property (nonatomic) float boostEnergy;            // 0..1; drains 0.28/s boosting, recharges 0.12/s
 @property (nonatomic) float maxSpeed;
 @property (nonatomic) float turnRate;               // multiplier
 @property (nonatomic) float hull, shield;

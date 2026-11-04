@@ -17,6 +17,14 @@ typedef NS_OPTIONS(NSUInteger, InputAction) {
     InputActionInvertMouse  = 1 << 3,
     InputActionRestart      = 1 << 4,
     InputActionToggleHelp   = 1 << 5,
+    InputActionUp           = 1 << 6,   // menus
+    InputActionDown         = 1 << 7,
+    InputActionLeft         = 1 << 8,
+    InputActionRight        = 1 << 9,
+    InputActionConfirm      = 1 << 10,  // Return / Enter / stick button 1
+    InputActionBack         = 1 << 11,  // Esc (mouse free) / M / Backspace
+    InputActionTarget       = 1 << 12,  // T / stick button 6: next target
+    InputActionTorpedo      = 1 << 13,  // G / stick button 5
 };
 
 // Merges a HID joystick (IOKit, so generic flight sticks work, not only

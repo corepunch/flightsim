@@ -1,10 +1,20 @@
 #import "HUD.h"
 #import "Exhaust.h"
 
-#define MAX_TARGETS 12
+#define MAX_TARGETS 64
 
 static NSColor *HUDColor(CGFloat a) { return [NSColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:a]; }
 static NSColor *EnemyColor(CGFloat a) { return [NSColor colorWithRed:1.0 green:0.42 blue:0.32 alpha:a]; }
+static NSColor *FriendColor(CGFloat a) { return [NSColor colorWithRed:0.4 green:0.95 blue:0.5 alpha:a]; }
+static NSColor *NeutralColor(CGFloat a) { return [NSColor colorWithRed:0.95 green:0.88 blue:0.45 alpha:a]; }
+static NSColor *KindColor(HUDKind k, CGFloat a) {
+    switch (k) {
+        case HUDKindEnemy: return EnemyColor(a);
+        case HUDKindFriend: return FriendColor(a);
+        case HUDKindNeutral: return NeutralColor(a);
+        case HUDKindNav: return HUDColor(a);
+    }
+}
 
 static SKLabelNode *Label(CGFloat size, SKLabelHorizontalAlignmentMode align) {
     SKLabelNode *l = [SKLabelNode labelNodeWithFontNamed:@"Menlo"];
@@ -46,6 +56,11 @@ static SKShapeNode *Bracket(void) {
     NSMutableArray<SKShapeNode *> *_brackets, *_arrows, *_leads;
     NSMutableArray<SKLabelNode *> *_distLabels;
     NSMutableArray<SKSpriteNode *> *_flares;
+    NSMutableArray<SKShapeNode *> *_navMarks;
+    SKShapeNode *_aimMark;
+    SKLabelNode *_statusLabel, *_torpLabel, *_bannerLabel;
+    SKNode *_objectivePanel, *_messagePanel;
+    NSMutableArray<SKLabelNode *> *_messages;
     SKSpriteNode *_sunStreak;
     CGSize _laidOut;
 }
@@ -189,7 +204,8 @@ static SKShapeNode *Bracket(void) {
                        @"MOUSE  pitch / yaw     Q/E roll     A/D yaw     arrows pitch/yaw",
                        @"W/S throttle   Z full   X cut   SHIFT/TAB boost   SPACE/LMB fire",
                        @"C camera   J cycle stick throttle axis   K invert throttle   I invert mouse",
-                       @"Joystick: X roll  Y pitch  throttle lever  (twist yaw)  B1 fire  B2/B4 boost  B3 camera  hat look",
+                       @"Joystick: X roll  Y pitch  throttle lever  B1 fire  B2/B4 boost  B3 camera  B5 torpedo  B6 target  hat look",
+                       @"T  next target   G  torpedo   ESC (mouse free) / M  abort to missions",
                        @"R restart   H toggle this help"];
     for (NSUInteger i = 0; i < lines.count; i++) {
         SKLabelNode *l = Label(12, SKLabelHorizontalAlignmentModeLeft);
@@ -199,6 +215,30 @@ static SKShapeNode *Bracket(void) {
         [_help addChild:l];
     }
     [_root addChild:_help];
+
+    _navMarks = [NSMutableArray array];
+    _aimMark = [SKShapeNode node];
+    CGMutablePathRef am = CGPathCreateMutable();
+    CGPathMoveToPoint(am, NULL, 0, 9); CGPathAddLineToPoint(am, NULL, 9, 0); CGPathAddLineToPoint(am, NULL, 0, -9); CGPathAddLineToPoint(am, NULL, -9, 0);
+    CGPathCloseSubpath(am);
+    _aimMark.path = am;
+    CGPathRelease(am);
+    _aimMark.strokeColor = [NSColor colorWithRed:1 green:0.75 blue:0.3 alpha:1];
+    _aimMark.lineWidth = 2;
+    [_root addChild:_aimMark];
+    _statusLabel = Label(13, SKLabelHorizontalAlignmentModeCenter);
+    [_root addChild:_statusLabel];
+    _torpLabel = Label(13, SKLabelHorizontalAlignmentModeLeft);
+    [_root addChild:_torpLabel];
+    _bannerLabel = Label(30, SKLabelHorizontalAlignmentModeCenter);
+    _bannerLabel.fontName = @"Menlo-Bold";
+    _bannerLabel.alpha = 0;
+    [_root addChild:_bannerLabel];
+    _objectivePanel = [SKNode node];
+    [_root addChild:_objectivePanel];
+    _messagePanel = [SKNode node];
+    [_root addChild:_messagePanel];
+    _messages = [NSMutableArray array];
 
     _brackets = [NSMutableArray array];
     _arrows = [NSMutableArray array];
@@ -265,6 +305,10 @@ static SKShapeNode *Bracket(void) {
     _inputLabel.position = CGPointMake(40, 30);
     _deadLabel.position = CGPointMake(s.width / 2, s.height / 2 + 80);
     _help.position = CGPointMake(40, s.height - 40);
+    _objectivePanel.position = CGPointMake(40, s.height - 40);
+    _messagePanel.position = CGPointMake(s.width / 2, s.height - 110);
+    _bannerLabel.position = CGPointMake(s.width / 2, s.height * 0.68);
+    _torpLabel.position = CGPointMake(66, 130);
     CGPathRef dp = CGPathCreateWithRect(CGRectMake(0, 0, s.width, s.height), NULL);
     _damage.path = dp;
     CGPathRelease(dp);
@@ -272,7 +316,55 @@ static SKShapeNode *Bracket(void) {
 }
 
 - (void)setInputText:(NSString *)text { _inputLabel.text = text; }
-- (void)toggleHelp { _help.hidden = !_help.hidden; }
+- (void)toggleHelp {
+    _help.hidden = !_help.hidden;
+    _objectivePanel.hidden = !_help.hidden;
+}
+- (void)setHelpVisible:(BOOL)visible {
+    _help.hidden = !visible;
+    _objectivePanel.hidden = visible;
+}
+
+- (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {
+    [_objectivePanel removeAllChildren];
+    SKLabelNode *head = Label(13, SKLabelHorizontalAlignmentModeLeft);
+    head.text = @"OBJECTIVES";
+    head.fontColor = HUDColor(0.6);
+    [_objectivePanel addChild:head];
+    for (NSUInteger i = 0; i < lines.count; i++) {
+        int st = states[i].intValue;
+        SKLabelNode *l = Label(14, SKLabelHorizontalAlignmentModeLeft);
+        NSString *mark = st == 1 ? @"[+]" : (st == 2 ? @"[x]" : (st == 3 ? @"[o]" : @"[ ]"));
+        l.text = [NSString stringWithFormat:@"%@ %@", mark, lines[i]];
+        l.fontColor = st == 1 ? FriendColor(0.85) : (st == 2 ? EnemyColor(0.9) : (st == 3 ? HUDColor(0.55) : HUDColor(0.95)));
+        l.position = CGPointMake(0, -20.0 * (i + 1));
+        [_objectivePanel addChild:l];
+    }
+}
+
+- (void)showMessage:(NSString *)text from:(NSString *)from {
+    SKLabelNode *l = Label(15, SKLabelHorizontalAlignmentModeCenter);
+    l.text = from.length ? [NSString stringWithFormat:@"%@: %@", [from uppercaseString], text] : text;
+    l.fontColor = [NSColor colorWithRed:0.85 green:0.95 blue:1 alpha:1];
+    [_messagePanel addChild:l];
+    [_messages insertObject:l atIndex:0];
+    while (_messages.count > 3) { [_messages.lastObject removeFromParent]; [_messages removeLastObject]; }
+    for (NSUInteger i = 0; i < _messages.count; i++) _messages[i].position = CGPointMake(0, -22.0 * i);
+    [l runAction:[SKAction sequence:@[[SKAction waitForDuration:7], [SKAction fadeOutWithDuration:1.5]]]];
+}
+
+- (void)clearMessages {
+    [_messagePanel removeAllChildren];
+    [_messages removeAllObjects];
+}
+
+- (void)showBanner:(NSString *)text color:(NSColor *)color {
+    _bannerLabel.text = text;
+    _bannerLabel.fontColor = color ?: HUDColor(1);
+    [_bannerLabel removeAllActions];
+    _bannerLabel.alpha = 1;
+    [_bannerLabel runAction:[SKAction sequence:@[[SKAction waitForDuration:2.5], [SKAction fadeOutWithDuration:1.0]]]];
+}
 
 static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     CGPathRef p = CGPathCreateWithRect(CGRectMake(0, 0, MAX(w, 0.01), MAX(h, 0.01)), NULL);
@@ -310,8 +402,15 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     SetBar(_shieldFill, 200 * f.shield, 6);
     _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
     _scoreLabel.text = [NSString stringWithFormat:@"KILLS %d   DEATHS %d", f.kills, f.deaths];
-    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel])
+    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _torpLabel])
         n.hidden = f.cockpit;
+    _scoreLabel.hidden = YES;
+    _torpLabel.text = [NSString stringWithFormat:@"TORP %d", f.torpedoes];
+    _aimMark.hidden = !f.aimVisible || f.playerDead;
+    _aimMark.position = f.aim;
+    _aimMark.zRotation = 0.0;
+    _statusLabel.text = f.status ?: @"";
+    _statusLabel.position = CGPointMake(f.boresight.x, f.boresight.y - 40);
     _deadLabel.hidden = !f.playerDead;
     _damage.alpha = f.damageFlash * 0.35;
 
@@ -332,18 +431,37 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
         SKLabelNode *d = _distLabels[i];
         if (i >= count || f.playerDead) { b.hidden = a.hidden = l.hidden = d.hidden = YES; continue; }
         HUDTarget t = targets[i];
+        NSColor *c = KindColor(t.kind, 0.9);
+        BOOL nav = t.kind == HUDKindNav;
         b.hidden = !t.onScreen;
         d.hidden = !t.onScreen;
-        a.hidden = t.onScreen;
-        l.hidden = !(t.onScreen && t.hasLead);
+        // Off-screen arrows only for what matters: hostile fighters, navs, the selection.
+        a.hidden = t.onScreen || !(t.selected || nav || (t.kind == HUDKindEnemy && !t.capital));
+        l.hidden = !(t.onScreen && t.hasLead && (t.selected || (t.kind == HUDKindEnemy && !t.capital)));
+        b.strokeColor = c;
+        b.lineWidth = t.selected ? 2.5 : 1.5;
+        a.fillColor = KindColor(t.kind, t.selected ? 1.0 : 0.7);
+        d.fontColor = c;
         if (t.onScreen) {
             b.position = t.point;
-            CGPathRef bp = BracketPath(roundf(t.size));
+            CGPathRef bp;
+            if (nav) {
+                CGMutablePathRef np = CGPathCreateMutable();
+                CGPathMoveToPoint(np, NULL, 0, 12); CGPathAddLineToPoint(np, NULL, 12, 0);
+                CGPathAddLineToPoint(np, NULL, 0, -12); CGPathAddLineToPoint(np, NULL, -12, 0);
+                CGPathCloseSubpath(np);
+                bp = np;
+            } else {
+                bp = BracketPath(roundf(t.size));
+            }
             b.path = bp;
             CGPathRelease(bp);
-            d.position = CGPointMake(t.point.x + t.size * 0.5 + 4, t.point.y + t.size * 0.5 - 4);
-            d.text = t.distance >= 1000 ? [NSString stringWithFormat:@"%.1fkm", t.distance / 1000.0]
-                                        : [NSString stringWithFormat:@"%dm", (int)t.distance];
+            NSString *dist = t.distance >= 1000 ? [NSString stringWithFormat:@"%.1fkm", t.distance / 1000.0]
+                                                : [NSString stringWithFormat:@"%dm", (int)t.distance];
+            BOOL named = t.label && (t.selected || t.capital || nav);
+            d.text = named ? [NSString stringWithFormat:@"%@ %@", t.label, dist] : dist;
+            CGFloat half = nav ? 12 : t.size * 0.5;
+            d.position = CGPointMake(t.point.x + half + 4, t.point.y + half - 4);
             l.position = t.lead;
         } else {
             a.position = t.point;

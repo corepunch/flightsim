@@ -15,7 +15,7 @@ clang -fobjc-arc -O2 -g -Wall -Wno-unused-function \
     -o "$APP/Contents/MacOS/SpaceFight"
 
 cp Resources/Info.plist "$APP/Contents/"
-cp -R Resources/Models Resources/Shaders Resources/Particles "$APP/Contents/Resources/"
+cp -R Resources/Models Resources/Shaders Resources/Particles Resources/Textures Resources/Missions "$APP/Contents/Resources/"
 cp CREDITS.md "$APP/Contents/Resources/"
 codesign --force --sign - "$APP" >/dev/null 2>&1 || true
 

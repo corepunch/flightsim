@@ -303,8 +303,13 @@ static NSString *const kFireFragment =
 #pragma mark - Explosions
 
 - (void)explosionAt:(simd_float3)p velocity:(simd_float3)v hullMaterial:(SCNMaterial *)hull {
+    [self explosionAt:p velocity:v hullMaterial:hull scale:1];
+}
+
+- (void)explosionAt:(simd_float3)p velocity:(simd_float3)v hullMaterial:(SCNMaterial *)hull scale:(float)scale {
     SCNNode *root = [SCNNode node];
     root.simdPosition = p;
+    root.simdScale = simd_make_float3(scale, scale, scale);
     [_scene.rootNode addChildNode:root];
     // The cloud keeps a little of the ship's momentum.
     [root runAction:[SCNAction moveBy:V3(v * 0.35f * 2.5f) duration:2.5]];
@@ -334,7 +339,7 @@ static NSString *const kFireFragment =
          completionHandler:^{ [ring removeFromParentNode]; }];
 
     // A few glowing hull chunks that cool as they tumble away.
-    int pieces = 4 + (int)arc4random_uniform(3);
+    int pieces = 4 + (int)arc4random_uniform(3) + (int)(scale > 1 ? 4 : 0);
     for (int i = 0; i < pieces; i++) [self debrisFrom:p velocity:v hull:hull];
 
     // Light flash on nearby hulls, from the fixed pool.
@@ -342,7 +347,7 @@ static NSString *const kFireFragment =
     [flash removeAllActions];
     flash.simdPosition = p;
     [flash runAction:[SCNAction customActionWithDuration:0.9 actionBlock:^(SCNNode *node, CGFloat t) {
-        node.light.intensity = 60000 * powf(1.0f - (float)(t / 0.9), 2.0f);
+        node.light.intensity = 60000 * scale * powf(1.0f - (float)(t / 0.9), 2.0f);
     }]];
     [root runAction:[SCNAction sequence:@[[SCNAction waitForDuration:2.5], [SCNAction removeFromParentNode]]]];
 }

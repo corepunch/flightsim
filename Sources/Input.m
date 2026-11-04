@@ -213,6 +213,9 @@ static NSString *AxisName(uint32_t key) {
         uint32_t bit = 1u << (usage - 1);
         BOOL down = raw != 0;
         if (down && !(_buttons & bit) && usage == 3) _actions |= InputActionToggleCamera;
+        if (down && !(_buttons & bit) && usage == 1) _actions |= InputActionConfirm;
+        if (down && !(_buttons & bit) && usage == 5) _actions |= InputActionTorpedo;
+        if (down && !(_buttons & bit) && usage == 6) _actions |= InputActionTarget;
         _buttons = down ? (_buttons | bit) : (_buttons & ~bit);
     } else if (page == kHIDPage_GenericDesktop && usage == kHIDUsage_GD_Hatswitch) {
         CFIndex mn = IOHIDElementGetLogicalMin(el), mx = IOHIDElementGetLogicalMax(el);
@@ -247,6 +250,14 @@ static NSString *AxisName(uint32_t key) {
             case kVK_ANSI_H: case kVK_F1: _actions |= InputActionToggleHelp; break;
             case kVK_ANSI_X: _kbThrottle = 0; _throttle = 0; self.throttleFromJoystick = NO; break;
             case kVK_ANSI_Z: _kbThrottle = 1; _throttle = 1; self.throttleFromJoystick = NO; break;
+            case kVK_UpArrow: _actions |= InputActionUp; break;
+            case kVK_DownArrow: _actions |= InputActionDown; break;
+            case kVK_LeftArrow: _actions |= InputActionLeft; break;
+            case kVK_RightArrow: _actions |= InputActionRight; break;
+            case kVK_Return: case kVK_ANSI_KeypadEnter: _actions |= InputActionConfirm; break;
+            case kVK_Escape: case kVK_ANSI_M: case kVK_Delete: _actions |= InputActionBack; break;
+            case kVK_ANSI_T: _actions |= InputActionTarget; break;
+            case kVK_ANSI_G: _actions |= InputActionTorpedo; break;
         }
     }
     os_unfair_lock_unlock(&_lock);
