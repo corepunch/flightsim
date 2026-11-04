@@ -78,6 +78,10 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
 }
 
 
+// Lamp light to crowd-sprite brightness: a seated row under an audience
+// downlight comes out about as bright as the sprites were unlit.
+#define SPRITE_GAIN 0.05f
+
 @implementation BriefingRoom {
     id<MTLDevice> _device;
     SKRenderer *_renderer;
@@ -273,10 +277,11 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     m.diffuse.contents = image;
     m.diffuse.wrapS = m.diffuse.wrapT = SCNWrapModeClamp;
     m.diffuse.mipFilter = SCNFilterModeLinear;
-    m.diffuse.intensity = _shadows ? 0.6 : 0.9;   // unlit: under Doom 3 lighting, kept down to sit in the dark
+    m.diffuse.intensity = 0.9;
     m.doubleSided = NO;
     m.blendMode = SCNBlendModeReplace;
     m.shaderModifiers = @{ SCNShaderModifierEntryPointFragment: @"if (_output.color.a < 0.5) discard_fragment();" };
+    if (_shadows) [_shadows applyToSprite:m gain:SPRITE_GAIN];   // in the lamps' pools, black outside them
 }
 
 - (void)buildLights {

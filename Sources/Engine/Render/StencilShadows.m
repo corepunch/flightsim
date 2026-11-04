@@ -391,38 +391,93 @@ static NSString *const kLampFunction = @
 
 static NSString *F(float v) { return [NSString stringWithFormat:@"%.6g", v]; }
 
+// Sprites (flat cut-outs of people): wrapped Lambert about a normal that
+// faces the camera, so they sit in the lamps' pools and fall to black
+// outside them.
+static NSString *const kSpriteLampFunction = @
+    "#pragma declaration\n"
+    "inline float sl_sprite_lamp(float3 Lv, float reach, float3 axis, float cone, float3 N) {\n"
+    "    float d = length(Lv);\n"
+    "    float w = saturate(1 - pow(d / reach, 4.0));\n"
+    "    float att = w * w / max(d * d, 0.01);\n"
+    "    float3 L = Lv / max(d, 1e-4);\n"
+    "    if (cone > -1.5) att *= smoothstep(cone, cone + 0.12, dot(-L, axis));\n"
+    "    return att * saturate(dot(N, L) * 0.6 + 0.4);\n"
+    "}\n";
+
+// The shared top of both shaders: the mask lookup at this fragment.
+static NSString *const kMaskLookup = @
+    "float4 clip = scn_frame.projectionTransform * float4(_surface.position, 1);\n"
+    "float2 uv = float2(clip.x / clip.w * 0.5 + 0.5, 0.5 - clip.y / clip.w * 0.5);\n"
+    "constexpr sampler ms(filter::linear, address::clamp_to_edge);\n"
+    "float4 m0 = sl_mask0.sample(ms, uv), m1 = sl_mask1.sample(ms, uv), m2 = sl_mask2.sample(ms, uv);\n"
+    "float4x4 vt = scn_frame.viewTransform;\n";
+
+static NSString *const kMaskArguments = @
+    "#pragma arguments\ntexture2d<float> sl_mask0;\ntexture2d<float> sl_mask1;\ntexture2d<float> sl_mask2;\nfloat4 sl_tint;\n";
+
+// `sum += mask * colour * call(...)` per lamp, `call` taking the view-space
+// vector to the lamp, its reach, axis and cone, then `rest`.
+- (NSString *)unrolledLamps:(NSString *)call rest:(NSString *)rest colour:(BOOL)colour {
+    static const char *chan[4] = { "r", "g", "b", "a" };
+    NSMutableString *src = [NSMutableString string];
+    for (NSUInteger i = 0; i < _nlights; i++) {
+        LightDesc l = _lights[i];
+        NSString *lit = [NSString stringWithFormat:@"m%lu.%s", i / 4, chan[i % 4]];
+        [src appendFormat:@"if (%@ > 0) sum += %@ * float3(%@, %@, %@) * %@("
+                           "(vt * float4(%@, %@, %@, 1)).xyz - _surface.position, %@, "
+                           "(vt * float4(%@, %@, %@, 0)).xyz, %@%@);\n",
+            lit, lit, F(l.color.x), F(l.color.y), F(l.color.z), call,
+            F(l.position.x), F(l.position.y), F(l.position.z), F(l.position.w),
+            F(l.spot.x), F(l.spot.y), F(l.spot.z), F(l.spot.w), rest];
+    }
+    return src;
+}
+
+- (void)applyToSprite:(SCNMaterial *)m gain:(float)gain {
+    // Lambert, so SceneKit computes the surface (a constant material leaves
+    // its position out); the colour is all ours.
+    m.lightingModelName = SCNLightingModelLambert;
+    NSMutableString *src = [NSMutableString stringWithString:kMaskArguments];
+    [src appendString:kSpriteLampFunction];
+    // No shadow mask: a sprite isn't in the depth prepass, so the mask at
+    // its pixels belongs to whatever is behind it (a seat back's edges
+    // would print across the heads). Pools and falloff only.
+    [src appendString:@"#pragma body\n"
+        "float4 m0 = float4(1), m1 = float4(1), m2 = float4(1);\n"
+        "float4x4 vt = scn_frame.viewTransform;\n"
+        "float3 N = normalize(_surface.view);\nfloat3 sum = float3(0);\n"];
+    [src appendString:[self unrolledLamps:@"sl_sprite_lamp" rest:@", N" colour:YES]];
+    [src appendFormat:@"_output.color.rgb = _surface.diffuse.rgb * min(sum * %@, float3(1.6));\n", F(gain)];
+    NSMutableDictionary *mods = [m.shaderModifiers mutableCopy] ?: [NSMutableDictionary dictionary];
+    NSString *before = mods[SCNShaderModifierEntryPointFragment] ?: @"";
+    // Keep the material's own fragment code (the alpha cut-out) first.
+    NSString *body = [before stringByReplacingOccurrencesOfString:@"#pragma body\n" withString:@""];
+    mods[SCNShaderModifierEntryPointFragment] = [src stringByReplacingOccurrencesOfString:@"#pragma body\n"
+        withString:[NSString stringWithFormat:@"#pragma body\n%@\n", body]];
+    m.shaderModifiers = mods;
+    for (int k = 0; k < kMasks; k++) [m setValue:_maskProp[k] forKey:[NSString stringWithFormat:@"sl_mask%d", k]];
+    [m setValue:[NSValue valueWithSCNVector4:SCNVector4Make(1, 1, 1, 1)] forKey:@"sl_tint"];
+    [_materials addObject:m];
+}
+
 - (void)applyToMaterial:(SCNMaterial *)m tint:(NSColor *)tint {
     // The lamps are static, so each is baked into the source as constants
     // and its call unrolled: arrays of them per fragment spill registers
     // past about eight lamps and halve the frame rate.
-    NSMutableString *src = [NSMutableString stringWithString:
-        @"#pragma arguments\ntexture2d<float> sl_mask0;\ntexture2d<float> sl_mask1;\ntexture2d<float> sl_mask2;\nfloat4 sl_tint;\n"];
+    NSMutableString *src = [NSMutableString stringWithString:kMaskArguments];
     [src appendString:kLampFunction];
+    [src appendString:@"#pragma body\n"];
+    [src appendString:kMaskLookup];
     [src appendString:@
-        "#pragma body\n"
-        "float4 clip = scn_frame.projectionTransform * float4(_surface.position, 1);\n"
-        "float2 uv = float2(clip.x / clip.w * 0.5 + 0.5, 0.5 - clip.y / clip.w * 0.5);\n"
-        "constexpr sampler ms(filter::linear, address::clamp_to_edge);\n"
-        "float4 m0 = sl_mask0.sample(ms, uv), m1 = sl_mask1.sample(ms, uv), m2 = sl_mask2.sample(ms, uv);\n"
         "float3 N = normalize(_surface.normal), V = normalize(_surface.view);\n"
         "float3 albedo = _surface.diffuse.rgb;\n"
         "float rough = clamp(_surface.roughness, 0.04, 1.0), metal = saturate(_surface.metalness);\n"
         "float a2 = rough * rough * rough * rough, k = (rough + 1) * (rough + 1) / 8;\n"
         "float3 F0 = mix(float3(0.04), albedo, metal);\n"
         "float NdV = max(dot(N, V), 1e-4);\n"
-        "float4x4 vt = scn_frame.viewTransform;\n"
         "float3 sum = float3(0);\n"];
-    static const char *chan[4] = { "r", "g", "b", "a" };
-    for (NSUInteger i = 0; i < _nlights; i++) {
-        LightDesc l = _lights[i];
-        NSString *lit = [NSString stringWithFormat:@"m%lu.%s", i / 4, chan[i % 4]];
-        [src appendFormat:@"if (%@ > 0) sum += %@ * float3(%@, %@, %@) * sl_lamp("
-                           "(vt * float4(%@, %@, %@, 1)).xyz - _surface.position, %@, "
-                           "(vt * float4(%@, %@, %@, 0)).xyz, %@, N, V, NdV, albedo, F0, metal, a2, k);\n",
-            lit, lit, F(l.color.x), F(l.color.y), F(l.color.z),
-            F(l.position.x), F(l.position.y), F(l.position.z), F(l.position.w),
-            F(l.spot.x), F(l.spot.y), F(l.spot.z), F(l.spot.w)];
-    }
+    [src appendString:[self unrolledLamps:@"sl_lamp" rest:@", N, V, NdV, albedo, F0, metal, a2, k" colour:YES]];
     [src appendString:@"_output.color.rgb += sum * sl_tint.rgb * 3.14159265;\n"];
     if (getenv("SF_STENCIL_DEBUG")) [src appendString:@"_output.color.rgb = float3(m0.r, m0.g, m0.b) * 0.5 + sum * 0.0001;\n"];
     NSMutableDictionary *mods = [m.shaderModifiers mutableCopy] ?: [NSMutableDictionary dictionary];

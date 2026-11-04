@@ -43,6 +43,11 @@
 // colour, if any (SceneKit applies multiply after lighting).
 - (void)applyToMaterial:(SCNMaterial *)material tint:(NSColor *)tint;
 
+// Lights a flat cut-out (a sprite of a person) by the same lamps, facing
+// the camera, without their shadows; `gain` scales lamp light to its
+// texture's brightness. Its own fragment modifier (an alpha cut-out) runs first.
+- (void)applyToSprite:(SCNMaterial *)material gain:(float)gain;
+
 // Render thread, from -renderer:willRenderScene:atTime:.
 - (void)renderWithRenderer:(id<SCNSceneRenderer>)renderer camera:(SCNNode *)camera;
 
