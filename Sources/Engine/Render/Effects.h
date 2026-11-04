@@ -21,7 +21,7 @@
 - (void)explosionAt:(simd_float3)p velocity:(simd_float3)v hullMaterial:(SCNMaterial *)hull scale:(float)scale;
 
 // Camera-facing horizontal lens streak (anamorphic flare look).
-- (SCNNode *)streakWithColor:(NSColor *)color width:(float)width height:(float)height;
+- (SCNNode *)streakWithColor:(SKColor *)color width:(float)width height:(float)height;
 
 // Nodes using every effect material, for -[SCNView prepareObjects:].
 - (NSArray<SCNNode *> *)warmupNodes;

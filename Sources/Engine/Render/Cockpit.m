@@ -1,3 +1,4 @@
+#import "PlatformImage.h"
 #import "Cockpit.h"
 #import <SpriteKit/SpriteKit.h>
 #import <Metal/Metal.h>
@@ -6,13 +7,13 @@
 
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-static NSColor *ScreenColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
-static NSColor *WarnColor(CGFloat a) { return [NSColor colorWithRed:1.0 green:0.68 blue:0.2 alpha:a]; }
-static NSColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
-static NSColor *ShieldColor(CGFloat a) { return UIColorWithOpacity(UIShield, a); }
+static SKColor *ScreenColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
+static SKColor *WarnColor(CGFloat a) { return [SKColor colorWithRed:1.0 green:0.68 blue:0.2 alpha:a]; }
+static SKColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
+static SKColor *ShieldColor(CGFloat a) { return UIColorWithOpacity(UIShield, a); }
 
 // Green -> amber -> red as a level drops.
-static NSColor *LevelColor(float v, CGFloat a) {
+static SKColor *LevelColor(float v, CGFloat a) {
     return v > 0.5f ? ScreenColor(a) : (v > 0.25f ? WarnColor(a) : EnemyColor(a));
 }
 
@@ -23,17 +24,17 @@ static BOOL Blink(double t, double hz) { return fmod(t * hz, 1.0) < 0.5; }
 
 #pragma mark - Display widgets
 
-static SKLabelNode *Text(CGFloat size, SKLabelHorizontalAlignmentMode align, NSColor *color) {
+static SKLabelNode *Text(CGFloat size, SKLabelHorizontalAlignmentMode align, SKColor *color) {
     SKLabelNode *label = UIMonoLabel(size, color, align, SKLabelVerticalAlignmentModeCenter);
     label.fontName = UIMonoBoldFont;
     return label;
 }
 
-static SKShapeNode *Stroke(CGPathRef path, NSColor *color, CGFloat width) {
+static SKShapeNode *Stroke(CGPathRef path, SKColor *color, CGFloat width) {
     SKShapeNode *n = [SKShapeNode shapeNodeWithPath:path];
     n.strokeColor = color;
     n.lineWidth = width;
-    n.fillColor = [NSColor clearColor];
+    n.fillColor = [SKColor clearColor];
     return n;
 }
 
@@ -53,7 +54,7 @@ static SKShapeNode *Stroke(CGPathRef path, NSColor *color, CGFloat width) {
         [self addChild:_fill];
         // Tick marks every 10%.
         for (int i = 1; i < 10; i++) {
-            SKSpriteNode *tick = [SKSpriteNode spriteNodeWithColor:[NSColor colorWithWhite:0 alpha:0.6] size:CGSizeMake(2, size.height)];
+            SKSpriteNode *tick = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:0.6] size:CGSizeMake(2, size.height)];
             tick.position = CGPointMake(size.width * i / 10.0, 0);
             [self addChild:tick];
         }
@@ -69,8 +70,7 @@ static SKShapeNode *Stroke(CGPathRef path, NSColor *color, CGFloat width) {
 // Background shared by every display: dark glass, faint grid, scanlines and
 // a vignette, so the screens don't read as flat colour.
 static SKTexture *ScreenBackground(CGSize size) {
-    NSImage *img = [NSImage imageWithSize:size flipped:NO drawingHandler:^BOOL(NSRect r) {
-        CGContextRef cg = NSGraphicsContext.currentContext.CGContext;
+    PlatformImage *img = PlatformDrawImage(size, ^(CGContextRef cg, CGRect r) {
         CGFloat comps[] = { 0.02, 0.075, 0.07, 1,   0.004, 0.012, 0.014, 1 };
         CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
         CGGradientRef g = CGGradientCreateWithColorComponents(cs, comps, NULL, 2);
@@ -78,19 +78,18 @@ static SKTexture *ScreenBackground(CGSize size) {
         CGContextDrawRadialGradient(cg, g, c, 0, c, hypot(c.x, c.y), kCGGradientDrawsAfterEndLocation);
         CGGradientRelease(g);
         CGColorSpaceRelease(cs);
-        [[NSColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:0.05] setFill];
-        for (CGFloat x = 0; x < r.size.width; x += 32) NSRectFill(NSMakeRect(x, 0, 1, r.size.height));
-        for (CGFloat y = 0; y < r.size.height; y += 32) NSRectFill(NSMakeRect(0, y, r.size.width, 1));
-        [[NSColor colorWithWhite:0 alpha:0.18] setFill];
-        for (CGFloat y = 0; y < r.size.height; y += 3) NSRectFill(NSMakeRect(0, y, r.size.width, 1));
-        return YES;
-    }];
+        [[SKColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:0.05] setFill];
+        for (CGFloat x = 0; x < r.size.width; x += 32) CGContextFillRect(cg, CGRectMake(x, 0, 1, r.size.height));
+        for (CGFloat y = 0; y < r.size.height; y += 32) CGContextFillRect(cg, CGRectMake(0, y, r.size.width, 1));
+        [[SKColor colorWithWhite:0 alpha:0.18] setFill];
+        for (CGFloat y = 0; y < r.size.height; y += 3) CGContextFillRect(cg, CGRectMake(0, y, r.size.width, 1));
+    });
     return [SKTexture textureWithImage:img];
 }
 
 static SKScene *MakeScreen(CGSize size, NSString *title) {
     SKScene *s = [SKScene sceneWithSize:size];
-    s.backgroundColor = [NSColor blackColor];
+    s.backgroundColor = [SKColor blackColor];
     s.scaleMode = SKSceneScaleModeFill;
     SKSpriteNode *bg = [SKSpriteNode spriteNodeWithTexture:ScreenBackground(size)];
     bg.anchorPoint = CGPointZero;
@@ -155,7 +154,7 @@ static BOOL FindScreen(SCNGeometry *g, NSString *material, ScreenFrame *out) {
 }
 
 // A ship mesh drawn as a wireframe hologram floating just off a display.
-static SCNNode *Hologram(NSColor *color, SCNNode * __strong *modelOut) {
+static SCNNode *Hologram(SKColor *color, SCNNode * __strong *modelOut) {
     SCNNode *holder = [SCNNode node];
     SCNNode *model = [SCNNode node];
     model.eulerAngles = SCNVector3Make(0, M_PI, 0);   // OBJ +Z nose -> ship -Z nose
@@ -190,9 +189,9 @@ static void SetHologramGeometry(SCNNode *model, SCNGeometry *source, float scale
     model.simdScale = simd_make_float3(scale, scale, scale);
 }
 
-static NSColor *TeamColor(Team t, CGFloat a) {
-    return t == TeamEnemy ? EnemyColor(a) : (t == TeamFriend ? [NSColor colorWithRed:0.4 green:1 blue:0.55 alpha:a]
-                                                             : [NSColor colorWithRed:0.95 green:0.88 blue:0.45 alpha:a]);
+static SKColor *TeamColor(Team t, CGFloat a) {
+    return t == TeamEnemy ? EnemyColor(a) : (t == TeamFriend ? [SKColor colorWithRed:0.4 green:1 blue:0.55 alpha:a]
+                                                             : [SKColor colorWithRed:0.95 green:0.88 blue:0.45 alpha:a]);
 }
 
 #pragma mark - Lamps
@@ -200,22 +199,23 @@ static NSColor *TeamColor(Team t, CGFloat a) {
 // Annunciator face: legend over a tinted tile. The lit version feeds the
 // emission channel, the unlit one the diffuse, so an off lamp still shows
 // its engraved legend.
-static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
-    return [NSImage imageWithSize:NSMakeSize(256, 120) flipped:NO drawingHandler:^BOOL(NSRect r) {
-        NSColor *bg = lit ? [color colorWithAlphaComponent:1] : [NSColor colorWithWhite:0.07 alpha:1];
-        if (lit) bg = [NSColor colorWithRed:color.redComponent * 0.12 green:color.greenComponent * 0.12 blue:color.blueComponent * 0.12 alpha:1];
+static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
+    return PlatformDrawImage(CGSizeMake(256, 120), ^(CGContextRef cg, CGRect r) {
+        CGFloat red = 0, green = 0, blue = 0;
+        [color getRed:&red green:&green blue:&blue alpha:NULL];
+        SKColor *bg = lit ? [SKColor colorWithRed:red * 0.12 green:green * 0.12 blue:blue * 0.12 alpha:1]
+                          : [SKColor colorWithWhite:0.07 alpha:1];
         [bg setFill];
-        NSRectFill(r);
-        NSColor *fg = lit ? [color blendedColorWithFraction:0.25 ofColor:NSColor.whiteColor] : [NSColor colorWithWhite:0.32 alpha:1];
+        CGContextFillRect(cg, r);
+        SKColor *fg = lit ? [SKColor colorWithRed:red * 0.75 + 0.25 green:green * 0.75 + 0.25 blue:blue * 0.75 + 0.25 alpha:1] : [SKColor colorWithWhite:0.32 alpha:1];
         NSMutableParagraphStyle *ps = [NSMutableParagraphStyle new];
         ps.alignment = NSTextAlignmentCenter;
         BOOL twoLines = [legend containsString:@"\n"];
-        NSDictionary *attrs = @{ NSFontAttributeName : [NSFont fontWithName:UIMonoBoldFont size:twoLines ? 38 : 54] ?: [NSFont boldSystemFontOfSize:50],
+        NSDictionary *attrs = @{ NSFontAttributeName : [PlatformFont fontWithName:UIMonoBoldFont size:twoLines ? 38 : 54] ?: [PlatformFont boldSystemFontOfSize:50],
                                  NSForegroundColorAttributeName : fg, NSParagraphStyleAttributeName : ps };
-        NSSize ts = [legend sizeWithAttributes:attrs];
-        [legend drawInRect:NSMakeRect(0, (r.size.height - ts.height) / 2, r.size.width, ts.height) withAttributes:attrs];
-        return YES;
-    }];
+        CGSize ts = [legend sizeWithAttributes:attrs];
+        [legend drawInRect:CGRectMake(0, (r.size.height - ts.height) / 2, r.size.width, ts.height) withAttributes:attrs];
+    });
 }
 
 @interface Lamp : NSObject
@@ -335,7 +335,7 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
 - (void)styleMaterial:(SCNMaterial *)m {
     NSString *name = m.name ?: @"";
     m.lightingModelName = SCNLightingModelPhysicallyBased;
-    m.emission.contents = [NSColor blackColor];
+    m.emission.contents = [SKColor blackColor];
     m.ambientOcclusion.contents = nil;
     m.specular.contents = nil;
 
@@ -368,17 +368,17 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
     };
     for (size_t i = 0; i < sizeof table / sizeof table[0]; i++) {
         if (strcmp(table[i].name, name.UTF8String)) continue;
-        m.diffuse.contents = [NSColor colorWithRed:table[i].r green:table[i].g blue:table[i].b alpha:1];
+        m.diffuse.contents = [SKColor colorWithRed:table[i].r green:table[i].g blue:table[i].b alpha:1];
         m.roughness.contents = @(table[i].rough);
         m.metalness.contents = @(table[i].metal);
         return;
     }
     if ([name isEqualToString:@"Glass"]) {
         // HUD combiner: barely there, a green tint and a sharp reflection.
-        m.diffuse.contents = [NSColor colorWithRed:0.3 green:0.9 blue:0.7 alpha:1];
+        m.diffuse.contents = [SKColor colorWithRed:0.3 green:0.9 blue:0.7 alpha:1];
         m.roughness.contents = @0.05;
         m.metalness.contents = @0;
-        m.transparent.contents = [NSColor colorWithWhite:1 alpha:0.1];
+        m.transparent.contents = [SKColor colorWithWhite:1 alpha:0.1];
         m.transparencyMode = SCNTransparencyModeAOne;
         m.blendMode = SCNBlendModeAlpha;
         m.writesToDepthBuffer = NO;
@@ -395,8 +395,8 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
         @"Hull"    : @[@"HULL", EnemyColor(1)],
         @"Hit"     : @[@"HIT", EnemyColor(1)],
         @"Six"     : @[@"SIX", EnemyColor(1)],
-        @"Lock"    : @[@"LOCK", [NSColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]],
-        @"Guns"    : @[@"GUNS", [NSColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]],
+        @"Lock"    : @[@"LOCK", [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]],
+        @"Guns"    : @[@"GUNS", [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]],
         @"Boost"   : @[@"BOOST", WarnColor(1)],
         @"Prox"    : @[@"PROX", WarnColor(1)],
     };
@@ -409,8 +409,8 @@ static NSImage *LampImage(NSString *legend, NSColor *color, BOOL lit) {
     } else {
         // Throttle ladder LEDs: plain colour, amber at the top.
         int i = [key hasPrefix:@"Thr"] ? [key substringFromIndex:3].intValue : 0;
-        NSColor *c = i < 7 ? [NSColor colorWithRed:0.3 green:1 blue:0.45 alpha:1] : WarnColor(1);
-        m.diffuse.contents = [NSColor colorWithWhite:0.05 alpha:1];
+        SKColor *c = i < 7 ? [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1] : WarnColor(1);
+        m.diffuse.contents = [SKColor colorWithWhite:0.05 alpha:1];
         m.emission.contents = c;
     }
     m.emission.intensity = 0;
@@ -761,7 +761,7 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
         CGFloat a = outside ? 0.45 : 1.0;
         if (c.attacking && !Blink(f.time, 2.5)) a *= 0.55;
         b.strokeColor = TeamColor(c.team, a);
-        b.fillColor = above ? TeamColor(c.team, a * 0.8) : [NSColor clearColor];
+        b.fillColor = above ? TeamColor(c.team, a * 0.8) : [SKColor clearColor];
         s.strokeColor = TeamColor(c.team, a * 0.6);
         b.xScale = b.yScale = c.capital ? 1.8 : 1.0;
         if ((int)i == f.target) {
@@ -832,7 +832,7 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     _targetHull.fill.color = LevelColor(c.hull, 0.95);
     _targetShieldPct.text = [NSString stringWithFormat:@"%d%%", (int)lroundf(c.shield * 100)];
     _targetHullPct.text = [NSString stringWithFormat:@"%d%%", (int)lroundf(c.hull * 100)];
-    if (f.lock) { _targetMode.text = Blink(f.time, 4) ? @"[ LOCK ]" : @"  LOCK  "; _targetMode.fontColor = [NSColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]; }
+    if (f.lock) { _targetMode.text = Blink(f.time, 4) ? @"[ LOCK ]" : @"  LOCK  "; _targetMode.fontColor = [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]; }
     else if (c.capital) { _targetMode.text = c.shielded ? @"SHIELDED" : @"VULNERABLE"; _targetMode.fontColor = c.shielded ? ShieldColor(1) : WarnColor(1); }
     else if (c.attacking) { _targetMode.text = @"ATTACKING"; _targetMode.fontColor = EnemyColor(1); }
     else if (c.team != TeamEnemy) { _targetMode.text = @""; }

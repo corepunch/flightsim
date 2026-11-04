@@ -1,3 +1,5 @@
+#import <TargetConditionals.h>
+#if TARGET_OS_OSX
 #import "GameView.h"
 #import "Briefing.h"
 #import "HUD.h"
@@ -116,3 +118,5 @@
 - (void)rightMouseDragged:(NSEvent *)event { [self.input mouseMovedByX:event.deltaX y:event.deltaY]; }
 
 @end
+
+#endif

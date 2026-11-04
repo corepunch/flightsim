@@ -1,7 +1,13 @@
 #import "GameLoader.h"
+#import <TargetConditionals.h>
+#if TARGET_OS_OSX
 #include <dlfcn.h>
+#endif
 
 GetGameAPIFunc GameLoaderOpen(void) {
+#if TARGET_OS_IOS
+    return GetGameAPI;
+#else
     const char *override = getenv("SF_GAME");
     NSString *path = override ? @(override)
                               : [[NSBundle mainBundle].builtInPlugInsPath stringByAppendingPathComponent:@"game.dylib"];
@@ -15,4 +21,5 @@ GetGameAPIFunc GameLoaderOpen(void) {
     else NSLog(@"GameLoader: loaded %@", path);
     // Never dlclose: an image with Objective-C classes can't be unloaded.
     return entry;
+#endif
 }

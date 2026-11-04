@@ -1,7 +1,7 @@
 #import "Loading.h"
 #import "UIStyle.h"
 
-static SKLabelNode *Text(CGFloat size, NSColor *c, SKLabelHorizontalAlignmentMode h) {
+static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMode h) {
     return UIMonoLabel(size, c, h, SKLabelVerticalAlignmentModeBaseline);
 }
 
@@ -38,7 +38,7 @@ static NSArray<NSString *> *Tips(void) {
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
         self.scaleMode = SKSceneScaleModeResizeFill;
-        self.backgroundColor = [NSColor clearColor];
+        self.backgroundColor = [SKColor clearColor];
         _root = [SKNode node];
         [self addChild:_root];
         _stars = [NSMutableArray array];

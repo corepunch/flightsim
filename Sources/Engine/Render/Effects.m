@@ -27,7 +27,7 @@ static NSString *const kTintFragment =
      "#pragma body\n"
      "_output.color.rgb *= tint;\n";
 
-static NSColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [NSColor colorWithRed:r green:g blue:b alpha:a]; }
+static SKColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [SKColor colorWithRed:r green:g blue:b alpha:a]; }
 
 @implementation Effects {
     SCNScene *_scene;
@@ -45,8 +45,8 @@ static NSColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [NSCol
 
 // Thin bright annulus with a soft inner glow and an empty centre; sprite-pack
 // rings are filled discs that grey out the screen once scaled up.
-+ (NSImage *)shockRingImage {
-    static NSImage *image;
++ (PlatformImage *)shockRingImage {
+    static PlatformImage *image;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         const int n = 512;
@@ -66,7 +66,7 @@ static NSColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [NSCol
         CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
         CGContextRef ctx = CGBitmapContextCreate(px, n, n, 8, n * 4, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
         CGImageRef cg = CGBitmapContextCreateImage(ctx);
-        image = [[NSImage alloc] initWithCGImage:cg size:NSMakeSize(n, n)];
+        image = PlatformImageFromCGImage(cg);
         CGImageRelease(cg);
         CGContextRelease(ctx);
         CGColorSpaceRelease(cs);
@@ -177,10 +177,13 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
     }
 }
 
-- (SCNNode *)streakWithColor:(NSColor *)color width:(float)width height:(float)height {
+- (SCNNode *)streakWithColor:(SKColor *)color width:(float)width height:(float)height {
     SCNPlane *plane = [SCNPlane planeWithWidth:1 height:1];
-    CGFloat r, g, b, a;
-    [[color colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]] getRed:&r green:&g blue:&b alpha:&a];
+    CGFloat r = 0, g = 0, b = 0;
+#if TARGET_OS_OSX
+    color = [color colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
+#endif
+    [color getRed:&r green:&g blue:&b alpha:NULL];
     NSString *key = [NSString stringWithFormat:@"%.2f,%.2f,%.2f", r, g, b];
     SCNMaterial *m = _streakMaterials[key];
     if (!m) {

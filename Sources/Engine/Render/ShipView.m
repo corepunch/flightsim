@@ -179,7 +179,7 @@ void ApplyHullRolloff(SCNMaterial *m) {
     _damageFire.spreadingAngle = 40;
     _damageFire.emittingDirection = SCNVector3Make(0, 1, 0);
     CAKeyframeAnimation *fc = [CAKeyframeAnimation animationWithKeyPath:@"color"];
-    fc.values = @[[NSColor colorWithRed:1 green:0.85 blue:0.5 alpha:1], [NSColor colorWithRed:1 green:0.35 blue:0.08 alpha:0]];
+    fc.values = @[[SKColor colorWithRed:1 green:0.85 blue:0.5 alpha:1], [SKColor colorWithRed:1 green:0.35 blue:0.08 alpha:0]];
     fc.keyTimes = @[@0, @1];
     _damageFire.propertyControllers = @{ SCNParticlePropertyColor : [SCNParticlePropertyController controllerWithAnimation:fc] };
     [spot addParticleSystem:_damageFire];
@@ -194,7 +194,7 @@ void ApplyHullRolloff(SCNMaterial *m) {
     _damageSmoke.particleVelocity = 2;
     _damageSmoke.spreadingAngle = 60;
     CAKeyframeAnimation *sc = [CAKeyframeAnimation animationWithKeyPath:@"color"];
-    sc.values = @[[NSColor colorWithRed:0.2 green:0.18 blue:0.17 alpha:0.55], [NSColor colorWithRed:0.15 green:0.15 blue:0.16 alpha:0]];
+    sc.values = @[[SKColor colorWithRed:0.2 green:0.18 blue:0.17 alpha:0.55], [SKColor colorWithRed:0.15 green:0.15 blue:0.16 alpha:0]];
     sc.keyTimes = @[@0, @1];
     CAKeyframeAnimation *ss = [CAKeyframeAnimation animationWithKeyPath:@"size"];
     ss.values = @[@1.0, @6.0];

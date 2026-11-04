@@ -5,11 +5,18 @@
 #import "UIMotion.h"
 #import <ImageIO/ImageIO.h>
 
-static SKLabelNode *Text(CGFloat size, NSColor *c, SKLabelHorizontalAlignmentMode h) {
+static NSValue *BoxPoint(CGPoint point) { return [NSValue value:&point withObjCType:@encode(CGPoint)]; }
+static CGPoint UnboxPoint(NSValue *value) {
+    CGPoint point = CGPointZero;
+    [value getValue:&point size:sizeof(point)];
+    return point;
+}
+
+static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMode h) {
     return UIMonoLabel(size, c, h, SKLabelVerticalAlignmentModeTop);
 }
 
-static SKLabelNode *Para(CGFloat size, NSColor *c, CGFloat width) {
+static SKLabelNode *Para(CGFloat size, SKColor *c, CGFloat width) {
     SKLabelNode *l = Text(size, c, SKLabelHorizontalAlignmentModeLeft);
     l.numberOfLines = 0;
     l.preferredMaxLayoutWidth = width;
@@ -139,7 +146,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
         self.scaleMode = SKSceneScaleModeResizeFill;
-        self.backgroundColor = [NSColor clearColor];
+        self.backgroundColor = [SKColor clearColor];
         self.speed = 1 / UIMotionTimeScale();
         _hover = [UIHover new];
         _stage = [SKNode node];
@@ -868,7 +875,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 - (SKNode *)buildMap:(NSDictionary *)m {
     _items = [NSMutableDictionary dictionary];
     SKCropNode *display = [SKCropNode node];
-    SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:[NSColor whiteColor] size:_mapRect.size];
+    SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:[SKColor whiteColor] size:_mapRect.size];
     mask.position = CGPointMake(CGRectGetMidX(_mapRect), CGRectGetMidY(_mapRect));
     display.maskNode = mask;
     _mapLayer = [SKNode node];
@@ -938,7 +945,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         NSString *kind = t[@"kind"];
         CGPoint p = project(Vec3(t[@"pos"]));
         SKNode *icon;
-        NSColor *c = [t[@"team"] isEqualToString:@"enemy"] ? UIColorWithOpacity(UIRed, 1) : ([t[@"team"] isEqualToString:@"neutral"] ? UIColorWithOpacity(UIYellow, 1) : UIColorWithOpacity(UIBlue, 1));
+        SKColor *c = [t[@"team"] isEqualToString:@"enemy"] ? UIColorWithOpacity(UIRed, 1) : ([t[@"team"] isEqualToString:@"neutral"] ? UIColorWithOpacity(UIYellow, 1) : UIColorWithOpacity(UIBlue, 1));
         if ([kind isEqualToString:@"rocks"]) {
             CGFloat r = [t[@"radius"] floatValue] * scale;
             SKShapeNode *field = [SKShapeNode shapeNodeWithCircleOfRadius:r];
@@ -975,7 +982,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
                 SKShapeNode *n = [SKShapeNode shapeNodeWithPath:a];
                 CGPathRelease(a);
                 n.fillColor = c;
-                n.strokeColor = [NSColor clearColor];
+                n.strokeColor = [SKColor clearColor];
                 n.position = CGPointMake((k - 1) * 9, k == 1 ? 5 : 0);
                 [g addChild:n];
             }
@@ -1084,7 +1091,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         for (SKNode *c in it.node.children) {
             if ([c isKindOfClass:[SKLabelNode class]]) {
                 SKLabelNode *l = (SKLabelNode *)c;
-                if (![l.userData[@"ink"] isKindOfClass:[NSColor class]]) l.userData = [@{ @"ink": l.fontColor } mutableCopy];
+                if (![l.userData[@"ink"] isKindOfClass:[SKColor class]]) l.userData = [@{ @"ink": l.fontColor } mutableCopy];
                 l.fontColor = focused ? UIColorWithOpacity(UIWhite, 1) : l.userData[@"ink"];
                 l.fontName = focused ? UIMonoBoldFont : UIMonoFont;
             } else {
@@ -1113,7 +1120,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         CGPathRelease(dashed);
         CGPathRelease(path);
         NSMutableArray<NSValue *> *points = [NSMutableArray array];
-        for (NSString *rid in route) if (_items[rid]) [points addObject:[NSValue valueWithPoint:_items[rid].point]];
+        for (NSString *rid in route) if (_items[rid]) [points addObject:BoxPoint(_items[rid].point)];
         _routePoints = points;
         _routeLine = line;
     }
@@ -1191,16 +1198,16 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction, CGPoint *head) CF_RETURNS_RETAINED {
     CGFloat total = 0;
     for (NSUInteger i = 1; i < points.count; i++) {
-        CGPoint a = points[i - 1].pointValue, b = points[i].pointValue;
+        CGPoint a = UnboxPoint(points[i - 1]), b = UnboxPoint(points[i]);
         total += hypot(b.x - a.x, b.y - a.y);
     }
     CGFloat want = MAX(0.5, total * fraction);
     CGMutablePathRef path = CGPathCreateMutable();
-    CGPoint start = points.firstObject.pointValue;
+    CGPoint start = UnboxPoint(points.firstObject);
     CGPathMoveToPoint(path, NULL, start.x, start.y);
     *head = start;
     for (NSUInteger i = 1; i < points.count && want > 0; i++) {
-        CGPoint a = points[i - 1].pointValue, b = points[i].pointValue;
+        CGPoint a = UnboxPoint(points[i - 1]), b = UnboxPoint(points[i]);
         CGFloat len = hypot(b.x - a.x, b.y - a.y);
         CGFloat k = len > 0 ? MIN(1, want / len) : 1;
         *head = CGPointMake(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k);
@@ -1221,7 +1228,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     dot.fillColor = UIColorWithOpacity(UIAmber, 1);
     dot.strokeColor = UIColorWithOpacity(UIAmber, 0.4);
     dot.lineWidth = 4;
-    dot.position = points.firstObject.pointValue;
+    dot.position = UnboxPoint(points.firstObject);
     dot.alpha = 0;
     [_routeLayer addChild:dot];
     line.hidden = YES;
@@ -1340,7 +1347,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 - (void)queueClickAtFraction:(CGPoint)point {
     @synchronized (self) {
-        _queuedClick = [NSValue valueWithPoint:point];
+        _queuedClick = BoxPoint(point);
     }
 }
 
@@ -1365,7 +1372,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         _queuedClick = nil;
     }
     if (click) {
-        CGPoint point = click.pointValue;
+        CGPoint point = UnboxPoint(click);
         point.x *= self.size.width;
         point.y *= self.size.height;
         if (CGRectContainsPoint(_confirmRect, point)) a |= InputActionConfirm;

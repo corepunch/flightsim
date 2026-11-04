@@ -39,10 +39,10 @@ static NSString *const kFlameFragment =
     BOOL _enabled;
 }
 
-+ (NSImage *)softDotImage {
++ (PlatformImage *)softDotImage {
     // Rendered into a real bitmap: a lazily drawn NSImage ends up as an
     // opaque square in SceneKit's particle renderer.
-    static NSImage *image;
+    static PlatformImage *image;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         const int n = 64;
@@ -61,7 +61,7 @@ static NSString *const kFlameFragment =
         CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
         CGContextRef ctx = CGBitmapContextCreate(px, n, n, 8, n * 4, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
         CGImageRef cg = CGBitmapContextCreateImage(ctx);
-        image = [[NSImage alloc] initWithCGImage:cg size:NSMakeSize(n, n)];
+        image = PlatformImageFromCGImage(cg);
         CGImageRelease(cg);
         CGContextRelease(ctx);
         CGColorSpaceRelease(cs);
@@ -73,7 +73,7 @@ static NSString *const kFlameFragment =
 // Several Kenney sprites are RGB on black. Give every texture premultiplied
 // alpha (= brightness when the file has none) so they blend cleanly in both
 // SceneKit particles and the SpriteKit overlay.
-static NSImage *LuminanceAlphaImage(NSURL *url) {
+static PlatformImage *LuminanceAlphaImage(NSURL *url) {
     CGImageSourceRef src = CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL);
     if (!src) return nil;
     CGImageRef cg = CGImageSourceCreateImageAtIndex(src, 0, NULL);
@@ -101,7 +101,7 @@ static NSImage *LuminanceAlphaImage(NSURL *url) {
         }
     }
     CGImageRef out = CGBitmapContextCreateImage(ctx);
-    NSImage *img = [[NSImage alloc] initWithCGImage:out size:NSMakeSize(w, h)];
+    PlatformImage *img = PlatformImageFromCGImage(out);
     CGImageRelease(out);
     CGContextRelease(ctx);
     CGColorSpaceRelease(cs);
@@ -111,8 +111,8 @@ static NSImage *LuminanceAlphaImage(NSURL *url) {
 
 // Horizontal lens streak whose alpha is exactly zero on every border, so it
 // can be stretched to extreme aspect ratios without showing the quad's edges.
-+ (NSImage *)streakImage {
-    static NSImage *image;
++ (PlatformImage *)streakImage {
+    static PlatformImage *image;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         const int w = 512, h = 64;
@@ -132,7 +132,7 @@ static NSImage *LuminanceAlphaImage(NSURL *url) {
         CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
         CGContextRef ctx = CGBitmapContextCreate(px, w, h, 8, w * 4, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
         CGImageRef cg = CGBitmapContextCreateImage(ctx);
-        image = [[NSImage alloc] initWithCGImage:cg size:NSMakeSize(w, h)];
+        image = PlatformImageFromCGImage(cg);
         CGImageRelease(cg);
         CGContextRelease(ctx);
         CGColorSpaceRelease(cs);
@@ -141,12 +141,12 @@ static NSImage *LuminanceAlphaImage(NSURL *url) {
     return image;
 }
 
-+ (NSImage *)particleTexture:(NSString *)name {
-    static NSMutableDictionary<NSString *, NSImage *> *cache;
++ (PlatformImage *)particleTexture:(NSString *)name {
+    static NSMutableDictionary<NSString *, PlatformImage *> *cache;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
     @synchronized (cache) {
-        NSImage *img = cache[name];
+        PlatformImage *img = cache[name];
         if (!img) {
             NSURL *url = [[NSBundle mainBundle] URLForResource:name withExtension:@"png" subdirectory:@"Particles"];
             img = url ? LuminanceAlphaImage(url) : nil;
@@ -195,9 +195,9 @@ static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray
     ps.particleSizeVariation = r * 0.3;
     ps.emitterShape = [SCNSphere sphereWithRadius:r * 0.45];
     ps.birthLocation = SCNParticleBirthLocationVolume;
-    NSColor *hot = [NSColor colorWithRed:0.9 green:0.95 blue:1.0 alpha:0.55];
-    NSColor *mid = [NSColor colorWithRed:color.x green:color.y blue:color.z alpha:0.45];
-    NSColor *end = [NSColor colorWithRed:color.x * 0.6 green:color.y * 0.3 blue:color.z * 0.8 alpha:0.0];
+    SKColor *hot = [SKColor colorWithRed:0.9 green:0.95 blue:1.0 alpha:0.55];
+    SKColor *mid = [SKColor colorWithRed:color.x green:color.y blue:color.z alpha:0.45];
+    SKColor *end = [SKColor colorWithRed:color.x * 0.6 green:color.y * 0.3 blue:color.z * 0.8 alpha:0.0];
     SCNParticlePropertyController *cc = [SCNParticlePropertyController controllerWithAnimation:
                                          OverLife(@"color", @[hot, mid, end], @[@0, @0.35, @1])];
     SCNParticlePropertyController *sc = [SCNParticlePropertyController controllerWithAnimation:
@@ -228,9 +228,9 @@ static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray
     ps.particleAngularVelocity = 20;
     ps.particleAngularVelocityVariation = 40;
     ps.particleAngleVariation = 180;
-    NSColor *a = [NSColor colorWithRed:0.50 green:0.54 blue:0.62 alpha:0.0];
-    NSColor *b = [NSColor colorWithRed:0.42 green:0.45 blue:0.52 alpha:0.06];
-    NSColor *c = [NSColor colorWithRed:0.30 green:0.32 blue:0.38 alpha:0.0];
+    SKColor *a = [SKColor colorWithRed:0.50 green:0.54 blue:0.62 alpha:0.0];
+    SKColor *b = [SKColor colorWithRed:0.42 green:0.45 blue:0.52 alpha:0.06];
+    SKColor *c = [SKColor colorWithRed:0.30 green:0.32 blue:0.38 alpha:0.0];
     SCNParticlePropertyController *cc = [SCNParticlePropertyController controllerWithAnimation:
                                          OverLife(@"color", @[a, b, c], @[@0, @0.1, @1])];
     SCNParticlePropertyController *sc = [SCNParticlePropertyController controllerWithAnimation:

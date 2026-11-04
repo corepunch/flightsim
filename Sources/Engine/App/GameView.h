@@ -1,9 +1,10 @@
 #import <SceneKit/SceneKit.h>
 #import "Input.h"
 
-// SCNView that feeds keyboard and mouse into Input and captures the cursor
-// (hidden + decoupled from the mouse) while flying with the mouse.
+// SCNView that routes platform controls to Input and taps/clicks to the front end.
 @interface GameView : SCNView
 @property (nonatomic, strong) Input *input;
+#if TARGET_OS_OSX
 - (void)releaseMouse;
+#endif
 @end

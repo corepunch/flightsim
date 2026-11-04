@@ -1,3 +1,5 @@
+#import <TargetConditionals.h>
+#if TARGET_OS_OSX
 #import <Cocoa/Cocoa.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import "GameView.h"
@@ -127,3 +129,5 @@ int main(int argc, const char *argv[]) {
     }
     return 0;
 }
+
+#endif

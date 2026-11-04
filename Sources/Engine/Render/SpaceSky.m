@@ -64,7 +64,7 @@ static const NSUInteger kDustCount = 1400;
     NSString *source = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
     NSError *error = nil;
     MTLCompileOptions *options = [MTLCompileOptions new];
-    if (@available(macOS 15.0, *)) options.mathMode = MTLMathModeFast;
+    if (@available(macOS 15.0, iOS 18.0, *)) options.mathMode = MTLMathModeFast;
     id<MTLLibrary> library = [_device newLibraryWithSource:source ?: @"" options:options error:&error];
     if (!library) {
         NSLog(@"SpaceSky: shader compile failed: %@", error);

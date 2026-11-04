@@ -84,7 +84,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 
 - (NSUInteger)itemCount {
 #if TARGET_OS_IOS
-    return MenuItemControls;
+    return MenuItemQuit;
 #else
     return MenuItemCount;
 #endif
@@ -158,6 +158,15 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     title.fontName = UIMonoBoldFont;
     [_header addObject:title];
     NSArray<NSArray<NSString *> *> *bindings = @[
+#if TARGET_OS_IOS
+        @[@"Pitch / yaw", @"TOUCH STICK / LEFT STICK"],
+        @[@"Throttle", @"SLIDER / BUMPERS"],
+        @[@"Guns / torpedo", @"FIRE + TORPEDO / RT + B"],
+        @[@"Next target", @"TARGET / Y"],
+        @[@"Roll / boost", @"RIGHT STICK / LT"],
+        @[@"Camera", @"X"],
+        @[@"Return to missions", @"MISSIONS / MENU"],
+#else
         @[@"Pitch / yaw", @"MOUSE / ARROWS"],
         @[@"Roll / throttle", @"Q E  /  W S"],
         @[@"Boost / fire", @"SHIFT  /  SPACE"],
@@ -165,6 +174,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         @[@"Camera / flight help", @"C  /  H"],
         @[@"Invert mouse pitch", @"I"],
         @[@"Cycle / invert throttle axis", @"J  /  K"],
+#endif
     ];
     CGFloat line = MIN(33, (CGRectGetHeight(bounds) - 130) / bindings.count);
     CGFloat font = width < 390 ? 11 : 14;
@@ -302,7 +312,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
                                selected:i == _selected compact:compact labels:_rowLabels[i]];
     }
     if (!compact) {
-        [_footerLabels addObject:[self label:@"↑ / ↓   SELECT       ↵   CONFIRM" size:11 color:UIInk opacity:0.6
+        [_footerLabels addObject:[self label:TARGET_OS_IOS ? @"TAP TO SELECT" : @"↑ / ↓   SELECT       ↵   CONFIRM" size:11 color:UIInk opacity:0.6
                                            x:left y:bottom]];
         SKLabelNode *caption = [self label:@"LANCER 01   /   EXECUTIONER" size:11 color:UIInk opacity:0.6
                                         x:self.size.width - _usedInsets.right - margin y:bottom];

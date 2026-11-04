@@ -36,6 +36,9 @@ typedef struct {
 } HUDTarget;
 
 @interface HUD : SKScene
+#if TARGET_OS_IOS
+@property (atomic) UIEdgeInsets contentInsets;
+#endif
 
 - (void)updateFrame:(HUDFrame)frame targets:(const HUDTarget *)targets count:(NSUInteger)count;
 - (void)setInputText:(NSString *)text;
@@ -44,7 +47,7 @@ typedef struct {
 // Objective lines; state per line: 0 active, 1 complete, 2 failed, 3 optional.
 - (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states;
 - (void)showMessage:(NSString *)text from:(NSString *)from;
-- (void)showBanner:(NSString *)text color:(NSColor *)color;
+- (void)showBanner:(NSString *)text color:(SKColor *)color;
 - (void)clearMessages;
 
 @end

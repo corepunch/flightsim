@@ -65,3 +65,7 @@ $(NATIVE)/game/%.c.o: %.c Makefile $(TOOLCHAIN)
 	$(call compile,game,$(GAME_FLAGS))
 
 -include $(addsuffix .d,$(basename $(ENGINE_OBJECTS) $(GAME_OBJECTS) $(ENGINE_PCH) $(GAME_PCH)))
+
+ifneq ($(filter ios,$(MAKECMDGOALS)),)
+include Tools/iOS.mk
+endif

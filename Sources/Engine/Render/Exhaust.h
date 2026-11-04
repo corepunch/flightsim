@@ -1,3 +1,4 @@
+#import "PlatformImage.h"
 #import <SceneKit/SceneKit.h>
 #import <simd/simd.h>
 
@@ -16,8 +17,8 @@
 
 @property (nonatomic, readonly) float level; // smoothed 0..~1.6
 
-+ (NSImage *)softDotImage;
-+ (NSImage *)streakImage;      // anamorphic streak, zero alpha on all edges
-+ (NSImage *)particleTexture:(NSString *)name;  // Resources/Particles/<name>.png
++ (PlatformImage *)softDotImage;
++ (PlatformImage *)streakImage;      // anamorphic streak, zero alpha on all edges
++ (PlatformImage *)particleTexture:(NSString *)name;  // Resources/Particles/<name>.png
 
 @end

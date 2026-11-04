@@ -15,6 +15,18 @@
 #import "Assets.h"
 #include "SharedMath.h"
 #import <stdatomic.h>
+#if TARGET_OS_IOS
+#include <ifaddrs.h>
+#include <netdb.h>
+#endif
+
+static NSString *PilotName(void) {
+#if TARGET_OS_IOS
+    return @"Pilot";
+#else
+    return NSFullUserName() ?: @"Pilot";
+#endif
+}
 
 typedef NS_ENUM(NSInteger, HostState) { HostStateLoading, HostStateMainMenu, HostStateMissions, HostStateFlying, HostStateOver, HostStateBrowser };
 
@@ -90,7 +102,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _client.disconnectHandler = ^(NSString *reason) { [weakSelf disconnected:reason]; };
         // The local server: this player reaches it over loopback, with the
         // same packets a remote player would send.
-        _server = [[Server alloc] initWithName:[NSString stringWithFormat:@"%@'s game", NSFullUserName() ?: @"Pilot"]];
+        _server = [[Server alloc] initWithName:[NSString stringWithFormat:@"%@'s game", PilotName()]];
         [_server addTransport:[LoopbackTransport side:1]];
         if (!getenv("SF_NO_UDP")) {
             _serverUDP = [[UDPTransport alloc] initWithPort:PORT_SERVER attempts:4];
@@ -105,17 +117,24 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         // is built off the main thread and swapped in when it is ready.
         _state = HostStateLoading;
         SCNScene *placeholder = [SCNScene scene];
-        placeholder.background.contents = [NSColor blackColor];
+        placeholder.background.contents = [SKColor blackColor];
         view.scene = placeholder;
         view.overlaySKScene = _loading;
         _shownOverlay = _loading;
+#if !TARGET_OS_IOS
         view.delegate = self;
+#endif
         view.playing = YES;
         view.loops = YES;
         view.rendersContinuously = YES;
+#if TARGET_OS_IOS
+        view.preferredFramesPerSecond = 60;
+        view.antialiasingMode = SCNAntialiasingModeMultisampling2X;
+#else
         view.preferredFramesPerSecond = 120;
         view.antialiasingMode = SCNAntialiasingModeMultisampling4X;
-        view.backgroundColor = [NSColor blackColor];
+#endif
+        view.backgroundColor = [SKColor blackColor];
         _loadStartedAt = 0;
         dispatch_async(_loadQueue, ^{ [self bootInBackground]; });
     }
@@ -123,7 +142,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 }
 
 - (void)connectLocal {
-    [_client connectTo:[NetAddress loopback:1] transport:[LoopbackTransport side:0] name:NSFullUserName() ?: @"Pilot"];
+    [_client connectTo:[NetAddress loopback:1] transport:[LoopbackTransport side:0] name:PilotName()];
 }
 
 - (BOOL)remote { return _client.serverAddress && !_client.serverAddress.isLoopback; }
@@ -136,7 +155,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [_clientView clearMission];
     if (!_clientUDP) _clientUDP = [[UDPTransport alloc] initWithPort:0 attempts:1];
     NSLog(@"Host: joining %@", address);
-    [_client connectTo:address transport:_clientUDP name:NSFullUserName() ?: @"Pilot"];
+    [_client connectTo:address transport:_clientUDP name:PilotName()];
     [_browser setStatus:[NSString stringWithFormat:@"Connecting to %@... waiting for the host to launch a mission", address]];
 }
 
@@ -175,7 +194,20 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     static NSSet *own;
     if (!own) {
         NSMutableSet *s = [NSMutableSet set];
+#if TARGET_OS_IOS
+        struct ifaddrs *interfaces = NULL;
+        if (getifaddrs(&interfaces) == 0) {
+            for (struct ifaddrs *i = interfaces; i; i = i->ifa_next) {
+                if (!i->ifa_addr || i->ifa_addr->sa_family != AF_INET) continue;
+                char ip[NI_MAXHOST];
+                if (getnameinfo(i->ifa_addr, i->ifa_addr->sa_len, ip, sizeof ip, NULL, 0, NI_NUMERICHOST) == 0)
+                    [s addObject:@(ip)];
+            }
+            freeifaddrs(interfaces);
+        }
+#else
         for (NSString *ip in NSHost.currentHost.addresses) [s addObject:ip];
+#endif
         [s addObject:@"127.0.0.1"];
         own = s;
     }
@@ -429,12 +461,25 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 #pragma mark - Loop
 
+#if TARGET_OS_IOS
+// SpriteKit overlays participate in UIKit focus on iPad. Run their updates
+// on the main thread instead of SceneKit's render queue.
+- (void)displayLinkTick:(CADisplayLink *)link {
+    [self updateFrameAtTime:link.timestamp];
+    if (_booted) [_clientView renderDisplaysWithQueue:_view.commandQueue time:link.timestamp];
+}
+#else
 - (void)renderer:(id<SCNSceneRenderer>)renderer willRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
     if (!_booted) return;   // the cockpit may still be under construction on the load queue
     [_clientView renderDisplaysWithQueue:renderer.commandQueue time:time];
 }
 
 - (void)renderer:(id<SCNSceneRenderer>)renderer updateAtTime:(NSTimeInterval)time {
+    [self updateFrameAtTime:time];
+}
+#endif
+
+- (void)updateFrameAtTime:(NSTimeInterval)time {
     float dt = _lastTime > 0 ? (float)(time - _lastTime) : 1.0f / 60.0f;
     _lastTime = time;
     dt = clampf(dt, 0.0005f, 1.0f / 20.0f);
@@ -517,9 +562,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             [self showBrowser];
             return;
         case MainMenuCommandQuit:
+#if TARGET_OS_OSX
             [self afterExit:[_mainMenu motionPowerDown] then:^{
                 dispatch_async(dispatch_get_main_queue(), ^{ [NSApp terminate:nil]; });
             }];
+#endif
             return;
         case MainMenuCommandNone:
             return;

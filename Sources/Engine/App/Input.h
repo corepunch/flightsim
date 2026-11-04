@@ -1,4 +1,9 @@
-#import <Cocoa/Cocoa.h>
+#import <TargetConditionals.h>
+#import <Foundation/Foundation.h>
+#import <CoreGraphics/CoreGraphics.h>
+#if TARGET_OS_OSX
+#import <AppKit/AppKit.h>
+#endif
 #import "InputAction.h"
 
 typedef struct {
@@ -11,11 +16,24 @@ typedef struct {
     int hat;         // -1 centred, 0..7 clockwise from up
 } ControlState;
 
-// Merges a HID joystick (IOKit, so generic flight sticks work, not only
-// GameController-compatible pads), the keyboard and a mouse "virtual stick".
-// Event handlers run on the main thread, -poll: on the render thread.
+#if TARGET_OS_IOS
+extern NSNotificationName const InputControllerDidChangeNotification;
+#endif
+
+// Desktop HID/keyboard/mouse or mobile touch/GameController. Events are
+// received on the main thread and consumed on the render thread.
 @interface Input : NSObject
 
+#if TARGET_OS_IOS
+- (void)setTouchStick:(CGPoint)stick; // +x yaw right, +y nose up
+- (void)setTouchThrottle:(float)value;
+- (void)setTouchFire:(BOOL)down;
+- (void)queueTouchAction:(InputAction)action;
+- (void)cancelTouchInput;            // releases spring controls and pending actions
+- (void)setFlightInputActive:(BOOL)active;
+- (void)setApplicationActive:(BOOL)active;
+@property (atomic, readonly) float currentThrottle;
+#else
 - (void)keyDown:(NSEvent *)event;
 - (void)keyUp:(NSEvent *)event;
 - (void)flagsChanged:(NSEvent *)event;
@@ -23,14 +41,19 @@ typedef struct {
 - (void)setMouseFire:(BOOL)down;
 - (void)recenterMouse;
 - (void)releaseAllKeys;
+#endif
 
 - (ControlState)poll:(float)dt;
 - (InputAction)consumeActions;
 
+#if TARGET_OS_IOS
+@property (nonatomic, readonly) BOOL mouseCaptured;
+#else
 @property (nonatomic) BOOL mouseCaptured;
-@property (atomic, readonly) CGPoint mouseStick;          // -1..1, for the HUD
-@property (atomic, readonly, copy) NSString *joystickName; // nil if none
 @property (atomic, readonly, copy) NSString *axisDescription;
 @property (atomic, readonly) BOOL throttleFromJoystick;
+#endif
+@property (atomic, readonly) CGPoint mouseStick;          // -1..1, for the HUD
+@property (atomic, readonly, copy) NSString *joystickName; // nil if none
 
 @end

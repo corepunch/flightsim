@@ -3,10 +3,10 @@
 #import "UIStyle.h"
 #import "UIMotion.h"
 
-static NSColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
-static NSColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }
+static SKColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
+static SKColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }
 
-static SKLabelNode *Text(CGFloat size, NSColor *c) {
+static SKLabelNode *Text(CGFloat size, SKColor *c) {
     return UIMonoLabel(size, c, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
 }
 
@@ -31,7 +31,7 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
         self.scaleMode = SKSceneScaleModeResizeFill;
-        self.backgroundColor = [NSColor clearColor];
+        self.backgroundColor = [SKColor clearColor];
         self.speed = 1 / UIMotionTimeScale();
         _hover = [UIHover new];
         _stage = [SKNode node];
@@ -82,7 +82,7 @@ static SKLabelNode *Text(CGFloat size, NSColor *c) {
     _stage.position = CGPointMake(s.width / 2, s.height / 2);
     _root.position = CGPointMake(-s.width / 2, -s.height / 2);
     NSMutableArray<SKLabelNode *> *rows = [NSMutableArray array], *notes = [NSMutableArray array];
-    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[NSColor colorWithWhite:0 alpha:0.72] size:s];
+    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:0.72] size:s];
     shade.anchorPoint = CGPointZero;
     [_root addChild:shade];
 

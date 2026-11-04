@@ -4,11 +4,11 @@
 
 #define MAX_TARGETS 64
 
-static NSColor *HUDColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
-static NSColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
-static NSColor *FriendColor(CGFloat a) { return UIColorWithOpacity(UIFriendly, a); }
-static NSColor *NeutralColor(CGFloat a) { return UIColorWithOpacity(UIHUDNeutral, a); }
-static NSColor *KindColor(HUDKind k, CGFloat a) {
+static SKColor *HUDColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
+static SKColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
+static SKColor *FriendColor(CGFloat a) { return UIColorWithOpacity(UIFriendly, a); }
+static SKColor *NeutralColor(CGFloat a) { return UIColorWithOpacity(UIHUDNeutral, a); }
+static SKColor *KindColor(HUDKind k, CGFloat a) {
     switch (k) {
         case HUDKindEnemy: return EnemyColor(a);
         case HUDKindFriend: return FriendColor(a);
@@ -59,12 +59,15 @@ static SKShapeNode *Bracket(void) {
     NSMutableArray<SKLabelNode *> *_messages;
     SKSpriteNode *_sunStreak;
     CGSize _laidOut;
+#if TARGET_OS_IOS
+    UIEdgeInsets _laidOutInsets;
+#endif
 }
 
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
         self.scaleMode = SKSceneScaleModeResizeFill;
-        self.backgroundColor = [NSColor clearColor];
+        self.backgroundColor = [SKColor clearColor];
         _root = [SKNode node];
         [self addChild:_root];
         [self build];
@@ -82,13 +85,13 @@ static SKShapeNode *Bracket(void) {
     // both at full strength so the flare is as bright as the disc it sits on.
     // 2+: ghosts along the sun-to-centre line (clean soft discs and rings).
     NSArray *sizes = @[@60, @260, @40, @90, @22, @130, @34];
-    NSArray *colors = @[[NSColor whiteColor],
-                        [NSColor colorWithRed:1 green:0.97 blue:0.9 alpha:1],
-                        [NSColor colorWithRed:0.5 green:0.7 blue:1 alpha:1],
-                        [NSColor colorWithRed:0.9 green:0.5 blue:1 alpha:1],
-                        [NSColor colorWithRed:0.6 green:1 blue:0.8 alpha:1],
-                        [NSColor colorWithRed:1 green:0.6 blue:0.4 alpha:1],
-                        [NSColor colorWithRed:0.6 green:0.8 blue:1 alpha:1]];
+    NSArray *colors = @[[SKColor whiteColor],
+                        [SKColor colorWithRed:1 green:0.97 blue:0.9 alpha:1],
+                        [SKColor colorWithRed:0.5 green:0.7 blue:1 alpha:1],
+                        [SKColor colorWithRed:0.9 green:0.5 blue:1 alpha:1],
+                        [SKColor colorWithRed:0.6 green:1 blue:0.8 alpha:1],
+                        [SKColor colorWithRed:1 green:0.6 blue:0.4 alpha:1],
+                        [SKColor colorWithRed:0.6 green:0.8 blue:1 alpha:1]];
     for (NSUInteger i = 0; i < sizes.count; i++) {
         CGFloat r = [sizes[i] doubleValue];
         SKTexture *tex = i == 0 ? glow : i == 1 ? starburst : (i % 2 ? ring : glow);
@@ -104,15 +107,15 @@ static SKShapeNode *Bracket(void) {
     // Anamorphic streak through the sun, the way a widescreen lens smears it.
     _sunStreak = [SKSpriteNode spriteNodeWithTexture:[SKTexture textureWithImage:[Exhaust streakImage]]
                                                 size:CGSizeMake(1400, 24)];
-    _sunStreak.color = [NSColor colorWithRed:0.6 green:0.75 blue:1 alpha:1];
+    _sunStreak.color = [SKColor colorWithRed:0.6 green:0.75 blue:1 alpha:1];
     _sunStreak.colorBlendFactor = 1;
     _sunStreak.blendMode = SKBlendModeAdd;
     _sunStreak.alpha = 0;
     [_root addChild:_sunStreak];
 
     _damage = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 10, 10)];
-    _damage.fillColor = [NSColor colorWithRed:1 green:0.15 blue:0.1 alpha:1];
-    _damage.strokeColor = [NSColor clearColor];
+    _damage.fillColor = [SKColor colorWithRed:1 green:0.15 blue:0.1 alpha:1];
+    _damage.strokeColor = [SKColor clearColor];
     _damage.alpha = 0;
     _damage.blendMode = SKBlendModeAdd;
     [_root addChild:_damage];
@@ -122,7 +125,7 @@ static SKShapeNode *Bracket(void) {
     _boresight.lineWidth = 1.5;
     SKShapeNode *dot = [SKShapeNode shapeNodeWithCircleOfRadius:1.5];
     dot.fillColor = HUDColor(1);
-    dot.strokeColor = [NSColor clearColor];
+    dot.strokeColor = [SKColor clearColor];
     [_boresight addChild:dot];
     for (int i = 0; i < 4; i++) {
         CGMutablePathRef p = CGPathCreateMutable();
@@ -162,11 +165,11 @@ static SKShapeNode *Bracket(void) {
     [_root addChild:_throttleFrame];
     _throttleFill = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 12, 1)];
     _throttleFill.fillColor = HUDColor(0.75);
-    _throttleFill.strokeColor = [NSColor clearColor];
+    _throttleFill.strokeColor = [SKColor clearColor];
     [_throttleFrame addChild:_throttleFill];
     _boostFill = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 4, 1)];
     _boostFill.fillColor = UIColorWithOpacity(UIBoost, 0.9);
-    _boostFill.strokeColor = [NSColor clearColor];
+    _boostFill.strokeColor = [SKColor clearColor];
     [_throttleFrame addChild:_boostFill];
     _throttleLabel = Label(13, SKLabelHorizontalAlignmentModeLeft);
     [_root addChild:_throttleLabel];
@@ -175,11 +178,11 @@ static SKShapeNode *Bracket(void) {
 
     _hullFill = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 1, 6)];
     _hullFill.fillColor = HUDColor(0.8);
-    _hullFill.strokeColor = [NSColor clearColor];
+    _hullFill.strokeColor = [SKColor clearColor];
     [_root addChild:_hullFill];
     _shieldFill = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 1, 6)];
     _shieldFill.fillColor = UIColorWithOpacity(UIShield, 0.85);
-    _shieldFill.strokeColor = [NSColor clearColor];
+    _shieldFill.strokeColor = [SKColor clearColor];
     [_root addChild:_shieldFill];
     _hullLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
     _hullLabel.text = @"HULL";
@@ -223,7 +226,7 @@ static SKShapeNode *Bracket(void) {
     CGPathCloseSubpath(am);
     _aimMark.path = am;
     CGPathRelease(am);
-    _aimMark.strokeColor = [NSColor colorWithRed:1 green:0.75 blue:0.3 alpha:1];
+    _aimMark.strokeColor = [SKColor colorWithRed:1 green:0.75 blue:0.3 alpha:1];
     _aimMark.lineWidth = 2;
     [_root addChild:_aimMark];
     _statusLabel = Label(13, SKLabelHorizontalAlignmentModeCenter);
@@ -259,7 +262,7 @@ static SKShapeNode *Bracket(void) {
         SKShapeNode *a = [SKShapeNode shapeNodeWithPath:ap];
         CGPathRelease(ap);
         a.fillColor = EnemyColor(0.8);
-        a.strokeColor = [NSColor clearColor];
+        a.strokeColor = [SKColor clearColor];
         a.hidden = YES;
         [_root addChild:a];
         [_arrows addObject:a];
@@ -292,7 +295,13 @@ static SKShapeNode *Bracket(void) {
 
 - (void)layoutIfNeeded {
     CGSize s = self.size;
+#if TARGET_OS_IOS
+    UIEdgeInsets insets = self.contentInsets;
+    if (CGSizeEqualToSize(s, _laidOut) && UIEdgeInsetsEqualToEdgeInsets(insets, _laidOutInsets)) return;
+    _laidOutInsets = insets;
+#else
     if (CGSizeEqualToSize(s, _laidOut)) return;
+#endif
     _laidOut = s;
     _throttleFrame.position = CGPointMake(40, 60);
     _throttleLabel.position = CGPointMake(66, 70);
@@ -309,6 +318,26 @@ static SKShapeNode *Bracket(void) {
     _messagePanel.position = CGPointMake(s.width / 2, s.height - 110);
     _bannerLabel.position = CGPointMake(s.width / 2, s.height * 0.68);
     _torpLabel.position = CGPointMake(66, 130);
+#if TARGET_OS_IOS
+    // The bottom corners belong to the stick and weapon controls. Keep
+    // telemetry in the open space above them and inside the safe area.
+    CGFloat left = insets.left + 14, right = s.width - insets.right - 14;
+    CGFloat top = s.height - insets.top - 18;
+    CGFloat stats = insets.bottom + (s.width > s.height ? 18 : 177);
+    CGFloat leftStats = s.width > s.height ? left + 160 : left;
+    CGFloat rightStats = s.width > s.height ? right - 158 : right;
+    _throttleLabel.position = CGPointMake(leftStats, stats + 36);
+    _speedLabel.position = CGPointMake(leftStats, stats + 17);
+    _speedLabel.fontSize = 16;
+    _torpLabel.position = CGPointMake(leftStats, stats);
+    _hullLabel.position = CGPointMake(rightStats - 88, stats + 24);
+    _shieldLabel.position = CGPointMake(rightStats - 88, stats + 40);
+    _hullFill.position = CGPointMake(rightStats - 80, stats + 21);
+    _shieldFill.position = CGPointMake(rightStats - 80, stats + 37);
+    _objectivePanel.position = CGPointMake(left, top);
+    _inputLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
+    _inputLabel.position = CGPointMake(right, top - 44);
+#endif
     CGPathRef dp = CGPathCreateWithRect(CGRectMake(0, 0, s.width, s.height), NULL);
     _damage.path = dp;
     CGPathRelease(dp);
@@ -345,7 +374,7 @@ static SKShapeNode *Bracket(void) {
 - (void)showMessage:(NSString *)text from:(NSString *)from {
     SKLabelNode *l = Label(15, SKLabelHorizontalAlignmentModeCenter);
     l.text = from.length ? [NSString stringWithFormat:@"%@: %@", [from uppercaseString], text] : text;
-    l.fontColor = [NSColor colorWithRed:0.85 green:0.95 blue:1 alpha:1];
+    l.fontColor = [SKColor colorWithRed:0.85 green:0.95 blue:1 alpha:1];
     [_messagePanel addChild:l];
     [_messages insertObject:l atIndex:0];
     while (_messages.count > 3) { [_messages.lastObject removeFromParent]; [_messages removeLastObject]; }
@@ -358,7 +387,7 @@ static SKShapeNode *Bracket(void) {
     [_messages removeAllObjects];
 }
 
-- (void)showBanner:(NSString *)text color:(NSColor *)color {
+- (void)showBanner:(NSString *)text color:(SKColor *)color {
     _bannerLabel.text = text;
     _bannerLabel.fontColor = color ?: HUDColor(1);
     [_bannerLabel removeAllActions];
@@ -398,13 +427,17 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     _boostFill.position = CGPointMake(-7, 3);
     _throttleLabel.text = [NSString stringWithFormat:@"THR %3d%%%@", (int)lroundf(f.throttle * 100), f.boosting ? @" BOOST" : @""];
     _speedLabel.text = [NSString stringWithFormat:@"%4d m/s", (int)lroundf(f.speed)];
-    UISetSkewedBar(_hullFill, 200 * f.hull, 6);
-    UISetSkewedBar(_shieldFill, 200 * f.shield, 6);
+    CGFloat conditionWidth = TARGET_OS_IOS ? 80 : 200;
+    UISetSkewedBar(_hullFill, conditionWidth * f.hull, 6);
+    UISetSkewedBar(_shieldFill, conditionWidth * f.shield, 6);
     _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
     _scoreLabel.text = [NSString stringWithFormat:@"KILLS %d   DEATHS %d", f.kills, f.deaths];
     for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _torpLabel])
         n.hidden = f.cockpit;
     _scoreLabel.hidden = YES;
+#if TARGET_OS_IOS
+    _throttleFrame.hidden = YES;
+#endif
     _torpLabel.text = [NSString stringWithFormat:@"TORP %d", f.torpedoes];
     _aimMark.hidden = !f.aimVisible || f.playerDead;
     _aimMark.position = f.aim;
@@ -431,7 +464,7 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
         SKLabelNode *d = _distLabels[i];
         if (i >= count || f.playerDead) { b.hidden = a.hidden = l.hidden = d.hidden = YES; continue; }
         HUDTarget t = targets[i];
-        NSColor *c = KindColor(t.kind, 0.9);
+        SKColor *c = KindColor(t.kind, 0.9);
         BOOL nav = t.kind == HUDKindNav;
         b.hidden = !t.onScreen;
         d.hidden = !t.onScreen;

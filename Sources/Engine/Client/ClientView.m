@@ -10,6 +10,7 @@
 #define MAX_BOLT_NODES 480
 #define MAX_HUD 64
 
+static const NSUInteger kSkyFaceSize = TARGET_OS_IOS ? 1024 : 1536;
 static const simd_float3 kCockpitEye = {0, 1.0f, -2.2f};
 
 typedef struct {
@@ -78,11 +79,11 @@ typedef struct {
 
 - (void)buildScene {
     _scene = [SCNScene scene];
-    [self applySky:[[SpaceSky alloc] initWithDevice:_view.device faceSize:1536 seed:1337] dust:nil];
+    [self applySky:[[SpaceSky alloc] initWithDevice:_view.device faceSize:kSkyFaceSize seed:1337] dust:nil];
 
     SCNLight *sun = [SCNLight light];
     sun.type = SCNLightTypeDirectional;
-    sun.color = [NSColor colorWithRed:1.0 green:0.94 blue:0.86 alpha:1];
+    sun.color = [SKColor colorWithRed:1.0 green:0.94 blue:0.86 alpha:1];
     sun.intensity = 2600;
     sun.castsShadow = YES;
     sun.shadowMapSize = CGSizeMake(2048, 2048);
@@ -91,7 +92,7 @@ typedef struct {
     sun.orthographicScale = 40;
     sun.zNear = 1;
     sun.zFar = 600;
-    sun.shadowColor = [NSColor colorWithWhite:0 alpha:0.85];
+    sun.shadowColor = [SKColor colorWithWhite:0 alpha:0.85];
     _sunLight = [SCNNode node];
     _sunLight.light = sun;
     [_scene.rootNode addChildNode:_sunLight];
@@ -124,7 +125,7 @@ typedef struct {
 
     SCNLight *glow = [SCNLight light];
     glow.type = SCNLightTypeOmni;
-    glow.color = [NSColor colorWithRed:0.35 green:0.6 blue:1.0 alpha:1];
+    glow.color = [SKColor colorWithRed:0.35 green:0.6 blue:1.0 alpha:1];
     glow.attenuationStartDistance = 0;
     glow.attenuationEndDistance = 18;
     glow.intensity = 0;
@@ -170,7 +171,7 @@ typedef struct {
     [SCNTransaction begin];
     [SCNTransaction setDisableActions:YES];
     uint32_t seed = (uint32_t)[self cs:CS_SKY].longLongValue;
-    _nextSky = [[SpaceSky alloc] initWithDevice:_view.device faceSize:1536 seed:seed ?: 1337];
+    _nextSky = [[SpaceSky alloc] initWithDevice:_view.device faceSize:kSkyFaceSize seed:seed ?: 1337];
     _nextDust = [_nextSky makeDustNode];
     *progress = 0.3f;
 
@@ -366,7 +367,7 @@ typedef struct {
             if (e->radius > 0) _shake = fmaxf(_shake, clampf(1.0f - simd_distance(e->pos, me) / e->radius, 0, 1));
             break;
         case EV_JUMP: {
-            SCNNode *s = [_fx streakWithColor:[NSColor colorWithRed:0.6 green:0.8 blue:1 alpha:1] width:400 * fmaxf(e->scale, 0.3f) height:6];
+            SCNNode *s = [_fx streakWithColor:[SKColor colorWithRed:0.6 green:0.8 blue:1 alpha:1] width:400 * fmaxf(e->scale, 0.3f) height:6];
             s.simdPosition = e->pos;
             [_scene.rootNode addChildNode:s];
             [s runAction:[SCNAction sequence:@[[SCNAction fadeOutWithDuration:0.8], [SCNAction removeFromParentNode]]]];
@@ -379,7 +380,7 @@ typedef struct {
     switch (type) {
         case SVC_RADIO: [_hud showMessage:a from:b]; break;
         case SVC_BANNER:
-            [_hud showBanner:a color:[b isEqualToString:@"red"] ? [NSColor colorWithRed:1 green:0.4 blue:0.3 alpha:1] : nil];
+            [_hud showBanner:a color:[b isEqualToString:@"red"] ? [SKColor colorWithRed:1 green:0.4 blue:0.3 alpha:1] : nil];
             break;
         case SVC_OBJECTIVES: {
             NSArray *lines = a.length ? [a componentsSeparatedByString:@"\n"] : @[];
@@ -681,10 +682,15 @@ typedef struct {
     [_hud updateFrame:f targets:targets count:n];
     if (_cockpit) [self updateCockpit:ps controls:c];
 
+#if TARGET_OS_IOS
+    NSString *controller = _input.joystickName;
+    NSString *inputText = controller ? [NSString stringWithFormat:@"CONTROLLER: %@", controller] : @"";
+#else
     NSString *inputText = [NSString stringWithFormat:@"%@%@  |  %@  |  T target  G torpedo  H help  ESC menu",
                            _input.joystickName ? [NSString stringWithFormat:@"Joystick: %@ (%@)", _input.joystickName, _input.axisDescription] : @"No joystick",
                            _input.throttleFromJoystick ? @" [throttle: stick]" : @" [throttle: keys]",
                            _input.mouseCaptured ? @"mouse captured (ESC releases)" : @"click to capture mouse"];
+#endif
     if (![inputText isEqualToString:_lastInputText]) {
         _lastInputText = inputText;
         [_hud setInputText:inputText];

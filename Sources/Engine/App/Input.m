@@ -1,3 +1,5 @@
+#import <TargetConditionals.h>
+#if TARGET_OS_OSX
 #import "Input.h"
 #import <Carbon/Carbon.h>
 #import <IOKit/hid/IOHIDManager.h>
@@ -395,3 +397,5 @@ static NSString *AxisName(uint32_t key) {
 }
 
 @end
+
+#endif
