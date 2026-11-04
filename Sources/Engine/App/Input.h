@@ -25,6 +25,7 @@ typedef NS_OPTIONS(NSUInteger, InputAction) {
     InputActionBack         = 1 << 11,  // Esc (mouse free) / M / Backspace
     InputActionTarget       = 1 << 12,  // T / stick button 6: next target
     InputActionTorpedo      = 1 << 13,  // G / stick button 5
+    InputActionMultiplayer  = 1 << 14,  // N: the LAN game browser
 };
 
 // Merges a HID joystick (IOKit, so generic flight sticks work, not only

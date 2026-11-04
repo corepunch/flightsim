@@ -17,6 +17,7 @@
 @property (atomic) BOOL loading;                // set while -spawnMission: runs; frame: does nothing
 @property (nonatomic, readonly) double time;
 @property (nonatomic, readonly) int clientCount;
+@property (nonatomic, readonly) BOOL missionEnded;   // the game has sent its debrief
 
 // Loads a mission. Slow; call off the render thread with `loading` set.
 // Every connected client gets the new gamestate and must begin again.

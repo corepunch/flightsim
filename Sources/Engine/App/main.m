@@ -2,6 +2,40 @@
 #import "GameView.h"
 #import "Host.h"
 #import "FXRecorder.h"
+#import "Server.h"
+#import "UDPTransport.h"
+#import "NetProtocol.h"
+#import "Assets.h"
+#import <QuartzCore/QuartzCore.h>
+
+// Headless server: SpaceFight --dedicated [mission]. Flies the campaign from
+// that mission on, moving to the next one ten seconds after each debrief.
+static int RunDedicated(int mission) {
+    Server *server = [[Server alloc] initWithName:[NSString stringWithFormat:@"%@ (dedicated)", NSHost.currentHost.localizedName ?: @"Server"]];
+    UDPTransport *udp = [[UDPTransport alloc] initWithPort:PORT_SERVER attempts:4];
+    if (!server || !udp) return 1;
+    [server addTransport:udp];
+    NSUInteger count = CampaignMissions().count;
+    int index = MAX(0, MIN(mission, (int)count - 1));
+    NSLog(@"Dedicated: mission %d, UDP port %d", index + 1, udp.port);
+    [server spawnMission:index];
+    double last = CACurrentMediaTime(), endedAt = 0;
+    for (;;) {
+        @autoreleasepool {
+            double now = CACurrentMediaTime();
+            [server frame:now - last];
+            last = now;
+            if (server.missionEnded && !endedAt) endedAt = now;
+            if (endedAt && now - endedAt > 10) {
+                endedAt = 0;
+                index = (index + 1) % (int)count;
+                NSLog(@"Dedicated: next mission %d", index + 1);
+                [server spawnMission:index];
+            }
+            usleep(2000);
+        }
+    }
+}
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @property (nonatomic, strong) NSWindow *window;
@@ -70,6 +104,10 @@ int main(int argc, const char *argv[]) {
         // Offline effect preview: SpaceFight --record-fx <effect> <out.mp4> [seconds]
         if (argc >= 4 && !strcmp(argv[1], "--record-fx"))
             return [FXRecorder recordEffect:@(argv[2]) toFile:@(argv[3]) seconds:argc >= 5 ? atof(argv[4]) : 3.0];
+        if (argc >= 2 && !strcmp(argv[1], "--dedicated"))
+            return RunDedicated(argc >= 3 ? atoi(argv[2]) - 1 : 0);
+        // SpaceFight --connect <host[:port]>: join that server after boot.
+        if (argc >= 3 && !strcmp(argv[1], "--connect")) setenv("SF_CONNECT", argv[2], 1);
 
         NSApplication *app = [NSApplication sharedApplication];
         app.activationPolicy = NSApplicationActivationPolicyRegular;

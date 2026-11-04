@@ -6,11 +6,15 @@
 #import "Loading.h"
 #import "Progress.h"
 #import "NetTransport.h"
+#import "UDPTransport.h"
+#import "LANBrowser.h"
+#import "NetProtocol.h"
+#import "ServerBrowser.h"
 #import "Assets.h"
 #include "SharedMath.h"
 #import <stdatomic.h>
 
-typedef NS_ENUM(NSInteger, HostState) { HostStateLoading, HostStateMenu, HostStateFlying, HostStateOver };
+typedef NS_ENUM(NSInteger, HostState) { HostStateLoading, HostStateMenu, HostStateFlying, HostStateOver, HostStateBrowser };
 
 // What the loading screen says while the background queue is on each step.
 typedef NS_ENUM(int, LoadStage) {
@@ -52,6 +56,12 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _Atomic bool _loadDone;
     double _loadStartedAt;
     BOOL _booted, _revealing, _precaching;
+
+    // Multiplayer: our server also listens on UDP, so others on the LAN can
+    // join whatever we fly; or we join theirs.
+    UDPTransport *_serverUDP, *_clientUDP;
+    LANBrowser *_lan;
+    ServerBrowser *_browser;
 }
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
@@ -73,6 +83,13 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         // same packets a remote player would send.
         _server = [[Server alloc] initWithName:[NSString stringWithFormat:@"%@'s game", NSFullUserName() ?: @"Pilot"]];
         [_server addTransport:[LoopbackTransport side:1]];
+        if (!getenv("SF_NO_UDP")) {
+            _serverUDP = [[UDPTransport alloc] initWithPort:PORT_SERVER attempts:4];
+            if (_serverUDP) [_server addTransport:_serverUDP];
+        }
+        _browser = [[ServerBrowser alloc] initWithSize:view.bounds.size];
+        _browser.hostLine = _serverUDP ? [NSString stringWithFormat:@"Your missions are open to this network on UDP port %d", _serverUDP.port]
+                                       : @"Hosting is off (no UDP port)";
         [self connectLocal];
 
         // Show the loading card over an empty scene right away; the real scene
@@ -97,6 +114,59 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 - (void)connectLocal {
     [_client connectTo:[NetAddress loopback:1] transport:[LoopbackTransport side:0] name:NSFullUserName() ?: @"Pilot"];
+}
+
+- (BOOL)remote { return _client.serverAddress && !_client.serverAddress.isLoopback; }
+
+// Leave our own server idle and connect to someone else's. The gamestate it
+// sends (now, or when it starts a mission) takes us through loading.
+- (void)joinServer:(NetAddress *)address {
+    if (!address) return;
+    [_server stop];
+    [_clientView clearMission];
+    if (!_clientUDP) _clientUDP = [[UDPTransport alloc] initWithPort:0 attempts:1];
+    NSLog(@"Host: joining %@", address);
+    [_client connectTo:address transport:_clientUDP name:NSFullUserName() ?: @"Pilot"];
+    [_browser setStatus:[NSString stringWithFormat:@"Connecting to %@... waiting for the host to launch a mission", address]];
+}
+
+- (void)showBrowser {
+    _state = HostStateBrowser;
+    if (!_lan) _lan = [LANBrowser new];
+    [_browser setStatus:self.remote ? [NSString stringWithFormat:@"Connected to %@", _client.serverAddress] : @""];
+    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_browser; });
+}
+
+- (void)updateBrowser:(InputAction)actions {
+    [_lan poll];
+    NSMutableArray *list = [NSMutableArray array];
+    for (LANServer *s in _lan.servers)
+        if (!(_serverUDP && s.address.port == _serverUDP.port && [self isOwnAddress:s.address])) [list addObject:s];
+    [_browser showServers:list];
+    switch ([_browser handle:actions]) {
+        case BrowserCommandJoin: [self joinServer:_browser.selected.address]; break;
+        case BrowserCommandBack: {
+            if (self.remote && _client.state != ClientActive) { [_client disconnect]; [self connectLocal]; }
+            _state = HostStateMenu;
+            dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
+            break;
+        }
+        default: break;
+    }
+    [_clientView menuFrame:_time];
+}
+
+// Our own listen server answers our broadcast too; leave it off the list.
+- (BOOL)isOwnAddress:(NetAddress *)a {
+    static NSSet *own;
+    if (!own) {
+        NSMutableSet *s = [NSMutableSet set];
+        for (NSString *ip in NSHost.currentHost.addresses) [s addObject:ip];
+        [s addObject:@"127.0.0.1"];
+        own = s;
+    }
+    NSString *ip = [a.string componentsSeparatedByString:@":"].firstObject;
+    return [own containsObject:ip];
 }
 
 #pragma mark - Loading
@@ -150,6 +220,17 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         return;
     }
     [_briefing showListSelecting:ProgressUnlockedCount() - 1];
+    const char *join = getenv("SF_CONNECT");   // --connect host[:port]
+    if (join) {
+        NetAddress *a = [NetAddress addressWithString:@(join) port:PORT_SERVER];
+        if (a) {
+            [self reveal:0.5];
+            [self showBrowser];
+            [self joinServer:a];
+            return;
+        }
+        NSLog(@"Host: cannot resolve %s", join);
+    }
     const char *b = getenv("SF_BRIEFING");   // debug: open a briefing
     if (b && atoi(b) >= 1) [_briefing showBriefing:(NSUInteger)atoi(b) - 1];
     [self reveal:0.5];
@@ -176,7 +257,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [_loading tick:_time];
     if (!_loading.faded) return;
     _revealing = NO;
-    SKScene *next = _state == HostStateFlying ? _clientView.hud : _briefing;
+    SKScene *next = _state == HostStateFlying ? _clientView.hud : (_state == HostStateBrowser ? _browser : _briefing);
     if (_state == HostStateFlying) [_clientView.hud showBanner:[CampaignMission(_missionIndex)[@"title"] uppercaseString] color:nil];
     dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = next; });
 }
@@ -186,6 +267,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 // Render thread: put up the loading card and build the mission off-thread.
 - (void)startMission:(NSUInteger)index {
     if (_state == HostStateLoading) return;
+    if (self.remote) { [_client disconnect]; [self connectLocal]; }   // flying our own mission now
     [_server stop];
     [_client leaveGame];
     [_clientView clearMission];
@@ -257,6 +339,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 - (void)disconnected:(NSString *)reason {
     _precaching = NO;
+    [_browser setStatus:reason];
     if (_state == HostStateFlying || _state == HostStateOver || (_state == HostStateLoading && _booted)) {
         _state = HostStateMenu;
         [_clientView clearMission];
@@ -270,7 +353,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (_state != HostStateFlying) return;
     _state = HostStateOver;
     if (success) ProgressMarkCompleted(_missionIndex);
-    [_server stop];
+    if (!self.remote) [_server stop];   // a remote host decides what comes next
     [_client leaveGame];
     [_briefing showDebrief:_missionIndex success:success results:results];
     dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
@@ -280,6 +363,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _state = HostStateMenu;
     [_server stop];
     [_client leaveGame];
+    if (self.remote) { [_client disconnect]; [self connectLocal]; }
     [_clientView clearMission];
     [_briefing showListSelecting:_missionIndex];
     dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_briefing; });
@@ -323,11 +407,16 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (actions & InputActionToggleCamera) _clientView.cockpit = !_clientView.cockpit;
     if (actions & InputActionToggleHelp) [_clientView.hud toggleHelp];
 
+    if (_state == HostStateBrowser) {
+        [self updateBrowser:actions];
+        return;
+    }
     if (_state != HostStateFlying) {
+        if (actions & InputActionMultiplayer) { [self showBrowser]; return; }
         [self updateMenu:actions];
         return;
     }
-    if (actions & InputActionRestart) { [self startMission:_missionIndex]; return; }
+    if ((actions & InputActionRestart) && !self.remote) { [self startMission:_missionIndex]; return; }
     if (actions & InputActionBack) { [self abortToMenu]; return; }
 
     [_client sendInput:controls actions:actions dt:dt];

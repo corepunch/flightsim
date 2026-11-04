@@ -93,6 +93,7 @@ static void SV_Event(const GameEvent *e) {
 }
 
 static void SV_Command(int client, int type, const char *a, const char *b, const char *c) {
+    if (type == SVC_MISSION_END) sv->_missionEnded = YES;
     MsgWriter *w = [MsgWriter new];
     [w u8:svc_command];
     [w u8:(uint8_t)type];
@@ -200,6 +201,7 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
     for (int i = 0; i < MAX_CONFIGSTRINGS; i++) _configStrings[i] = @"";
     [_models removeAllObjects];
     _events.length = 0;
+    _missionEnded = NO;
     _ge->spawnMission(missionIndex);
     _spawnCount++;
     _accumulator = 0;

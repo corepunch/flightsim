@@ -258,6 +258,7 @@ static NSString *AxisName(uint32_t key) {
             case kVK_Escape: case kVK_ANSI_M: case kVK_Delete: _actions |= InputActionBack; break;
             case kVK_ANSI_T: _actions |= InputActionTarget; break;
             case kVK_ANSI_G: _actions |= InputActionTorpedo; break;
+            case kVK_ANSI_N: _actions |= InputActionMultiplayer; break;
         }
     }
     os_unfair_lock_unlock(&_lock);
