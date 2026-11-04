@@ -235,7 +235,11 @@ for i in range(6):
     cx = x0 + 0.6 + i * (x1 - x0 - 1.2) / 5
     chamfer_box(room, (cx - 1.2, FRONT - 0.3, STAGE_H + 0.5), (cx + 1.2, FRONT, z0 - 1.3), "Panel", c=0.08)
     box(room, (cx - 0.55, FRONT - 0.36, z0 - 2.0), (cx + 0.55, FRONT - 0.3, z0 - 1.75), "Glow_Amber" if i % 2 else "Glow_AmberDim")
-    kit(room, rng.choice(GREEBLES), (cx, FRONT - 0.45, STAGE_H + 1.1), size=(0.3, 1.6, 0.7), rot=(0, 0, 90), mat="Metal")
+    # A slatted vent in each panel: dark recess, five thin louvres.
+    box(room, (cx - 0.8, FRONT - 0.31, STAGE_H + 0.8), (cx + 0.8, FRONT - 0.3, STAGE_H + 1.5), "Dark")
+    for k in range(5):
+        vz = STAGE_H + 0.88 + k * 0.13
+        box(room, (cx - 0.76, FRONT - 0.36, vz), (cx + 0.76, FRONT - 0.31, vz + 0.04), "Panel")
 
 # ---- stage, three broad steps, lit risers
 box(room, (-W + BAL_D, STAGE_Y, 0), (W - BAL_D, FRONT, STAGE_H), "Stage")
