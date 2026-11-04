@@ -7,6 +7,8 @@
 #import "Capital.h"
 #import "Mission.h"
 #import "Briefing.h"
+#import "Loading.h"
+#import <stdatomic.h>
 
 #define MAX_BOLTS 480
 #define MAX_TORPEDOES 12
@@ -28,7 +30,29 @@ typedef struct {
 } Bolt;
 
 typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition };
-typedef NS_ENUM(NSInteger, GameState) { GameStateMenu, GameStateFlying, GameStateOver };
+typedef NS_ENUM(NSInteger, GameState) { GameStateLoading, GameStateMenu, GameStateFlying, GameStateOver };
+
+// What the loading screen says while the background queue is on each step.
+typedef NS_ENUM(int, LoadStage) {
+    LoadStageStart, LoadStageSky, LoadStageCockpit, LoadStageFleet, LoadStageFields,
+    LoadStageWings, LoadStageUpload, LoadStageShaders, LoadStageReady,
+};
+static NSString *LoadStatus(LoadStage s) {
+    switch (s) {
+        case LoadStageStart: return @"LOADING";
+        case LoadStageSky: return @"CHARTING STARFIELD";
+        case LoadStageCockpit: return @"POWERING UP COCKPIT";
+        case LoadStageFleet: return @"PLOTTING CAPITAL SHIPS";
+        case LoadStageFields: return @"SURVEYING DEBRIS FIELDS";
+        case LoadStageWings: return @"SCRAMBLING FIGHTER WINGS";
+        case LoadStageUpload: return @"UPLOADING GEOMETRY AND TEXTURES";
+        case LoadStageShaders: return @"COMPILING SHADERS";
+        case LoadStageReady: return @"READY";
+    }
+    return @"LOADING";
+}
+
+static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the title card
 
 static float frand(void) { return (float)arc4random_uniform(1000000) / 1000000.0f; }
 static float srand1(void) { return frand() * 2.0f - 1.0f; }
@@ -127,6 +151,7 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
     SpaceSky *_sky;
     HUD *_hud;
     Briefing *_briefing;
+    Loading *_loading;
     Cockpit *_cockpitModel;
     Effects *_fx;
 
@@ -167,15 +192,38 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
     BOOL _objectivesDirty;
     NSMutableArray *_explosionQueue;   // [time, Capital] pairs for break-up sequences
     Pilot *_autopilot;                 // debug: SF_AUTOPILOT flies the player with the AI
+
+    // Loading: content is built on _loadQueue into detached nodes, uploaded to
+    // the GPU with -prepareObject:, then attached on the render thread.
+    dispatch_queue_t _loadQueue;
+    SCNNode *_world;                   // parent of every mission node (identity transform)
+    SpaceSky *_nextSky;
+    SCNNode *_nextDust;
+    _Atomic float _loadProgress;
+    _Atomic int _loadStage;
+    _Atomic bool _loadDone;
+    double _loadStartedAt;
+    BOOL _booted, _revealing;
 }
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
     if ((self = [super init])) {
         _view = view;
         _input = input;
-        [self buildScene];
-        view.scene = _scene;
-        view.pointOfView = _cameraNode;
+        _loadQueue = dispatch_queue_create("SpaceFight.loading", DISPATCH_QUEUE_SERIAL);
+        _hud = [[HUD alloc] initWithSize:view.bounds.size];
+        _briefing = [[Briefing alloc] initWithSize:view.bounds.size];
+        _loading = [[Loading alloc] initWithSize:view.bounds.size];
+        [_loading showTitle:@"Kestrel Frontier" kicker:@"SPACE FIGHT"
+                     detail:@"CNS BASTION  /  LANCER FLIGHT"];
+
+        // Show the loading card over an empty scene right away; the real scene
+        // is built off the main thread and swapped in when it is ready.
+        _state = GameStateLoading;
+        SCNScene *placeholder = [SCNScene scene];
+        placeholder.background.contents = [NSColor blackColor];
+        view.scene = placeholder;
+        view.overlaySKScene = _loading;
         view.delegate = self;
         view.playing = YES;
         view.loops = YES;
@@ -183,29 +231,103 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
         view.preferredFramesPerSecond = 120;
         view.antialiasingMode = SCNAntialiasingModeMultisampling4X;
         view.backgroundColor = [NSColor blackColor];
-        [view prepareObjects:[_fx warmupNodes] withCompletionHandler:nil];
-        _hud = [[HUD alloc] initWithSize:view.bounds.size];
-        _briefing = [[Briefing alloc] initWithSize:view.bounds.size];
-
-        const char *m = getenv("SF_MISSION");   // debug: fly mission N straight away
-        if (m && atoi(m) >= 1) {
-            [self startMission:(NSUInteger)atoi(m) - 1];
-        } else {
-            _state = GameStateMenu;
-            [_briefing showListSelecting:[Mission unlockedCount] - 1];
-            view.overlaySKScene = _briefing;
-            const char *b = getenv("SF_BRIEFING");   // debug: open a briefing
-            if (b && atoi(b) >= 1) [_briefing showBriefing:(NSUInteger)atoi(b) - 1];
-        }
+        _loadStartedAt = 0;
+        dispatch_async(_loadQueue, ^{ [self bootInBackground]; });
     }
     return self;
+}
+
+#pragma mark - Loading
+
+- (void)reportStage:(LoadStage)stage progress:(float)progress {
+    atomic_store(&_loadStage, stage);
+    atomic_store(&_loadProgress, progress);
+}
+
+// Upload a hierarchy to the GPU (buffers, textures, shader variants) node by
+// node, so the bar moves and the first rendered frame doesn't stall.
+- (void)prepare:(NSArray *)objects view:(SCNView *)view from:(float)p0 to:(float)p1 {
+    NSUInteger n = objects.count;
+    for (NSUInteger i = 0; i < n; i++) {
+        [view prepareObject:objects[i] shouldAbortBlock:nil];
+        atomic_store(&_loadProgress, p0 + (p1 - p0) * (float)(i + 1) / (float)n);
+    }
+}
+
+// Load queue: the whole scene, which nobody is rendering yet.
+- (void)bootInBackground {
+    CFTimeInterval t0 = CACurrentMediaTime();
+    SCNView *view = _view;
+    [SCNTransaction begin];
+    [SCNTransaction setDisableActions:YES];
+    [self buildScene];
+    [SCNTransaction commit];
+    [SCNTransaction flush];
+    [self reportStage:LoadStageShaders progress:0.7f];
+    NSMutableArray *objects = [NSMutableArray arrayWithObject:_scene];
+    [objects addObjectsFromArray:[_fx warmupNodes]];
+    [self prepare:objects view:view from:0.7f to:1.0f];
+    [self reportStage:LoadStageReady progress:1];
+    NSLog(@"Boot loaded in %.2f s", CACurrentMediaTime() - t0);
+    atomic_store(&_loadDone, true);
+}
+
+// Render thread, once the boot load is done and the bar is full.
+- (void)finishBoot {
+    _booted = YES;
+    SCNView *view = _view;
+    SCNScene *scene = _scene;
+    SCNNode *camera = _cameraNode;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        view.scene = scene;
+        view.pointOfView = camera;
+    });
+    const char *m = getenv("SF_MISSION");   // debug: fly mission N straight away
+    if (m && atoi(m) >= 1) {
+        _state = GameStateMenu;
+        [self startMission:(NSUInteger)atoi(m) - 1];
+        return;
+    }
+    _state = GameStateMenu;
+    [_briefing showListSelecting:[Mission unlockedCount] - 1];
+    const char *b = getenv("SF_BRIEFING");   // debug: open a briefing
+    if (b && atoi(b) >= 1) [_briefing showBriefing:(NSUInteger)atoi(b) - 1];
+    [self reveal:0.5];
+}
+
+// Fade the loading card out, then hand the overlay to the HUD or the menus.
+- (void)reveal:(double)seconds {
+    _revealing = YES;
+    [_loading fadeOut:seconds];
+}
+
+- (void)updateLoading {
+    [_loading setProgress:atomic_load(&_loadProgress) status:LoadStatus((LoadStage)atomic_load(&_loadStage))];
+    [_loading tick:_time];
+    double minimum = _booted ? kMinMissionLoadSeconds : 0;
+    if (atomic_load(&_loadDone) && _loading.barFull && _time - _loadStartedAt >= minimum) {
+        atomic_store(&_loadDone, false);
+        if (_booted) [self finishMission];
+        else [self finishBoot];
+    }
+}
+
+- (void)updateReveal {
+    [_loading tick:_time];
+    if (!_loading.faded) return;
+    _revealing = NO;
+    SKScene *next = _state == GameStateFlying ? _hud : _briefing;
+    if (_state == GameStateFlying) [_hud showBanner:[_mission[@"title"] uppercaseString] color:nil];
+    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = next; });
 }
 
 #pragma mark - Scene
 
 - (void)buildScene {
     _scene = [SCNScene scene];
+    [self reportStage:LoadStageSky progress:0.05f];
     [self loadSky:1337];
+    [self reportStage:LoadStageCockpit progress:0.45f];
 
     SCNLight *sun = [SCNLight light];
     sun.type = SCNLightTypeDirectional;
@@ -286,12 +408,17 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
 
 // Each mission gets its own sky: the seed moves the sun, planet and nebula.
 - (void)loadSky:(uint32_t)seed {
-    _sky = [[SpaceSky alloc] initWithDevice:_view.device faceSize:1536 seed:seed];
+    SpaceSky *sky = [[SpaceSky alloc] initWithDevice:_view.device faceSize:1536 seed:seed];
+    [self applySky:sky dust:[sky makeDustNode]];
+}
+
+- (void)applySky:(SpaceSky *)sky dust:(SCNNode *)dust {
+    _sky = sky;
     _scene.background.contents = _sky.cubeTexture;
     _scene.lightingEnvironment.contents = _sky.cubeTexture;
     _scene.lightingEnvironment.intensity = 1.6;
     [_dust removeFromParentNode];
-    _dust = [_sky makeDustNode];
+    _dust = dust;
     [_scene.rootNode addChildNode:_dust];
 }
 
@@ -307,41 +434,125 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
     [_explosionQueue removeAllObjects];
     for (int i = 0; i < MAX_BOLTS; i++) { _bolts[i].active = NO; _boltNodes[i].hidden = YES; }
     _selected = nil;
+    [_world removeFromParentNode];
+    _world = nil;
 }
 
+// Render thread: put up the loading card and build the mission off-thread.
 - (void)startMission:(NSUInteger)index {
+    if (_state == GameStateLoading) return;
+    [self clearWorld];
+    _state = GameStateLoading;
+    _revealing = NO;
     _missionIndex = index;
     _mission = [Mission missionAtIndex:index];
-    [self clearWorld];
-    [self loadSky:1337 + (uint32_t)[_mission[@"id"] intValue] * 7919];
+    _player.node.hidden = YES;
+    _cockpitModel.node.hidden = YES;
 
+    NSDictionary *b = _mission[@"briefing"];
+    NSString *detail = b[@"stardate"] ? [NSString stringWithFormat:@"%@   /   SD %@", b[@"location"] ?: @"", b[@"stardate"]] : b[@"location"];
+    [_loading showTitle:_mission[@"title"]
+                 kicker:[NSString stringWithFormat:@"KESTREL FRONTIER  /  MISSION %02lu", (unsigned long)index + 1]
+                 detail:detail];
+    [self reportStage:LoadStageStart progress:0];
+    atomic_store(&_loadDone, false);
+    _loadStartedAt = _time;
+    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_loading; });
+
+    NSDictionary *mission = _mission;
+    dispatch_async(_loadQueue, ^{ [self loadMissionInBackground:mission]; });
+}
+
+// Load queue. The render thread only animates the loading card while this
+// runs, so the mission state it fills in is not read concurrently; all new
+// nodes hang off a detached _world node until -finishMission attaches it.
+- (void)loadMissionInBackground:(NSDictionary *)mission {
+    CFTimeInterval t0 = CACurrentMediaTime();
+    SCNView *view = _view;
+    [SCNTransaction begin];
+    [SCNTransaction setDisableActions:YES];
+
+    [self reportStage:LoadStageSky progress:0.02f];
+    uint32_t seed = 1337 + (uint32_t)[mission[@"id"] intValue] * 7919;
+    SpaceSky *sky = [[SpaceSky alloc] initWithDevice:view.device faceSize:1536 seed:seed];
+    SCNNode *dust = [sky makeDustNode];
+    [self reportStage:LoadStageFleet progress:0.3f];
+
+    _world = [SCNNode node];
+    _world.name = @"World";
     _missionTime = 0;
     _endAt = 0;
     _success = NO;
     _kills = 0;
-    _torpedoCount = [_mission[@"loadout"][@"torpedoes"] intValue];
+    _torpedoCount = [mission[@"loadout"][@"torpedoes"] intValue];
     _spawned = [NSMutableSet setWithObject:@"start"];
     _navsVisited = [NSMutableSet set];
     _navs = [NSMutableDictionary dictionary];
     _navNames = [NSMutableDictionary dictionary];
-    for (NSDictionary *n in _mission[@"navs"]) {
+    for (NSDictionary *n in mission[@"navs"]) {
         simd_float3 p = Vec3(n[@"pos"]);
         _navs[n[@"id"]] = Vec3Value(p);
         _navNames[n[@"id"]] = n[@"name"];
     }
-    _objectives = [Mission objectivesFor:_mission];
+    _objectives = [Mission objectivesFor:mission];
     _pendingEntities = [NSMutableArray array];
     _pendingWaves = [NSMutableArray array];
-    _pendingMessages = [_mission[@"messages"] mutableCopy] ?: [NSMutableArray array];
-    for (NSDictionary *e in _mission[@"entities"]) {
+    _pendingMessages = [mission[@"messages"] mutableCopy] ?: [NSMutableArray array];
+
+    NSArray *entities = mission[@"entities"], *fields = mission[@"fields"], *waves = mission[@"waves"];
+    float steps = (float)MAX(entities.count + fields.count + waves.count, 1), done = 0;
+    for (NSDictionary *e in entities) {
         if (e[@"at"] || e[@"after"] || e[@"nav"]) [_pendingEntities addObject:e];
         else [self spawnEntity:e jump:NO];
+        atomic_store(&_loadProgress, 0.3f + 0.3f * ++done / steps);
     }
-    for (NSDictionary *f in _mission[@"fields"]) [self buildField:f];
-    for (NSDictionary *w in _mission[@"waves"]) {
+    [self reportStage:LoadStageFields progress:0.3f + 0.3f * done / steps];
+    for (NSDictionary *f in fields) {
+        [self buildField:f];
+        atomic_store(&_loadProgress, 0.3f + 0.3f * ++done / steps);
+    }
+    [self reportStage:LoadStageWings progress:0.3f + 0.3f * done / steps];
+    for (NSDictionary *w in waves) {
         if (w[@"at"] || w[@"after"] || w[@"nav"]) [_pendingWaves addObject:w];
         else [self spawnWave:w jump:NO];
+        atomic_store(&_loadProgress, 0.3f + 0.3f * ++done / steps);
     }
+    [SCNTransaction commit];
+    [SCNTransaction flush];
+
+    // Ships that jump in later are cloned from the same prototypes, so warm
+    // those up too: one throwaway instance of each.
+    NSMutableArray *objects = [NSMutableArray arrayWithArray:_world.childNodes];
+    NSMutableSet *seen = [NSMutableSet set];
+    for (NSDictionary *e in _pendingEntities) {
+        NSString *key = [NSString stringWithFormat:@"%@|%@", e[@"asset"], e[@"style"]];
+        if ([seen containsObject:key]) continue;
+        [seen addObject:key];
+        [objects addObject:[Capital capitalWithAsset:e[@"asset"] style:e[@"style"] team:TeamNamed(e[@"team"])].node];
+    }
+    for (NSDictionary *w in _pendingWaves) {
+        NSString *key = [@"ship|" stringByAppendingString:w[@"ship"] ?: @""];
+        if ([seen containsObject:key]) continue;
+        [seen addObject:key];
+        [objects addObject:[Ship shipWithClass:ClassNamed(w[@"ship"]) smoke:YES].node];
+    }
+    [objects addObject:dust];
+    [self reportStage:LoadStageUpload progress:0.6f];
+    [self prepare:objects view:view from:0.6f to:1.0f];
+
+    _nextSky = sky;
+    _nextDust = dust;
+    [self reportStage:LoadStageReady progress:1];
+    NSLog(@"Mission %@ loaded in %.2f s (%lu nodes)", mission[@"id"], CACurrentMediaTime() - t0, (unsigned long)objects.count);
+    atomic_store(&_loadDone, true);
+}
+
+// Render thread: attach what the load queue built and start flying.
+- (void)finishMission {
+    [self applySky:_nextSky dust:_nextDust];
+    _nextSky = nil;
+    _nextDust = nil;
+    [_scene.rootNode addChildNode:_world];
 
     NSDictionary *pl = _mission[@"player"];
     simd_float3 facing = pl[@"facing"] ? Vec3(pl[@"facing"]) : simd_make_float3(0, 0, -1);
@@ -369,9 +580,8 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
     _state = GameStateFlying;
     [_hud clearMessages];
     [_hud setHelpVisible:NO];
-    [_hud showBanner:[_mission[@"title"] uppercaseString] color:nil];
     _objectivesDirty = YES;
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_view.overlaySKScene = self->_hud; });
+    [self reveal:0.6];
 }
 
 - (void)endMission:(BOOL)success {
@@ -411,7 +621,7 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
     c.noHullDamage = [e[@"noHullDamage"] boolValue];
     if (e[@"hull"]) c.maxHull = c.hull = [e[@"hull"] floatValue];
     if (e[@"hullFraction"]) c.hull = c.maxHull * [e[@"hullFraction"] floatValue];
-    [_scene.rootNode addChildNode:c.node];
+    [_world addChildNode:c.node];
     [_capitals addObject:c];
     if (c.identifier) [_spawned addObject:c.identifier];
     if (c.group) [_spawned addObject:c.group];
@@ -444,7 +654,7 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
         p.orderTarget = colon.location == NSNotFound ? nil : [order substringFromIndex:colon.location + 1];
         p.wave = w[@"id"];
         if (w[@"name"]) p.callsign = count > 1 ? [NSString stringWithFormat:@"%@ %d", w[@"name"], i + 2] : w[@"name"];
-        [_scene.rootNode addChildNode:p.ship.node];
+        [_world addChildNode:p.ship.node];
         [_pilots addObject:p];
         if (jump) [self jumpFlashAt:pos scale:0.4f];
     }
@@ -469,7 +679,7 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
             c.orientation = simd_quaternion((float)(drand48() * 6.28), simd_normalize(simd_make_float3(drand48() - 0.5, drand48() - 0.5, drand48() - 0.5) + 0.01f));
             [c setUniformScale:0.6f + (float)drand48() * 1.6f];
             c.spin = (float)(drand48() * 2 - 1) * 6;
-            [_scene.rootNode addChildNode:c.node];
+            [_world addChildNode:c.node];
             [_capitals addObject:c];
         }
     } else if ([type isEqualToString:@"mines"]) {
@@ -481,7 +691,7 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
             c.group = f[@"group"];
             c.position = centre + simd_make_float3(drand48() - 0.5, drand48() - 0.5, drand48() - 0.5) * size;
             c.spin = 20;
-            [_scene.rootNode addChildNode:c.node];
+            [_world addChildNode:c.node];
             [_capitals addObject:c];
         }
         [_spawned addObject:f[@"group"]];
@@ -495,7 +705,7 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
             [_navs[nav] getValue:&p size:sizeof p];
             c.position = p + simd_make_float3(0, -25, 0);
             c.spin = 10;
-            [_scene.rootNode addChildNode:c.node];
+            [_world addChildNode:c.node];
             [_capitals addObject:c];
         }
     }
@@ -511,6 +721,7 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
 #pragma mark - Loop
 
 - (void)renderer:(id<SCNSceneRenderer>)renderer willRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
+    if (!_booted) return;   // the cockpit may still be under construction on the load queue
     [_cockpitModel renderDisplaysWithQueue:renderer.commandQueue time:time];
 }
 
@@ -523,6 +734,11 @@ static Team BodyTeam(id b) { return [b isKindOfClass:[Ship class]] ? ((Ship *)b)
 
     InputAction actions = [_input consumeActions];
     ControlState controls = [_input poll:dt];
+    if (_state == GameStateLoading) { [self updateLoading]; return; }
+    if (_revealing) {
+        [self updateReveal];
+        if (_state == GameStateMenu) actions = 0;   // the menu isn't visible yet
+    }
     if (actions & InputActionToggleCamera) _cockpit = !_cockpit;
     if (actions & InputActionToggleHelp) [_hud toggleHelp];
 
