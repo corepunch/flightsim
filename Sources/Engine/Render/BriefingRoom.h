@@ -33,6 +33,8 @@ typedef NS_ENUM(NSInteger, RoomShot) {
 
 // Render thread.
 - (void)updateAtTime:(double)time aspect:(CGFloat)aspect;
+// Before SceneKit draws the room: the lamps' shadow masks.
+- (void)renderShadowsWithRenderer:(id<SCNSceneRenderer>)renderer;
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time;
 - (NSArray *)warmupObjects;
 

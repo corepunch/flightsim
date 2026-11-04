@@ -2,6 +2,7 @@
 #import <simd/simd.h>
 #import "SceneAsset.h"
 #import "SpaceSky.h"
+#import "StencilShadows.h"
 
 // Light categories: the hall's lamps stay inside, the star lights the
 // cruiser outside the window.
@@ -78,6 +79,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     float _leanNow;
     CGFloat _aspect;
     NSMutableDictionary<NSString *, NSImage *> *_sprites;
+    StencilShadows *_shadows;   // nil: the hall's lamps are plain SCNLights, no shadows
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device {
@@ -89,12 +91,19 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
         [self loadLayout];
         [self buildPresentation];
         [self buildCamera];
-        [self buildRoom];
+        // SF_STENCIL=0: SceneKit's own lamps; =lit: ours, never shadowed.
+        const char *stencil = getenv("SF_STENCIL");
+        if (!stencil || strcmp(stencil, "0")) {
+            _shadows = [[StencilShadows alloc] initWithDevice:device];
+            _shadows.disabled = stencil && !strcmp(stencil, "lit");
+        }
         [self buildLights];
+        [self buildRoom];
+        [_shadows finish];
         _sky = [[SpaceSky alloc] initWithDevice:device faceSize:1024 seed:4242];
         _scene.background.contents = _sky.cubeTexture;
         _scene.lightingEnvironment.contents = _sky.cubeTexture;
-        _scene.lightingEnvironment.intensity = 0.25;
+        _scene.lightingEnvironment.intensity = _shadows ? 0.12 : 0.25;
         [self cutTo:RoomShotWide];
     }
     return self;
@@ -163,17 +172,26 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
         for (SCNMaterial *m in n.geometry.materials) {
             NSString *name = m.name ?: @"";
             // Same name, same material: one draw state per kind.
-            SCNMaterial *s = shared[name];
+            NSString *key = outside ? [@"Outside/" stringByAppendingString:name] : name;
+            SCNMaterial *s = shared[key];
             if (!s) {
                 s = m;
                 [self dress:s outside:outside];
-                shared[name] = s;
+                if (_shadows && !outside && [s.lightingModelName isEqualToString:SCNLightingModelPhysicallyBased])
+                    [_shadows applyToMaterial:s tint:[s.multiply.contents isKindOfClass:[NSColor class]] ? s.multiply.contents : nil];
+                shared[key] = s;
             }
             [mats addObject:s];
         }
         n.geometry.materials = mats;
         n.castsShadow = NO;
         [_scene.rootNode addChildNode:n];
+        if (_shadows && [n.name isEqualToString:@"Room"]) {
+            // Glows are the lamps themselves; the screen and sprites let light by.
+            NSArray *skip = @[@"Sprite_", @"Glow_", @"Screen_"];
+            [_shadows addReceiver:n skip:@[@"Sprite_"]];
+            [_shadows addCaster:n skip:skip];
+        }
     }
 }
 
@@ -235,6 +253,7 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
 
 - (void)buildLights {
     void (^omni)(simd_float3, NSColor *, CGFloat, CGFloat) = ^(simd_float3 p, NSColor *c, CGFloat lumens, CGFloat reach) {
+        if (self->_shadows) { [self->_shadows addLight:p color:c intensity:(float)lumens reach:(float)reach]; return; }
         SCNLight *l = [SCNLight light];
         l.type = SCNLightTypeOmni;
         l.color = c;
@@ -251,7 +270,8 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     SCNLight *ambient = [SCNLight light];
     ambient.type = SCNLightTypeAmbient;
     ambient.color = RGB(0.5, 0.55, 0.7);
-    ambient.intensity = 70;
+    // With hard shadows the fill comes down, so they read (Doom 3's contrast).
+    ambient.intensity = _shadows ? 30 : 70;
     ambient.categoryBitMask = kInside;
     SCNNode *an = [SCNNode node];
     an.light = ambient;
@@ -341,6 +361,10 @@ static void Glow(SCNMaterial *m, NSColor *c, float intensity) {
     [_cameraNode simdLookAt:at up:simd_make_float3(0, 1, 0) localFront:simd_make_float3(0, 0, -1)];
     _cameraNode.camera.fieldOfView = _pose.fov;
     _cameraNode.camera.projectionDirection = SCNCameraProjectionDirectionVertical;
+}
+
+- (void)renderShadowsWithRenderer:(id<SCNSceneRenderer>)renderer {
+    [_shadows renderWithRenderer:renderer camera:_cameraNode];
 }
 
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time {

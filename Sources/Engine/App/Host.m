@@ -378,7 +378,16 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 - (void)renderer:(id<SCNSceneRenderer>)renderer willRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
     if (!_booted) return;   // the cockpit may still be under construction on the load queue
-    if (_roomShowing) [_room renderDisplaysWithQueue:renderer.commandQueue time:time];
+    if (getenv("SF_FPS")) {   // debug: frames per second, every 2 s
+        static double since; static int frames;
+        double now = CACurrentMediaTime();
+        if (!since) since = now;
+        if (++frames, now - since >= 2) { NSLog(@"Host: %.1f fps", frames / (now - since)); since = now; frames = 0; }
+    }
+    if (_roomShowing) {
+        [_room renderShadowsWithRenderer:renderer];
+        [_room renderDisplaysWithQueue:renderer.commandQueue time:time];
+    }
     else [_clientView renderDisplaysWithQueue:renderer.commandQueue time:time];
 }
 

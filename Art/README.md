@@ -39,7 +39,11 @@ renders a still with EEVEE, e.g. `ROOM_PREVIEW=/tmp/room.png`,
 Bakes and launches. `SF_BRIEFING=3 SF_UNLOCK_ALL=1` opens mission 3's
 dialogue in the briefing room, and `SF_BRIEFING=1` opens a tactical briefing.
 `SF_SNAPSHOT=/tmp/shot` saves three frames and quits (`SF_SNAPGAP` sets the
-seconds between them).
+seconds between them; `SF_SNAPNOUI=1` leaves the menus out). The briefing
+room's lamps cast stencil shadows (`StencilShadows.m`): `SF_STENCIL=0` puts
+SceneKit's plain lamps back, `SF_STENCIL=lit` keeps ours unshadowed, and
+`SF_STENCIL_DEBUG=1` paints the first three lamps' masks as red, green and
+blue. `SF_FPS=1` logs the frame rate.
 
 With the Blender MCP add-on running, the same scripts can be run in a live
 Blender session (`exec(open(path).read())` through `execute_blender_code`),
