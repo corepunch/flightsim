@@ -9,14 +9,21 @@ cd "$(dirname "$0")"
 
 APP=build/SpaceFight.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/PlugIns"
 
 CFLAGS=(-fobjc-arc -O2 -g -Wall -Wno-unused-function -mmacosx-version-min=13.0)
-INCLUDES=(-ISources/Shared -ISources/Game)
-for d in Sources/Engine/*/; do INCLUDES+=(-I"$d"); done
+ENGINE_INCLUDES=(-ISources/Shared)
+for d in Sources/Engine/*/; do ENGINE_INCLUDES+=(-I"$d"); done
 
-clang "${CFLAGS[@]}" "${INCLUDES[@]}" \
-    Sources/Shared/*.(m|c) Sources/Game/*.m Sources/Engine/*/*.m \
+# The game module: loaded by the server at run time (SF_GAME overrides the path).
+# Only GetGameAPI is exported.
+clang "${CFLAGS[@]}" -ISources/Shared -ISources/Game -fvisibility=hidden -dynamiclib \
+    Sources/Shared/*.(m|c) Sources/Game/*.m \
+    -framework Foundation -install_name @rpath/game.dylib \
+    -o "$APP/Contents/PlugIns/game.dylib"
+
+clang "${CFLAGS[@]}" "${ENGINE_INCLUDES[@]}" \
+    Sources/Shared/*.(m|c) Sources/Engine/*/*.m \
     -framework Cocoa -framework SceneKit -framework SpriteKit -framework Metal \
     -framework QuartzCore -framework IOKit -framework Carbon -framework ImageIO -framework AVFoundation -framework CoreMedia -framework CoreVideo \
     -o "$APP/Contents/MacOS/SpaceFight"

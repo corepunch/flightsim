@@ -1,5 +1,6 @@
 #import "Server.h"
 #import "ModelInfo.h"
+#import "GameLoader.h"
 
 @implementation Snapshot
 - (NSUInteger)entityCount { return _entities.length / sizeof(EntityState); }
@@ -123,7 +124,9 @@ static void SV_Command(int client, int type, const char *a, const char *b, const
             .event = SV_Event,
             .command = SV_Command,
         };
-        _ge = GetGameAPI(&gi);
+        GetGameAPIFunc getGameAPI = GameLoaderOpen();
+        if (!getGameAPI) return nil;
+        _ge = getGameAPI(&gi);
         if (!_ge || _ge->apiVersion != GAME_API_VERSION) {
             NSLog(@"Server: game API version mismatch");
             return nil;

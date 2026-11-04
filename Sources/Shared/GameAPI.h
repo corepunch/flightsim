@@ -69,4 +69,5 @@ typedef struct {
 } GameExport;
 
 typedef GameExport *(*GetGameAPIFunc)(const GameImport *import);
-GameExport *GetGameAPI(const GameImport *import);
+// The one symbol the game dylib exports.
+__attribute__((visibility("default"))) GameExport *GetGameAPI(const GameImport *import);
