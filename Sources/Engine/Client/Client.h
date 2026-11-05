@@ -31,6 +31,7 @@ typedef NS_ENUM(NSInteger, ClientState) {
 
 @property (nonatomic, readonly) ClientView *view;
 @property (nonatomic, readonly) ClientState state;
+@property (nonatomic) BOOL inputSuspended; // keep the connection alive without flight commands
 @property (nonatomic, readonly) NSArray<NSString *> *configStrings;
 @property (nonatomic, readonly) int missionIndex;
 @property (nonatomic, readonly) NetAddress *serverAddress;

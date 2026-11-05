@@ -1,0 +1,1020 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00773CC8470D55391B979B8A /* GEntities.m in Sources */ = {isa = PBXBuildFile; fileRef = 9B93A7B137EAF6F2CF8A560D /* GEntities.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		02FB92496785D072FAD8C3C0 /* LANBrowser.m in Sources */ = {isa = PBXBuildFile; fileRef = 83EE68C6A43D3D9E6A640DAA /* LANBrowser.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		051600704DF44584D3C182B7 /* FlightInstruments.m in Sources */ = {isa = PBXBuildFile; fileRef = 809B6FD2D1275CDE4CA10F82 /* FlightInstruments.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		066527D4926461C6D61AEEF4 /* ModelInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E1B800B9DE031FFDBCA644D5 /* ModelInfo.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		06F32A0C21C063AE0BC2AB44 /* Cockpit.m in Sources */ = {isa = PBXBuildFile; fileRef = 7D9D66CE55ECFF849E8F5A18 /* Cockpit.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		08CD45E734764309FC770345 /* InputIOS.m in Sources */ = {isa = PBXBuildFile; fileRef = 78EFC49A0D9351DC6561B614 /* InputIOS.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		0DAFD5B826888156390412A8 /* Briefing.m in Sources */ = {isa = PBXBuildFile; fileRef = F1E7F2E93458338C939D87F3 /* Briefing.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		0EF75916FE5418756E371AED /* UDPTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = 474485A4C72A1D560C04B21C /* UDPTransport.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		0FD41F083A3415049133A1F2 /* PauseMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = F823012616B291C3E4500451 /* PauseMenu.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		1155816D03F8379A3A01A4B8 /* Cmd.m in Sources */ = {isa = PBXBuildFile; fileRef = 714E0A7A2433FFA546F7B620 /* Cmd.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		120A20A330F6DD850AEE0A5E /* UIMotion.m in Sources */ = {isa = PBXBuildFile; fileRef = 7C32390EA8CBB06D4BCFE81E /* UIMotion.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		14A7C3593840A75DBECDBC53 /* GEntities.m in Sources */ = {isa = PBXBuildFile; fileRef = 9B93A7B137EAF6F2CF8A560D /* GEntities.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		166582EBCC518E79612F2EF6 /* GAI.m in Sources */ = {isa = PBXBuildFile; fileRef = 91CA5E34091F3E00ABDA2413 /* GAI.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		17ECBDED95F68A3CB030196B /* Client.m in Sources */ = {isa = PBXBuildFile; fileRef = FA0ADB7A3655C360ED99B8DC /* Client.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		17F07E3D537C055C34D580C8 /* Briefing.m in Sources */ = {isa = PBXBuildFile; fileRef = F1E7F2E93458338C939D87F3 /* Briefing.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		1B274F62EA705156334CA43E /* GameViewIOS.m in Sources */ = {isa = PBXBuildFile; fileRef = B6C9C2BDC1D956204FDD3BE9 /* GameViewIOS.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		21190BA521571FA646AEA9CE /* GameAudio.m in Sources */ = {isa = PBXBuildFile; fileRef = 54A6625D3399BA37902C0C94 /* GameAudio.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		21B0FC682C3B59BC5561C1F4 /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 4448D04AD3B5B572ADE6601B /* Host.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		23A3E2407B64684591A42C81 /* GMain.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B9EE21F63A70C7A03D68CF1 /* GMain.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		2A59CF3E29DCE1823974B5A2 /* GWeapons.m in Sources */ = {isa = PBXBuildFile; fileRef = 7D33C3D3B94813A0376410D8 /* GWeapons.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		2C7C58FFB483893475F96A29 /* Cvar.m in Sources */ = {isa = PBXBuildFile; fileRef = E947095C9A2A14660C2A02D6 /* Cvar.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		2F34B4286E88EFF46E8BB5A8 /* MainMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = C730A0D6699A8EDB589CB230 /* MainMenu.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		3262C3C0E2DD6DE73130369C /* Assets.m in Sources */ = {isa = PBXBuildFile; fileRef = 40F193704F3D6B4273923770 /* Assets.m */; };
+		328D247AE9EE8EC7C7745FB9 /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 4448D04AD3B5B572ADE6601B /* Host.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		3F52A3CF217303207A67FEEC /* NetProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = AAC062E630FAC2ABFB0BF4F2 /* NetProtocol.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		419640121AD728914FAEB565 /* ShipMove.c in Sources */ = {isa = PBXBuildFile; fileRef = 2ACB1B6BE7DACE217AF29CB6 /* ShipMove.c */; };
+		445C023D1DC2275EA18FF238 /* GMission.m in Sources */ = {isa = PBXBuildFile; fileRef = 3501BF6AFF60E66D76687CFE /* GMission.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		4617A90784EAE623013A513A /* HUD.m in Sources */ = {isa = PBXBuildFile; fileRef = 00AE9593FE447C3B67F24D86 /* HUD.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		473BEB1CAD54DE8921FB7B81 /* Cvar.m in Sources */ = {isa = PBXBuildFile; fileRef = E947095C9A2A14660C2A02D6 /* Cvar.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		4766A9B34E1F6C4BE4649904 /* NetProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = AAC062E630FAC2ABFB0BF4F2 /* NetProtocol.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		48460BECD34C0A4FCC6DA83B /* ShipView.m in Sources */ = {isa = PBXBuildFile; fileRef = 2F65CF19DDD6E64F52390E71 /* ShipView.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		48F4276C4C5609F253933B13 /* mainIOS.m in Sources */ = {isa = PBXBuildFile; fileRef = F2E4BD95C08E33E242106611 /* mainIOS.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		4DF56D7F0E3ED68149B736B8 /* UIMotion.m in Sources */ = {isa = PBXBuildFile; fileRef = 7C32390EA8CBB06D4BCFE81E /* UIMotion.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		5059A849CAEF011A5ECBB926 /* Loading.m in Sources */ = {isa = PBXBuildFile; fileRef = D17A50858700207A61743937 /* Loading.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		5059D9A38755FB10F52CF152 /* LANBrowser.m in Sources */ = {isa = PBXBuildFile; fileRef = 83EE68C6A43D3D9E6A640DAA /* LANBrowser.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		58BA6F4BE3823F4E58B1A727 /* Server.m in Sources */ = {isa = PBXBuildFile; fileRef = 47C411751EC74E7AE3101743 /* Server.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		65F593C0F1ED128F2C2DC46F /* MonitorSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = DFC6BC34568C7B917EA4C4D4 /* MonitorSignal.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		6F981AF9C24FDE0387D2A98A /* GAI.m in Sources */ = {isa = PBXBuildFile; fileRef = 91CA5E34091F3E00ABDA2413 /* GAI.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		70058B7242DC47204E543A49 /* Effects.m in Sources */ = {isa = PBXBuildFile; fileRef = 2E015069601436664CDEE7EE /* Effects.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		72F029710AEF4B0C48ADF81A /* LensFlare.m in Sources */ = {isa = PBXBuildFile; fileRef = 762700A52A57454CC41E3B4C /* LensFlare.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		7430F60FFBCFC798731D816D /* Cockpit.m in Sources */ = {isa = PBXBuildFile; fileRef = 7D9D66CE55ECFF849E8F5A18 /* Cockpit.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		793CD4EEC0ABC9683ACADC8B /* GameLoader.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D7AD44D2CBAB40BBEFA00C3 /* GameLoader.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		7B6CA22EC859815F5E523DF1 /* GameView.m in Sources */ = {isa = PBXBuildFile; fileRef = E8EFEE7B86FAC508A1E57171 /* GameView.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		7D2BFC03890347100B33BA3D /* Progress.m in Sources */ = {isa = PBXBuildFile; fileRef = 364505059E18631CF1A12ED1 /* Progress.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		823BCD1EB80AABB247023708 /* ServerBrowser.m in Sources */ = {isa = PBXBuildFile; fileRef = FED89264205E9FCA0283B4D4 /* ServerBrowser.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		83013EA509DC6900D389CB2C /* MonitorSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = DFC6BC34568C7B917EA4C4D4 /* MonitorSignal.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		832F120F0E272AF745DEBFC4 /* PauseMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = F823012616B291C3E4500451 /* PauseMenu.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		85C6C6216609A72F8E53538C /* NetMsg.m in Sources */ = {isa = PBXBuildFile; fileRef = 1DF4000571D64B268F825346 /* NetMsg.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		866AD1EB6957FE6E0FCB7AB6 /* GameAudio.m in Sources */ = {isa = PBXBuildFile; fileRef = 54A6625D3399BA37902C0C94 /* GameAudio.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		8AB6C4ED28436909A1E1C6C6 /* Effects.m in Sources */ = {isa = PBXBuildFile; fileRef = 2E015069601436664CDEE7EE /* Effects.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		9495FF4E9C860E878390086B /* Server.m in Sources */ = {isa = PBXBuildFile; fileRef = 47C411751EC74E7AE3101743 /* Server.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		975B61AC13A2C20C93310039 /* Assets.m in Sources */ = {isa = PBXBuildFile; fileRef = 40F193704F3D6B4273923770 /* Assets.m */; };
+		9899D958E348C7E74DE15FA0 /* TouchFlightControls.m in Sources */ = {isa = PBXBuildFile; fileRef = 91A9CC2E2CA141715B398FE7 /* TouchFlightControls.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		99917EB55A02B646FACCC91A /* ClientView.m in Sources */ = {isa = PBXBuildFile; fileRef = 636DAF786E099300451F6AF5 /* ClientView.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		99D7FBD3A775949FBFE449CD /* Loading.m in Sources */ = {isa = PBXBuildFile; fileRef = D17A50858700207A61743937 /* Loading.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		9AE6F2FE8FC3A8E8000780D4 /* FXRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = C0905C6582FC6E4D7CE93E12 /* FXRecorder.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		9B671FAF705B30A441EB7D14 /* game.dylib in Embed game module */ = {isa = PBXBuildFile; fileRef = A81A4044967C6D4277D1776C /* game.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		9BE0506ABD5DB138091CC781 /* UDPTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = 474485A4C72A1D560C04B21C /* UDPTransport.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		9C98CF9FBBB4F3E870A72407 /* NetChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CFDA83224EBC24B2A01D9D7 /* NetChannel.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		9DD3E038506807F0BED669EB /* NetChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CFDA83224EBC24B2A01D9D7 /* NetChannel.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		A47B25B97C64F8D1E1EE39B6 /* Client.m in Sources */ = {isa = PBXBuildFile; fileRef = FA0ADB7A3655C360ED99B8DC /* Client.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		AC71D88E0BE45410B0E6DE92 /* MainMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = C730A0D6699A8EDB589CB230 /* MainMenu.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		ACAFD3B172FD2B8F88AB3935 /* ClientView.m in Sources */ = {isa = PBXBuildFile; fileRef = 636DAF786E099300451F6AF5 /* ClientView.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		B0794638163672476DFD5ADB /* GMission.m in Sources */ = {isa = PBXBuildFile; fileRef = 3501BF6AFF60E66D76687CFE /* GMission.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		B613C39D60D45D3E3713616B /* SpaceSky.m in Sources */ = {isa = PBXBuildFile; fileRef = 516D93F6B2306E75F5F40271 /* SpaceSky.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		B69EAD2D82DB0C7D61BB739D /* FlightInstruments.m in Sources */ = {isa = PBXBuildFile; fileRef = 809B6FD2D1275CDE4CA10F82 /* FlightInstruments.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		BA58EC1473DF9BBA54898BA9 /* NetTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = 0192E71202C149913DD460B1 /* NetTransport.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		BA8C59901424ADB48705ADB1 /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F59E4C1FBE609FAC2DF50AE /* Resources/Assets.xcassets */; };
+		BAF55C743B3299C6DFF2F2B3 /* NetTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = 0192E71202C149913DD460B1 /* NetTransport.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		C34C5676FE59C72E803DBA44 /* ServerBrowser.m in Sources */ = {isa = PBXBuildFile; fileRef = FED89264205E9FCA0283B4D4 /* ServerBrowser.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		C4E744D75FB3FCECD20033C0 /* ModelInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E1B800B9DE031FFDBCA644D5 /* ModelInfo.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		C5EB970F6F9D6A01AA21691D /* Assets.m in Sources */ = {isa = PBXBuildFile; fileRef = 40F193704F3D6B4273923770 /* Assets.m */; };
+		C9EC08DF6A8741972FDDC954 /* LensFlare.m in Sources */ = {isa = PBXBuildFile; fileRef = 762700A52A57454CC41E3B4C /* LensFlare.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		D0D85B5738A0076C32873336 /* GameLoader.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D7AD44D2CBAB40BBEFA00C3 /* GameLoader.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		D0E9677E0FE8B984E41EBC6C /* GTargeting.m in Sources */ = {isa = PBXBuildFile; fileRef = 697C2B4A8D05526206A00D47 /* GTargeting.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		D1CA0A86324D7C64EFF5A26D /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = D1446246734B3AFDAAE748AA /* main.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		D1CD86F41330DCE9376E64FD /* ShipMove.c in Sources */ = {isa = PBXBuildFile; fileRef = 2ACB1B6BE7DACE217AF29CB6 /* ShipMove.c */; };
+		D1FEBB39F82A8EBCE3606821 /* CapitalView.m in Sources */ = {isa = PBXBuildFile; fileRef = AF3787446BC2F59003DE4B51 /* CapitalView.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		D2629158CF9938DCCFE02986 /* GWeapons.m in Sources */ = {isa = PBXBuildFile; fileRef = 7D33C3D3B94813A0376410D8 /* GWeapons.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		D32BA9B6FE6986CFC5F90765 /* Input.m in Sources */ = {isa = PBXBuildFile; fileRef = 4914AF3372C000B3BF2D1CBA /* Input.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		D54031935E92A487B16364AB /* CapitalView.m in Sources */ = {isa = PBXBuildFile; fileRef = AF3787446BC2F59003DE4B51 /* CapitalView.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		DABB6A7A81DE232EA26A8346 /* SpaceSky.m in Sources */ = {isa = PBXBuildFile; fileRef = 516D93F6B2306E75F5F40271 /* SpaceSky.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		DB40B2AE82E8F54E3C69637A /* Progress.m in Sources */ = {isa = PBXBuildFile; fileRef = 364505059E18631CF1A12ED1 /* Progress.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		DBD40E9C57F0D3397567BE36 /* Exhaust.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C7825F9FA3C1A46FBFAF593 /* Exhaust.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		DDC0D67AAAA5499A4BEA641A /* ShipMove.c in Sources */ = {isa = PBXBuildFile; fileRef = 2ACB1B6BE7DACE217AF29CB6 /* ShipMove.c */; };
+		E0E18CA15A61BA519D4F4D22 /* GMain.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B9EE21F63A70C7A03D68CF1 /* GMain.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		E5C224F3D0ECFA974DB2FD33 /* GTargeting.m in Sources */ = {isa = PBXBuildFile; fileRef = 697C2B4A8D05526206A00D47 /* GTargeting.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
+		E911D5715F645AB48C02B35A /* ShipView.m in Sources */ = {isa = PBXBuildFile; fileRef = 2F65CF19DDD6E64F52390E71 /* ShipView.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		F69DF7CE2609616646E8F91E /* Cmd.m in Sources */ = {isa = PBXBuildFile; fileRef = 714E0A7A2433FFA546F7B620 /* Cmd.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		FB71595F847246E57CF7819F /* NetMsg.m in Sources */ = {isa = PBXBuildFile; fileRef = 1DF4000571D64B268F825346 /* NetMsg.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		FC7A9F75C5243FEF24DCB84E /* Exhaust.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C7825F9FA3C1A46FBFAF593 /* Exhaust.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		FC96CFD82D376A9CFBDE543E /* HUD.m in Sources */ = {isa = PBXBuildFile; fileRef = 00AE9593FE447C3B67F24D86 /* HUD.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		01FB82A5076063581B5B9957 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 244210E48437B6556980A702 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0F26821D05D2582A45D17E0A;
+			remoteInfo = "KestrelFrontier-Game";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7AF59D9DEE199F046AE0D887 /* Embed game module */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9B671FAF705B30A441EB7D14 /* game.dylib in Embed game module */,
+			);
+			name = "Embed game module";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		00AE9593FE447C3B67F24D86 /* HUD.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HUD.m; sourceTree = "<group>"; };
+		0121C9D1523A192D5381DADD /* UIStyle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UIStyle.h; sourceTree = "<group>"; };
+		0192E71202C149913DD460B1 /* NetTransport.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NetTransport.m; sourceTree = "<group>"; };
+		05FD554367B7927FD082EE17 /* Exhaust.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Exhaust.h; sourceTree = "<group>"; };
+		0800EFD946EE779D7780ECB7 /* UIMotion.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UIMotion.h; sourceTree = "<group>"; };
+		0B3F4FF4580F51FE60D63D12 /* CvarFlags.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CvarFlags.h; sourceTree = "<group>"; };
+		14A3FD612336DF5C08639DD4 /* Protocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Protocol.h; sourceTree = "<group>"; };
+		151E73B5908ED0B7CAA902EE /* NetProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetProtocol.h; sourceTree = "<group>"; };
+		1633E1957F7C4AB02AF3A827 /* Prefix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Prefix.h; sourceTree = "<group>"; };
+		1C7825F9FA3C1A46FBFAF593 /* Exhaust.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Exhaust.m; sourceTree = "<group>"; };
+		1DF4000571D64B268F825346 /* NetMsg.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NetMsg.m; sourceTree = "<group>"; };
+		1EE48ABFA006EA41A782521B /* MonitorSignal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MonitorSignal.h; sourceTree = "<group>"; };
+		27B534DF06E0F6E626965F2A /* Client.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Client.h; sourceTree = "<group>"; };
+		2ACB1B6BE7DACE217AF29CB6 /* ShipMove.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ShipMove.c; sourceTree = "<group>"; };
+		2B9EE21F63A70C7A03D68CF1 /* GMain.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GMain.m; sourceTree = "<group>"; };
+		2E015069601436664CDEE7EE /* Effects.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Effects.m; sourceTree = "<group>"; };
+		2F59E4C1FBE609FAC2DF50AE /* Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
+		2F65CF19DDD6E64F52390E71 /* ShipView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ShipView.m; sourceTree = "<group>"; };
+		349A02879EAA7FD6DE844BB0 /* GameAPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameAPI.h; sourceTree = "<group>"; };
+		3501BF6AFF60E66D76687CFE /* GMission.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GMission.m; sourceTree = "<group>"; };
+		364505059E18631CF1A12ED1 /* Progress.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Progress.m; sourceTree = "<group>"; };
+		3AE3B938C05B1F56F877222B /* SceneAsset.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneAsset.h; sourceTree = "<group>"; };
+		3DA7AC65EC5BCE9B43D4188D /* Prefix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Prefix.h; sourceTree = "<group>"; };
+		40F193704F3D6B4273923770 /* Assets.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Assets.m; sourceTree = "<group>"; };
+		432ACAFA941F06AC7F3724FB /* Host.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Host.h; sourceTree = "<group>"; };
+		4448D04AD3B5B572ADE6601B /* Host.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Host.m; sourceTree = "<group>"; };
+		46D5F6B01D29435F30D4E715 /* GameAudio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameAudio.h; sourceTree = "<group>"; };
+		474485A4C72A1D560C04B21C /* UDPTransport.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = UDPTransport.m; sourceTree = "<group>"; };
+		47C411751EC74E7AE3101743 /* Server.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Server.m; sourceTree = "<group>"; };
+		48AAB49AA1329952AD77F29B /* ServerBrowser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ServerBrowser.h; sourceTree = "<group>"; };
+		4914AF3372C000B3BF2D1CBA /* Input.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Input.m; sourceTree = "<group>"; };
+		4D43CE799CE10C26FDC5A14D /* TouchFlightControls.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TouchFlightControls.h; sourceTree = "<group>"; };
+		4DB6850B8BD766CED9162F02 /* GameView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameView.h; sourceTree = "<group>"; };
+		516D93F6B2306E75F5F40271 /* SpaceSky.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SpaceSky.m; sourceTree = "<group>"; };
+		540828806E044DA49B805294 /* GameLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameLoader.h; sourceTree = "<group>"; };
+		54A6625D3399BA37902C0C94 /* GameAudio.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GameAudio.m; sourceTree = "<group>"; };
+		584A7C91C4D830BCD98004EC /* ModelInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ModelInfo.h; sourceTree = "<group>"; };
+		5DD434E910C18C4C22B80AAD /* SharedMath.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedMath.h; sourceTree = "<group>"; };
+		5E17814AEE2D3F82E69BBBEC /* LANBrowser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LANBrowser.h; sourceTree = "<group>"; };
+		636DAF786E099300451F6AF5 /* ClientView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ClientView.m; sourceTree = "<group>"; };
+		669C8F3E820E5A4DA408F5CB /* Briefing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Briefing.h; sourceTree = "<group>"; };
+		697C2B4A8D05526206A00D47 /* GTargeting.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GTargeting.m; sourceTree = "<group>"; };
+		6B6D60731DE49107435C730C /* NetChannel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetChannel.h; sourceTree = "<group>"; };
+		6CFDA83224EBC24B2A01D9D7 /* NetChannel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NetChannel.m; sourceTree = "<group>"; };
+		6D7AD44D2CBAB40BBEFA00C3 /* GameLoader.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GameLoader.m; sourceTree = "<group>"; };
+		6F69C7B329C14533646D8E23 /* FlightInstruments.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FlightInstruments.h; sourceTree = "<group>"; };
+		714E0A7A2433FFA546F7B620 /* Cmd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Cmd.m; sourceTree = "<group>"; };
+		762700A52A57454CC41E3B4C /* LensFlare.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LensFlare.m; sourceTree = "<group>"; };
+		789A261685BB7D198FD844AB /* UDPTransport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UDPTransport.h; sourceTree = "<group>"; };
+		78EFC49A0D9351DC6561B614 /* InputIOS.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InputIOS.m; sourceTree = "<group>"; };
+		7C32390EA8CBB06D4BCFE81E /* UIMotion.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = UIMotion.m; sourceTree = "<group>"; };
+		7D33C3D3B94813A0376410D8 /* GWeapons.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GWeapons.m; sourceTree = "<group>"; };
+		7D9D66CE55ECFF849E8F5A18 /* Cockpit.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Cockpit.m; sourceTree = "<group>"; };
+		809B6FD2D1275CDE4CA10F82 /* FlightInstruments.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FlightInstruments.m; sourceTree = "<group>"; };
+		83EE68C6A43D3D9E6A640DAA /* LANBrowser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LANBrowser.m; sourceTree = "<group>"; };
+		8AC46CA6418487259119EB2A /* CapitalView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CapitalView.h; sourceTree = "<group>"; };
+		8CB7969007147A1057B2EB19 /* NetMsg.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetMsg.h; sourceTree = "<group>"; };
+		91A9CC2E2CA141715B398FE7 /* TouchFlightControls.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TouchFlightControls.m; sourceTree = "<group>"; };
+		91CA5E34091F3E00ABDA2413 /* GAI.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GAI.m; sourceTree = "<group>"; };
+		937011A4EF7ADB12D821D115 /* LensFlare.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LensFlare.h; sourceTree = "<group>"; };
+		9B93A7B137EAF6F2CF8A560D /* GEntities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GEntities.m; sourceTree = "<group>"; };
+		A0C03B473BEE5D5B4E94E821 /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
+		A81A4044967C6D4277D1776C /* game.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = game.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		A8792157CB4F27FB949C035F /* KestrelFrontier.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = KestrelFrontier.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAC062E630FAC2ABFB0BF4F2 /* NetProtocol.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NetProtocol.m; sourceTree = "<group>"; };
+		AF259D801AED81A86865D8B6 /* Assets.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Assets.h; sourceTree = "<group>"; };
+		AF3787446BC2F59003DE4B51 /* CapitalView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CapitalView.m; sourceTree = "<group>"; };
+		B00F5AAF072ADA3258FCAEC2 /* KestrelFrontier.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = KestrelFrontier.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B043B52EF9A158D1BD5A2F60 /* ClientView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ClientView.h; sourceTree = "<group>"; };
+		B68EBE50E2DA3CF7C21EDDE6 /* Cvar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Cvar.h; sourceTree = "<group>"; };
+		B6C9C2BDC1D956204FDD3BE9 /* GameViewIOS.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GameViewIOS.m; sourceTree = "<group>"; };
+		B9D1D3AEBD35BF4ECEB10EBF /* GLocal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GLocal.h; sourceTree = "<group>"; };
+		C0905C6582FC6E4D7CE93E12 /* FXRecorder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FXRecorder.m; sourceTree = "<group>"; };
+		C730A0D6699A8EDB589CB230 /* MainMenu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MainMenu.m; sourceTree = "<group>"; };
+		C7416FF7A83F4818FD3CEE79 /* MainMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainMenu.h; sourceTree = "<group>"; };
+		C74614CE128E6992FB6A06D9 /* InputAction.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InputAction.h; sourceTree = "<group>"; };
+		C9B726265A993CEE8DC0B865 /* HUD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HUD.h; sourceTree = "<group>"; };
+		CC48770BFB36FC6C6509C976 /* SpaceSky.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SpaceSky.h; sourceTree = "<group>"; };
+		CE6490553C6380B9C671EBBB /* NetTransport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetTransport.h; sourceTree = "<group>"; };
+		D1446246734B3AFDAAE748AA /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		D17A50858700207A61743937 /* Loading.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Loading.m; sourceTree = "<group>"; };
+		D9F18179B8599993F0EF67C2 /* PlatformImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformImage.h; sourceTree = "<group>"; };
+		DBC71C294EC981F222EB63CC /* ShipView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShipView.h; sourceTree = "<group>"; };
+		DCFE285AC4AD14417D7DADBA /* Progress.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Progress.h; sourceTree = "<group>"; };
+		DFC6BC34568C7B917EA4C4D4 /* MonitorSignal.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MonitorSignal.m; sourceTree = "<group>"; };
+		E1B800B9DE031FFDBCA644D5 /* ModelInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ModelInfo.m; sourceTree = "<group>"; };
+		E3B8130C427AE1BD9E9E9BBE /* Cockpit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Cockpit.h; sourceTree = "<group>"; };
+		E3FC20D262B16E14E56AB9DE /* ShipMove.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShipMove.h; sourceTree = "<group>"; };
+		E53A055BACF5C0314BCADEFC /* Cmd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Cmd.h; sourceTree = "<group>"; };
+		E6BE0DA7CB7F2FA15B6B9C16 /* Effects.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Effects.h; sourceTree = "<group>"; };
+		E6C88EF3E3BA2CBB02E328D7 /* Server.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Server.h; sourceTree = "<group>"; };
+		E8EFEE7B86FAC508A1E57171 /* GameView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GameView.m; sourceTree = "<group>"; };
+		E947095C9A2A14660C2A02D6 /* Cvar.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Cvar.m; sourceTree = "<group>"; };
+		F1E7F2E93458338C939D87F3 /* Briefing.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Briefing.m; sourceTree = "<group>"; };
+		F2E4BD95C08E33E242106611 /* mainIOS.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = mainIOS.m; sourceTree = "<group>"; };
+		F358A0F660B58608EE8A7FA2 /* Input.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Input.h; sourceTree = "<group>"; };
+		F823012616B291C3E4500451 /* PauseMenu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PauseMenu.m; sourceTree = "<group>"; };
+		F8A47039424D439889FB7A9F /* FXRecorder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FXRecorder.h; sourceTree = "<group>"; };
+		F8AA5E909FD98BA8A8CE154F /* Loading.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Loading.h; sourceTree = "<group>"; };
+		F9632954BE94324DE06F9844 /* PauseMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PauseMenu.h; sourceTree = "<group>"; };
+		FA0ADB7A3655C360ED99B8DC /* Client.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Client.m; sourceTree = "<group>"; };
+		FED89264205E9FCA0283B4D4 /* ServerBrowser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ServerBrowser.m; sourceTree = "<group>"; };
+		FFD254A8F67061025159DC33 /* LoadingLocalization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LoadingLocalization.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		05F8A25BDBF403CDE3C749DE /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				C1630CF144B3DF36B2C4A65E /* Engine */,
+				A6117C2268EB2F943276036A /* Game */,
+				ED967DB9B7D273F09F981EE8 /* Shared */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		0A3E27B8CA818264D75C8D81 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A8792157CB4F27FB949C035F /* KestrelFrontier.app */,
+				B00F5AAF072ADA3258FCAEC2 /* KestrelFrontier.app */,
+				A81A4044967C6D4277D1776C /* game.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1ACA60CEC30688E618AB947B /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				669C8F3E820E5A4DA408F5CB /* Briefing.h */,
+				F1E7F2E93458338C939D87F3 /* Briefing.m */,
+				F8AA5E909FD98BA8A8CE154F /* Loading.h */,
+				D17A50858700207A61743937 /* Loading.m */,
+				FFD254A8F67061025159DC33 /* LoadingLocalization.h */,
+				C7416FF7A83F4818FD3CEE79 /* MainMenu.h */,
+				C730A0D6699A8EDB589CB230 /* MainMenu.m */,
+				1EE48ABFA006EA41A782521B /* MonitorSignal.h */,
+				DFC6BC34568C7B917EA4C4D4 /* MonitorSignal.m */,
+				F9632954BE94324DE06F9844 /* PauseMenu.h */,
+				F823012616B291C3E4500451 /* PauseMenu.m */,
+				DCFE285AC4AD14417D7DADBA /* Progress.h */,
+				364505059E18631CF1A12ED1 /* Progress.m */,
+				48AAB49AA1329952AD77F29B /* ServerBrowser.h */,
+				FED89264205E9FCA0283B4D4 /* ServerBrowser.m */,
+				0800EFD946EE779D7780ECB7 /* UIMotion.h */,
+				7C32390EA8CBB06D4BCFE81E /* UIMotion.m */,
+				0121C9D1523A192D5381DADD /* UIStyle.h */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		664F835B1ED89846DAB355B5 = {
+			isa = PBXGroup;
+			children = (
+				05F8A25BDBF403CDE3C749DE /* Sources */,
+				A0C03B473BEE5D5B4E94E821 /* Resources */,
+				2F59E4C1FBE609FAC2DF50AE /* Resources/Assets.xcassets */,
+				0A3E27B8CA818264D75C8D81 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		77B7ED04BBB1A5E0BAC17319 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				46D5F6B01D29435F30D4E715 /* GameAudio.h */,
+				54A6625D3399BA37902C0C94 /* GameAudio.m */,
+				4DB6850B8BD766CED9162F02 /* GameView.h */,
+				E8EFEE7B86FAC508A1E57171 /* GameView.m */,
+				B6C9C2BDC1D956204FDD3BE9 /* GameViewIOS.m */,
+				432ACAFA941F06AC7F3724FB /* Host.h */,
+				4448D04AD3B5B572ADE6601B /* Host.m */,
+				F358A0F660B58608EE8A7FA2 /* Input.h */,
+				4914AF3372C000B3BF2D1CBA /* Input.m */,
+				C74614CE128E6992FB6A06D9 /* InputAction.h */,
+				78EFC49A0D9351DC6561B614 /* InputIOS.m */,
+				4D43CE799CE10C26FDC5A14D /* TouchFlightControls.h */,
+				91A9CC2E2CA141715B398FE7 /* TouchFlightControls.m */,
+				D1446246734B3AFDAAE748AA /* main.m */,
+				F2E4BD95C08E33E242106611 /* mainIOS.m */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		81908590BFF96B57F4F05425 /* Client */ = {
+			isa = PBXGroup;
+			children = (
+				27B534DF06E0F6E626965F2A /* Client.h */,
+				FA0ADB7A3655C360ED99B8DC /* Client.m */,
+				B043B52EF9A158D1BD5A2F60 /* ClientView.h */,
+				636DAF786E099300451F6AF5 /* ClientView.m */,
+			);
+			path = Client;
+			sourceTree = "<group>";
+		};
+		A6117C2268EB2F943276036A /* Game */ = {
+			isa = PBXGroup;
+			children = (
+				91CA5E34091F3E00ABDA2413 /* GAI.m */,
+				9B93A7B137EAF6F2CF8A560D /* GEntities.m */,
+				B9D1D3AEBD35BF4ECEB10EBF /* GLocal.h */,
+				2B9EE21F63A70C7A03D68CF1 /* GMain.m */,
+				3501BF6AFF60E66D76687CFE /* GMission.m */,
+				697C2B4A8D05526206A00D47 /* GTargeting.m */,
+				7D33C3D3B94813A0376410D8 /* GWeapons.m */,
+				3DA7AC65EC5BCE9B43D4188D /* Prefix.h */,
+			);
+			path = Game;
+			sourceTree = "<group>";
+		};
+		ADDFA25450B9DE3B0C1C8AC4 /* Net */ = {
+			isa = PBXGroup;
+			children = (
+				5E17814AEE2D3F82E69BBBEC /* LANBrowser.h */,
+				83EE68C6A43D3D9E6A640DAA /* LANBrowser.m */,
+				6B6D60731DE49107435C730C /* NetChannel.h */,
+				6CFDA83224EBC24B2A01D9D7 /* NetChannel.m */,
+				8CB7969007147A1057B2EB19 /* NetMsg.h */,
+				1DF4000571D64B268F825346 /* NetMsg.m */,
+				151E73B5908ED0B7CAA902EE /* NetProtocol.h */,
+				AAC062E630FAC2ABFB0BF4F2 /* NetProtocol.m */,
+				CE6490553C6380B9C671EBBB /* NetTransport.h */,
+				0192E71202C149913DD460B1 /* NetTransport.m */,
+				789A261685BB7D198FD844AB /* UDPTransport.h */,
+				474485A4C72A1D560C04B21C /* UDPTransport.m */,
+			);
+			path = Net;
+			sourceTree = "<group>";
+		};
+		B7CC57B4C606FFE00800A6E2 /* Common */ = {
+			isa = PBXGroup;
+			children = (
+				E53A055BACF5C0314BCADEFC /* Cmd.h */,
+				714E0A7A2433FFA546F7B620 /* Cmd.m */,
+				B68EBE50E2DA3CF7C21EDDE6 /* Cvar.h */,
+				E947095C9A2A14660C2A02D6 /* Cvar.m */,
+			);
+			path = Common;
+			sourceTree = "<group>";
+		};
+		C1630CF144B3DF36B2C4A65E /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				77B7ED04BBB1A5E0BAC17319 /* App */,
+				81908590BFF96B57F4F05425 /* Client */,
+				B7CC57B4C606FFE00800A6E2 /* Common */,
+				ADDFA25450B9DE3B0C1C8AC4 /* Net */,
+				1633E1957F7C4AB02AF3A827 /* Prefix.h */,
+				CC736AA6B87DB36FC71DA4B5 /* Render */,
+				C48449D9C087944E590A8C11 /* Server */,
+				1ACA60CEC30688E618AB947B /* UI */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		C48449D9C087944E590A8C11 /* Server */ = {
+			isa = PBXGroup;
+			children = (
+				540828806E044DA49B805294 /* GameLoader.h */,
+				6D7AD44D2CBAB40BBEFA00C3 /* GameLoader.m */,
+				E6C88EF3E3BA2CBB02E328D7 /* Server.h */,
+				47C411751EC74E7AE3101743 /* Server.m */,
+			);
+			path = Server;
+			sourceTree = "<group>";
+		};
+		CC736AA6B87DB36FC71DA4B5 /* Render */ = {
+			isa = PBXGroup;
+			children = (
+				8AC46CA6418487259119EB2A /* CapitalView.h */,
+				AF3787446BC2F59003DE4B51 /* CapitalView.m */,
+				E3B8130C427AE1BD9E9E9BBE /* Cockpit.h */,
+				7D9D66CE55ECFF849E8F5A18 /* Cockpit.m */,
+				E6BE0DA7CB7F2FA15B6B9C16 /* Effects.h */,
+				2E015069601436664CDEE7EE /* Effects.m */,
+				05FD554367B7927FD082EE17 /* Exhaust.h */,
+				1C7825F9FA3C1A46FBFAF593 /* Exhaust.m */,
+				F8A47039424D439889FB7A9F /* FXRecorder.h */,
+				C0905C6582FC6E4D7CE93E12 /* FXRecorder.m */,
+				6F69C7B329C14533646D8E23 /* FlightInstruments.h */,
+				809B6FD2D1275CDE4CA10F82 /* FlightInstruments.m */,
+				C9B726265A993CEE8DC0B865 /* HUD.h */,
+				00AE9593FE447C3B67F24D86 /* HUD.m */,
+				937011A4EF7ADB12D821D115 /* LensFlare.h */,
+				762700A52A57454CC41E3B4C /* LensFlare.m */,
+				584A7C91C4D830BCD98004EC /* ModelInfo.h */,
+				E1B800B9DE031FFDBCA644D5 /* ModelInfo.m */,
+				D9F18179B8599993F0EF67C2 /* PlatformImage.h */,
+				3AE3B938C05B1F56F877222B /* SceneAsset.h */,
+				DBC71C294EC981F222EB63CC /* ShipView.h */,
+				2F65CF19DDD6E64F52390E71 /* ShipView.m */,
+				CC48770BFB36FC6C6509C976 /* SpaceSky.h */,
+				516D93F6B2306E75F5F40271 /* SpaceSky.m */,
+			);
+			path = Render;
+			sourceTree = "<group>";
+		};
+		ED967DB9B7D273F09F981EE8 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				AF259D801AED81A86865D8B6 /* Assets.h */,
+				40F193704F3D6B4273923770 /* Assets.m */,
+				0B3F4FF4580F51FE60D63D12 /* CvarFlags.h */,
+				349A02879EAA7FD6DE844BB0 /* GameAPI.h */,
+				14A3FD612336DF5C08639DD4 /* Protocol.h */,
+				5DD434E910C18C4C22B80AAD /* SharedMath.h */,
+				2ACB1B6BE7DACE217AF29CB6 /* ShipMove.c */,
+				E3FC20D262B16E14E56AB9DE /* ShipMove.h */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0F26821D05D2582A45D17E0A /* KestrelFrontier-Game */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 29E4AF27E5BB1B6C635EA166 /* Build configuration list for PBXNativeTarget "KestrelFrontier-Game" */;
+			buildPhases = (
+				65694E41AD3585C0AC67C53F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "KestrelFrontier-Game";
+			productName = game;
+			productReference = A81A4044967C6D4277D1776C /* game.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+		34A04005BCAF206EEC990BD9 /* KestrelFrontier-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7C97AB33A1F3A2952C09C3E7 /* Build configuration list for PBXNativeTarget "KestrelFrontier-iOS" */;
+			buildPhases = (
+				AAACEF93EB2439F2C22BAACD /* Sources */,
+				C0DB9B262E1CFDB5EF5A482C /* Resources */,
+				1A8C2C006C407097E0E8F941 /* Bundle runtime resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "KestrelFrontier-iOS";
+			productName = KestrelFrontier;
+			productReference = A8792157CB4F27FB949C035F /* KestrelFrontier.app */;
+			productType = "com.apple.product-type.application";
+		};
+		4219BEAD389C09F80A7CE748 /* KestrelFrontier-macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ED971AD232F5402B0CED3032 /* Build configuration list for PBXNativeTarget "KestrelFrontier-macOS" */;
+			buildPhases = (
+				7FA2F43EDCB6FA8DC4873232 /* Sources */,
+				7AF59D9DEE199F046AE0D887 /* Embed game module */,
+				945B888536D82DE7FBCD6948 /* Bundle runtime resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				30C8D14FA074E633AB72F59A /* PBXTargetDependency */,
+			);
+			name = "KestrelFrontier-macOS";
+			productName = KestrelFrontier;
+			productReference = B00F5AAF072ADA3258FCAEC2 /* KestrelFrontier.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		244210E48437B6556980A702 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 4F9780D05AFB226691EE6E8A /* Build configuration list for PBXProject "KestrelFrontier" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 664F835B1ED89846DAB355B5;
+			productRefGroup = 0A3E27B8CA818264D75C8D81 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				34A04005BCAF206EEC990BD9 /* KestrelFrontier-iOS */,
+				4219BEAD389C09F80A7CE748 /* KestrelFrontier-macOS */,
+				0F26821D05D2582A45D17E0A /* KestrelFrontier-Game */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C0DB9B262E1CFDB5EF5A482C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA8C59901424ADB48705ADB1 /* Resources/Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		1A8C2C006C407097E0E8F941 /* Bundle runtime resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle runtime resources";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/zsh;
+			shellScript = "set -e\ncd \"$SRCROOT\"\n/bin/zsh Tools/bundle-resources.sh \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\" \"$PROJECT_TEMP_DIR/KestrelFrontierResources\"\n";
+		};
+		945B888536D82DE7FBCD6948 /* Bundle runtime resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle runtime resources";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/zsh;
+			shellScript = "set -e\ncd \"$SRCROOT\"\n/bin/zsh Tools/bundle-resources.sh \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\" \"$PROJECT_TEMP_DIR/KestrelFrontierResources\"\ncp -p Resources/AppIcon.icns \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		65694E41AD3585C0AC67C53F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6F981AF9C24FDE0387D2A98A /* GAI.m in Sources */,
+				00773CC8470D55391B979B8A /* GEntities.m in Sources */,
+				23A3E2407B64684591A42C81 /* GMain.m in Sources */,
+				445C023D1DC2275EA18FF238 /* GMission.m in Sources */,
+				D0E9677E0FE8B984E41EBC6C /* GTargeting.m in Sources */,
+				D2629158CF9938DCCFE02986 /* GWeapons.m in Sources */,
+				3262C3C0E2DD6DE73130369C /* Assets.m in Sources */,
+				D1CD86F41330DCE9376E64FD /* ShipMove.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7FA2F43EDCB6FA8DC4873232 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				21190BA521571FA646AEA9CE /* GameAudio.m in Sources */,
+				7B6CA22EC859815F5E523DF1 /* GameView.m in Sources */,
+				328D247AE9EE8EC7C7745FB9 /* Host.m in Sources */,
+				D32BA9B6FE6986CFC5F90765 /* Input.m in Sources */,
+				D1CA0A86324D7C64EFF5A26D /* main.m in Sources */,
+				17ECBDED95F68A3CB030196B /* Client.m in Sources */,
+				ACAFD3B172FD2B8F88AB3935 /* ClientView.m in Sources */,
+				1155816D03F8379A3A01A4B8 /* Cmd.m in Sources */,
+				2C7C58FFB483893475F96A29 /* Cvar.m in Sources */,
+				02FB92496785D072FAD8C3C0 /* LANBrowser.m in Sources */,
+				9DD3E038506807F0BED669EB /* NetChannel.m in Sources */,
+				FB71595F847246E57CF7819F /* NetMsg.m in Sources */,
+				4766A9B34E1F6C4BE4649904 /* NetProtocol.m in Sources */,
+				BAF55C743B3299C6DFF2F2B3 /* NetTransport.m in Sources */,
+				9BE0506ABD5DB138091CC781 /* UDPTransport.m in Sources */,
+				D54031935E92A487B16364AB /* CapitalView.m in Sources */,
+				7430F60FFBCFC798731D816D /* Cockpit.m in Sources */,
+				8AB6C4ED28436909A1E1C6C6 /* Effects.m in Sources */,
+				FC7A9F75C5243FEF24DCB84E /* Exhaust.m in Sources */,
+				9AE6F2FE8FC3A8E8000780D4 /* FXRecorder.m in Sources */,
+				051600704DF44584D3C182B7 /* FlightInstruments.m in Sources */,
+				4617A90784EAE623013A513A /* HUD.m in Sources */,
+				72F029710AEF4B0C48ADF81A /* LensFlare.m in Sources */,
+				C4E744D75FB3FCECD20033C0 /* ModelInfo.m in Sources */,
+				E911D5715F645AB48C02B35A /* ShipView.m in Sources */,
+				B613C39D60D45D3E3713616B /* SpaceSky.m in Sources */,
+				D0D85B5738A0076C32873336 /* GameLoader.m in Sources */,
+				58BA6F4BE3823F4E58B1A727 /* Server.m in Sources */,
+				0DAFD5B826888156390412A8 /* Briefing.m in Sources */,
+				99D7FBD3A775949FBFE449CD /* Loading.m in Sources */,
+				2F34B4286E88EFF46E8BB5A8 /* MainMenu.m in Sources */,
+				83013EA509DC6900D389CB2C /* MonitorSignal.m in Sources */,
+				832F120F0E272AF745DEBFC4 /* PauseMenu.m in Sources */,
+				DB40B2AE82E8F54E3C69637A /* Progress.m in Sources */,
+				C34C5676FE59C72E803DBA44 /* ServerBrowser.m in Sources */,
+				4DF56D7F0E3ED68149B736B8 /* UIMotion.m in Sources */,
+				975B61AC13A2C20C93310039 /* Assets.m in Sources */,
+				DDC0D67AAAA5499A4BEA641A /* ShipMove.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAACEF93EB2439F2C22BAACD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				866AD1EB6957FE6E0FCB7AB6 /* GameAudio.m in Sources */,
+				1B274F62EA705156334CA43E /* GameViewIOS.m in Sources */,
+				21B0FC682C3B59BC5561C1F4 /* Host.m in Sources */,
+				08CD45E734764309FC770345 /* InputIOS.m in Sources */,
+				9899D958E348C7E74DE15FA0 /* TouchFlightControls.m in Sources */,
+				48F4276C4C5609F253933B13 /* mainIOS.m in Sources */,
+				A47B25B97C64F8D1E1EE39B6 /* Client.m in Sources */,
+				99917EB55A02B646FACCC91A /* ClientView.m in Sources */,
+				F69DF7CE2609616646E8F91E /* Cmd.m in Sources */,
+				473BEB1CAD54DE8921FB7B81 /* Cvar.m in Sources */,
+				5059D9A38755FB10F52CF152 /* LANBrowser.m in Sources */,
+				9C98CF9FBBB4F3E870A72407 /* NetChannel.m in Sources */,
+				85C6C6216609A72F8E53538C /* NetMsg.m in Sources */,
+				3F52A3CF217303207A67FEEC /* NetProtocol.m in Sources */,
+				BA58EC1473DF9BBA54898BA9 /* NetTransport.m in Sources */,
+				0EF75916FE5418756E371AED /* UDPTransport.m in Sources */,
+				D1FEBB39F82A8EBCE3606821 /* CapitalView.m in Sources */,
+				06F32A0C21C063AE0BC2AB44 /* Cockpit.m in Sources */,
+				70058B7242DC47204E543A49 /* Effects.m in Sources */,
+				DBD40E9C57F0D3397567BE36 /* Exhaust.m in Sources */,
+				B69EAD2D82DB0C7D61BB739D /* FlightInstruments.m in Sources */,
+				FC96CFD82D376A9CFBDE543E /* HUD.m in Sources */,
+				C9EC08DF6A8741972FDDC954 /* LensFlare.m in Sources */,
+				066527D4926461C6D61AEEF4 /* ModelInfo.m in Sources */,
+				48460BECD34C0A4FCC6DA83B /* ShipView.m in Sources */,
+				DABB6A7A81DE232EA26A8346 /* SpaceSky.m in Sources */,
+				793CD4EEC0ABC9683ACADC8B /* GameLoader.m in Sources */,
+				9495FF4E9C860E878390086B /* Server.m in Sources */,
+				17F07E3D537C055C34D580C8 /* Briefing.m in Sources */,
+				5059A849CAEF011A5ECBB926 /* Loading.m in Sources */,
+				AC71D88E0BE45410B0E6DE92 /* MainMenu.m in Sources */,
+				65F593C0F1ED128F2C2DC46F /* MonitorSignal.m in Sources */,
+				0FD41F083A3415049133A1F2 /* PauseMenu.m in Sources */,
+				7D2BFC03890347100B33BA3D /* Progress.m in Sources */,
+				823BCD1EB80AABB247023708 /* ServerBrowser.m in Sources */,
+				120A20A330F6DD850AEE0A5E /* UIMotion.m in Sources */,
+				166582EBCC518E79612F2EF6 /* GAI.m in Sources */,
+				14A7C3593840A75DBECDBC53 /* GEntities.m in Sources */,
+				E0E18CA15A61BA519D4F4D22 /* GMain.m in Sources */,
+				B0794638163672476DFD5ADB /* GMission.m in Sources */,
+				E5C224F3D0ECFA974DB2FD33 /* GTargeting.m in Sources */,
+				2A59CF3E29DCE1823974B5A2 /* GWeapons.m in Sources */,
+				C5EB970F6F9D6A01AA21691D /* Assets.m in Sources */,
+				419640121AD728914FAEB565 /* ShipMove.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		30C8D14FA074E633AB72F59A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0F26821D05D2582A45D17E0A /* KestrelFrontier-Game */;
+			targetProxy = 01FB82A5076063581B5B9957 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		09AA38CEF3EA53936A20C858 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/Sources/Shared",
+					"$(SRCROOT)/Sources/Game",
+					"$(SRCROOT)/Sources/Engine/App",
+					"$(SRCROOT)/Sources/Engine/Client",
+					"$(SRCROOT)/Sources/Engine/Common",
+					"$(SRCROOT)/Sources/Engine/Net",
+					"$(SRCROOT)/Sources/Engine/Render",
+					"$(SRCROOT)/Sources/Engine/Server",
+					"$(SRCROOT)/Sources/Engine/UI",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-Wno-deprecated-declarations",
+				);
+			};
+			name = Debug;
+		};
+		0B005757AB90F962CF77E3D7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					Cocoa,
+					"-framework",
+					SceneKit,
+					"-framework",
+					SpriteKit,
+					"-framework",
+					Metal,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					IOKit,
+					"-framework",
+					Carbon,
+					"-framework",
+					ImageIO,
+					"-framework",
+					AVFoundation,
+					"-framework",
+					CoreMedia,
+					"-framework",
+					CoreVideo,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.igor.spacefight;
+				PRODUCT_NAME = KestrelFrontier;
+				SDKROOT = macosx;
+				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = Release;
+		};
+		27FD49470A253B08B94E0E4B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "$(PROJECT_FILE_PATH)/Generated/ios-Info.plist";
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					UIKit,
+					"-framework",
+					SceneKit,
+					"-framework",
+					SpriteKit,
+					"-framework",
+					Metal,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					ImageIO,
+					"-framework",
+					GameController,
+					"-framework",
+					AVFoundation,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.corepunch.spacefight;
+				PRODUCT_NAME = KestrelFrontier;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		2C51B24F1BD0E37CCD3A85CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/Sources/Shared",
+					"$(SRCROOT)/Sources/Game",
+					"$(SRCROOT)/Sources/Engine/App",
+					"$(SRCROOT)/Sources/Engine/Client",
+					"$(SRCROOT)/Sources/Engine/Common",
+					"$(SRCROOT)/Sources/Engine/Net",
+					"$(SRCROOT)/Sources/Engine/Render",
+					"$(SRCROOT)/Sources/Engine/Server",
+					"$(SRCROOT)/Sources/Engine/UI",
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-Wno-deprecated-declarations",
+				);
+			};
+			name = Release;
+		};
+		5FA7D61F6B51CC24941BB269 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					Cocoa,
+					"-framework",
+					SceneKit,
+					"-framework",
+					SpriteKit,
+					"-framework",
+					Metal,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					IOKit,
+					"-framework",
+					Carbon,
+					"-framework",
+					ImageIO,
+					"-framework",
+					AVFoundation,
+					"-framework",
+					CoreMedia,
+					"-framework",
+					CoreVideo,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.igor.spacefight;
+				PRODUCT_NAME = KestrelFrontier;
+				SDKROOT = macosx;
+				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = Debug;
+		};
+		719A98D8A89F95FDBAF28C7F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "$(PROJECT_FILE_PATH)/Generated/ios-Info.plist";
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					UIKit,
+					"-framework",
+					SceneKit,
+					"-framework",
+					SpriteKit,
+					"-framework",
+					Metal,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					ImageIO,
+					"-framework",
+					GameController,
+					"-framework",
+					AVFoundation,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.corepunch.spacefight;
+				PRODUCT_NAME = KestrelFrontier;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		79C95880FF43B8C696575DE2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				EXECUTABLE_PREFIX = "";
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				MACH_O_TYPE = mh_dylib;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					Foundation,
+				);
+				PRODUCT_NAME = game;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = Release;
+		};
+		9AAD53394871F441EC351708 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				EXECUTABLE_PREFIX = "";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				MACH_O_TYPE = mh_dylib;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					Foundation,
+				);
+				PRODUCT_NAME = game;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		29E4AF27E5BB1B6C635EA166 /* Build configuration list for PBXNativeTarget "KestrelFrontier-Game" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9AAD53394871F441EC351708 /* Debug */,
+				79C95880FF43B8C696575DE2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4F9780D05AFB226691EE6E8A /* Build configuration list for PBXProject "KestrelFrontier" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				09AA38CEF3EA53936A20C858 /* Debug */,
+				2C51B24F1BD0E37CCD3A85CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7C97AB33A1F3A2952C09C3E7 /* Build configuration list for PBXNativeTarget "KestrelFrontier-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				719A98D8A89F95FDBAF28C7F /* Debug */,
+				27FD49470A253B08B94E0E4B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		ED971AD232F5402B0CED3032 /* Build configuration list for PBXNativeTarget "KestrelFrontier-macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5FA7D61F6B51CC24941BB269 /* Debug */,
+				0B005757AB90F962CF77E3D7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 244210E48437B6556980A702 /* Project object */;
+}

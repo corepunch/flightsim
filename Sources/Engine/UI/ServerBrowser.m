@@ -8,7 +8,7 @@ static SKColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static SKColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }
 
 static SKLabelNode *Text(CGFloat size, SKColor *c) {
-    return UIMonoLabel(size, c, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
+    return UIInterfaceLabel(size, c, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
 }
 
 @interface ServerBrowser () <UIMotionScene>
@@ -126,7 +126,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     NSArray *lines = @[
         _status ?: @"",
         _hostLine ?: @"",
-        s.width >= 850 ? @"Direct IP: SpaceFight --connect <host[:port]>   /   Dedicated: SpaceFight --dedicated [mission]" : @"↑ / ↓  Select   •   Return  Join   •   Esc  Back",
+        s.width >= 850 ? @"Direct IP: SpaceFight +connect <host[:port]>   /   Dedicated: SpaceFight --dedicated [mission]" : @"↑ / ↓  Select   •   Return  Join   •   Esc  Back",
     ];
     for (NSUInteger i = 0; i < lines.count; i++) {
         SKLabelNode *l = Text(i == 0 ? 14 : 12, i == 0 ? Amber(1) : Ink(0.55));

@@ -91,3 +91,12 @@ They build on these published techniques:
 - `pcg3d` hash: Mark Jarzynski & Marc Olano, "Hash Functions for GPU Rendering",
   JCGT vol. 9 no. 3 (2020), https://jcgt.org/published/0009/03/02/
 - Quintic-interpolated gradient noise: Ken Perlin, "Improving Noise" (SIGGRAPH 2002)
+
+## Fonts
+
+**Oxanium** by **Severin Meyer / The Oxanium Project Authors**
+- Source: https://github.com/sevmeyer/oxanium
+- Version: 2.000, upstream commit `a8f39e0c71186190027a093e9001459410192d1e`
+- License: SIL Open Font License 1.1, included in `Resources/Fonts/OFL.txt`
+- Unmodified Regular, Medium and Bold TTFs are bundled for front-end text,
+  briefing/debriefing dialogue, readouts, and loading screens.

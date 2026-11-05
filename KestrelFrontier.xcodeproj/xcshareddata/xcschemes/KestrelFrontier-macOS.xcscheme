@@ -3,19 +3,19 @@
   <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES">
     <BuildActionEntries>
       <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">
-        <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="34A04005BCAF206EEC990BD9" BuildableName="SpaceFight.app" BlueprintName="SpaceFight-iOS" ReferencedContainer="container:SpaceFight.xcodeproj" />
+        <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="4219BEAD389C09F80A7CE748" BuildableName="KestrelFrontier.app" BlueprintName="KestrelFrontier-macOS" ReferencedContainer="container:KestrelFrontier.xcodeproj" />
       </BuildActionEntry>
     </BuildActionEntries>
   </BuildAction>
   <TestAction buildConfiguration="Debug" />
   <LaunchAction buildConfiguration="Debug" useCustomWorkingDirectory="NO" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0">
     <BuildableProductRunnable runnableDebuggingMode="0">
-      <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="34A04005BCAF206EEC990BD9" BuildableName="SpaceFight.app" BlueprintName="SpaceFight-iOS" ReferencedContainer="container:SpaceFight.xcodeproj" />
+      <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="4219BEAD389C09F80A7CE748" BuildableName="KestrelFrontier.app" BlueprintName="KestrelFrontier-macOS" ReferencedContainer="container:KestrelFrontier.xcodeproj" />
     </BuildableProductRunnable>
   </LaunchAction>
   <ProfileAction buildConfiguration="Release" useCustomWorkingDirectory="NO">
     <BuildableProductRunnable runnableDebuggingMode="0">
-      <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="34A04005BCAF206EEC990BD9" BuildableName="SpaceFight.app" BlueprintName="SpaceFight-iOS" ReferencedContainer="container:SpaceFight.xcodeproj" />
+      <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="4219BEAD389C09F80A7CE748" BuildableName="KestrelFrontier.app" BlueprintName="KestrelFrontier-macOS" ReferencedContainer="container:KestrelFrontier.xcodeproj" />
     </BuildableProductRunnable>
   </ProfileAction>
   <AnalyzeAction buildConfiguration="Debug" />

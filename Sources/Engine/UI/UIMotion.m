@@ -1,6 +1,7 @@
 #import "UIMotion.h"
 #import "GameAudio.h"
 #import "UIStyle.h"
+#import "Cvar.h"
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
 typedef UIFont UIMotionFont;
@@ -11,6 +12,17 @@ typedef NSFont UIMotionFont;
 
 static NSString * const TypeKey = @"motion.type";
 static NSString * const TypeTextKey = @"motion.text";
+static NSString * const CaretName = @"motion.caret";
+
+@interface UITypeStop : NSObject
+@property NSUInteger count;
+@property CGPoint point;
+@property CGSize size;
+@property NSTimeInterval time;
+@property BOOL carriageReturn;
+@end
+@implementation UITypeStop
+@end
 
 BOOL UIMotionReduced(void) {
 #if TARGET_OS_IOS
@@ -21,13 +33,14 @@ BOOL UIMotionReduced(void) {
 }
 
 double UIMotionTimeScale(void) {
-    static double scale;
+    static Cvar *c;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        const char *slow = getenv("SF_UI_SLOWMO");
-        scale = slow && atof(slow) > 0 ? atof(slow) : 1;
+        c = [Cvar get:@"ui_timescale" defaultValue:@"1" flags:0
+                 help:@"Front-end motion runs this many times slower (screens built after the change)"];
     });
-    return scale;
+    double scale = c.value;
+    return scale > 0 ? scale : 1;
 }
 
 #pragma mark - Curves
@@ -204,7 +217,119 @@ BOOL UIMotionIsTyping(SKLabelNode *label) {
     return label && [label actionForKey:TypeKey] != nil;
 }
 
+NSTimeInterval UIMotionDialogueTypeOn(SKLabelNode *label, NSTimeInterval delay, CGFloat charsPerSecond) {
+    [label removeActionForKey:TypeKey];
+    [[label childNodeWithName:CaretName] removeFromParent];
+    NSString *text = label.text;
+    if (UIMotionReduced() || !text.length || charsPerSecond <= 0) return 0;
+    if (!label.userData) label.userData = [NSMutableDictionary dictionary];
+    label.userData[TypeTextKey] = text;
+    NSAttributedString *full = Revealed(label, text, text.length);
+    label.attributedText = full;
+
+    // Lay out the complete paragraph once, exactly as for the invisible text
+    // reveal. Measuring a growing substring would move words between lines.
+    NSTextStorage *storage = [[NSTextStorage alloc] initWithAttributedString:full];
+    NSLayoutManager *layout = [NSLayoutManager new];
+    layout.usesFontLeading = YES;
+    NSTextContainer *container = [[NSTextContainer alloc] initWithSize:CGSizeMake(
+        label.preferredMaxLayoutWidth > 0 ? label.preferredMaxLayoutWidth : 10000, 10000)];
+    container.lineFragmentPadding = 0;
+    container.maximumNumberOfLines = label.numberOfLines;
+    container.lineBreakMode = label.lineBreakMode;
+    [layout addTextContainer:container];
+    [storage addLayoutManager:layout];
+    [layout ensureLayoutForTextContainer:container];
+    CGRect bounds = label.frame;
+    CGFloat left = CGRectGetMinX(bounds) - label.position.x;
+    CGFloat top = CGRectGetMaxY(bounds) - label.position.y;
+    UIMotionFont *font = [full attribute:NSFontAttributeName atIndex:0 effectiveRange:NULL];
+    CGFloat height = MAX(label.fontSize, font.capHeight - font.descender + 2);
+    CGFloat centerAboveBaseline = (font.capHeight + font.descender) / 2;
+    CGFloat cellWidth = [@"M" sizeWithAttributes:@{NSFontAttributeName:font}].width;
+    NSMutableArray<UITypeStop *> *stops = [NSMutableArray array];
+    NSMutableArray<NSNumber *> *boundaries = [NSMutableArray arrayWithObject:@0];
+    [text enumerateSubstringsInRange:NSMakeRange(0, text.length) options:NSStringEnumerationByComposedCharacterSequences
+                         usingBlock:^(NSString *s, NSRange range, NSRange enclosing, BOOL *stop) {
+        [boundaries addObject:@(NSMaxRange(range))];
+    }];
+    for (NSNumber *boundary in boundaries) {
+        NSUInteger count = boundary.unsignedIntegerValue;
+        // The scanning head covers the character just received while typing.
+        NSRange character = [text rangeOfComposedCharacterSequenceAtIndex:count ? count - 1 : 0];
+        NSRange glyphs = [layout glyphRangeForCharacterRange:character actualCharacterRange:NULL];
+        NSUInteger glyph = glyphs.location;
+        CGRect line = [layout lineFragmentUsedRectForGlyphAtIndex:glyph effectiveRange:NULL];
+        CGPoint location = [layout locationForGlyphAtIndex:glyph];
+        CGRect ink = [layout boundingRectForGlyphRange:glyphs inTextContainer:container];
+        CGFloat x = line.origin.x + location.x;
+        if (ink.size.width > 0) x = MIN(x, CGRectGetMinX(ink));
+        x -= 1;
+        UITypeStop *stop = [UITypeStop new];
+        stop.count = count;
+        // TextKit's glyph location includes the baseline inset inside the line.
+        stop.point = CGPointMake(left + x, top - line.origin.y - location.y + centerAboveBaseline);
+        stop.size = CGSizeMake(MAX(cellWidth, CGRectGetMaxX(ink) - x + 1), height);
+        UITypeStop *previous = stops.lastObject;
+        stop.carriageReturn = previous && stop.point.y < previous.point.y - height / 2;
+        stop.time = previous ? previous.time + (stop.carriageReturn ? 0.12 : 1 / charsPerSecond) : 0;
+        [stops addObject:stop];
+    }
+
+    SKNode *caret = [SKNode node];
+    caret.name = CaretName;
+    caret.zPosition = 1;
+    caret.alpha = 0;
+    [label addChild:caret];
+    SKSpriteNode *block = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 1)
+                                                    size:stops.firstObject.size];
+    block.anchorPoint = CGPointMake(0, 0.5);
+    [caret addChild:block];
+    SKSpriteNode *trail = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.25)
+                                                    size:CGSizeMake(1, height * 0.65)];
+    trail.anchorPoint = CGPointMake(0, 0.5);
+    trail.hidden = YES;
+    [caret addChild:trail];
+    caret.position = stops.firstObject.point;
+    label.attributedText = Revealed(label, text, 0);
+    __block NSUInteger index = 0, shown = NSNotFound;
+    NSTimeInterval duration = stops.lastObject.time;
+    SKAction *type = [SKAction customActionWithDuration:duration actionBlock:^(SKNode *node, CGFloat elapsed) {
+        while (index + 1 < stops.count && elapsed >= stops[index + 1].time) index++;
+        UITypeStop *current = stops[index];
+        if (shown != current.count) {
+            shown = current.count;
+            ((SKLabelNode *)node).attributedText = Revealed((SKLabelNode *)node, text, shown);
+        }
+        caret.alpha = 1;
+        caret.hidden = current.count == text.length;
+        caret.position = current.point;
+        block.size = current.size;
+        trail.hidden = YES;
+        if (index + 1 < stops.count && stops[index + 1].carriageReturn) {
+            UITypeStop *next = stops[index + 1];
+            CGFloat t = MIN(1, MAX(0, (elapsed - current.time) / (next.time - current.time)));
+            CGFloat eased = Curve(UICurveOutExpo, t);
+            caret.position = CGPointMake(current.point.x + (next.point.x - current.point.x) * eased, next.point.y);
+            trail.hidden = NO;
+            trail.size = CGSizeMake(MAX(1, current.point.x - caret.position.x), height * 0.65);
+            trail.alpha = (1 - t) * 0.8;
+        }
+    }];
+    [label runAction:UIAfter(delay, [SKAction sequence:@[type, [SKAction runBlock:^{
+        label.attributedText = full;
+        [caret removeFromParent];
+    }]]]) withKey:TypeKey];
+    return delay + duration;
+}
+
+void UIMotionOffsetDialogueCaret(SKLabelNode *label, CGFloat y) {
+    for (SKNode *art in [label childNodeWithName:CaretName].children)
+        art.position = CGPointMake(art.position.x, y);
+}
+
 void UIMotionFinishTyping(SKLabelNode *label) {
+    [[label childNodeWithName:CaretName] removeFromParent];
     if (!UIMotionIsTyping(label)) return;
     [label removeActionForKey:TypeKey];
     NSString *text = label.userData[TypeTextKey];

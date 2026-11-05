@@ -100,8 +100,9 @@ static EntityState FighterState(GFighter *s, GPilot *p) {
         e.model = c.model;
         e.name = c.name ? gi.stringIndex(c.name.UTF8String) : 0;
         e.className = gi.stringIndex(c.className.UTF8String);
+        e.cargo = c.scanned && c.cargo.length ? gi.stringIndex(c.cargo.UTF8String) : 0;
         BOOL shielded = c.shielded;
-        e.flags = (c.alive ? 0 : EF_DEAD) | (shielded ? EF_SHIELDED : 0) | (c.isProp ? EF_PROP : 0) | (c.isMine ? EF_MINE : 0);
+        e.flags = (c.alive ? 0 : EF_DEAD) | (c.scanned ? EF_SCANNED : 0) | (shielded ? EF_SHIELDED : 0) | (c.isProp ? EF_PROP : 0) | (c.isMine ? EF_MINE : 0);
         e.origin = c.position;
         e.velocity = c.velocity;
         e.orientation = c.orientation;
@@ -141,6 +142,7 @@ static void BuildPlayerState(GClient *cl) {
         ps->shield = s.shield;
     }
     ps->missionTime = (float)level->_missionTime;
+    ps->stats[STAT_LASER_ENERGY] = (int16_t)lroundf(s.laserEnergy * 1000);
     ps->stats[STAT_TORPEDOES] = (int16_t)cl.torpedoes;
     ps->stats[STAT_KILLS] = (int16_t)cl.kills;
     ps->stats[STAT_DEATHS] = (int16_t)cl.deaths;
@@ -205,8 +207,9 @@ static void ClientThink(int index, const UserCmd *cmd) {
     simd_float3 before = s.position;
     [s step:ShipInputFromCmd(cmd) dt:dt];
     [w collidePlayer:cl from:before];
-    if ((cmd->buttons & BUTTON_FIRE) && s.alive && cl.cmdTime - s.lastShot > 0.11) {
+    if ((cmd->buttons & BUTTON_FIRE) && s.alive && s.laserEnergy >= LASER_SHOT_ENERGY && cl.cmdTime - s.lastShot > 0.11) {
         s.lastShot = cl.cmdTime;
+        s.laserEnergy = fmaxf(0, s.laserEnergy - LASER_SHOT_ENERGY);
         [w fireFrom:s.nextGunWorldPosition velocity:s.velocity direction:s.forward speed:BOLT_SPEED team:TeamFriend
              damage:0.12f capDamage:0.12f owner:cl];
         [w muzzleFlash:s];
@@ -250,6 +253,10 @@ static void ClientDisconnect(int index) {
 #pragma mark - Exports
 
 static void Init(void) {
+    gi.cvarRegister("g_god", "0", CVAR_CHEAT, "Players take no damage");
+    gi.cvarRegister("g_autopilot", "0", CVAR_CHEAT, "The AI flies the first player's ship");
+    gi.cvarRegister("g_warp", "", CVAR_CHEAT, "Entity id to spawn the first player next to, facing it");
+    gi.cvarRegister("g_warpDistance", "2.2", CVAR_CHEAT, "g_warp: distance in multiples of the entity's radius");
     level = [GWorld new];
     GPrint(@"Game module initialised (API %d)", GAME_API_VERSION);
 }

@@ -1,5 +1,6 @@
 #import "PlatformImage.h"
 #import "Cockpit.h"
+#import "FlightInstruments.h"
 #import <SpriteKit/SpriteKit.h>
 #import <Metal/Metal.h>
 #import "SceneAsset.h"
@@ -244,13 +245,9 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
 
     SKScene *_radar, *_self, *_target, *_status;
 
-    // Radar
-    NSMutableArray<SKShapeNode *> *_blips, *_stalks;
-    SKShapeNode *_radarTargetMark;
-    SKLabelNode *_radarRange;
-    CGPoint _radarCentre;
-    CGSize _radarRadius;
-
+    // Power panel; hemisphere scopes live at the top edges of the HUD.
+    SKLabelNode *_energyEngine, *_energyLaser, *_energyShield, *_energyBoost;
+    Bar *_laserBar;
     // Self status
     SCNNode *_selfHolder, *_selfModel;
     SKShapeNode *_shieldRing;
@@ -258,12 +255,7 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     SKLabelNode *_shieldPct, *_hullPct, *_boostPct, *_throttlePct, *_speedLabel, *_selfState;
 
     // Target
-    SCNNode *_targetHolder, *_targetModel;
-    SKNode *_targetInfo;
-    SKLabelNode *_noTarget, *_targetName, *_targetRange, *_targetClosing, *_targetMode, *_targetHullPct, *_targetShieldPct;
-    Bar *_targetHull, *_targetShield;
-    SCNGeometry *_targetGeometry;
-    SKLabelNode *_targetTeam, *_targetClassLabel;
+    TargetReadout *_targetReadout;
 
     // Status
     SKLabelNode *_killsLabel, *_deathsLabel, *_clockLabel, *_messageLabel;
@@ -311,14 +303,13 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
 
     // Holograms hover a couple of centimetres off the MFD glass.
     for (SCNNode *n in _node.childNodes) {
-        ScreenFrame sl, sr;
-        if (FindScreen(n.geometry, @"Screen_Left", &sl)) [self mountHologram:_selfHolder on:sl scale:0.0085f topDown:YES];
-        if (FindScreen(n.geometry, @"Screen_Right", &sr)) [self mountHologram:_targetHolder on:sr scale:0.0075f topDown:NO];
+        ScreenFrame sl;
+        if (FindScreen(n.geometry, @"Screen_Left", &sl)) [self mountHologram:_selfHolder on:sl scale:0.0085f topDown:YES spot:kHoloSpot];
     }
 }
 
-- (void)mountHologram:(SCNNode *)holo on:(ScreenFrame)f scale:(float)scale topDown:(BOOL)topDown {
-    simd_float3 p = f.origin + f.u * (float)(kHoloSpot.x / 608.0) + f.v * (float)(kHoloSpot.y / 480.0) + f.n * 0.025f;
+- (void)mountHologram:(SCNNode *)holo on:(ScreenFrame)f scale:(float)scale topDown:(BOOL)topDown spot:(CGPoint)spot {
+    simd_float3 p = f.origin + f.u * (float)(spot.x / 608.0) + f.v * (float)(spot.y / (topDown ? 480.0 : 400.0)) + f.n * 0.025f;
     SCNNode *mount = [SCNNode node];
     mount.simdPosition = p;
     mount.simdScale = simd_make_float3(scale, scale, scale);
@@ -454,9 +445,9 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
 }
 
 - (SKScene *)screenNamed:(NSString *)key {
-    if ([key isEqualToString:@"Radar"]) return _radar;
+    if ([key isEqualToString:@"Radar"]) return _target;
     if ([key isEqualToString:@"Left"]) return _self;
-    if ([key isEqualToString:@"Right"]) return _target;
+    if ([key isEqualToString:@"Right"]) return _radar;
     if ([key isEqualToString:@"Status"]) return _status;
     NSLog(@"Cockpit: unknown screen %@", key);
     return nil;
@@ -472,69 +463,21 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
 }
 
 - (void)buildRadar {
-    CGSize size = CGSizeMake(512, 512);
-    _radar = MakeScreen(size, nil);
-    _radarCentre = CGPointMake(256, 236);
-    _radarRadius = CGSizeMake(226, 132);   // the scanner disc, seen at an angle
-
-    // Range rings at 1/4, 1/2 and full range (square-root scale), plus the
-    // forward cone and cross hairs.
-    for (int i = 1; i <= 3; i++) {
-        CGFloat k = sqrt(i == 3 ? 1.0 : i * 0.25);
-        CGPathRef p = CGPathCreateWithEllipseInRect(CGRectMake(_radarCentre.x - _radarRadius.width * k, _radarCentre.y - _radarRadius.height * k,
-                                                               _radarRadius.width * 2 * k, _radarRadius.height * 2 * k), NULL);
-        [_radar addChild:Stroke(p, ScreenColor(i == 3 ? 0.6 : 0.28), i == 3 ? 3 : 2)];
-        CGPathRelease(p);
+    _radar = MakeScreen(CGSizeMake(608, 480), @"POWER / WEAPONS");
+    _energyEngine = Text(28, SKLabelHorizontalAlignmentModeLeft, ScreenColor(1));
+    _energyLaser = Text(28, SKLabelHorizontalAlignmentModeLeft, ScreenColor(1));
+    _energyShield = Text(24, SKLabelHorizontalAlignmentModeLeft, ShieldColor(1));
+    _energyBoost = Text(24, SKLabelHorizontalAlignmentModeLeft, WarnColor(1));
+    NSArray *labels = @[_energyEngine, _energyLaser, _energyShield, _energyBoost];
+    for (NSUInteger i = 0; i < labels.count; i++) {
+        SKLabelNode *label = labels[i]; label.position = CGPointMake(24, 380 - i * 86);
+        [_radar addChild:label];
     }
-    CGMutablePathRef cross = CGPathCreateMutable();
-    CGPathMoveToPoint(cross, NULL, _radarCentre.x - _radarRadius.width, _radarCentre.y);
-    CGPathAddLineToPoint(cross, NULL, _radarCentre.x + _radarRadius.width, _radarCentre.y);
-    CGPathMoveToPoint(cross, NULL, _radarCentre.x, _radarCentre.y - _radarRadius.height);
-    CGPathAddLineToPoint(cross, NULL, _radarCentre.x, _radarCentre.y + _radarRadius.height);
-    for (int s = -1; s <= 1; s += 2) {
-        CGPathMoveToPoint(cross, NULL, _radarCentre.x, _radarCentre.y);
-        CGPathAddLineToPoint(cross, NULL, _radarCentre.x + s * _radarRadius.width * 0.7, _radarCentre.y + _radarRadius.height * 0.7);
-    }
-    [_radar addChild:Stroke(cross, ScreenColor(0.18), 2)];
-    CGPathRelease(cross);
-
-    // Own ship marker.
-    CGMutablePathRef me = CGPathCreateMutable();
-    CGPathMoveToPoint(me, NULL, _radarCentre.x, _radarCentre.y + 12);
-    CGPathAddLineToPoint(me, NULL, _radarCentre.x + 9, _radarCentre.y - 8);
-    CGPathAddLineToPoint(me, NULL, _radarCentre.x - 9, _radarCentre.y - 8);
-    CGPathCloseSubpath(me);
-    SKShapeNode *meNode = Stroke(me, ScreenColor(0.95), 2);
-    meNode.fillColor = ScreenColor(0.5);
-    [_radar addChild:meNode];
-    CGPathRelease(me);
-
-    _blips = [NSMutableArray array];
-    _stalks = [NSMutableArray array];
-    for (int i = 0; i < COCKPIT_MAX_CONTACTS; i++) {
-        SKShapeNode *stalk = [SKShapeNode node];
-        stalk.strokeColor = EnemyColor(0.6);
-        stalk.lineWidth = 2;
-        [_radar addChild:stalk];
-        [_stalks addObject:stalk];
-        SKShapeNode *b = [SKShapeNode shapeNodeWithRect:CGRectMake(-7, -7, 14, 14)];
-        b.strokeColor = EnemyColor(1);
-        b.lineWidth = 3;
-        [_radar addChild:b];
-        [_blips addObject:b];
-    }
-    CGPathRef ring = CGPathCreateWithEllipseInRect(CGRectMake(-16, -16, 32, 32), NULL);
-    _radarTargetMark = Stroke(ring, ScreenColor(1), 2.5);
-    CGPathRelease(ring);
-    [_radar addChild:_radarTargetMark];
-
-    _radarRange = Text(22, SKLabelHorizontalAlignmentModeRight, ScreenColor(0.7));
-    _radarRange.position = CGPointMake(496, 486);
-    [_radar addChild:_radarRange];
-    SKLabelNode *title = Text(22, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.7));
-    title.text = @"SCANNER";
-    title.position = CGPointMake(16, 486);
-    [_radar addChild:title];
+    _laserBar = [[Bar alloc] initWithSize:CGSizeMake(550, 18)];
+    _laserBar.position = CGPointMake(24, 254); [_radar addChild:_laserBar];
+    SKLabelNode *rate = Text(20, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.7));
+    rate.text = @"LASER +22%/S  /  SHIELD +6%/S";
+    rate.position = CGPointMake(24, 52); [_radar addChild:rate];
 }
 
 static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *barOut, SKLabelNode * __strong *pctOut) {
@@ -592,53 +535,9 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
 }
 
 - (void)buildTarget {
-    CGSize size = CGSizeMake(608, 480);
-    _target = MakeScreen(size, @"TARGET");
-
-    _noTarget = Text(34, SKLabelHorizontalAlignmentModeCenter, ScreenColor(0.6));
-    _noTarget.text = @"NO TARGET";
-    _noTarget.position = CGPointMake(304, 220);
-    [_target addChild:_noTarget];
-
-    _targetInfo = [SKNode node];
-    [_target addChild:_targetInfo];
-    _targetHolder = Hologram(EnemyColor(0.55), &_targetModel);
-    CGPathRef padPath = CGPathCreateWithEllipseInRect(CGRectMake(-120, -50, 240, 100), NULL);
-    SKShapeNode *pad = Stroke(padPath, EnemyColor(0.35), 2);
-    CGPathRelease(padPath);
-    pad.position = CGPointMake(kHoloSpot.x, kHoloSpot.y - 90);
-    [_targetInfo addChild:pad];
-
-    _targetTeam = Text(22, SKLabelHorizontalAlignmentModeRight, EnemyColor(1));
-    _targetTeam.position = CGPointMake(588, 450);
-    [_targetInfo addChild:_targetTeam];
-
-    _targetName = Text(24, SKLabelHorizontalAlignmentModeLeft, EnemyColor(1));
-    _targetName.position = CGPointMake(330, 392);
-    [_targetInfo addChild:_targetName];
-    _targetClassLabel = Text(18, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.7));
-    _targetClassLabel.position = CGPointMake(330, 366);
-    [_targetInfo addChild:_targetClassLabel];
-    _targetRange = Text(24, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.95));
-    _targetRange.position = CGPointMake(330, 334);
-    [_targetInfo addChild:_targetRange];
-    _targetClosing = Text(24, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.95));
-    _targetClosing.position = CGPointMake(330, 306);
-    [_targetInfo addChild:_targetClosing];
-
-    SKLabelNode *l = Row(_target, @"SHIELD", 238, &_targetShield, &_targetShieldPct);
-    [l removeFromParent]; [_targetInfo addChild:l];
-    l = Row(_target, @"HULL", 170, &_targetHull, &_targetHullPct);
-    [l removeFromParent]; [_targetInfo addChild:l];
-    for (SKNode *n in @[_targetShield, _targetShieldPct, _targetHull, _targetHullPct]) {
-        [n removeFromParent];
-        [_targetInfo addChild:n];
-    }
-    _targetShield.fill.color = ShieldColor(0.95);
-
-    _targetMode = Text(24, SKLabelHorizontalAlignmentModeCenter, EnemyColor(1));
-    _targetMode.position = CGPointMake(160, 40);
-    [_targetInfo addChild:_targetMode];
+    _target = MakeScreen(CGSizeMake(608, 400), nil);
+    _targetReadout = [[TargetReadout alloc] initWithPreview:YES];
+    [_target addChild:_targetReadout];
 }
 
 - (void)buildStatus {
@@ -695,7 +594,12 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     _last = f;
 
     [self updateLamps:f];
-    [self updateRadar:f contacts:contacts count:count];
+    _energyEngine.text = [NSString stringWithFormat:@"ENGINE   %3d%%", (int)lroundf(f.throttle * 100)];
+    _energyLaser.text = [NSString stringWithFormat:@"LASER    %3d%%", (int)lroundf(f.laserEnergy * 100)];
+    _energyShield.text = f.shield >= 0.999 ? @"SHIELD   FULL" : @"SHIELD   RECHARGING";
+    _energyBoost.text = [NSString stringWithFormat:@"BOOST    %3d%%", (int)lroundf(f.boostEnergy * 100)];
+    _laserBar.value = f.laserEnergy;
+    _laserBar.fill.color = LevelColor(f.laserEnergy, 1);
     [self updateSelf:f];
     [self updateTarget:f contacts:contacts count:count];
     [self updateStatus:f];
@@ -728,49 +632,6 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     }
 }
 
-- (void)updateRadar:(CockpitFrame)f contacts:(const CockpitContact *)contacts count:(NSUInteger)count {
-    const float range = 2000.0f;
-    _radarRange.text = @"2.0 KM";
-    _radarTargetMark.hidden = YES;
-    for (NSUInteger i = 0; i < COCKPIT_MAX_CONTACTS; i++) {
-        SKShapeNode *b = _blips[i], *s = _stalks[i];
-        if (i >= count || !f.alive) { b.hidden = s.hidden = YES; continue; }
-        CockpitContact c = contacts[i];
-        // Square-root range scale keeps close contacts readable; forward
-        // (-Z) is up on the disc, height is drawn as a stalk.
-        float planar = simd_length(simd_make_float2(c.local.x, c.local.z));
-        float d = simd_length(c.local);
-        BOOL outside = d > range;
-        float k = sqrtf(fminf(d, range) / range) / fmaxf(d, 1.0f);
-        CGPoint base = CGPointMake(_radarCentre.x + c.local.x * k * _radarRadius.width,
-                                   _radarCentre.y - c.local.z * k * _radarRadius.height);
-        if (planar < 1e-3f) base = _radarCentre;
-        CGPoint tip = CGPointMake(base.x, base.y + c.local.y * k * _radarRadius.height * 1.4f);
-        CGMutablePathRef p = CGPathCreateMutable();
-        CGPathMoveToPoint(p, NULL, base.x, base.y);
-        CGPathAddLineToPoint(p, NULL, tip.x, tip.y);
-        CGPathMoveToPoint(p, NULL, base.x - 5, base.y);
-        CGPathAddLineToPoint(p, NULL, base.x + 5, base.y);
-        s.path = p;
-        CGPathRelease(p);
-        s.hidden = NO;
-        b.hidden = NO;
-        b.position = tip;
-        // Above the plane: filled; below: hollow. Attackers blink.
-        BOOL above = c.local.y >= 0;
-        CGFloat a = outside ? 0.45 : 1.0;
-        if (c.attacking && !Blink(f.time, 2.5)) a *= 0.55;
-        b.strokeColor = TeamColor(c.team, a);
-        b.fillColor = above ? TeamColor(c.team, a * 0.8) : [SKColor clearColor];
-        s.strokeColor = TeamColor(c.team, a * 0.6);
-        b.xScale = b.yScale = c.capital ? 1.8 : 1.0;
-        if ((int)i == f.target) {
-            _radarTargetMark.hidden = NO;
-            _radarTargetMark.position = tip;
-        }
-    }
-}
-
 - (void)updateSelf:(CockpitFrame)f {
     float shield = f.alive ? f.shield : 0, hull = f.alive ? f.hull : 0;
     _shieldBar.value = shield;
@@ -800,43 +661,8 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
 }
 
 - (void)updateTarget:(CockpitFrame)f contacts:(const CockpitContact *)contacts count:(NSUInteger)count {
-    BOOL has = f.alive && f.target >= 0 && f.target < (int)count;
-    _targetInfo.hidden = !has;
-    _targetHolder.hidden = !has;
-    _noTarget.hidden = has;
-    _noTarget.alpha = Blink(f.time, 1) ? 0.8 : 0.35;
-    if (!has) return;
-    CockpitContact c = contacts[f.target];
-    if (c.geometry != _targetGeometry) {
-        _targetGeometry = c.geometry;
-        BOOL fighter = !c.capital && fabsf(c.holoScale - 0.0075f) < 1e-5f;
-        // The mount is scaled for fighters (0.0075); scale relative to it.
-        SetHologramGeometry(_targetModel, c.geometry, c.holoScale / 0.0075f, fighter);
-    }
-    NSString *name = [c.name uppercaseString] ?: @"";
-    if (name.length > 17) name = [name substringToIndex:17];
-    _targetName.text = name;
-    _targetClassLabel.text = [c.className uppercaseString];
-    _targetName.fontColor = TeamColor(c.team, 1);
-    _targetTeam.text = c.team == TeamEnemy ? @"HOSTILE" : (c.team == TeamFriend ? @"FRIENDLY" : @"NEUTRAL");
-    _targetTeam.fontColor = TeamColor(c.team, 1);
-    ((SCNMaterial *)[_targetModel valueForKey:@"holoMaterial"]).diffuse.contents = TeamColor(c.team, 0.55);
-    // The hologram shows the target's attitude as seen from our cockpit.
-    _targetHolder.simdOrientation = c.orientation;
-    float d = simd_length(c.local);
-    _targetRange.text = d >= 1000 ? [NSString stringWithFormat:@"RNG %5.2f KM", d / 1000.0f]
-                                  : [NSString stringWithFormat:@"RNG %5d M", (int)d];
-    _targetClosing.text = [NSString stringWithFormat:@"CLS %+5d M/S", (int)lroundf(f.closingSpeed)];
-    _targetShield.value = c.shield;
-    _targetHull.value = c.hull;
-    _targetHull.fill.color = LevelColor(c.hull, 0.95);
-    _targetShieldPct.text = [NSString stringWithFormat:@"%d%%", (int)lroundf(c.shield * 100)];
-    _targetHullPct.text = [NSString stringWithFormat:@"%d%%", (int)lroundf(c.hull * 100)];
-    if (f.lock) { _targetMode.text = Blink(f.time, 4) ? @"[ LOCK ]" : @"  LOCK  "; _targetMode.fontColor = [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]; }
-    else if (c.capital) { _targetMode.text = c.shielded ? @"SHIELDED" : @"VULNERABLE"; _targetMode.fontColor = c.shielded ? ShieldColor(1) : WarnColor(1); }
-    else if (c.attacking) { _targetMode.text = @"ATTACKING"; _targetMode.fontColor = EnemyColor(1); }
-    else if (c.team != TeamEnemy) { _targetMode.text = @""; }
-    else { _targetMode.text = @"EVADING"; _targetMode.fontColor = WarnColor(1); }
+    [_targetReadout updateFrame:f contacts:contacts count:count];
+
 }
 
 - (void)updateStatus:(CockpitFrame)f {

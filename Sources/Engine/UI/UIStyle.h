@@ -23,11 +23,13 @@ static const UIRGB UIConsoleSteel = { 0.055, 0.047, 0.041 };
 static const UIRGB UIConsoleEdge = { 0.51, 0.31, 0.17 };
 static const UIRGB UIConsoleGlass = { 0.014, 0.055, 0.058 };
 
-// Menlo for labels and telemetry, Helvetica Neue for dialogue and long readouts.
+// Fixed-width cockpit telemetry; proportional Oxanium for the front end.
 static NSString * const UIMonoFont = @"Menlo";
 static NSString * const UIMonoBoldFont = @"Menlo-Bold";
-static NSString * const UIBodyFont = @"HelveticaNeue";
-static NSString * const UIBodyMediumFont = @"HelveticaNeue-Medium";
+static NSString * const UIInterfaceFont = @"Oxanium-Regular";
+static NSString * const UIInterfaceBoldFont = @"Oxanium-Bold";
+static NSString * const UIBodyFont = @"Oxanium-Regular";
+static NSString * const UIBodyMediumFont = @"Oxanium-Medium";
 
 static const CGFloat UISlant = 0.36;
 static const CGFloat UIReadoutChamfer = 9;
@@ -43,6 +45,13 @@ static inline SKLabelNode *UIMonoLabel(CGFloat size, SKColor *color, SKLabelHori
     label.fontColor = color;
     label.horizontalAlignmentMode = horizontal;
     label.verticalAlignmentMode = vertical;
+    return label;
+}
+
+static inline SKLabelNode *UIInterfaceLabel(CGFloat size, SKColor *color, SKLabelHorizontalAlignmentMode horizontal,
+                                           SKLabelVerticalAlignmentMode vertical) {
+    SKLabelNode *label = UIMonoLabel(size, color, horizontal, vertical);
+    label.fontName = UIInterfaceFont;
     return label;
 }
 
@@ -77,9 +86,9 @@ static inline SKShapeNode *UIControlRail(CGRect rect, BOOL console) {
 
 static inline SKShapeNode *UIActionButton(CGRect rect, NSString *text, UIRGB accent) {
     SKShapeNode *button = UISkewedShape(rect, UIColorWithOpacity(accent, 0.85), UIColorWithOpacity(UIPanel, 0.96));
-    SKLabelNode *label = UIMonoLabel(13, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeCenter,
+    SKLabelNode *label = UIInterfaceLabel(13, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeCenter,
                                    SKLabelVerticalAlignmentModeCenter);
-    label.fontName = UIMonoBoldFont;
+    label.fontName = UIInterfaceBoldFont;
     label.position = CGPointMake(CGRectGetMidX(rect), CGRectGetMidY(rect));
     label.text = text;
     [button addChild:label];

@@ -19,7 +19,7 @@ for source in Tools/BakeModels.m Tools/ObjLoader.m Tools/ObjLoader.h; do
 done
 
 # Keep the directory structure used by NSBundle resource lookups.
-for directory in Audio Briefing Menu Shaders Particles Textures Missions; do
+for directory in Audio Briefing Fonts Menu Shaders Particles Textures Missions; do
     if [[ -d $destination/$directory ]]; then
         rsync -a --delete "Resources/$directory/" "$destination/$directory/"
     else

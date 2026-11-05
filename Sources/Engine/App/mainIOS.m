@@ -3,6 +3,7 @@
 #import <UIKit/UIKit.h>
 #import "GameView.h"
 #import "Host.h"
+#import "Cmd.h"
 
 @interface FlightViewController : UIViewController
 @end
@@ -59,6 +60,10 @@
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
+        // Console: +set <cvar> <value> ... +map 3 as scheme or simctl launch
+        // arguments. Sets apply now; the rest once the game has booted.
+        [Cmd setArguments:NSProcessInfo.processInfo.arguments];
+        [Cmd executeEarlyCommands];
         return UIApplicationMain(argc, argv, nil, NSStringFromClass(IOSAppDelegate.class));
     }
 }

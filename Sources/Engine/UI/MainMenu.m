@@ -108,7 +108,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 
 - (SKLabelNode *)label:(NSString *)text size:(CGFloat)size color:(UIRGB)color opacity:(CGFloat)opacity
                      x:(CGFloat)x y:(CGFloat)y {
-    SKLabelNode *label = UIMonoLabel(size, UIColorWithOpacity(color, opacity),
+    SKLabelNode *label = UIInterfaceLabel(size, UIColorWithOpacity(color, opacity),
                                    SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeCenter);
     label.text = text;
     label.position = CGPointMake(x, y);
@@ -149,7 +149,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     CGFloat x = CGRectGetMinX(rect) + 23, y = CGRectGetMidY(rect);
     SKLabelNode *label = [self label:title size:compact ? 14 : 17 color:accent opacity:1
                                   x:x y:y + (detail.length ? 8 : 0)];
-    label.fontName = UIMonoBoldFont;
+    label.fontName = UIInterfaceBoldFont;
     [labels addObject:label];
     if (detail.length) {
         SKLabelNode *sub = [self label:detail size:compact ? 10 : 12 color:UIInk opacity:0.74 x:x y:y - 11];
@@ -172,7 +172,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     [_header addObject:[self label:@"KESTREL FRONTIER  /  FLIGHT MANUAL" size:12 color:UIAmber opacity:1 x:x y:y - 8]];
     SKLabelNode *title = [self label:@"Flight controls" size:MIN(34, CGRectGetHeight(bounds) * 0.09)
                                color:MenuTitle opacity:1 x:x y:y - 43];
-    title.fontName = UIMonoBoldFont;
+    title.fontName = UIInterfaceBoldFont;
     [_header addObject:title];
     NSArray<NSArray<NSString *> *> *bindings = @[
 #if TARGET_OS_IOS
@@ -182,11 +182,12 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         @[@"Next target", @"TARGET / Y"],
         @[@"Roll / boost", @"RIGHT STICK / LT"],
         @[@"Camera", @"X"],
-        @[@"Return to missions", @"MISSIONS / MENU"],
+        @[@"Pause / flight options", @"PAUSE / MENU"],
 #else
         @[@"Pitch / yaw", @"MOUSE / ARROWS"],
-        @[@"Roll / throttle", @"Q E  /  W S"],
-        @[@"Boost / fire", @"SHIFT  /  SPACE"],
+        @[@"Roll", @"HOLD RMB + MOUSE X / Q E"],
+        @[@"Throttle / centre stick", @"WHEEL / WHEEL CLICK"],
+        @[@"Boost / fire", @"SHIFT  /  LMB or SPACE"],
         @[@"Next target / torpedo", @"T  /  G"],
         @[@"Camera / flight help", @"C  /  H"],
         @[@"Invert mouse pitch", @"I"],
@@ -311,7 +312,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     CGFloat titleY = stackTop + header - (compact ? 19 : 29);
     SKLabelNode *wordmark = [self label:oneLine ? @"KESTREL FRONTIER" : @"KESTREL"
                                    size:titleSize color:MenuTitle opacity:1 x:left y:titleY];
-    wordmark.fontName = @"HelveticaNeue-CondensedBlack";
+    wordmark.fontName = UIInterfaceBoldFont;
     wordmark.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
     wordmark.name = @"wordmark";
     [_header addObject:wordmark];

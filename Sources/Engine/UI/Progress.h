@@ -7,3 +7,6 @@ BOOL ProgressHasStarted(void);
 BOOL ProgressCampaignCompleted(void);
 void ProgressMarkStarted(void);
 void ProgressMarkCompleted(NSUInteger missionIndex);
+
+NSUInteger ProgressBestStars(NSUInteger missionIndex); // 0 unplayed, 1..3 best objective rating
+void ProgressRecordResult(NSUInteger missionIndex, NSArray<NSString *> *results);

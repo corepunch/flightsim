@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 #import "Input.h"
+#import "Cvar.h"
 #import <GameController/GameController.h>
 #import <os/lock.h>
 
@@ -21,13 +22,14 @@ static float Deadzone(float value) {
     float _throttle, _throttleRate;
     BOOL _touchFire, _fireTapped, _flying, _active;
     InputAction _touchActions, _controllerActions, _menuActions;
+    Cvar *_touchOnly;
 }
 
 - (instancetype)init {
     if ((self = [super init])) {
         _lock = OS_UNFAIR_LOCK_INIT;
-        const char *thr = getenv("SF_THROTTLE");
-        if (thr) _throttle = fminf(fmaxf(atof(thr), 0), 1);
+        _throttle = fminf(fmaxf([Cvar get:@"in_throttle" defaultValue:@"0" flags:0 help:@"Throttle at launch (0..1)"].value, 0), 1);
+        _touchOnly = [Cvar get:@"in_touchOnly" defaultValue:@"0" flags:0 help:@"Ignore game controllers (touch layout checks)"];
         NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
         [nc addObserver:self selector:@selector(controllersChanged:) name:GCControllerDidConnectNotification object:nil];
         [nc addObserver:self selector:@selector(controllersChanged:) name:GCControllerDidDisconnectNotification object:nil];
@@ -42,10 +44,8 @@ static float Deadzone(float value) {
 }
 
 - (void)controllersChanged:(NSNotification *)note {
-#if TARGET_OS_SIMULATOR
     // Simulator may present a host controller even during a touch-only check.
-    if (getenv("SF_TOUCH_ONLY")) return;
-#endif
+    if (_touchOnly.boolValue) return;
     GCController *removed = [note.name isEqualToString:GCControllerDidDisconnectNotification] ? note.object : nil;
     NSArray<GCController *> *controllers = GCController.controllers;
     if (_controller && _controller != removed && [controllers containsObject:_controller]) return;
