@@ -38,8 +38,9 @@
 
 // Actions.
 - (void)missionSpawn:(NSString *)name;                       // a held entity, wave or group
+- (void)missionReinforce:(NSString *)wave;                   // the wave arrives again (its reinforcements)
 - (void)missionSetTeam:(NSString *)team ofUnits:(NSArray<id<MissionUnit>> *)units;
-- (void)missionDepart:(id<MissionUnit>)unit;                 // leaves safely (jumps out)
+- (void)missionDepart:(id<MissionUnit>)unit;                 // leaves safely (jumps out, or docks with its mothership)
 - (void)missionCollect:(id<MissionUnit>)unit;                // taken aboard
 - (void)missionMarkScanned:(id<MissionUnit>)unit;
 - (void)missionDestroy:(id<MissionUnit>)unit;
@@ -83,6 +84,9 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 - (NSArray<id<MissionUnit>> *)unitsNamed:(NSArray<NSString *> *)names;
 - (NSArray<id<MissionUnit>> *)livePlayersNear:(simd_float3)point range:(float)range;
 - (simd_float3)navPosition:(NSString *)nav;
+// More units by this name are still to come (a wave's reinforcements), so
+// the ones there now being dead does not mean they are all destroyed.
+- (BOOL)expecting:(NSString *)name;
 - (void)objective:(MissionObjective *)o becomes:(MissionObjectiveState)state;
 // The first active objective that wants the HUD's nav marker gets it.
 - (void)pointAtNav:(NSString *)nav;
@@ -147,7 +151,8 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 //   time: seconds            mission time reached
 //   objective: id, state     an objective's state ("complete" by default; "failed", "active")
 //   spawned: name            a unit, wave or group has arrived
-//   destroyed: name          everything by that name has arrived and is gone (dead, not departed)
+//   destroyed: name          everything by that name has arrived and is gone (dead, not departed),
+//                            with no reinforcements still to come
 //   nav: id                  a player has been within 400 m of the nav
 //   flag: name               set by the set_flag action
 //   all: [ … ], any: [ … ], not: { … }
@@ -182,6 +187,8 @@ typedef void (^MissionAction)(id value, id<MissionEventContext> context);
 
 // Problems with an "events" list: unknown triggers or actions, wrong shapes.
 + (NSArray<NSString *> *)problemsWithEvents:(id)events;
+// Problems with one "when" object, reported as "<where>: …".
++ (NSArray<NSString *> *)problemsWithCondition:(id)when at:(NSString *)where;
 
 - (instancetype)initWithEvents:(NSArray<NSDictionary *> *)events;
 // Fires every event whose condition now holds.
@@ -194,13 +201,31 @@ typedef void (^MissionAction)(id value, id<MissionEventContext> context);
 
 MissionObjectiveState MissionObjectiveStateNamed(NSString *name);
 
+// MARK: - MissionArrivals
+
+// Units that come and go on their own: a level's entities and waves with an
+// "arrival", "departure" or "reinforcements" (LevelCue, LevelWave). Their
+// conditions use the scripted events' vocabulary; the world spawns them
+// (missionSpawn:, missionReinforce:) and sends them off (missionDepart:).
+//
+// A wave with a mothership arrives only while the mothership is alive, and
+// its reinforcements stop when the mothership is lost. A departure also ends
+// a wave's reinforcements.
+@interface MissionArrivals : NSObject
++ (NSArray<NSString *> *)problemsWithLevel:(const LevelDef *)level;
+- (instancetype)initWithLevel:(const LevelDef *)level;
+// One frame, after the scripted events.
+- (void)updateIn:(id<MissionEventContext>)context;
+- (BOOL)expecting:(NSString *)name;
+@end
+
 // MARK: - MissionRunner
 
 // Runs one level's objectives, events and rules against a MissionWorld.
 //
-// It reads the level's objectives, events and rules (LevelDef). Spawning
-// the level's units is the game's job; it tells the runner what has arrived
-// with -noteSpawned: (entity ids, groups, wave ids, and "start").
+// It reads the level's objectives, events, arrivals and rules (LevelDef).
+// Spawning the level's units is the game's job; it tells the runner what has
+// arrived with -noteSpawned: (entity ids, groups, wave ids, and "start").
 //
 // Rules: see LevelRules in Shared.h.
 @interface MissionRunner : NSObject <MissionEventContext>

@@ -71,6 +71,7 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic) Team team;
 @property (nonatomic) float hull, shield, laserEnergy;
 @property (nonatomic) BOOL alive;
+@property (nonatomic) BOOL departed;              // left the level alive (jumped out or docked); not alive
 @property (nonatomic) double lastShot;
 @property (nonatomic) double deathTime;
 @property (nonatomic, weak) GClient *client;      // nil for AI ships
@@ -149,6 +150,21 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 
 #pragma mark - Pilots, torpedoes, objectives, clients
 
+// How well a pilot flies and shoots: a wave's "skill" (LevelSkill).
+typedef struct {
+    float aimError;         // wobble on the aim point (x 6 m)
+    float jinkChance;       // chance to jink away when hit
+    float fireJitter;       // up to this many extra seconds between shots
+    float reaction;         // seconds between choosing targets (plus up to 1)
+} PilotSkill;
+
+// The game's own mix, for waves that name no skill: friends steady, enemies
+// anywhere from sharp to sloppy.
+PilotSkill PilotSkillFor(LevelSkill skill, Team team);
+
+// A pilot on the way out of the level (a wave's departure).
+typedef NS_ENUM(NSInteger, PilotLeaving) { PilotStaying, PilotDocking, PilotJumping };
+
 // An AI-flown fighter: its ship, its team's orders, and its current target
 // (a GFighter or a GCapital).
 @interface GPilot : NSObject
@@ -156,8 +172,11 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic) AIMode mode;
 @property (nonatomic) double modeUntil, retargetAt;
 @property (nonatomic) simd_float3 evadePoint;
-@property (nonatomic) float aimError;
+@property (nonatomic) PilotSkill skill;
 @property (nonatomic, copy) NSString *order, *orderTarget, *wave, *callsign;
+@property (nonatomic, copy) NSString *mothership;   // entity it launched from and docks with; nil: none
+@property (nonatomic) PilotLeaving leaving;
+@property (nonatomic) double leavingSince;
 @property (nonatomic, weak) id target;
 @end
 
@@ -246,6 +265,9 @@ extern GWorld *level;
 - (NSArray *)unitsFor:(NSString *)name;      // by entity id, group, wave or callsign
 - (simd_float3)navPosition:(NSString *)nav;
 - (void)jumpFlashAt:(simd_float3)p scale:(float)scale;
+- (GCapital *)capitalNamed:(NSString *)identifier;        // alive or not; nil when none
+- (simd_float3)launchPointOf:(GCapital *)mothership;      // where its fighters leave and come aboard
+- (void)fighterLeaves:(GFighter *)s jump:(BOOL)jump;      // gone from the level alive
 @end
 
 @interface GWorld (AI)

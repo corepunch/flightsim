@@ -58,7 +58,7 @@
                 [self damageShip:s amount:b->damage by:b->owner shake:0.35f];
                 // A hit makes AI pilots jink.
                 for (GPilot *p in _pilots)
-                    if (p.ship == s && p.mode == AIModeAttack && frand() < 0.35f) {
+                    if (p.ship == s && p.mode == AIModeAttack && frand() < p.skill.jinkChance) {
                         p.mode = AIModeEvade;
                         p.modeUntil = _time + 1.5 + frand() * 1.5;
                         p.evadePoint = s.position + (randomUnit() + s.right * (frand() < 0.5f ? -1.0f : 1.0f)) * 500.0f;

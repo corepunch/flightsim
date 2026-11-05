@@ -93,15 +93,21 @@ static NSString *Count(NSUInteger a, NSUInteger b) {
 }
 @end
 
-// Every target destroyed.
+// Every target destroyed, reinforcements included. A target that gets away
+// (departs) fails it.
 @interface MissionObjectiveDestroy : MissionObjective @end
 @implementation MissionObjectiveDestroy
 + (NSArray *)problemsWithDefinition:(NSDictionary *)d { return [self requireTargets:d navs:NO targets:YES]; }
 - (void)updateIn:(id<MissionContext>)ctx dt:(float)dt {
     NSArray<id<MissionUnit>> *units = [ctx unitsNamed:self.targets];
     NSUInteger dead = 0;
-    for (id<MissionUnit> u in units) if (!u.missionAlive) dead++;
-    if (units.count && dead == units.count) [ctx objective:self becomes:MissionObjectiveComplete];
+    for (id<MissionUnit> u in units) {
+        if (u.missionGone) { [ctx objective:self becomes:MissionObjectiveFailed]; return; }
+        if (!u.missionAlive) dead++;
+    }
+    BOOL more = NO;
+    for (NSString *t in self.targets) more = more || [ctx expecting:t];
+    if (units.count && dead == units.count && !more) [ctx objective:self becomes:MissionObjectiveComplete];
     self.progress = units.count > 1 ? Count(dead, units.count) : @"";
 }
 @end

@@ -223,7 +223,8 @@ static void EachContact(const LevelDef *level, void (^body)(MapContact contact))
         const LevelWave *w = &level->waves[i];
         const ShipDef *ship = ShipDefNamed(w->ship);
         NSString *label = w->name ?: L10nFormat(@"briefing.map_wave", @(w->count), ship ? @(ship->displayName) : w->ship);
-        body((MapContact){ .kind = ContactWave, .identifier = w->identifier, .pos = w->pos, .team = w->team, .label = label });
+        const LevelEntity *carrier = w->mothership ? LevelEntityNamed(level, w->mothership) : NULL;   // launches from it
+        body((MapContact){ .kind = ContactWave, .identifier = w->identifier, .pos = carrier ? carrier->pos : w->pos, .team = w->team, .label = label });
     }
     for (int i = 0; i < level->fieldCount; i++) {
         const LevelField *f = &level->fields[i];

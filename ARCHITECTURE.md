@@ -51,7 +51,7 @@ headers only).
 | `Refresh/` | The renderer as the client sees it, after Quake 2's `refexport_t`: register models while loading, then describe each frame (entities, player, camera, effects). Also the HUD and `CockpitFrame`. No renderer types cross it. |
 | `Render/` | `SceneKitRefresh`, the only Refresh backend, and what it draws with: ship and capital views, hull styles, exhaust, effects, cockpit, flight instruments, lens flare, sky, the FX recorder. |
 | `Collision/` | `ModelInfo`: capital models' parts and subsystems for server traces and renderer dressing; baked-scene loading. |
-| `Mission/` | The mission runtime (objectives, scripted events, win/lose rules) that runs a `LevelDef` against a `MissionWorld` the game supplies. Linked into game modules, not the engine binary. |
+| `Mission/` | The mission runtime (objectives, scripted events, scheduled arrivals and departures, win/lose rules) that runs a `LevelDef` against a `MissionWorld` the game supplies. Linked into game modules, not the engine binary. |
 | `Story/` | The campaign and its story data: missions with briefings and debriefs, cast, rooms, briefing pages (immutable classes). |
 | `UI/` | SpriteKit screens: `FrontEnd` (which screen shows), main menu, mission list/briefing/debrief (`Briefing`), loading card, pause menu, server browser, `ScreenHost` (transitions), `UILayout` (menus from JSON), theme, motion. |
 | `Input/` | Keyboard, mouse, controllers and touch into `InputAction` and a `ControlState`; pointer events for screens (`ScreenInput`). |

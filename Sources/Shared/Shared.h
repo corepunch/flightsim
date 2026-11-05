@@ -438,9 +438,19 @@ typedef struct {
     simd_float3 pos;
 } LevelNav;
 
+// When a unit arrives or leaves on its own: a condition in the scripted
+// events' vocabulary (MissionEvents: time, destroyed, objective, nav, …),
+// then a delay. The mission runtime schedules it.
+//   { "when": { "destroyed": "escorts" }, "delay": 8 }
+typedef struct {
+    NSDictionary *when;                 // nil: not scheduled
+    float delay;                        // seconds after the condition first holds
+} LevelCue;
+
 // A capital ship, station or prop.
 //   { "id", "asset", "style", "team", "name", "group", "cargo", "pos", "facing",
 //     "path": [[x, y, z], …], "speed", "loop", "spin", "stealth", "hold",
+//     "arrival": LevelCue, "departure": LevelCue,
 //     "invulnerable", "noHullDamage", "hull", "hullFraction" }
 typedef struct {
     NSString *identifier, *asset, *style, *team, *name, *group, *cargo;
@@ -451,21 +461,44 @@ typedef struct {
     float stealth;                      // > 0: only on sensors within this range
     float hull;                         // 0: the asset's
     float hullFraction;                 // of the full hull at the start, 1 by default
+    LevelCue arrival, departure;        // an arrival implies hold; departure: jumps out
     int8_t invulnerable;                // -1: as the asset says
-    bool loop, hold, noHullDamage;      // hold: arrives when an event spawns it
+    bool loop, hold, noHullDamage;      // hold: arrives when an event or its arrival spawns it
 } LevelEntity;
+
+// How well a wave's pilots fly and shoot. Default is the game's own mix.
+typedef enum { LevelSkillDefault, LevelSkillRookie, LevelSkillRegular, LevelSkillVeteran, LevelSkillAce } LevelSkill;
+
+// How a wave is arranged when it arrives. Scatter places each ship at random
+// within "spread"; the others place ships in slots behind and beside the lead.
+typedef enum {
+    LevelFormationScatter, LevelFormationVic, LevelFormationFingerFour, LevelFormationLineAbreast,
+    LevelFormationLineAstern, LevelFormationEchelonLeft, LevelFormationEchelonRight, LevelFormationDiamond,
+} LevelFormation;
 
 // A flight of AI fighters.
 //   { "id", "ship", "team", "name", "callsigns": [], "count", "pos", "spread",
-//     "order": "attack" | "escort:<id>" | …, "hold" }
+//     "order": "attack" | "escort:<id>" | …, "hold",
+//     "arrival": LevelCue,                        // implies hold
+//     "departure": LevelCue,                      // survivors leave: back aboard the mothership, else jump out
+//     "mothership": "<entity id>",                // launches from it (no arrival while it is dead)
+//     "reinforcements": { "count": 2, "delay": 10 },   // the flight comes back this often after it is wiped out
+//     "skill": "rookie" | "regular" | "veteran" | "ace",
+//     "formation": "vic" | "finger-four" | "line-abreast" | "line-astern" | "echelon-left" | "echelon-right" | "diamond" }
 typedef struct {
     NSString *identifier, *ship, *team, *name;
     NSArray<NSString *> *callsigns;
     NSString *order, *orderTarget;      // "escort:layer" reads as escort / layer
+    NSString *mothership;               // nil: arrives at pos
     simd_float3 pos;
     int count;                          // at least 1
     float spread;                       // metres, 80 by default
-    bool hold;
+    LevelCue arrival, departure;
+    int reinforcements;                 // further flights after the first, 0 by default
+    float reinforcementDelay;           // seconds after the flight is wiped out
+    LevelSkill skill;
+    LevelFormation formation;
+    bool hold;                          // arrives when an event or its arrival spawns it
 } LevelWave;
 
 typedef enum { LevelFieldAsteroids, LevelFieldMines, LevelFieldBuoys, LevelFieldUnknown } LevelFieldKind;

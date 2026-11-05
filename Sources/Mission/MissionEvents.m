@@ -68,6 +68,12 @@ static NSSet *Qualifiers(void) { return [NSSet setWithObjects:@"state", nil]; }
     }
 }
 
++ (NSArray<NSString *> *)problemsWithCondition:(id)when at:(NSString *)where {
+    NSMutableArray *problems = [NSMutableArray array];
+    [self collectProblemsInCondition:when at:where into:problems];
+    return problems;
+}
+
 + (NSArray<NSString *> *)problemsWithEvents:(id)events {
     NSMutableArray *problems = [NSMutableArray array];
     if (!events) return problems;
@@ -166,7 +172,7 @@ static NSMutableDictionary<NSString *, MissionTrigger> *Triggers(void) {
         triggers[@"destroyed"] = ^BOOL(id v, id<MissionEventContext> c) {
             for (NSString *n in Names(v)) {
                 NSArray<id<MissionUnit>> *units = [c.world missionUnitsNamed:n];
-                if (!units.count) return NO;
+                if (!units.count || [c expecting:n]) return NO;
                 for (id<MissionUnit> u in units) if (u.missionAlive || u.missionGone) return NO;
             }
             return YES;

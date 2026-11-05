@@ -349,6 +349,7 @@ static FakeUnit *Unit(NSString *key, NSString *group, simd_float3 p) {
 @property (nonatomic) NSString *nav, *lastObjectives;
 @property (nonatomic) MissionRunner *runner;
 @property (nonatomic) int ended;      // 0 running, 1 success, 2 failure
+@property (nonatomic) int reinforced;
 @property (nonatomic) NSArray<NSString *> *results;
 @end
 @implementation FakeWorld
@@ -380,6 +381,14 @@ static FakeUnit *Unit(NSString *key, NSString *group, simd_float3 p) {
     [_units addObject:u];
     [_runner noteSpawned:u.missionKey];
     [_runner noteSpawned:u.group];
+}
+- (void)missionReinforce:(NSString *)wave {
+    for (FakeUnit *u in [_units copy])
+        if ([u.group isEqualToString:wave]) {
+            FakeUnit *again = Unit([u.missionKey stringByAppendingString:@"+"], wave, u.missionPosition);
+            [_units addObject:again];
+        }
+    _reinforced++;
 }
 - (void)missionSetTeam:(NSString *)team ofUnits:(NSArray *)units {}
 - (void)missionDepart:(id<MissionUnit>)unit { ((FakeUnit *)unit).missionGone = YES; ((FakeUnit *)unit).missionAlive = NO; }
@@ -449,6 +458,91 @@ static FakeWorld *StartTestLevel(void) {
     return w;
 }
 
+// Units that come and go by themselves: a raid launched from a carrier 2 s
+// after the guard dies, which comes back once when wiped out; pickets that
+// leave at 5 s; and the same raid kept aboard when its carrier is lost first.
+static NSDictionary *ArrivalsLevelJSON(void) {
+    return @{
+        @"entities": @[@{ @"id": @"carrier", @"asset": @"Corvette" }, @{ @"id": @"guard", @"asset": @"Corvette" }],
+        @"waves": @[
+            @{ @"id": @"raid", @"ship": @"wasp", @"count": @2, @"mothership": @"carrier",
+               @"arrival": @{ @"when": @{ @"destroyed": @"guard" }, @"delay": @2 },
+               @"reinforcements": @{ @"count": @1, @"delay": @1 }, @"skill": @"ace", @"formation": @"vic" },
+            @{ @"id": @"pickets", @"ship": @"wasp", @"departure": @{ @"when": @{ @"time": @5 } } },
+        ],
+        @"objectives": @[
+            @{ @"id": @"kill", @"type": @"destroy", @"targets": @[@"raid"], @"text": @"Stop the raid" },
+            @{ @"id": @"pick", @"type": @"destroy", @"targets": @[@"pickets"], @"optional": @YES, @"text": @"Catch the pickets" },
+        ],
+    };
+}
+
+static FakeWorld *StartArrivals(const LevelDef *level) {
+    FakeWorld *w = [FakeWorld new];
+    [w.players addObject:Unit(@"player", nil, 0)];
+    [w.units addObject:Unit(@"carrier", nil, 0)];
+    [w.units addObject:Unit(@"guard", nil, 0)];
+    [w.units addObject:Unit(@"picket", @"pickets", 0)];
+    w.held[@"raid"] = Unit(@"raider", @"raid", 0);
+    w.runner = [[MissionRunner alloc] initWithLevel:level world:w];
+    for (NSString *n in @[@"carrier", @"guard", @"pickets"]) [w.runner noteSpawned:n];
+    return w;
+}
+
+static FakeUnit *UnitKeyed(FakeWorld *w, NSString *key) {
+    for (FakeUnit *u in w.units) if ([u.missionKey isEqualToString:key]) return u;
+    return nil;
+}
+
+static void CheckArrivals(void) {
+    LevelDef *level = LevelCreate(ArrivalsLevelJSON());
+    const LevelWave *raid = LevelWaveNamed(level, @"raid"), *pickets = LevelWaveNamed(level, @"pickets");
+    CHECK(raid->hold && raid->arrival.delay == 2 && raid->arrival.when[@"destroyed"] && [raid->mothership isEqualToString:@"carrier"]);
+    CHECK(raid->reinforcements == 1 && raid->reinforcementDelay == 1);
+    CHECK(raid->skill == LevelSkillAce && raid->formation == LevelFormationVic);
+    CHECK(!pickets->hold && pickets->departure.when && pickets->skill == LevelSkillDefault && pickets->formation == LevelFormationScatter);
+    CHECK([MissionRunner problemsWithLevel:level].count == 0);
+
+    // Shapes, names and triggers are checked.
+    LevelDef *bad = LevelCreate(@{
+        @"entities": @[@{ @"id": @"e", @"asset": @"Corvette", @"departure": @{ @"delay": @3 } }],
+        @"waves": @[@{ @"id": @"w", @"ship": @"wasp", @"skill": @"legend", @"formation": @"blob", @"mothership": @"nobody",
+                       @"reinforcements": @3, @"arrival": @{ @"when": @{ @"eclipse": @YES } } }],
+    });
+    CHECK(bad->problems.count == 5 && [MissionRunner problemsWithLevel:bad].count == 6);
+    LevelRelease(bad);
+
+    // The raid arrives 2 s after the guard dies.
+    FakeWorld *w = StartArrivals(level);
+    Run(w, 1);
+    CHECK(!UnitKeyed(w, @"raider"));
+    UnitKeyed(w, @"guard").missionAlive = NO;
+    Run(w, 1);
+    CHECK(!UnitKeyed(w, @"raider"));
+    Run(w, 1.2f);
+    CHECK(UnitKeyed(w, @"raider") && [w.runner objectiveNamed:@"kill"].state == MissionObjectiveActive);
+    // Wiped out, it is not yet destroyed: one more flight comes a second later.
+    UnitKeyed(w, @"raider").missionAlive = NO;
+    Run(w, 0.5f);
+    CHECK(w.reinforced == 0 && [w.runner objectiveNamed:@"kill"].state == MissionObjectiveActive && [w.runner expecting:@"raid"]);
+    Run(w, 0.75f);
+    CHECK(w.reinforced == 1 && UnitKeyed(w, @"raider+") && ![w.runner expecting:@"raid"]);
+    // The pickets leave at 5 s: the optional objective to catch them fails.
+    Run(w, 1.5f);
+    CHECK(UnitKeyed(w, @"picket").missionGone && [w.runner objectiveNamed:@"pick"].state == MissionObjectiveFailed);
+    UnitKeyed(w, @"raider+").missionAlive = NO;
+    Run(w, 10);
+    CHECK(w.ended == 1 && w.reinforced == 1);
+
+    // With its carrier lost first, the raid never launches.
+    w = StartArrivals(level);
+    UnitKeyed(w, @"carrier").missionAlive = NO;
+    UnitKeyed(w, @"guard").missionAlive = NO;
+    Run(w, 5);
+    CHECK(!UnitKeyed(w, @"raider") && w.held[@"raid"] && ![w.runner expecting:@"raid"]);
+    LevelRelease(level);
+}
+
 static void CheckMissionRuntime(void) {
     [MissionObjective registerType:@"test_flag" class:FlagObjective.class];
 
@@ -506,6 +600,8 @@ static void CheckMissionRuntime(void) {
     w.players[0].missionAlive = NO;
     Run(w, 10);
     CHECK(w.ended == 2);
+
+    CheckArrivals();
 
     // Tokens expand on the client.
     NSString *scanned = [L10nCatalogs()[@"en"][@"strings"][@"mission.scanned"] stringByReplacingOccurrencesOfString:@"%@" withString:@"Relay"];

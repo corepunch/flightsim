@@ -234,6 +234,30 @@ static void ReadNav(NSDictionary *j, LevelNav *n, NSMutableArray *problems) {
     n->pos = JSONVec3(j, @"pos", 0);
 }
 
+// A cue's condition is checked against the registered triggers by the
+// mission runtime (MissionRunner's problems); here only its shape.
+static LevelCue ReadCue(NSDictionary *j, NSString *key, NSString *what, NSMutableArray *problems) {
+    id value = j[key];
+    if (!value) return (LevelCue){0};
+    NSDictionary *cue = JSONObject(j, key);
+    NSDictionary *when = JSONObject(cue, @"when");
+    if (!when.count) {
+        [problems addObject:[NSString stringWithFormat:@"%@: \"%@\" needs a \"when\" object", what, key]];
+        return (LevelCue){0};
+    }
+    return (LevelCue){ .when = when, .delay = fmaxf(0, JSONFloat(cue, @"delay", 0)) };
+}
+
+// An enum from its JSON name; a name not in the table is reported.
+static int ReadName(NSDictionary *j, NSString *key, NSDictionary<NSString *, NSNumber *> *names, int fallback,
+                    NSString *what, NSMutableArray *problems) {
+    NSString *name = JSONString(j, key);
+    if (!name) return fallback;
+    if (names[name]) return names[name].intValue;
+    [problems addObject:[NSString stringWithFormat:@"%@: unknown %@ \"%@\"", what, key, name]];
+    return fallback;
+}
+
 static void ReadEntity(NSDictionary *j, LevelEntity *e, NSMutableArray *problems) {
     Require(j, @"asset", [NSString stringWithFormat:@"entity %@", JSONString(j, @"id") ?: @"?"], problems);
     e->identifier = JSONString(j, @"id");
@@ -255,7 +279,10 @@ static void ReadEntity(NSDictionary *j, LevelEntity *e, NSMutableArray *problems
     e->hullFraction = JSONFloat(j, @"hullFraction", 1);
     e->invulnerable = JSONNumber(j, @"invulnerable") ? JSONBool(j, @"invulnerable", false) : -1;
     e->loop = JSONBool(j, @"loop", false);
-    e->hold = JSONBool(j, @"hold", false);
+    NSString *what = [NSString stringWithFormat:@"entity %@", e->identifier ?: @"?"];
+    e->arrival = ReadCue(j, @"arrival", what, problems);
+    e->departure = ReadCue(j, @"departure", what, problems);
+    e->hold = JSONBool(j, @"hold", false) || e->arrival.when;
     e->noHullDamage = JSONBool(j, @"noHullDamage", false);
 }
 
@@ -275,7 +302,24 @@ static void ReadWave(NSDictionary *j, LevelWave *w, NSMutableArray *problems) {
     w->pos = JSONVec3(j, @"pos", 0);
     w->count = MAX(1, JSONInt(j, @"count", 1));
     w->spread = JSONFloat(j, @"spread", 80);
-    w->hold = JSONBool(j, @"hold", false);
+    w->mothership = JSONString(j, @"mothership");
+    w->arrival = ReadCue(j, @"arrival", what, problems);
+    w->departure = ReadCue(j, @"departure", what, problems);
+    w->hold = JSONBool(j, @"hold", false) || w->arrival.when;
+    NSDictionary *reinforcements = JSONObject(j, @"reinforcements");
+    if (j[@"reinforcements"] && !reinforcements) [problems addObject:[what stringByAppendingString:@": \"reinforcements\" is not an object"]];
+    w->reinforcements = MAX(0, JSONInt(reinforcements, @"count", 0));
+    w->reinforcementDelay = fmaxf(0, JSONFloat(reinforcements, @"delay", 0));
+    w->skill = (LevelSkill)ReadName(j, @"skill", @{
+        @"rookie": @(LevelSkillRookie), @"regular": @(LevelSkillRegular),
+        @"veteran": @(LevelSkillVeteran), @"ace": @(LevelSkillAce),
+    }, LevelSkillDefault, what, problems);
+    w->formation = (LevelFormation)ReadName(j, @"formation", @{
+        @"scatter": @(LevelFormationScatter), @"vic": @(LevelFormationVic), @"finger-four": @(LevelFormationFingerFour),
+        @"line-abreast": @(LevelFormationLineAbreast), @"line-astern": @(LevelFormationLineAstern),
+        @"echelon-left": @(LevelFormationEchelonLeft), @"echelon-right": @(LevelFormationEchelonRight),
+        @"diamond": @(LevelFormationDiamond),
+    }, LevelFormationScatter, what, problems);
 }
 
 static void ReadField(NSDictionary *j, LevelField *f, NSMutableArray *problems) {
@@ -327,6 +371,11 @@ LevelDef *LevelCreate(NSDictionary *json) {
     LEVEL_READ(json, @"waves", LevelWave, level->waves, level->waveCount, problems, ReadWave);
     LEVEL_READ(json, @"fields", LevelField, level->fields, level->fieldCount, problems, ReadField);
     LEVEL_READ(json, @"objectives", LevelObjective, level->objectives, level->objectiveCount, problems, ReadObjective);
+    for (int i = 0; i < level->waveCount; i++) {
+        const LevelWave *w = &level->waves[i];
+        if (w->mothership && !LevelEntityNamed(level, w->mothership))
+            [problems addObject:[NSString stringWithFormat:@"wave %@: mothership \"%@\" is no entity", w->identifier, w->mothership]];
+    }
     NSArray *events = JSONArray(json, @"events");
     if (json[@"events"] && !events) [problems addObject:@"\"events\" is not a list"];
     level->events = events ?: @[];

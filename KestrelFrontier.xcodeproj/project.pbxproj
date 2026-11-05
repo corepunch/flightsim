@@ -719,6 +719,26 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
+		"15131AF847E5FF7B3F916975" = {
+			"isa" = "PBXFileReference";
+			"path" = "MissionArrivals.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"EA49ADD38A481AA444F5E708" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "15131AF847E5FF7B3F916975";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
+			};
+		};
+		"52E28068C53ED7623B8AA4F2" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "15131AF847E5FF7B3F916975";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
+			};
+		};
 		"A62E385F323FF4355C8CEB8B" = {
 			"isa" = "PBXFileReference";
 			"path" = "MissionEvents.m";
@@ -784,6 +804,7 @@
 			"path" = "Mission";
 			"children" = (
 				"104A66B2962108F25A3AED31",
+				"15131AF847E5FF7B3F916975",
 				"A62E385F323FF4355C8CEB8B",
 				"A7F16A86BCA2AFF671276492",
 				"4DFF5FE3D433BF9AF17C4935",
@@ -1833,6 +1854,7 @@
 				"4009EE748AD594AC7F7D6779",
 				"52008117FAF5E634CBB78072",
 				"6C89D9B5FBAE10C2BC7F79E8",
+				"EA49ADD38A481AA444F5E708",
 				"C5162243BDB257B0AD9F7922",
 				"85FF9C9BC400BE56CF9553FD",
 				"6F606C427EA6318A95DB9A05",
@@ -1937,6 +1959,7 @@
 		"65694E41AD3585C0AC67C53F" = {
 			"isa" = "PBXSourcesBuildPhase";
 			"files" = (
+				"52E28068C53ED7623B8AA4F2",
 				"1925FC8465FD0250410B83D3",
 				"405FD5C92CD10B2B73C34888",
 				"3791B8A598B8DA4DC2EEB57A",

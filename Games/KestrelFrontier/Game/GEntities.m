@@ -222,7 +222,23 @@
 
 #pragma mark - Small things
 
+PilotSkill PilotSkillFor(LevelSkill skill, Team team) {
+    float spread = 0.85f + frand() * 0.3f;   // pilots of one wave are not clones
+    switch (skill) {
+        case LevelSkillRookie:  return (PilotSkill){ .aimError = 1.6f * spread, .jinkChance = 0.15f, .fireJitter = 0.6f, .reaction = 2.5f };
+        case LevelSkillRegular: return (PilotSkill){ .aimError = 1.0f * spread, .jinkChance = 0.3f, .fireJitter = 0.3f, .reaction = 1.8f };
+        case LevelSkillVeteran: return (PilotSkill){ .aimError = 0.6f * spread, .jinkChance = 0.45f, .fireJitter = 0.2f, .reaction = 1.3f };
+        case LevelSkillAce:     return (PilotSkill){ .aimError = 0.3f * spread, .jinkChance = 0.6f, .fireJitter = 0.1f, .reaction = 0.9f };
+        case LevelSkillDefault: break;
+    }
+    return (PilotSkill){ .aimError = team == TeamFriend ? 0.5f : 0.6f + frand() * 0.8f, .jinkChance = 0.35f, .fireJitter = 0.25f, .reaction = 1.5f };
+}
+
 @implementation GPilot
+- (instancetype)init {
+    if ((self = [super init])) _skill = PilotSkillFor(LevelSkillDefault, TeamFriend);
+    return self;
+}
 @end
 
 @implementation GTorpedo

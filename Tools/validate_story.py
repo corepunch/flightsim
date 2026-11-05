@@ -127,7 +127,8 @@ def validate_mission(mission):
     # unit has an event that spawns it. The mission runtime checks types,
     # triggers and actions (Tools/UnitChecks.m).
     named = units | set(friendly_pilots)
-    held = {item["id"] for item in arrivals if item.get("hold")}
+    # Units with an "arrival" spawn themselves; other held units need an event.
+    held = {item["id"] for item in arrivals if item.get("hold") and "arrival" not in item}
     spawned_by_events = set()
 
     def check_when(when):
@@ -144,6 +145,12 @@ def validate_mission(mission):
             elif key in ("spawned", "destroyed"):
                 assert set([value] if isinstance(value, str) else value) <= named, (index, when)
 
+    for item in arrivals:
+        for cue in ("arrival", "departure"):
+            if cue in item:
+                check_when(item[cue]["when"])
+    for wave in mission.get("waves", []):
+        assert "mothership" not in wave or wave["mothership"] in entities, (index, wave)
     for event in mission.get("events", []):
         check_when(event["when"])
         for action in event["do"]:

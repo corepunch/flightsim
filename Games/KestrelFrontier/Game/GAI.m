@@ -3,6 +3,9 @@
 
 // Capital ship turret rounds.
 static const float kTurretBoltSpeed = 700, kTurretBoltLife = 1.6f;
+// Departing fighters: how close to the launch point counts as aboard, and how
+// long a ship with nowhere to dock flies clear before it jumps.
+static const float kDockRange = 45, kJumpOutAfter = 3;
 
 @implementation GWorld (AI)
 
@@ -45,9 +48,10 @@ static const float kTurretBoltSpeed = 700, kTurretBoltLife = 1.6f;
 - (void)thinkPilot:(GPilot *)p dt:(float)dt {
     GFighter *s = p.ship;
     if (!s.alive) return;
+    if (p.leaving != PilotStaying) { [self flyOut:p dt:dt]; return; }
     if (_time > p.retargetAt || !BodyAlive(p.target) || (p.target && !TeamsHostile(s.team, BodyTeam(p.target)) && BodyTeam(p.target) != TeamNeutral)) {
         p.target = [self pickTargetFor:p];
-        p.retargetAt = _time + 1.5 + frand();
+        p.retargetAt = _time + p.skill.reaction + frand();
     }
     id target = p.target;
     simd_float3 aimPoint;
@@ -78,7 +82,7 @@ static const float kTurretBoltSpeed = 700, kTurretBoltLife = 1.6f;
         }
         if (p.mode == AIModeAttack) {
             float tLead = dist / s.gun.speed;
-            simd_float3 wobble = simd_make_float3(sinf(_time * 1.3f + s.radius), cosf(_time * 0.9f), sinf(_time * 0.7f)) * p.aimError * 6.0f;
+            simd_float3 wobble = simd_make_float3(sinf(_time * 1.3f + s.radius), cosf(_time * 0.9f), sinf(_time * 0.7f)) * p.skill.aimError * 6.0f;
             aimPoint = tp + BodyVelocity(target) * tLead + (capital ? 0 : wobble);
             float facing = simd_dot(s.forward, toT / fmaxf(dist, 1));
             if (facing < -0.2f && dist < 400) boost = s.boostEnergy > 0.5f;
@@ -91,9 +95,51 @@ static const float kTurretBoltSpeed = 700, kTurretBoltLife = 1.6f;
         }
     }
 
-    // Keep clear of big hulls and rocks.
+    [self steer:s to:aimPoint throttle:throttle boost:boost target:target docking:NO dt:dt];
+
+    float range = capital ? 900 + BodyRadius(target) : 750;
+    if (target && p.mode == AIModeAttack && dist < range) {
+        simd_float3 leadDir = simd_normalize(aimPoint - s.position);
+        float cone = capital ? 0.97f : 0.985f;
+        ShipGun gun = s.gun;
+        if (simd_dot(s.forward, leadDir) > cone && _time - s.lastShot > gun.interval + frand() * p.skill.fireJitter) {
+            s.lastShot = _time;
+            [self fireFrom:[s nextGunWorldPosition] velocity:s.velocity direction:simd_normalize(s.forward + randomUnit() * 0.008f)
+                     speed:gun.speed life:gun.life team:s.team damage:gun.damage capDamage:gun.capitalDamage owner:s.client];
+            [self muzzleFlash:s];
+        }
+    }
+}
+
+// A departing pilot holds fire and heads for its mothership's launch point
+// to go aboard; with no mothership left it flies clear and jumps out.
+- (void)flyOut:(GPilot *)p dt:(float)dt {
+    GFighter *s = p.ship;
+    p.mode = AIModeReposition;
+    p.target = nil;
+    GCapital *home = p.leaving == PilotDocking ? [self capitalNamed:p.mothership] : nil;
+    if (p.leaving == PilotDocking && !BodyAlive(home)) {
+        p.leaving = PilotJumping;
+        p.leavingSince = _time;
+    }
+    if (p.leaving == PilotDocking) {
+        simd_float3 bay = [self launchPointOf:home];
+        float d = simd_distance(s.position, bay);
+        if (d < kDockRange) { [self fighterLeaves:s jump:NO]; return; }
+        [self steer:s to:bay throttle:clampf(d / 300, 0.3f, 1) boost:d > 1500 && s.boostEnergy > 0.3f target:home docking:YES dt:dt];
+    } else {
+        if (_time - p.leavingSince > kJumpOutAfter) { [self fighterLeaves:s jump:YES]; return; }
+        [self steer:s to:s.position + s.forward * 1000 + s.up * 80 throttle:1 boost:s.boostEnergy > 0.2f target:nil docking:NO dt:dt];
+    }
+}
+
+// Flies the ship toward a point, clear of big hulls and rocks. It may close
+// on its target but not ram it, unless it is docking with it.
+- (void)steer:(GFighter *)s to:(simd_float3)aimPoint throttle:(float)throttle boost:(BOOL)boost target:(id)target
+      docking:(BOOL)docking dt:(float)dt {
     for (GCapital *c in _capitals) {
         if (!c.alive || c.radius < 15) continue;
+        if (docking && c == target) continue;
         simd_float3 away = s.position - c.position;
         float d = simd_length(away) - c.radius;
         if (d < 110 && simd_dot(s.velocity, -away) > 0 && c != target) {
@@ -116,19 +162,6 @@ static const float kTurretBoltSpeed = 700, kTurretBoltLife = 1.6f;
     c.pitch = clampf(pitchErr * 2.5f, -1, 1);
     c.yaw = clampf(yawErr * 1.5f, -1, 1);
     [s step:c dt:dt];
-
-    float range = capital ? 900 + BodyRadius(target) : 750;
-    if (target && p.mode == AIModeAttack && dist < range) {
-        simd_float3 leadDir = simd_normalize(aimPoint - s.position);
-        float cone = capital ? 0.97f : 0.985f;
-        ShipGun gun = s.gun;
-        if (simd_dot(s.forward, leadDir) > cone && _time - s.lastShot > gun.interval + frand() * 0.25) {
-            s.lastShot = _time;
-            [self fireFrom:[s nextGunWorldPosition] velocity:s.velocity direction:simd_normalize(s.forward + randomUnit() * 0.008f)
-                     speed:gun.speed life:gun.life team:s.team damage:gun.damage capDamage:gun.capitalDamage owner:s.client];
-            [self muzzleFlash:s];
-        }
-    }
 }
 
 - (void)fireTurrets:(GCapital *)c {

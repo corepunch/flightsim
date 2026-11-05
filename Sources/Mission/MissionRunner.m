@@ -7,6 +7,7 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
     LevelRules _rules;
     NSArray<MissionObjective *> *_objectives;
     MissionEvents *_events;
+    MissionArrivals *_arrivals;
     NSMutableSet<NSString *> *_spawned, *_navsVisited, *_flags;
     double _time, _endAt;
     BOOL _dirty;
@@ -33,6 +34,7 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
             [problems addObject:[NSString stringWithFormat:@"objective %@: \"after\" names unknown objective \"%@\"",
                                  level->objectives[i].identifier, a]];
     [problems addObjectsFromArray:[MissionEvents problemsWithEvents:level->events]];
+    [problems addObjectsFromArray:[MissionArrivals problemsWithLevel:level]];
     return problems;
 }
 
@@ -49,6 +51,7 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
         }
         _objectives = objectives;
         _events = [[MissionEvents alloc] initWithEvents:level->events];
+        _arrivals = [[MissionArrivals alloc] initWithLevel:level];
         _spawned = [NSMutableSet setWithObject:@"start"];
         _navsVisited = [NSMutableSet set];
         _flags = [NSMutableSet set];
@@ -88,6 +91,7 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
 }
 
 - (BOOL)hasSpawned:(NSString *)name { return [_spawned containsObject:name]; }
+- (BOOL)expecting:(NSString *)name { return [_arrivals expecting:name]; }
 - (BOOL)navVisited:(NSString *)nav { return [_navsVisited containsObject:nav]; }
 - (BOOL)flag:(NSString *)name { return [_flags containsObject:name]; }
 - (void)setFlag:(NSString *)name { [_flags addObject:name]; }
@@ -124,6 +128,7 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
         if (![_navsVisited containsObject:nav] && [self livePlayersNear:[self navPosition:nav] range:kNavVisitRange].count)
             [_navsVisited addObject:nav];
     [_events updateIn:self];
+    [_arrivals updateIn:self];
 
     _currentNav = nil;
     for (MissionObjective *o in _objectives) [self updateObjective:o dt:dt];

@@ -69,8 +69,8 @@ static NSString *PartKindName(SubsystemKind kind) {
 - (simd_float3)missionPosition { return self.position; }
 - (float)missionRadius { return self.radius; }
 - (BOOL)missionAlive { return self.alive; }
-- (BOOL)missionGone { return NO; }
 - (float)missionHullFraction { return clampf(self.hull, 0, 1); }
+- (BOOL)missionGone { return self.departed; }
 - (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly { return 0; }
 @end
 
@@ -211,7 +211,7 @@ static NSString *PartKindName(SubsystemKind kind) {
         GPilot *ap = [GPilot new];
         ap.ship = s;
         ap.order = @"attack";
-        ap.aimError = 0.3f;
+        ap.skill = (PilotSkill){ .aimError = 0.3f, .jinkChance = 0.35f, .fireJitter = 0.25f, .reaction = 1.5f };
         cl.autopilot = ap;
     }
     [_runner resendObjectives];
@@ -244,10 +244,55 @@ static NSString *PartKindName(SubsystemKind kind) {
     return c;
 }
 
+// A formation slot in units of kFormationSpacing: x to the lead's right,
+// y up, z behind. Slots past a pattern's end repeat it further back.
+static const float kFormationSpacing = 40;
+static simd_float3 FormationSlot(LevelFormation f, int i) {
+    float side = i % 2 ? -1 : 1, rank = (i + 1) / 2;     // 0, 1 left, 1 right, 2 left, …
+    switch (f) {
+        case LevelFormationVic: return simd_make_float3(side * rank, 0, rank);
+        case LevelFormationFingerFour: {
+            static const simd_float3 four[4] = { { 0, 0, 0 }, { -1, 0, 1 }, { 1.5f, 0, 0.5f }, { 2.5f, 0, 1.5f } };
+            return four[i % 4] + simd_make_float3(0, 0, 3.0f * (i / 4));
+        }
+        case LevelFormationLineAbreast: return simd_make_float3(side * rank, 0, 0);
+        case LevelFormationLineAstern: return simd_make_float3(0, 0.25f * (i % 2), i);
+        case LevelFormationEchelonLeft: return simd_make_float3(-i, 0, i);
+        case LevelFormationEchelonRight: return simd_make_float3(i, 0, i);
+        case LevelFormationDiamond: {
+            static const simd_float3 diamond[4] = { { 0, 0, 0 }, { -1, 0, 1 }, { 1, 0, 1 }, { 0, 0, 2 } };
+            return diamond[i % 4] + simd_make_float3(0, 0.5f * (i / 4), 2.5f * (i / 4));
+        }
+        case LevelFormationScatter: break;
+    }
+    return 0;
+}
+
+- (GCapital *)capitalNamed:(NSString *)identifier {
+    for (GCapital *c in _capitals) if ([c.identifier isEqualToString:identifier]) return c;
+    return nil;
+}
+
+// Below the hull, clear of it: there is no hangar in the models to aim for.
+- (simd_float3)launchPointOf:(GCapital *)m {
+    return m.position - [m worldDirection:simd_make_float3(0, 1, 0)] * (m.radius * 0.6f + 30);
+}
+
 - (void)spawnWave:(const LevelWave *)w jump:(BOOL)jump {
     int count = w->count;
     Team team = TeamNamed(w->team);
     simd_float3 ref = [self referencePosition];
+    GCapital *carrier = w->mothership ? [self capitalNamed:w->mothership] : nil;
+    if (carrier && !BodyAlive(carrier)) carrier = nil;
+    // Where the lead arrives and which way the flight points: out of the
+    // mothership's bay along its heading, or at pos toward the action
+    // (enemies face the players, friends fly the players' way).
+    simd_float3 origin = carrier ? [self launchPointOf:carrier] : w->pos;
+    simd_float3 heading = carrier ? carrier.forward
+                        : team == TeamFriend ? [self referenceForward]
+                        : simd_length(ref - origin) > 1 ? simd_normalize(ref - origin) : simd_make_float3(0, 0, -1);
+    simd_quatf flight = LookRotation(heading, simd_make_float3(0, 1, 0));
+    BOOL scatter = w->formation == LevelFormationScatter;
     for (int i = 0; i < count; i++) {
         GPilot *p = [GPilot new];
         GFighter *s = [GFighter fighterWithShip:w->ship ai:YES];
@@ -255,24 +300,38 @@ static NSString *PartKindName(SubsystemKind kind) {
         s.number = [self allocEntity];
         s.team = team;
         s->params.maxSpeed += s.definition->aiSpeedSpread * (i % 3);   // a little variety within a wave
-        simd_float3 pos = w->pos + randomUnit() * w->spread * (i == 0 ? 0.2f : 1.0f);
-        simd_float3 toward = simd_length(ref - pos) > 1 ? simd_normalize(ref - pos) : simd_make_float3(0, 0, -1);
-        if (team == TeamFriend) toward = [self referenceForward];
-        [s resetAt:pos facing:LookRotation(toward + randomUnit() * 0.2f, simd_make_float3(0, 1, 0))];
-        s.velocity = s.forward * 100;
+        simd_float3 pos, toward = heading;
+        if (scatter && !carrier) {
+            pos = origin + randomUnit() * w->spread * (i == 0 ? 0.2f : 1.0f);
+            if (team != TeamFriend && simd_length(ref - pos) > 1) toward = simd_normalize(ref - pos);
+            toward += randomUnit() * 0.2f;
+        } else {
+            simd_float3 slot = scatter ? simd_make_float3(0, 0, 1.5f * i) : FormationSlot(w->formation, i);
+            pos = origin + simd_act(flight, simd_make_float3(slot.x, slot.y, slot.z) * kFormationSpacing);
+        }
+        [s resetAt:pos facing:LookRotation(toward, simd_make_float3(0, 1, 0))];
+        s.velocity = s.forward * 100 + (carrier ? carrier.velocity : 0);
         p.ship = s;
         p.mode = AIModeAttack;
-        p.aimError = team == TeamFriend ? 0.5f : 0.6f + frand() * 0.8f;
+        p.skill = PilotSkillFor(w->skill, team);
         p.order = w->order;
         p.orderTarget = w->orderTarget;
+        p.mothership = w->mothership;
         p.wave = w->identifier;
         if (i < w->callsigns.count) p.callsign = w->callsigns[i];
         else if (w->name) p.callsign = count > 1 ? [NSString stringWithFormat:@"%@ %d", w->name, i + 2] : w->name;
         if (p.callsign) s.nameIndex = gi.stringIndex(p.callsign.UTF8String);
         [_pilots addObject:p];
-        if (jump) [self jumpFlashAt:pos scale:0.4f];
+        if (jump && !carrier) [self jumpFlashAt:pos scale:0.4f];
     }
     [_runner noteSpawned:w->identifier];
+}
+
+- (void)fighterLeaves:(GFighter *)s jump:(BOOL)jump {
+    if (!s.alive) return;
+    if (jump) [self jumpFlashAt:s.position scale:0.4f];
+    s.alive = NO;
+    s.departed = YES;
 }
 
 - (void)buildField:(const LevelField *)f {
@@ -387,6 +446,11 @@ static NSString *PartKindName(SubsystemKind kind) {
     else [self spawnEntity:entity.pointerValue jump:YES];
 }
 
+- (void)missionReinforce:(NSString *)name {
+    const LevelWave *w = LevelWaveNamed(_level, name);
+    if (w) [self spawnWave:w jump:YES];
+}
+
 - (void)missionSetTeam:(NSString *)team ofUnits:(NSArray<id<MissionUnit>> *)units {
     for (id u in units) {
         if ([u isKindOfClass:GCapital.class]) ((GCapital *)u).team = TeamNamed(team);
@@ -395,6 +459,14 @@ static NSString *PartKindName(SubsystemKind kind) {
 }
 
 - (void)missionDepart:(id<MissionUnit>)unit {
+    if ([(id)unit isKindOfClass:GFighter.class]) {
+        for (GPilot *p in _pilots)
+            if (p.ship == unit && p.leaving == PilotStaying) {
+                p.leaving = BodyAlive([self capitalNamed:p.mothership]) ? PilotDocking : PilotJumping;
+                p.leavingSince = _time;
+            }
+        return;
+    }
     if (![(id)unit isKindOfClass:GCapital.class]) return;
     GCapital *c = (GCapital *)unit;
     if (c.departed) return;
