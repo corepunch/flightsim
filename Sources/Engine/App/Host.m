@@ -22,6 +22,12 @@
 #import "Cmd.h"
 #include "SharedMath.h"
 #import <stdatomic.h>
+#if TARGET_OS_OSX
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
+#import <ImageIO/ImageIO.h>
+#import <objc/runtime.h>
+#endif
 #if TARGET_OS_IOS
 #include <ifaddrs.h>
 #include <netdb.h>
@@ -95,6 +101,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     void (^_afterExit)(void);
 
     Cvar *_testInput, *_cockpit, *_autoStart;
+
+#if TARGET_OS_OSX
+    NSMutableArray<NSString *> *_screenshotPaths;   // render thread: waiting for a readable frame
+    dispatch_group_t _screenshotsInFlight;          // requested and not yet written; quit waits
+#endif
 }
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
@@ -198,13 +209,20 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         [weak saveScreenshot:a[1]];
     }];
     [Cmd add:@"quit" help:@"Exits the game" handler:^(NSArray<NSString *> *a) {
-        dispatch_async(dispatch_get_main_queue(), ^{
 #if TARGET_OS_OSX
-            [NSApp terminate:nil];
-#else
-            exit(0);
-#endif
+        // Screenshots finish over the next frames; let them land first.
+        Host *host = weak;
+        dispatch_group_t screenshots = host ? host->_screenshotsInFlight : nil;
+        dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+            if (screenshots && dispatch_group_wait(screenshots, dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC)))
+                NSLog(@"quit: gave up waiting for screenshots");
+            dispatch_async(dispatch_get_main_queue(), ^{ [NSApp terminate:nil]; });
         });
+#else
+        dispatch_async(dispatch_get_main_queue(), ^{
+            exit(0);
+        });
+#endif
     }];
 }
 
@@ -233,21 +251,146 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (_booted && _state != HostStateLoading) [self showMainMenu];
 }
 
+#if TARGET_OS_OSX
+// -[SCNView snapshot] draws the scene and the overlay SKScene a second time,
+// through a temporary SCNRenderer. That second SpriteKit draw of the live
+// overlay can leave the view's own overlay renderer waiting forever for a
+// buffer (jet_buffer_pool::next_buffer) with the scene lock held, which
+// stalls the main thread and the load queue behind it: the app hangs. So
+// nothing is drawn twice here. The layer remembers the drawable SceneKit
+// takes for each frame, and the next frame copies it (overlay included) on
+// the view's own command queue, after the frame that filled it. SceneKit
+// calls updateAtTime: before it takes the frame's drawable, so at that
+// point the remembered one is the previous, finished frame.
+
+static const void *kLastDrawableKey = &kLastDrawableKey;   // on the layer: the drawable, while armed
+static const void *kArmedKey = &kArmedKey;                 // on the layer: a screenshot is waiting
+
+static id<CAMetalDrawable> TrackedNextDrawable(CAMetalLayer *self, SEL _cmd) {
+    Class base = class_getSuperclass(object_getClass(self));
+    id<CAMetalDrawable> (*next)(id, SEL) = (void *)class_getMethodImplementation(base, _cmd);
+    id<CAMetalDrawable> drawable = next(self, _cmd);
+    if (objc_getAssociatedObject(self, kArmedKey)) objc_setAssociatedObject(self, kLastDrawableKey, drawable, OBJC_ASSOCIATION_RETAIN);
+    return drawable;
+}
+
+// The layer's own class (SceneKit's) gains a subclass that also records the
+// drawable each nextDrawable hands out, the way KVO subclasses an object.
+static BOOL TrackDrawables(CAMetalLayer *layer) {
+    Class base = object_getClass(layer);
+    if (class_getInstanceMethod(base, @selector(nextDrawable)) && objc_getAssociatedObject(base, kLastDrawableKey)) return YES;
+    NSString *name = [@"SFScreenshot_" stringByAppendingString:NSStringFromClass(base)];
+    Class tracking = NSClassFromString(name);
+    if (!tracking) {
+        tracking = objc_allocateClassPair(base, name.UTF8String, 0);
+        if (!tracking) return NO;
+        Method m = class_getInstanceMethod(base, @selector(nextDrawable));
+        class_addMethod(tracking, @selector(nextDrawable), (IMP)TrackedNextDrawable, method_getTypeEncoding(m));
+        objc_setAssociatedObject(tracking, kLastDrawableKey, @YES, OBJC_ASSOCIATION_RETAIN);
+        objc_registerClassPair(tracking);
+    }
+    object_setClass(layer, tracking);
+    return YES;
+}
+
+// On the frame thread (the render thread). The file is written a frame or
+// two later; quit waits for it.
+- (void)saveScreenshot:(NSString *)path {
+    if (!_screenshotPaths) _screenshotPaths = [NSMutableArray array];
+    if (!_screenshotsInFlight) _screenshotsInFlight = dispatch_group_create();
+    [_screenshotPaths addObject:path];
+    dispatch_group_enter(_screenshotsInFlight);
+    CAMetalLayer *layer = [_view.layer isKindOfClass:CAMetalLayer.class] ? (CAMetalLayer *)_view.layer : nil;
+    if (!layer || !TrackDrawables(layer)) {
+        NSLog(@"screenshot: no Metal layer to read");
+        [self finishScreenshots:_screenshotPaths png:nil];
+        [_screenshotPaths removeAllObjects];
+        return;
+    }
+    objc_setAssociatedObject(layer, kArmedKey, @YES, OBJC_ASSOCIATION_RETAIN);
+    // Drawables are framebuffer-only by default; a copy needs to read one.
+    dispatch_async(dispatch_get_main_queue(), ^{ layer.framebufferOnly = NO; });
+}
+
+- (void)finishScreenshots:(NSArray<NSString *> *)paths png:(NSData *)png {
+    for (NSString *path in paths) {
+        if (!png || ![png writeToFile:path.stringByExpandingTildeInPath atomically:YES]) NSLog(@"screenshot: cannot write %@", path);
+        else NSLog(@"screenshot: wrote %@", path);
+        dispatch_group_leave(_screenshotsInFlight);
+    }
+}
+
+static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
+    size_t w = t.width, h = t.height, bytes, bits;
+    CGBitmapInfo info;
+    switch (t.pixelFormat) {
+        case MTLPixelFormatBGRA8Unorm:
+        case MTLPixelFormatBGRA8Unorm_sRGB:
+            bytes = 4, bits = 8, info = kCGBitmapByteOrder32Little | (CGBitmapInfo)kCGImageAlphaNoneSkipFirst; break;
+        case MTLPixelFormatRGBA8Unorm:
+        case MTLPixelFormatRGBA8Unorm_sRGB:
+            bytes = 4, bits = 8, info = kCGBitmapByteOrder32Big | (CGBitmapInfo)kCGImageAlphaNoneSkipLast; break;
+        case MTLPixelFormatRGBA16Float:
+            bytes = 8, bits = 16, info = kCGBitmapByteOrder16Little | kCGBitmapFloatComponents | (CGBitmapInfo)kCGImageAlphaNoneSkipLast; break;
+        default:
+            NSLog(@"screenshot: unsupported pixel format %lu", (unsigned long)t.pixelFormat);
+            return nil;
+    }
+    NSMutableData *pixels = [NSMutableData dataWithLength:w * h * bytes];
+    [t getBytes:pixels.mutableBytes bytesPerRow:w * bytes fromRegion:MTLRegionMake2D(0, 0, w, h) mipmapLevel:0];
+    CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)pixels);
+    CGImageRef image = CGImageCreate(w, h, bits, bytes * 8, w * bytes, space, info, provider, NULL, false, kCGRenderingIntentDefault);
+    CGDataProviderRelease(provider);
+    if (!image) return nil;
+    NSMutableData *png = [NSMutableData data];
+    CGImageDestinationRef dest = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)png, CFSTR("public.png"), 1, NULL);
+    CGImageDestinationAddImage(dest, image, NULL);
+    BOOL ok = CGImageDestinationFinalize(dest);
+    CFRelease(dest);
+    CGImageRelease(image);
+    return ok ? png : nil;
+}
+
+// Start of a frame, on the render thread: copy the drawable the last frame
+// presented, once one that can be read has come round.
+- (void)captureScreenshots:(id<SCNSceneRenderer>)renderer {
+    if (!_screenshotPaths.count) return;
+    CAMetalLayer *layer = (CAMetalLayer *)_view.layer;
+    id<CAMetalDrawable> drawable = objc_getAssociatedObject(layer, kLastDrawableKey);
+    id<MTLTexture> source = drawable.texture;
+    if (!source || source.framebufferOnly) return;
+    NSArray<NSString *> *paths = [_screenshotPaths copy];
+    [_screenshotPaths removeAllObjects];
+    objc_setAssociatedObject(layer, kArmedKey, nil, OBJC_ASSOCIATION_RETAIN);
+    objc_setAssociatedObject(layer, kLastDrawableKey, nil, OBJC_ASSOCIATION_RETAIN);
+    MTLTextureDescriptor *d = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:source.pixelFormat
+                                                                                width:source.width height:source.height mipmapped:NO];
+    d.storageMode = source.device.hasUnifiedMemory ? MTLStorageModeShared : MTLStorageModeManaged;
+    id<MTLTexture> copy = [source.device newTextureWithDescriptor:d];
+    id<MTLCommandBuffer> commands = [renderer.commandQueue commandBuffer];
+    id<MTLBlitCommandEncoder> blit = [commands blitCommandEncoder];
+    [blit copyFromTexture:source toTexture:copy];
+    if (d.storageMode == MTLStorageModeManaged) [blit synchronizeResource:copy];
+    [blit endEncoding];
+    CGColorSpaceRef space = layer.colorspace ? CGColorSpaceRetain(layer.colorspace) : CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    __weak Host *weak = self;
+    [commands addCompletedHandler:^(id<MTLCommandBuffer> done) {
+        NSData *png = done.status == MTLCommandBufferStatusCompleted ? PNGFromTexture(copy, space) : nil;
+        CGColorSpaceRelease(space);
+        [weak finishScreenshots:paths png:png];
+    }];
+    [commands commit];
+}
+#else
 - (void)saveScreenshot:(NSString *)path {
     SCNView *view = _view;
     dispatch_async(dispatch_get_main_queue(), ^{
-#if TARGET_OS_OSX
-        NSImage *image = [view snapshot];
-        CGImageRef cg = [image CGImageForProposedRect:NULL context:nil hints:nil];
-        NSBitmapImageRep *rep = cg ? [[NSBitmapImageRep alloc] initWithCGImage:cg] : nil;
-        NSData *png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
-#else
         NSData *png = UIImagePNGRepresentation([view snapshot]);
-#endif
         if (!png || ![png writeToFile:path.stringByExpandingTildeInPath atomically:YES]) NSLog(@"screenshot: cannot write %@", path);
         else NSLog(@"screenshot: wrote %@", path);
     });
 }
+#endif
 
 - (void)connectLocal {
     [_client connectTo:[NetAddress loopback:1] transport:[LoopbackTransport side:0] name:PilotName()];
@@ -621,6 +764,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 }
 
 - (void)renderer:(id<SCNSceneRenderer>)renderer updateAtTime:(NSTimeInterval)time {
+    [self captureScreenshots:renderer];
     [self updateFrameAtTime:time];
 }
 #endif
