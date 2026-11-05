@@ -1,0 +1,16 @@
+{
+  "name": "বাংলা",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "মিশন লোড হচ্ছে…",
+    "loading.preparing_ship": "মহাকাশযান প্রস্তুত হচ্ছে…",
+    "loading.mission_ready": "মিশন প্রস্তুত",
+    "loading.continue_prompt": "মিশন শুরু করতে যেকোনো জায়গায় ট্যাপ করুন",
+    "loading.charting_starfield": "নক্ষত্রের মানচিত্র তৈরি হচ্ছে…",
+    "loading.plotting_capital_ships": "প্রধান যুদ্ধজাহাজ স্থাপন করা হচ্ছে…",
+    "loading.scrambling_fighter_wings": "যুদ্ধবিমান স্কোয়াড্রন প্রস্তুত হচ্ছে…",
+    "loading.uploading_assets": "জ্যামিতি ও টেক্সচার আপলোড হচ্ছে…",
+    "loading.compiling_shaders": "শেডার কম্পাইল হচ্ছে…",
+    "loading.mission_tip": "উড্ডয়নের আগে মিশনের লক্ষ্যগুলো দেখে নিন।"
+  }
+}

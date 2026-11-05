@@ -2,10 +2,9 @@
 #import "UIStyle.h"
 #import "UIMotion.h"
 #import "GameAudio.h"
+#import "Localization.h"
 #import <ImageIO/ImageIO.h>
 
-static const UIRGB MenuNight = { 4.0 / 255, 6.0 / 255, 11.0 / 255 };
-static const UIRGB MenuTitle = { 0.89, 0.97, 0.96 };
 
 static SKShader *MenuArtShader(void) {
     static SKShader *shader;
@@ -88,9 +87,8 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 }
 
 - (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
-    _campaignLabel = completed ? @"REPLAY CAMPAIGN" : (started ? @"CONTINUE CAMPAIGN" : @"START CAMPAIGN");
-    _missionLabel = title.length ? [NSString stringWithFormat:@"MISSION %02lu  /  %@", (unsigned long)index + 1,
-                                   title.uppercaseString] : @"";
+    _campaignLabel = L10n(completed ? @"menu.campaign_replay" : (started ? @"menu.campaign_continue" : @"menu.campaign_start"));
+    _missionLabel = title.length ? L10nFormat(@"menu.mission_line", (unsigned long)index + 1, title.uppercaseString) : @"";
     _selected = MenuItemCampaign;
     _controls = NO;
     @synchronized (self) { _hasPendingPoint = NO; }
@@ -169,31 +167,19 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 - (void)drawControlsIn:(CGRect)bounds {
     CGFloat x = CGRectGetMinX(bounds), y = CGRectGetMaxY(bounds);
     CGFloat width = MIN(580, CGRectGetWidth(bounds));
-    [_header addObject:[self label:@"KESTREL FRONTIER  /  FLIGHT MANUAL" size:12 color:UIAmber opacity:1 x:x y:y - 8]];
-    SKLabelNode *title = [self label:@"Flight controls" size:MIN(34, CGRectGetHeight(bounds) * 0.09)
-                               color:MenuTitle opacity:1 x:x y:y - 43];
+    [_header addObject:[self label:L10n(@"controls.kicker") size:12 color:UIAmber opacity:1 x:x y:y - 8]];
+    SKLabelNode *title = [self label:L10n(@"controls.title") size:MIN(34, CGRectGetHeight(bounds) * 0.09)
+                               color:UIMenuTitle opacity:1 x:x y:y - 43];
     title.fontName = UIInterfaceBoldFont;
     [_header addObject:title];
-    NSArray<NSArray<NSString *> *> *bindings = @[
+    // Action and binding columns, from the catalog.
 #if TARGET_OS_IOS
-        @[@"Pitch / yaw", @"TOUCH STICK / LEFT STICK"],
-        @[@"Throttle", @"SLIDER / BUMPERS"],
-        @[@"Guns / torpedo", @"FIRE + TORPEDO / RT + B"],
-        @[@"Next target", @"TARGET / Y"],
-        @[@"Roll / boost", @"RIGHT STICK / LT"],
-        @[@"Camera", @"X"],
-        @[@"Pause / flight options", @"PAUSE / MENU"],
+    NSArray<NSString *> *actions = L10nList(@"controls.touch.actions"), *keys = L10nList(@"controls.touch.keys");
 #else
-        @[@"Pitch / yaw", @"MOUSE / ARROWS"],
-        @[@"Roll", @"HOLD RMB + MOUSE X / Q E"],
-        @[@"Throttle / centre stick", @"WHEEL / WHEEL CLICK"],
-        @[@"Boost / fire", @"SHIFT  /  LMB or SPACE"],
-        @[@"Next target / torpedo", @"T  /  G"],
-        @[@"Camera / flight help", @"C  /  H"],
-        @[@"Invert mouse pitch", @"I"],
-        @[@"Cycle / invert throttle axis", @"J  /  K"],
+    NSArray<NSString *> *actions = L10nList(@"controls.desktop.actions"), *keys = L10nList(@"controls.desktop.keys");
 #endif
-    ];
+    NSMutableArray<NSArray<NSString *> *> *bindings = [NSMutableArray array];
+    for (NSUInteger i = 0; i < MIN(actions.count, keys.count); i++) [bindings addObject:@[actions[i], keys[i]]];
     CGFloat line = MIN(33, (CGRectGetHeight(bounds) - 130) / bindings.count);
     CGFloat font = width < 390 ? 11 : 14;
     _controlRows = [NSMutableArray array];
@@ -202,7 +188,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         SKNode *row = [SKNode node];
         [_root addChild:row];
         _target = row;
-        [self label:bindings[i][0] size:font color:MenuTitle opacity:0.92 x:x y:rowY];
+        [self label:bindings[i][0] size:font color:UIMenuTitle opacity:0.92 x:x y:rowY];
         SKLabelNode *key = [self label:bindings[i][1] size:font color:UIInk opacity:0.9 x:x + width - 4 y:rowY];
         key.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
         key.name = @"key";
@@ -210,7 +196,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         [_controlRows addObject:row];
     }
     _controlsBack = CGRectMake(x, CGRectGetMinY(bounds), MIN(210, width), 44);
-    _backButton = UIActionButton(_controlsBack, @"‹  MAIN MENU", UIAmber);
+    _backButton = UIActionButton(_controlsBack, L10n(@"controls.back"), UIAmber);
     [_root addChild:_backButton];
     [_hover addButton:_backButton rect:_controlsBack accent:UIAmber];
 }
@@ -260,7 +246,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         _artNode = nil;
         _sceneryLaidOut = self.size;
         _sceneryPortrait = portrait;
-        SKSpriteNode *backdrop = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(MenuNight, 1) size:self.size];
+        SKSpriteNode *backdrop = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIMenuNight, 1) size:self.size];
         backdrop.anchorPoint = CGPointZero;
         backdrop.zPosition = -2;
         [_scenery addChild:backdrop];
@@ -277,7 +263,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     if (availableWidth < 120 || top - bottom < 220) return;
 
     if (_controls) {
-        SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(MenuNight, 0.8) size:self.size];
+        SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIMenuNight, 0.8) size:self.size];
         shade.anchorPoint = CGPointZero;
         shade.zPosition = -0.5;
         [_root addChild:shade];
@@ -307,17 +293,18 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     CGFloat stackBottom = portrait ? bottom + 8 : MAX(bottom, bottom + (top - bottom - blockHeight) * 0.5);
     CGFloat stackTop = stackBottom + stack;
 
-    [_header addObject:[self label:@"CNS BASTION   /   LANCER FLIGHT" size:compact ? 10 : 13 color:UIAmber
+    [_header addObject:[self label:L10n(@"menu.unit") size:compact ? 10 : 13 color:UIAmber
                            opacity:0.96 x:left + 2 y:stackTop + header - 6]];
     CGFloat titleY = stackTop + header - (compact ? 19 : 29);
-    SKLabelNode *wordmark = [self label:oneLine ? @"KESTREL FRONTIER" : @"KESTREL"
-                                   size:titleSize color:MenuTitle opacity:1 x:left y:titleY];
+    NSArray<NSString *> *words = L10nList(@"menu.wordmark");
+    SKLabelNode *wordmark = [self label:oneLine ? [words componentsJoinedByString:@" "] : words.firstObject
+                                   size:titleSize color:UIMenuTitle opacity:1 x:left y:titleY];
     wordmark.fontName = UIInterfaceBoldFont;
     wordmark.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
     wordmark.name = @"wordmark";
     [_header addObject:wordmark];
-    if (!oneLine) {
-        SKLabelNode *secondLine = [self label:@"FRONTIER" size:titleSize color:MenuTitle opacity:1
+    if (!oneLine && words.count > 1) {
+        SKLabelNode *secondLine = [self label:[[words subarrayWithRange:NSMakeRange(1, words.count - 1)] componentsJoinedByString:@" "] size:titleSize color:UIMenuTitle opacity:1
                                           x:left y:titleY - titleSize * 0.85];
         secondLine.fontName = wordmark.fontName;
         secondLine.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
@@ -325,8 +312,8 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         [_header addObject:secondLine];
     }
 
-    NSArray<NSString *> *labels = @[_campaignLabel, @"MISSION SELECT", @"LAN CO-OP", @"FLIGHT CONTROLS",
-                                   [[GameAudio shared] mixTitle], @"QUIT GAME"];
+    NSArray<NSString *> *labels = @[_campaignLabel, L10n(@"menu.missions"), L10n(@"menu.lan"), L10n(@"menu.controls"),
+                                   [[GameAudio shared] mixTitle], L10n(@"menu.quit")];
     for (NSUInteger i = 0; i < count; i++) {
         CGFloat y = stackTop - (i + 1) * rowHeight - i * gap;
         _rows[i] = CGRectMake(left, y, width, rowHeight);
@@ -334,9 +321,9 @@ typedef NS_ENUM(NSInteger, MenuItem) {
                                selected:i == _selected compact:compact labels:_rowLabels[i]];
     }
     if (!compact) {
-        [_footerLabels addObject:[self label:TARGET_OS_IOS ? @"TAP TO SELECT" : @"↑ / ↓   SELECT       ↵   CONFIRM" size:11 color:UIInk opacity:0.6
+        [_footerLabels addObject:[self label:L10n(TARGET_OS_IOS ? @"menu.footer_touch" : @"menu.footer") size:11 color:UIInk opacity:0.6
                                            x:left y:bottom]];
-        SKLabelNode *caption = [self label:@"LANCER 01   /   EXECUTIONER" size:11 color:UIInk opacity:0.6
+        SKLabelNode *caption = [self label:L10n(@"menu.caption") size:11 color:UIInk opacity:0.6
                                         x:self.size.width - _usedInsets.right - margin y:bottom];
         caption.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
         [_footerLabels addObject:caption];

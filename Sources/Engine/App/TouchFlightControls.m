@@ -1,6 +1,7 @@
 #import "TouchFlightControls.h"
 #if TARGET_OS_IOS
 #import "UIStyle.h"
+#import "Localization.h"
 
 typedef NS_ENUM(NSInteger, TouchControl) {
     TouchControlNone = -1,
@@ -70,7 +71,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
 }
 
 - (void)setSecondaryLabel:(NSString *)label {
-    dispatch_async(dispatch_get_main_queue(), ^{ self->_secondaryLabel.text = label.length ? label : @"FIRE 2"; });
+    dispatch_async(dispatch_get_main_queue(), ^{ self->_secondaryLabel.text = label.length ? label : L10n(@"touch.fire2"); });
 }
 
 - (void)buildArt {
@@ -105,16 +106,16 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     _throttleThumb.strokeColor = UIColorWithOpacity(UIInk, 0.9);
     _throttleThumb.fillColor = UIColorWithOpacity(UIInk, 0.28);
     [throttle addChild:_throttleThumb];
-    SKLabelNode *label = ControlLabel(@"THR", 11, UIInk);
+    SKLabelNode *label = ControlLabel(L10n(@"touch.throttle"), 11, UIInk);
     label.position = CGPointMake(0, ThrottleHeight / 2 + 13);
     [throttle addChild:label];
     _faces[TouchControlThrottle] = throttle;
     [_art addChild:throttle];
 
-    [self addButton:TouchControlFire title:@"FIRE" radius:35 accent:UIInk];
-    [self addButton:TouchControlSecondary title:@"FIRE 2" radius:28 accent:UIAmber];
-    [self addButton:TouchControlTarget title:@"TARGET" radius:28 accent:UIInk];
-    _faces[TouchControlPause] = UIActionButton(CGRectMake(-46, -22, 92, 44), @"PAUSE", UIInk);
+    [self addButton:TouchControlFire title:L10n(@"touch.fire") radius:35 accent:UIInk];
+    [self addButton:TouchControlSecondary title:L10n(@"touch.fire2") radius:28 accent:UIAmber];
+    [self addButton:TouchControlTarget title:L10n(@"touch.target") radius:28 accent:UIInk];
+    _faces[TouchControlPause] = UIActionButton(CGRectMake(-46, -22, 92, 44), L10n(@"touch.pause"), UIInk);
     [_art addChild:_faces[TouchControlPause]];
 }
 

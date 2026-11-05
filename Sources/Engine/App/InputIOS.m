@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 #import "Input.h"
+#import "Localization.h"
 #import "Cvar.h"
 #import <GameController/GameController.h>
 #import <os/lock.h>
@@ -58,7 +59,7 @@ static float Deadzone(float value) {
     _controller.extendedGamepad.valueChangedHandler = nil;
     _controller = next;
     os_unfair_lock_lock(&_lock);
-    _controllerName = next ? (next.vendorName ?: @"Controller") : nil;
+    _controllerName = next ? (next.vendorName ?: L10n(@"input.controller")) : nil;
     _pad = (ControlState){ .hat = -1 };
     _throttleRate = 0;
     _controllerActions = 0;

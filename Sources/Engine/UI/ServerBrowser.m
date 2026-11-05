@@ -3,6 +3,7 @@
 #import "Assets.h"
 #import "UIStyle.h"
 #import "UIMotion.h"
+#import "Localization.h"
 
 static SKColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static SKColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }
@@ -89,18 +90,19 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 
     CGFloat x = MIN(110, s.width * 0.08), y = s.height - MIN(90, s.height * 0.14);
     SKLabelNode *kicker = Text(14, Ink(0.6));
-    kicker.text = @"KESTREL FRONTIER  /  MULTIPLAYER";
+    kicker.text = L10n(@"browser.kicker");
     kicker.position = CGPointMake(x, y);
     [_root addChild:kicker];
     SKLabelNode *title = Text(34, Ink(1));
-    title.text = @"Games on this network";
+    title.text = L10n(@"browser.title");
     title.position = CGPointMake(x, y - 26);
     [_root addChild:title];
 
     y -= 84;
     if (!_servers.count) {
         SKLabelNode *none = Text(17, Ink(0.55));
-        none.text = @"Searching for games on this network…";
+        none.text = L10n(@"browser.searching");
+        none.name = @"searching";
         none.position = CGPointMake(x, y);
         [_root addChild:none];
     }
@@ -113,8 +115,8 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
         BOOL sel = i == _index;
         NSString *mission = srv.missionIndex >= 0 ? CampaignMission((NSUInteger)srv.missionIndex)[@"title"] : nil;
         SKLabelNode *l = Text(16, sel ? Amber(1) : Ink(0.85));
-        l.text = [NSString stringWithFormat:@"%@ %@   %d/%d pilots   %@   %@", sel ? @">" : @" ", srv.name, srv.players, srv.maxPlayers,
-                  mission ? [NSString stringWithFormat:@"flying \"%@\"", mission] : @"in the menus", srv.address];
+        l.text = L10nFormat(@"browser.row", sel ? @">" : @" ", srv.name, srv.players, srv.maxPlayers,
+                            mission ? L10nFormat(@"browser.flying", mission) : L10n(@"browser.in_menus"), srv.address);
         l.numberOfLines = 1;
         l.preferredMaxLayoutWidth = width;
         l.lineBreakMode = NSLineBreakByTruncatingTail;
@@ -126,7 +128,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     NSArray *lines = @[
         _status ?: @"",
         _hostLine ?: @"",
-        s.width >= 850 ? @"Direct IP: SpaceFight +connect <host[:port]>   /   Dedicated: SpaceFight --dedicated [mission]" : @"↑ / ↓  Select   •   Return  Join   •   Esc  Back",
+        L10n(s.width >= 850 ? @"browser.help_wide" : @"browser.help"),
     ];
     for (NSUInteger i = 0; i < lines.count; i++) {
         SKLabelNode *l = Text(i == 0 ? 14 : 12, i == 0 ? Amber(1) : Ink(0.55));
@@ -140,10 +142,10 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     }
     _backRect = CGRectMake(x, 20, 145, 44);
     _joinRect = self.selected ? CGRectMake(s.width - x - 145, 20, 145, 44) : CGRectZero;
-    SKNode *back = UIActionButton(_backRect, @"‹  BACK", UIInk);
+    SKNode *back = UIActionButton(_backRect, L10n(@"browser.back"), UIInk);
     [_root addChild:back];
     [_hover addButton:back rect:_backRect accent:UIInk];
-    SKNode *join = self.selected ? UIActionButton(_joinRect, @"JOIN GAME  ›", UIAmber) : nil;
+    SKNode *join = self.selected ? UIActionButton(_joinRect, L10n(@"browser.join"), UIAmber) : nil;
     if (join) {
         [_root addChild:join];
         [_hover addButton:join rect:_joinRect accent:UIAmber];
@@ -160,7 +162,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     UIMotionSlideIn(back, CGVectorMake(0, -44), 0.25, 0.32);
     if (join) UIMotionSlideIn(join, CGVectorMake(0, -44), 0.3, 0.32);
     if (!rows.count) for (SKNode *child in _root.children)
-        if ([child isKindOfClass:SKLabelNode.class] && [((SKLabelNode *)child).text hasPrefix:@"Searching"]) {
+        if ([child isKindOfClass:SKLabelNode.class] && [child.name isEqualToString:@"searching"]) {
             UIMotionDecode((SKLabelNode *)child, 0.25, 0.5);
             [child runAction:UIAfter(0.8, [SKAction repeatActionForever:[SKAction sequence:@[
                 [SKAction fadeAlphaTo:0.35 duration:0.8], [SKAction fadeAlphaTo:1 duration:0.8],

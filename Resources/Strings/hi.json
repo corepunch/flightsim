@@ -1,0 +1,16 @@
+{
+  "name": "हिन्दी",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "मिशन लोड हो रहा है…",
+    "loading.preparing_ship": "अंतरिक्ष यान तैयार हो रहा है…",
+    "loading.mission_ready": "मिशन तैयार है",
+    "loading.continue_prompt": "मिशन शुरू करने के लिए कहीं भी टैप करें",
+    "loading.charting_starfield": "तारों का नक्शा तैयार हो रहा है…",
+    "loading.plotting_capital_ships": "बड़े युद्धपोत तैनात हो रहे हैं…",
+    "loading.scrambling_fighter_wings": "लड़ाकू दस्ते तैयार हो रहे हैं…",
+    "loading.uploading_assets": "ज्यामिति और टेक्सचर अपलोड हो रहे हैं…",
+    "loading.compiling_shaders": "शेडर संकलित हो रहे हैं…",
+    "loading.mission_tip": "उड़ान भरने से पहले मिशन के उद्देश्य देख लें।"
+  }
+}

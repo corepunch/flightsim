@@ -1,0 +1,16 @@
+{
+  "name": "繁體中文",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "正在載入任務…",
+    "loading.preparing_ship": "正在準備太空船…",
+    "loading.mission_ready": "任務已就緒",
+    "loading.continue_prompt": "輕觸任意位置開始任務",
+    "loading.charting_starfield": "正在繪製星圖…",
+    "loading.plotting_capital_ships": "正在部署主力艦…",
+    "loading.scrambling_fighter_wings": "正在集結戰鬥機編隊…",
+    "loading.uploading_assets": "正在上傳幾何體與材質…",
+    "loading.compiling_shaders": "正在編譯著色器…",
+    "loading.mission_tip": "出發前請查看任務目標。"
+  }
+}

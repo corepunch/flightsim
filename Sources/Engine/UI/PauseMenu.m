@@ -1,6 +1,7 @@
 #import "PauseMenu.h"
 #import "UIStyle.h"
 #import "GameAudio.h"
+#import "Localization.h"
 
 @implementation PauseMenu {
     BOOL _remote, _cockpit;
@@ -31,15 +32,16 @@
     CGFloat x = (self.size.width - width) / 2, y = (self.size.height - height) / 2;
     [self addChild:UIReadoutPanel(CGRectMake(x, y, width, height), UIColorWithOpacity(UIInk, 0.8), UIColorWithOpacity(UIPanel, 0.98))];
     SKLabelNode *title = UIInterfaceLabel(24, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeCenter, SKLabelVerticalAlignmentModeCenter);
-    title.text = _remote ? @"FLIGHT OPTIONS" : @"PAUSED";
+    title.text = L10n(_remote ? @"pause.title_online" : @"pause.title");
     title.fontName = UIInterfaceBoldFont;
     title.position = CGPointMake(self.size.width / 2, y + height - 28);
     [self addChild:title];
     SKLabelNode *hint = UIInterfaceLabel(10, UIColorWithOpacity(UIInk, 0.65), SKLabelHorizontalAlignmentModeCenter, SKLabelVerticalAlignmentModeCenter);
-    hint.text = _remote ? @"ONLINE FLIGHT CONTINUES" : @"MISSION HELD  /  RESUME WHEN READY";
+    hint.text = L10n(_remote ? @"pause.hint_online" : @"pause.hint");
     hint.position = CGPointMake(self.size.width / 2, y + height - 51);
     [self addChild:hint];
-    NSArray *titles = @[@"RESUME FLIGHT", _cockpit ? @"CAMERA: COCKPIT" : @"CAMERA: CHASE", [[GameAudio shared] mixTitle], _remote ? @"RESTART: HOST ONLY" : @"RESTART MISSION", @"RETURN TO MISSIONS"];
+    NSArray *titles = @[L10n(@"pause.resume"), L10n(_cockpit ? @"pause.camera_cockpit" : @"pause.camera_chase"), [[GameAudio shared] mixTitle],
+                        L10n(_remote ? @"pause.restart_host_only" : @"pause.restart"), L10n(@"pause.missions")];
     CGFloat rowHeight = MIN(44, (height - 82) / 5 - 6);
     for (NSInteger i = 0; i < 5; i++) {
         _buttons[i] = CGRectMake(x + 22, y + height - 70 - (i + 1) * (rowHeight + 6), width - 44, rowHeight);

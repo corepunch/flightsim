@@ -1,0 +1,116 @@
+{
+  "colors": {
+    "ink": [
+      0.55,
+      0.95,
+      0.85
+    ],
+    "amber": [
+      1.0,
+      0.72,
+      0.3
+    ],
+    "red": [
+      1.0,
+      0.42,
+      0.32
+    ],
+    "blue": [
+      0.45,
+      0.75,
+      1.0
+    ],
+    "friendly": [
+      0.4,
+      0.95,
+      0.5
+    ],
+    "shield": [
+      0.4,
+      0.7,
+      1.0
+    ],
+    "boost": [
+      1.0,
+      0.75,
+      0.3
+    ],
+    "yellow": [
+      0.95,
+      0.9,
+      0.45
+    ],
+    "background": [
+      0.012,
+      0.018,
+      0.028
+    ],
+    "panel": [
+      0.018,
+      0.065,
+      0.085
+    ],
+    "map": [
+      0,
+      0.06,
+      0.06
+    ],
+    "black": [
+      0,
+      0,
+      0
+    ],
+    "white": [
+      1,
+      1,
+      1
+    ],
+    "field": [
+      0.55,
+      0.55,
+      0.55
+    ],
+    "consoleSteel": [
+      0.055,
+      0.047,
+      0.041
+    ],
+    "consoleEdge": [
+      0.51,
+      0.31,
+      0.17
+    ],
+    "consoleGlass": [
+      0.014,
+      0.055,
+      0.058
+    ],
+    "menuNight": [
+      0.01568627450980392,
+      0.023529411764705882,
+      0.043137254901960784
+    ],
+    "menuTitle": [
+      0.89,
+      0.97,
+      0.96
+    ],
+    "hudNeutral": [
+      0.95,
+      0.88,
+      0.45
+    ]
+  },
+  "fonts": {
+    "mono": "Menlo",
+    "monoBold": "Menlo-Bold",
+    "interface": "Oxanium-Regular",
+    "interfaceBold": "Oxanium-Bold",
+    "body": "Oxanium-Regular",
+    "bodyMedium": "Oxanium-Medium"
+  },
+  "metrics": {
+    "slant": 0.36,
+    "readoutChamfer": 9.0
+  }
+}

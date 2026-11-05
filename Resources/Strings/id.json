@@ -1,0 +1,16 @@
+{
+  "name": "Bahasa Indonesia",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Memuat misi…",
+    "loading.preparing_ship": "Menyiapkan pesawat antariksa…",
+    "loading.mission_ready": "Misi siap",
+    "loading.continue_prompt": "Ketuk di mana saja untuk memulai misi",
+    "loading.charting_starfield": "Memetakan bintang…",
+    "loading.plotting_capital_ships": "Menempatkan kapal induk tempur…",
+    "loading.scrambling_fighter_wings": "Menyiapkan skuadron tempur…",
+    "loading.uploading_assets": "Mengunggah geometri dan tekstur…",
+    "loading.compiling_shaders": "Mengompilasi shader…",
+    "loading.mission_tip": "Tinjau tujuan misi sebelum lepas landas."
+  }
+}

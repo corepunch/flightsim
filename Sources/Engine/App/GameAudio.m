@@ -1,4 +1,5 @@
 #import "GameAudio.h"
+#import "Localization.h"
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
@@ -116,7 +117,7 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 
 - (NSString *)mixTitle {
     NSInteger mix = [NSUserDefaults.standardUserDefaults integerForKey:MixKey];
-    return @[@"SOUND: MUSIC + EFFECTS", @"SOUND: EFFECTS ONLY", @"SOUND: MUTED"][MIN(2, MAX(0, mix))];
+    return L10n(@[@"audio.mix_all", @"audio.mix_effects", @"audio.mix_muted"][MIN(2, MAX(0, mix))]);
 }
 
 - (void)cycleMix {

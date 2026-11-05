@@ -9,7 +9,7 @@ qa=$(mktemp -d "$PWD/build/unit-checks.XXXXXX")
 # A bare executable's main bundle is its directory: give it the resources the
 # shared code reads.
 ln -s "$PWD/Resources/Missions" "$qa/Missions"
-for directory in Ships Capitals Styles Projectiles; do [[ -d Resources/$directory ]] && ln -s "$PWD/Resources/$directory" "$qa/$directory"; done
+for directory in Ships Capitals Styles Projectiles Strings; do [[ -d Resources/$directory ]] && ln -s "$PWD/Resources/$directory" "$qa/$directory"; done
 clang -fobjc-arc -Wall -Wno-unused-function -mmacosx-version-min=13.0 \
     -ISources/Shared -ISources/Engine/Common -ISources/Engine/Net \
     Tools/UnitChecks.m Sources/Shared/*.m Sources/Shared/*.c Sources/Engine/Common/*.m \
@@ -38,3 +38,4 @@ for source in Sources/Engine/Client/*.m; do
 done
 print "PASS: the client builds without SceneKit"
 rm -rf "$qa"
+python3 -I Tools/validate_strings.py

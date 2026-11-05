@@ -4,6 +4,7 @@
 #import <SpriteKit/SpriteKit.h>
 #import <Metal/Metal.h>
 #import "SceneAsset.h"
+#import "Localization.h"
 #import "UIStyle.h"
 
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
@@ -375,15 +376,15 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
 
 - (void)styleLamp:(SCNMaterial *)m key:(NSString *)key {
     NSDictionary<NSString *, NSArray *> *legends = @{
-        @"Caution" : @[@"MASTER\nCAUTION", WarnColor(1)],
-        @"Shield"  : @[@"SHIELD", ShieldColor(1)],
-        @"Hull"    : @[@"HULL", EnemyColor(1)],
-        @"Hit"     : @[@"HIT", EnemyColor(1)],
-        @"Six"     : @[@"SIX", EnemyColor(1)],
-        @"Lock"    : @[@"LOCK", [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]],
-        @"Guns"    : @[@"GUNS", [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]],
-        @"Boost"   : @[@"BOOST", WarnColor(1)],
-        @"Prox"    : @[@"PROX", WarnColor(1)],
+        @"Caution" : @[L10n(@"cockpit.lamp.caution"), WarnColor(1)],
+        @"Shield"  : @[L10n(@"cockpit.lamp.shield"), ShieldColor(1)],
+        @"Hull"    : @[L10n(@"cockpit.lamp.hull"), EnemyColor(1)],
+        @"Hit"     : @[L10n(@"cockpit.lamp.hit"), EnemyColor(1)],
+        @"Six"     : @[L10n(@"cockpit.lamp.six"), EnemyColor(1)],
+        @"Lock"    : @[L10n(@"cockpit.lamp.lock"), [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]],
+        @"Guns"    : @[L10n(@"cockpit.lamp.guns"), [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1]],
+        @"Boost"   : @[L10n(@"cockpit.lamp.boost"), WarnColor(1)],
+        @"Prox"    : @[L10n(@"cockpit.lamp.prox"), WarnColor(1)],
     };
     NSArray *legend = legends[key];
     m.metalness.contents = @0;
@@ -457,7 +458,7 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
 }
 
 - (void)buildRadar {
-    _radar = MakeScreen(CGSizeMake(608, 480), @"POWER / WEAPONS");
+    _radar = MakeScreen(CGSizeMake(608, 480), L10n(@"cockpit.power_title"));
     _energyEngine = Text(28, SKLabelHorizontalAlignmentModeLeft, ScreenColor(1));
     _energyLaser = Text(28, SKLabelHorizontalAlignmentModeLeft, ScreenColor(1));
     _energyShield = Text(24, SKLabelHorizontalAlignmentModeLeft, ShieldColor(1));
@@ -470,7 +471,7 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     _laserBar = [[Bar alloc] initWithSize:CGSizeMake(550, 18)];
     _laserBar.position = CGPointMake(24, 254); [_radar addChild:_laserBar];
     SKLabelNode *rate = Text(20, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.7));
-    rate.text = @"LASER +22%/S  /  SHIELD +6%/S";
+    rate.text = L10n(@"cockpit.recharge_rates");
     rate.position = CGPointMake(24, 52); [_radar addChild:rate];
 }
 
@@ -492,7 +493,7 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
 
 - (void)buildSelf {
     CGSize size = CGSizeMake(608, 480);
-    _self = MakeScreen(size, @"SHIP STATUS");
+    _self = MakeScreen(size, L10n(@"cockpit.status_title"));
 
     _selfHolder = Hologram(ScreenColor(0.5), &_selfModel);
 
@@ -503,22 +504,22 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     _shieldRing.glowWidth = 3;
     [_self addChild:_shieldRing];
 
-    Row(_self, @"SHIELD", 378, &_shieldBar, &_shieldPct);
-    Row(_self, @"HULL", 310, &_hullBar, &_hullPct);
-    Row(_self, @"BOOST", 242, &_boostBar, &_boostPct);
-    Row(_self, @"THROTTLE", 174, &_throttleBar, &_throttlePct);
+    Row(_self, L10n(@"cockpit.row_shield"), 378, &_shieldBar, &_shieldPct);
+    Row(_self, L10n(@"cockpit.row_hull"), 310, &_hullBar, &_hullPct);
+    Row(_self, L10n(@"cockpit.row_boost"), 242, &_boostBar, &_boostPct);
+    Row(_self, L10n(@"cockpit.row_throttle"), 174, &_throttleBar, &_throttlePct);
     _shieldBar.fill.color = ShieldColor(0.95);
     _boostBar.fill.color = WarnColor(0.95);
 
     SKLabelNode *spd = Text(22, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.75));
-    spd.text = @"SPEED";
+    spd.text = L10n(@"cockpit.speed");
     spd.position = CGPointMake(330, 118);
     [_self addChild:spd];
     _speedLabel = Text(52, SKLabelHorizontalAlignmentModeRight, ScreenColor(1));
     _speedLabel.position = CGPointMake(588, 70);
     [_self addChild:_speedLabel];
     SKLabelNode *unit = Text(20, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.6));
-    unit.text = @"M/S";
+    unit.text = L10n(@"units.mps");
     unit.position = CGPointMake(330, 62);
     [_self addChild:unit];
 
@@ -578,19 +579,19 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     _throttle.position = SCNVector3Make(_throttleRest.x, _throttleRest.y, _throttleRest.z + 0.11f - 0.22f * f.throttle);
 
     // Events for the status display.
-    if (f.kills > _last.kills) [self say:@"SPLASH ONE" warn:NO time:t];
-    if (f.alive && f.shield < 0.02f && _last.shield >= 0.02f) [self say:@"SHIELDS DOWN" warn:YES time:t];
-    if (f.alive && f.hull < 0.3f && _last.hull >= 0.3f) [self say:@"HULL CRITICAL" warn:YES time:t];
-    if (!f.alive && _last.alive) [self say:@"SHIP LOST" warn:YES time:t];
-    if (f.alive && !_last.alive && t > 1) [self say:@"SYSTEMS ONLINE" warn:NO time:t];
-    if (f.six && !_last.six) [self say:@"CHECK SIX" warn:YES time:t];
+    if (f.kills > _last.kills) [self say:L10n(@"cockpit.say_kill") warn:NO time:t];
+    if (f.alive && f.shield < 0.02f && _last.shield >= 0.02f) [self say:L10n(@"cockpit.say_shields_down") warn:YES time:t];
+    if (f.alive && f.hull < 0.3f && _last.hull >= 0.3f) [self say:L10n(@"cockpit.say_hull_critical") warn:YES time:t];
+    if (!f.alive && _last.alive) [self say:L10n(@"cockpit.ship_lost") warn:YES time:t];
+    if (f.alive && !_last.alive && t > 1) [self say:L10n(@"cockpit.say_online") warn:NO time:t];
+    if (f.six && !_last.six) [self say:L10n(@"cockpit.say_six") warn:YES time:t];
     _last = f;
 
     [self updateLamps:f];
-    _energyEngine.text = [NSString stringWithFormat:@"ENGINE   %3d%%", (int)lroundf(f.throttle * 100)];
-    _energyLaser.text = [NSString stringWithFormat:@"LASER    %3d%%", (int)lroundf(f.weaponEnergy * 100)];
-    _energyShield.text = f.shield >= 0.999 ? @"SHIELD   FULL" : @"SHIELD   RECHARGING";
-    _energyBoost.text = [NSString stringWithFormat:@"BOOST    %3d%%", (int)lroundf(f.boostEnergy * 100)];
+    _energyEngine.text = L10nFormat(@"cockpit.energy_engine", (int)lroundf(f.throttle * 100));
+    _energyLaser.text = L10nFormat(@"cockpit.energy_laser", (int)lroundf(f.weaponEnergy * 100));
+    _energyShield.text = L10n(f.shield >= 0.999 ? @"cockpit.energy_shield_full" : @"cockpit.energy_shield_recharging");
+    _energyBoost.text = L10nFormat(@"cockpit.energy_boost", (int)lroundf(f.boostEnergy * 100));
     _laserBar.value = f.weaponEnergy;
     _laserBar.fill.color = LevelColor(f.weaponEnergy, 1);
     [self updateSelf:f];
@@ -648,9 +649,9 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     SCNMaterial *holo = [_selfModel valueForKey:@"holoMaterial"];
     holo.diffuse.contents = f.damageFlash > 0.05f ? EnemyColor(0.2 + 0.5 * f.damageFlash) : LevelColor(hull, 0.5);
 
-    if (!f.alive) { _selfState.text = Blink(f.time, 1.5) ? @"SHIP LOST" : @""; _selfState.fontColor = EnemyColor(1); }
-    else if (f.boosting) { _selfState.text = @"BOOST"; _selfState.fontColor = WarnColor(1); }
-    else { _selfState.text = @"NOMINAL"; _selfState.fontColor = ScreenColor(0.7); }
+    if (!f.alive) { _selfState.text = Blink(f.time, 1.5) ? L10n(@"cockpit.ship_lost") : @""; _selfState.fontColor = EnemyColor(1); }
+    else if (f.boosting) { _selfState.text = L10n(@"cockpit.state_boost"); _selfState.fontColor = WarnColor(1); }
+    else { _selfState.text = L10n(@"cockpit.state_nominal"); _selfState.fontColor = ScreenColor(0.7); }
 }
 
 - (void)updateTarget:(CockpitFrame)f contacts:(const CockpitContact *)contacts count:(NSUInteger)count {
@@ -665,7 +666,7 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
 }
 
 - (void)updateStatus:(CockpitFrame)f {
-    _killsLabel.text = [NSString stringWithFormat:@"KILLS %d  %@ %d", f.kills, f.secondaryName.length ? f.secondaryName : @"AMMO", f.secondary];
+    _killsLabel.text = L10nFormat(@"cockpit.kills", f.kills, f.secondaryName.length ? f.secondaryName : L10n(@"cockpit.ammo"), f.secondary);
     NSString *obj = [f.objective uppercaseString] ?: @"";
     if (obj.length > 30) obj = [[obj substringToIndex:29] stringByAppendingString:@"."];
     _deathsLabel.text = obj;

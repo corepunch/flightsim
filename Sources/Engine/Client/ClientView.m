@@ -1,5 +1,6 @@
 #import "ClientView.h"
 #import "GameAudio.h"
+#import "Localization.h"
 #import "Assets.h"
 #include "SharedMath.h"
 
@@ -588,13 +589,13 @@ typedef struct {
 
 #if TARGET_OS_IOS
     NSString *controller = _input.joystickName;
-    NSString *inputText = controller ? [NSString stringWithFormat:@"CONTROLLER: %@", controller] : @"";
+    NSString *inputText = controller ? L10nFormat(@"hud.input_controller", controller) : @"";
 #else
-    NSString *inputText = [NSString stringWithFormat:@"%@%@  |  %@  |  T target  G %@  H help  ESC pause",
-                           _input.joystickName ? [NSString stringWithFormat:@"Joystick: %@ (%@)", _input.joystickName, _input.axisDescription] : @"No joystick",
-                           _input.throttleFromJoystick ? @" [throttle: stick]" : @" [throttle: wheel/keys]",
-                           _input.mouseCaptured ? @"mouse captured (ESC releases)" : @"click to capture mouse",
-                           [self cs:CS_SECONDARY_NAME].lowercaseString];
+    NSString *inputText = L10nFormat(@"hud.input_line",
+                           _input.joystickName ? L10nFormat(@"hud.input_joystick", _input.joystickName, _input.axisDescription) : L10n(@"hud.input_no_joystick"),
+                           L10n(_input.throttleFromJoystick ? @"hud.input_throttle_stick" : @"hud.input_throttle_keys"),
+                           L10n(_input.mouseCaptured ? @"hud.input_mouse_captured" : @"hud.input_mouse_free"),
+                           [self cs:CS_SECONDARY_NAME].lowercaseString);
 #endif
     if (![inputText isEqualToString:_lastInputText]) {
         _lastInputText = inputText;
@@ -665,13 +666,13 @@ typedef struct {
         k.hull = s.hull;
         k.shield = s.shield;
         k.systems = -1;
-        k.component = @"FUSELAGE";
-        k.cargo = fighter ? @"NONE" : (s.flags & EF_SCANNED) ? ([self stringAt:s.cargo].length ? [self stringAt:s.cargo] : @"NO MANIFEST") : @"UNKNOWN";
+        k.component = L10n(@"part.hull");
+        k.cargo = fighter ? L10n(@"cockpit.cargo_none") : (s.flags & EF_SCANNED) ? ([self stringAt:s.cargo].length ? [self stringAt:s.cargo] : L10n(@"cockpit.cargo_no_manifest")) : L10n(@"cockpit.unknown");
         if (fighter) {
             const ShipDef *def = v.definition;
             k.hologram = [_refresh hologramForModel:v.refModel];
             k.holoScale = def ? def->hologramScale : 0.0075f;
-            k.name = [self stringAt:s.name] ?: (def ? @(def->displayName) : @"FIGHTER");
+            k.name = [self stringAt:s.name] ?: (def ? @(def->displayName) : L10n(@"cockpit.fighter"));
             k.className = [self stringAt:s.className] ?: (def ? @(def->displayName) : @"");
             k.attacking = hostile && (s.flags & EF_ATTACKING) && s.target == ps->entity &&
                           simd_dot(QuatForward(s.orientation), -rel / fmaxf(dist, 1)) > 0.8f;
@@ -692,8 +693,8 @@ typedef struct {
                 k.systems = (float)alive / info->numParts;
                 int aim = ps->stats[STAT_AIM_PART] - 1;
                 if (s.number == selected && aim >= 0 && aim < info->numParts) {
-                    NSArray *names = @[@"TURRET", @"ENGINE", @"SHIELD GENERATOR", @"REACTOR"];
-                    k.component = names[MIN(info->parts[aim].kind, 3)];
+                    NSArray *names = @[@"part.turret", @"part.engine", @"part.shield", @"part.core"];
+                    k.component = L10n(names[MIN(info->parts[aim].kind, 3)]);
                 }
             }
             if (hostile && ((s.flags & EF_MINE) || !prop)) f.nearest = fminf(f.nearest, dist - radius);

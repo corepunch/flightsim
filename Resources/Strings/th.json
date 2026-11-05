@@ -1,0 +1,16 @@
+{
+  "name": "ไทย",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "กำลังโหลดภารกิจ…",
+    "loading.preparing_ship": "กำลังเตรียมยานอวกาศ…",
+    "loading.mission_ready": "ภารกิจพร้อมแล้ว",
+    "loading.continue_prompt": "แตะที่ใดก็ได้เพื่อเริ่มภารกิจ",
+    "loading.charting_starfield": "กำลังจัดทำแผนที่ดวงดาว…",
+    "loading.plotting_capital_ships": "กำลังวางตำแหน่งยานรบหลัก…",
+    "loading.scrambling_fighter_wings": "กำลังเตรียมฝูงบินขับไล่…",
+    "loading.uploading_assets": "กำลังอัปโหลดรูปทรงและพื้นผิว…",
+    "loading.compiling_shaders": "กำลังคอมไพล์เชดเดอร์…",
+    "loading.mission_tip": "ตรวจสอบเป้าหมายภารกิจก่อนออกบิน"
+  }
+}

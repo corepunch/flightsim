@@ -1,0 +1,16 @@
+{
+  "name": "Deutsch",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Mission wird geladen…",
+    "loading.preparing_ship": "Raumschiff wird vorbereitet…",
+    "loading.mission_ready": "Mission bereit",
+    "loading.continue_prompt": "Tippe irgendwo, um die Mission zu starten",
+    "loading.charting_starfield": "Sternenfeld wird kartiert…",
+    "loading.plotting_capital_ships": "Großkampfschiffe werden positioniert…",
+    "loading.scrambling_fighter_wings": "Jägerstaffeln werden mobilisiert…",
+    "loading.uploading_assets": "Geometrie und Texturen werden hochgeladen…",
+    "loading.compiling_shaders": "Shader werden kompiliert…",
+    "loading.mission_tip": "Prüfe vor dem Start deine Missionsziele."
+  }
+}

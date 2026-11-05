@@ -1,0 +1,16 @@
+{
+  "name": "한국어",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "임무 불러오는 중…",
+    "loading.preparing_ship": "우주선 준비 중…",
+    "loading.mission_ready": "임무 준비 완료",
+    "loading.continue_prompt": "아무 곳이나 탭하여 임무 시작",
+    "loading.charting_starfield": "성도 작성 중…",
+    "loading.plotting_capital_ships": "주력함 배치 중…",
+    "loading.scrambling_fighter_wings": "전투기 편대 준비 중…",
+    "loading.uploading_assets": "지오메트리 및 텍스처 업로드 중…",
+    "loading.compiling_shaders": "셰이더 컴파일 중…",
+    "loading.mission_tip": "출격 전에 임무 목표를 확인하세요."
+  }
+}

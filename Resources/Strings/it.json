@@ -1,0 +1,16 @@
+{
+  "name": "Italiano",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Caricamento missione…",
+    "loading.preparing_ship": "Preparazione della navicella…",
+    "loading.mission_ready": "Missione pronta",
+    "loading.continue_prompt": "Tocca un punto qualsiasi per avviare la missione",
+    "loading.charting_starfield": "Mappatura del campo stellare…",
+    "loading.plotting_capital_ships": "Posizionamento delle navi capitali…",
+    "loading.scrambling_fighter_wings": "Mobilitazione delle squadriglie…",
+    "loading.uploading_assets": "Caricamento di geometria e texture…",
+    "loading.compiling_shaders": "Compilazione degli shader…",
+    "loading.mission_tip": "Controlla gli obiettivi della missione prima del decollo."
+  }
+}

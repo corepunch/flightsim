@@ -1,5 +1,6 @@
 #import "FlightInstruments.h"
 #import "UIStyle.h"
+#import "Localization.h"
 #import "MonitorSignal.h"
 #import "UIMotion.h"
 #import "PlatformImage.h"
@@ -33,7 +34,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
 - (instancetype)initWithPreview:(BOOL)preview {
     if ((self = [super init])) {
         self.name = @"Target readout";
-        _empty = Readout(self, @"NO TARGET SELECTED", 304, 215, 24, SKLabelHorizontalAlignmentModeCenter);
+        _empty = Readout(self, L10n(@"cockpit.no_target"), 304, 215, 24, SKLabelHorizontalAlignmentModeCenter);
         _info = [SKNode node]; [self addChild:_info];
         _name = Readout(_info, @"", 304, 370, 26, SKLabelHorizontalAlignmentModeCenter);
         _kind = Readout(_info, @"", 304, 337, 18, SKLabelHorizontalAlignmentModeCenter);
@@ -94,16 +95,16 @@ static NSString *Short(NSString *text, NSUInteger length) {
     if (!has) return;
     CockpitContact c = contacts[f.target];
     _name.text = Short(c.name, 31); _name.fontColor = ContactInk(c.relation);
-    _kind.text = [NSString stringWithFormat:@"%@ / %@", c.relation == RelationHostile ? @"HOSTILE" : c.relation == RelationFriendly ? @"FRIENDLY" : @"NEUTRAL", Short(c.className, 25)];
-    _shield.text = [NSString stringWithFormat:@"SHD %3d%%", (int)lroundf(c.shield * 100)];
-    _hull.text = [NSString stringWithFormat:@"HUL %3d%%", (int)lroundf(c.hull * 100)];
+    _kind.text = L10nFormat(@"cockpit.kind", L10n(c.relation == RelationHostile ? @"cockpit.hostile" : c.relation == RelationFriendly ? @"cockpit.friendly" : @"cockpit.neutral"), Short(c.className, 25));
+    _shield.text = L10nFormat(@"cockpit.target_shield", (int)lroundf(c.shield * 100));
+    _hull.text = L10nFormat(@"cockpit.target_hull", (int)lroundf(c.hull * 100));
     _hull.fontColor = UIColorWithOpacity(c.hull < 0.3 ? UIRed : UIInk, 1);
-    _systems.text = c.systems < 0 ? @"SYS  N/A" : [NSString stringWithFormat:@"SYS %3d%%", (int)lroundf(c.systems * 100)];
-    _range.text = [NSString stringWithFormat:@"%.2f KM", simd_length(c.local) / 1000];
-    _closing.text = [NSString stringWithFormat:@"%+d M/S", (int)lroundf(f.closingSpeed)];
-    _cargo.text = [@"CARGO: " stringByAppendingString:Short(c.cargo ?: @"UNKNOWN", 36)];
-    _component.text = [@"PART: " stringByAppendingString:Short(c.component ?: @"FUSELAGE", 36)];
-    _mode.text = f.lock ? @"FIRING SOLUTION" : c.attacking ? @"INCOMING ATTACK" : c.capital ? (c.shielded ? @"SHIELDED" : @"VULNERABLE") : @"TRACKING";
+    _systems.text = c.systems < 0 ? L10n(@"cockpit.target_systems_na") : L10nFormat(@"cockpit.target_systems", (int)lroundf(c.systems * 100));
+    _range.text = L10nFormat(@"units.km2", simd_length(c.local) / 1000);
+    _closing.text = L10nFormat(@"units.closing", (int)lroundf(f.closingSpeed));
+    _cargo.text = L10nFormat(@"cockpit.cargo", Short(c.cargo ?: L10n(@"cockpit.unknown"), 36));
+    _component.text = L10nFormat(@"cockpit.part", Short(c.component ?: L10n(@"part.hull"), 36));
+    _mode.text = L10n(f.lock ? @"cockpit.mode_lock" : c.attacking ? @"cockpit.mode_attack" : c.capital ? (c.shielded ? @"cockpit.mode_shielded" : @"cockpit.mode_vulnerable") : @"cockpit.mode_tracking");
     _mode.fontColor = UIColorWithOpacity(c.attacking ? UIRed : f.lock ? UIFriendly : UIAmber, 1);
     if (_preview) {
         if (_source != c.hologram) {
@@ -160,8 +161,8 @@ static NSString *Short(NSString *text, NSUInteger length) {
         CGPathMoveToPoint(path, NULL, -62, 0); CGPathAddLineToPoint(path, NULL, 62, 0);
         CGPathMoveToPoint(path, NULL, 0, -62); CGPathAddLineToPoint(path, NULL, 0, 62);
         cross.path = path; CGPathRelease(path); cross.strokeColor = UIColorWithOpacity(UIInk, 0.18); [self addChild:cross];
-        Readout(self, rear ? @"REAR" : @"FORWARD", 0, 76, 11, SKLabelHorizontalAlignmentModeCenter);
-        _range = Readout(self, @"5 KM", 0, -76, 10, SKLabelHorizontalAlignmentModeCenter);
+        Readout(self, L10n(rear ? @"cockpit.scanner_rear" : @"cockpit.scanner_forward"), 0, 76, 11, SKLabelHorizontalAlignmentModeCenter);
+        _range = Readout(self, L10nFormat(@"units.km0", 5.0), 0, -76, 10, SKLabelHorizontalAlignmentModeCenter);
         _blips = [NSMutableArray array];
         for (NSUInteger i = 0; i < COCKPIT_MAX_CONTACTS; i++) {
             SKShapeNode *blip = [SKShapeNode shapeNodeWithRectOfSize:CGSizeMake(4, 4)];
@@ -179,7 +180,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
     float range = 5000;
     // Keep a selected distant craft on sensors, with an explicit range change.
     if (f.target >= 0 && f.target < (int)count) range = fmaxf(range, ceilf(simd_length(contacts[f.target].local) / 1000) * 1000);
-    _range.text = [NSString stringWithFormat:@"%.0f KM", range / 1000];
+    _range.text = L10nFormat(@"units.km0", range / 1000);
     for (NSUInteger i = 0; i < _blips.count; i++) {
         SKShapeNode *blip = _blips[i]; blip.hidden = YES;
         if (!f.alive || i >= count) continue;

@@ -1,6 +1,7 @@
 #import "Client.h"
 #import "NetChannel.h"
 #import "NetProtocol.h"
+#import "Localization.h"
 #import <QuartzCore/QuartzCore.h>
 #include "SharedMath.h"
 #include "ShipMove.h"
@@ -142,7 +143,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
         NSData *payload = [_channel process:packet];
         if (payload) [self parseServer:payload];
     }
-    if (_state >= ClientConnected && now - _channel.lastReceived > NET_TIMEOUT) [self dropWithReason:@"Server timed out"];
+    if (_state >= ClientConnected && now - _channel.lastReceived > NET_TIMEOUT) [self dropWithReason:L10n(@"net.timed_out")];
 }
 
 - (void)connectionless:(NSString *)text {
@@ -151,7 +152,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
         _channel.lastReceived = CACurrentMediaTime();
         NSLog(@"Client: connected to %@", _channel.address);
     } else if ([text hasPrefix:@"reject"] && _state == ClientConnecting) {
-        [self dropWithReason:[NSString stringWithFormat:@"Server refused: %@", [text substringFromIndex:MIN(text.length, 7)]]];
+        [self dropWithReason:L10nFormat(@"net.refused", [text substringFromIndex:MIN(text.length, 7)])];
     }
 }
 

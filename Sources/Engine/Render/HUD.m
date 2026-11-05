@@ -2,6 +2,7 @@
 #import "FlightInstruments.h"
 #import "LensFlare.h"
 #import "UIStyle.h"
+#import "Localization.h"
 #import "PlatformImage.h"
 
 #define MAX_TARGETS 64
@@ -168,10 +169,10 @@ static SKShapeNode *Bracket(void) {
     _shieldFill.strokeColor = [SKColor clearColor];
     [_root addChild:_shieldFill];
     _hullLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
-    _hullLabel.text = @"HULL";
+    _hullLabel.text = L10n(@"hud.hull");
     [_root addChild:_hullLabel];
     _shieldLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
-    _shieldLabel.text = @"SHIELD";
+    _shieldLabel.text = L10n(@"hud.shield");
     [_root addChild:_shieldLabel];
 
     _scoreLabel = Label(16, SKLabelHorizontalAlignmentModeRight);
@@ -180,19 +181,13 @@ static SKShapeNode *Bracket(void) {
     _inputLabel.fontColor = HUDColor(0.55);
     [_root addChild:_inputLabel];
     _deadLabel = Label(30, SKLabelHorizontalAlignmentModeCenter);
-    _deadLabel.text = @"SHIP DESTROYED - respawning";
+    _deadLabel.text = L10n(@"hud.destroyed");
     _deadLabel.fontColor = EnemyColor(0.95);
     _deadLabel.hidden = YES;
     [_root addChild:_deadLabel];
 
     _help = [SKNode node];
-    NSArray *lines = @[@"CLICK  capture mouse (virtual stick)   ESC release   wheel-click recentre",
-                       @"MOUSE  pitch / yaw   hold RMB + move sideways to roll   Q/E roll   A/D yaw",
-                       @"WHEEL or W/S throttle   Z full   X cut   SHIFT/TAB boost   SPACE/LMB fire",
-                       @"C camera   J cycle stick throttle axis   K invert throttle   I invert mouse",
-                       @"Joystick: X roll  Y pitch  throttle lever  B1 fire  B2/B4 boost  B3 camera  B5 torpedo  B6 target  hat look",
-                       @"T  next target   G  torpedo   ESC (mouse free) / M  pause / flight options",
-                       @"R restart   H toggle this help"];
+    NSArray *lines = L10nList(@"hud.help");
     for (NSUInteger i = 0; i < lines.count; i++) {
         SKLabelNode *l = Label(12, SKLabelHorizontalAlignmentModeLeft);
         l.text = lines[i];
@@ -434,9 +429,9 @@ static SKShapeNode *Bracket(void) {
     _targetReadout.hidden = cockpit;
     if (!cockpit) [_targetReadout updateFrame:frame contacts:contacts count:count];
     _laserLabel.hidden = _rechargeLabel.hidden = cockpit;
-    _laserLabel.text = [NSString stringWithFormat:@"LASER %3d%%", (int)lroundf(frame.weaponEnergy * 100)];
+    _laserLabel.text = L10nFormat(@"hud.laser", (int)lroundf(frame.weaponEnergy * 100));
     _laserLabel.fontColor = frame.weaponEnergy < frame.weaponShotEnergy ? EnemyColor(1) : HUDColor(0.9);
-    _rechargeLabel.text = frame.shield < 0.999 ? @"SHIELD +6%/S" : @"SHIELD FULL";
+    _rechargeLabel.text = L10n(frame.shield < 0.999 ? @"hud.shield_recharging" : @"hud.shield_full");
 }
 
 - (void)setInputText:(NSString *)text { _inputLabel.text = @""; }
@@ -451,7 +446,7 @@ static SKShapeNode *Bracket(void) {
 - (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {
     [_objectivePanel removeAllChildren];
     SKLabelNode *head = Label(13, SKLabelHorizontalAlignmentModeLeft);
-    head.text = @"OBJECTIVES";
+    head.text = L10n(@"hud.objectives");
     head.fontColor = HUDColor(0.6);
     [_objectivePanel addChild:head];
     _laidOut = CGSizeZero; // Heading metrics determine the matching top margin.
@@ -555,13 +550,13 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     _throttleFill.fillColor = f.boosting ? UIColorWithOpacity(UIBoost, 0.9) : HUDColor(0.75);
     SetBar(_boostFill, 3, 214 * f.boostEnergy);
     _boostFill.position = CGPointMake(-7, 3);
-    _throttleLabel.text = [NSString stringWithFormat:@"THR %3d%%%@", (int)lroundf(f.throttle * 100), f.boosting ? @" BOOST" : @""];
-    _speedLabel.text = [NSString stringWithFormat:@"%4d m/s", (int)lroundf(f.speed)];
+    _throttleLabel.text = L10nFormat(f.boosting ? @"hud.throttle_boost" : @"hud.throttle", (int)lroundf(f.throttle * 100));
+    _speedLabel.text = L10nFormat(@"hud.speed", (int)lroundf(f.speed));
     CGFloat conditionWidth = _touchLayout ? 80 : 200;
     UISetSkewedBar(_hullFill, conditionWidth * f.hull, 6);
     UISetSkewedBar(_shieldFill, conditionWidth * f.shield, 6);
     _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
-    _scoreLabel.text = [NSString stringWithFormat:@"KILLS %d   DEATHS %d", f.kills, f.deaths];
+    _scoreLabel.text = L10nFormat(@"hud.score", f.kills, f.deaths);
     for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _secondaryLabel, _secondaryRack])
         n.hidden = f.cockpit;
     _scoreLabel.hidden = YES;
@@ -624,11 +619,11 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
             }
             b.path = bp;
             CGPathRelease(bp);
-            NSString *dist = t.distance >= 1000 ? [NSString stringWithFormat:@"%.1fkm", t.distance / 1000.0]
-                                                : [NSString stringWithFormat:@"%dm", (int)t.distance];
+            NSString *dist = t.distance >= 1000 ? L10nFormat(@"units.km1_short", t.distance / 1000.0)
+                                                : L10nFormat(@"units.m_short", (int)t.distance);
             BOOL named = t.label && (t.selected || t.capital || nav);
             d.text = named ? [NSString stringWithFormat:@"%@ %@", t.label, dist] : dist;
-            if (t.selected) d.text = [@"TARGET / " stringByAppendingString:d.text];
+            if (t.selected) d.text = L10nFormat(@"hud.target_prefix", d.text);
             CGFloat half = nav ? 12 : (t.selected ? MAX(44, t.size) : t.size) * 0.5;
             d.position = CGPointMake(t.point.x + half + 6, t.point.y + half + (t.selected ? 10 : -4));
             if (t.selected) {
