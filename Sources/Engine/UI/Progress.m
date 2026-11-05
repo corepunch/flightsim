@@ -1,11 +1,19 @@
 #import "Progress.h"
+#import "FileSystem.h"
 #import "Story.h"
 #import "Assets.h"
 #import "Cvar.h"
 
-static NSString *const kUnlockedKey = @"SFMissionsUnlocked";
-static NSString *const kStartedKey = @"SFCampaignStarted";
-static NSString *const kCompletedKey = @"SFCampaignCompleted";
+// Progress is per game. The app's default game keeps the original keys, so
+// existing saves carry over; another game prefixes them with its name.
+static NSString *GameKey(NSString *key) {
+    NSString *game = FSGame(), *preferred = [NSBundle.mainBundle objectForInfoDictionaryKey:@"FSDefaultGame"];
+    return !game.length || [game isEqualToString:preferred] ? key : [NSString stringWithFormat:@"%@.%@", game, key];
+}
+#define kUnlockedKey GameKey(@"SFMissionsUnlocked")
+#define kStartedKey GameKey(@"SFCampaignStarted")
+#define kCompletedKey GameKey(@"SFCampaignCompleted")
+#define kStarsKey GameKey(@"SFMissionStars")
 
 static Cvar *UnlockAll(void) {
     static Cvar *c;
@@ -43,7 +51,7 @@ void ProgressMarkCompleted(NSUInteger index) {
 }
 
 NSUInteger ProgressBestStars(NSUInteger index) {
-    NSNumber *saved = [NSUserDefaults.standardUserDefaults dictionaryForKey:@"SFMissionStars"][[NSString stringWithFormat:@"%lu", (unsigned long)index]];
+    NSNumber *saved = [NSUserDefaults.standardUserDefaults dictionaryForKey:kStarsKey][[NSString stringWithFormat:@"%lu", (unsigned long)index]];
     if (saved) return MIN(3, saved.unsignedIntegerValue);
     // Preserve completion earned before per-mission ratings existed.
     NSInteger unlocked = [NSUserDefaults.standardUserDefaults integerForKey:kUnlockedKey];
@@ -55,7 +63,7 @@ void ProgressRecordResult(NSUInteger index, NSArray<NSString *> *results) {
     for (NSString *line in results) if ([line hasPrefix:@"+"]) done++;
     NSUInteger stars = results.count == 0 ? 1 : done == results.count ? 3 : done * 4 >= results.count * 3 ? 2 : 1;
     stars = MAX(stars, ProgressBestStars(index));
-    NSMutableDictionary *ratings = [[NSUserDefaults.standardUserDefaults dictionaryForKey:@"SFMissionStars"] mutableCopy] ?: [NSMutableDictionary dictionary];
+    NSMutableDictionary *ratings = [[NSUserDefaults.standardUserDefaults dictionaryForKey:kStarsKey] mutableCopy] ?: [NSMutableDictionary dictionary];
     ratings[[NSString stringWithFormat:@"%lu", (unsigned long)index]] = @(stars);
-    [NSUserDefaults.standardUserDefaults setObject:ratings forKey:@"SFMissionStars"];
+    [NSUserDefaults.standardUserDefaults setObject:ratings forKey:kStarsKey];
 }
