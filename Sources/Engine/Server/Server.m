@@ -335,9 +335,13 @@ static int CompareEntities(const void *a, const void *b) {
 }
 
 - (void)frame:(double)dt {
+    [self frame:dt paused:NO];
+}
+
+- (void)frame:(double)dt paused:(BOOL)paused {
     if (self.loading) return;   // packets wait in the transports
     [self readPackets];
-    if (_running) {
+    if (_running && !paused) {
         _accumulator = fmin(_accumulator + dt, 0.25);   // after a hitch, skip rather than spiral
         while (_accumulator >= TICK_DT) {
             _accumulator -= TICK_DT;
@@ -363,7 +367,7 @@ static int CompareEntities(const void *a, const void *b) {
         if (slot.state == SlotFree) continue;
         if (now - slot.channel.lastReceived > NET_TIMEOUT) { [self drop:(int)i reason:@"timed out"]; continue; }
         // Keep the channel moving between snapshots: reliable data, acks.
-        if (slot.state != SlotInGame || !_running)
+        if (slot.state != SlotInGame || !_running || paused)
             if (slot.channel.hasPendingReliable || now - slot.channel.lastSent > 0.25) [slot.channel transmit:nil];
     }
 }
