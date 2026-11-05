@@ -61,6 +61,10 @@
 
 - (void)step:(ShipInput)input dt:(float)dt {
     if (!_alive) return;
+    if (_disabled) {
+        ShipDrift(&move, dt);
+        return;
+    }
     ShipMove(&move, &params, input, dt);
     _laserEnergy = fminf(1, _laserEnergy + _gun.recharge * dt);
     _shield = fminf(_definition->shield, _shield + _definition->shieldRegen * dt);
@@ -73,6 +77,15 @@
     return move.origin + simd_act(move.orientation, local);
 }
 
+- (void)disable {
+    if (_disabled) return;
+    _disabled = YES;
+    _systems = 0;
+    // A slow tumble about a random axis, in ship space.
+    move.angularVelocity = randomUnit() * (0.12f + 0.2f * frand());
+    ShipDrift(&move, 0);
+}
+
 - (BOOL)takeIonDamage:(float)amount {
     BOOL shielded = self.shielded;
     if (_disabled) return shielded;
@@ -80,7 +93,7 @@
     float absorbed = fminf(_shield, drain);
     _shield -= absorbed;
     _systems -= (drain - absorbed) / ION_SHIELD_DRAIN;
-    if (_systems <= 0) { _systems = 0; _disabled = YES; }
+    if (_systems <= 0) [self disable];
     return shielded;
 }
 

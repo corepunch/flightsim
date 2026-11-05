@@ -176,7 +176,7 @@ NSString *GSecondaryShort(const ShipDef *def) { return OrRule(def ? def->seconda
 - (void)fireTorpedoFor:(GClient *)cl {
     GFighter *s = cl.ship;
     id target = cl.selected;
-    if (!s.alive) return;
+    if (!s.alive || s.disabled) return;
     const ShipSecondary *weapon = &s.definition->secondary;
     if (cl.torpedoes <= 0 || !BodyAlive(target)) {
         GCommand(cl, SVC_RADIO, MissionText(cl.torpedoes <= 0 ? @"combat.no_secondary" : @"combat.select_target", nil), @"", nil);

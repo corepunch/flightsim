@@ -102,6 +102,15 @@ static void CheckShipMove(void) {
     CHECK(s.boostDepleted && !s.boosting);
     for (int i = 0; i < 3; i++) ShipMove(&s, &params, (ShipInput){ 0, 0, 0, 1, true }, TICK_DT);
     CHECK(!s.boosting);
+
+    // A ship with no power coasts: heading and spin kept, speed bleeding off slowly.
+    ShipMoveReset(&s, 0, simd_quaternion(0.0f, simd_make_float3(0, 1, 0)));
+    s.angularVelocity = simd_make_float3(0.2f, 0, 0);
+    s.throttle = 1;
+    for (int i = 0; i < 30 * 10; i++) ShipDrift(&s, TICK_DT);
+    CHECK(s.throttle == 0 && !s.boosting && NEAR(simd_length(s.angularVelocity), 0.2f, 1e-6f));
+    CHECK(simd_length(s.velocity) > 30 && simd_length(s.velocity) < 60);     // 60 m/s at reset
+    CHECK(simd_dot(QuatForward(s.orientation), simd_make_float3(0, 0, -1)) < 0.9f);
 }
 
 static void CheckAimAssist(void) {
@@ -190,6 +199,7 @@ static void CheckPlayerState(void) {
     ps.params = params;
     ps.entity = 42;
     ps.alive = 1;
+    ps.disabled = 1;
     ps.hull = 0.8f;
     ps.shield = 0.3f;
     ps.missionTime = 123.5f;
@@ -206,7 +216,7 @@ static void CheckPlayerState(void) {
     // wire exactly, not approximately.
     CHECK(MoveEqual(&back.move, &ps.move));
     CHECK(memcmp(&back.params, &ps.params, sizeof ps.params) == 0);
-    CHECK(back.entity == ps.entity && back.alive == ps.alive && back.hull == ps.hull && back.shield == ps.shield);
+    CHECK(back.entity == ps.entity && back.alive == ps.alive && back.disabled == 1 && back.hull == ps.hull && back.shield == ps.shield);
     CHECK(back.missionTime == ps.missionTime && back.commandTime == ps.commandTime && back.lastCommand == ps.lastCommand);
     CHECK(memcmp(back.stats, ps.stats, sizeof ps.stats) == 0);
 }

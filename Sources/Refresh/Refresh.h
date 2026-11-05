@@ -22,6 +22,7 @@ typedef struct CockpitContact {
     BOOL capital;               // a big ship or station (bigger scanner blip)
     BOOL shielded;              // capital with its shield generators up
     BOOL attacking;             // in an attack run on the player
+    BOOL disabled;              // a fighter drifting with its systems down
     __unsafe_unretained id preview;           // Refresh preview handle for the target readout
     __unsafe_unretained NSString *name, *className, *cargo, *component;
 } CockpitContact;

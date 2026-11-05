@@ -175,7 +175,7 @@ void WritePlayerState(MsgWriter *w, const PlayerState *ps) {
     [w quat:m->orientation];
     [w f32:m->throttle];
     [w f32:m->boostEnergy];
-    [w u8:(uint8_t)(m->boosting | (m->boostDepleted << 1) | (ps->alive << 2))];
+    [w u8:(uint8_t)(m->boosting | (m->boostDepleted << 1) | (ps->alive << 2) | (ps->disabled << 3))];
     const float *params = (const float *)&ps->params;
     for (size_t i = 0; i < sizeof(ShipParams) / sizeof(float); i++) [w f32:params[i]];
     [w u16:ps->entity];
@@ -201,6 +201,7 @@ void ReadPlayerState(MsgReader *r, PlayerState *ps) {
     m->boosting = b & 1;
     m->boostDepleted = (b >> 1) & 1;
     ps->alive = (b >> 2) & 1;
+    ps->disabled = (b >> 3) & 1;
     float *params = (float *)&ps->params;
     for (size_t i = 0; i < sizeof(ShipParams) / sizeof(float); i++) params[i] = [r f32];
     ps->entity = [r u16];

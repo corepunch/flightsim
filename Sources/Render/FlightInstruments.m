@@ -113,8 +113,8 @@ static NSString *Short(NSString *text, NSUInteger length) {
     _closing.text = L10nFormat(@"units.closing", (int)lroundf(f.closingSpeed));
     _cargo.text = L10nFormat(@"cockpit.cargo", Short(c.cargo ?: L10n(@"cockpit.unknown"), 36));
     _component.text = L10nFormat(@"cockpit.part", Short(c.component ?: L10n(@"part.hull"), 36));
-    _mode.text = L10n(f.lock ? @"cockpit.mode_lock" : c.attacking ? @"cockpit.mode_attack" : c.capital ? (c.shielded ? @"cockpit.mode_shielded" : @"cockpit.mode_vulnerable") : @"cockpit.mode_tracking");
-    _mode.fontColor = UIColorWithOpacity(c.attacking ? UIRed : f.lock ? UIFriendly : UIAmber, 1);
+    _mode.text = L10n(f.lock ? @"cockpit.mode_lock" : c.disabled ? @"cockpit.mode_disabled" : c.attacking ? @"cockpit.mode_attack" : c.capital ? (c.shielded ? @"cockpit.mode_shielded" : @"cockpit.mode_vulnerable") : @"cockpit.mode_tracking");
+    _mode.fontColor = UIColorWithOpacity(c.attacking && !c.disabled ? UIRed : f.lock ? UIFriendly : UIAmber, 1);
     if (_preview) {
         if (_source != c.preview) {
             _source = c.preview;

@@ -313,11 +313,67 @@ static void IonRun(void) {
     Steps(server, @[c], (ControlState){0}, 45);
     CHECK(view.ionShots > 5 && view.ionBolts == view.bolts && view.bolts > 10);
     CHECK(drone.disabled && drone.alive && drone.hull == 3 && drone.shield == 0 && drone.systems == 0);
+    // The wire says so, and the AI leaves it alone unless ordered to destroy it.
+    const EntityState *seen = NULL;
+    Snapshot *snap = Latest(c);
+    for (NSUInteger i = 0; i < snap.entityCount; i++) if (snap.entityStates[i].number == drone.number) seen = &snap.entityStates[i];
+    CHECK(seen && (seen->flags & EF_DISABLED) && seen->hull == 1);
+    GPilot *hunter = [GPilot new];
+    hunter.ship = [GFighter fighterWithShip:@"wasp" ai:YES]; hunter.ship.team = TeamFriend;
+    hunter.ship.position = simd_make_float3(0, 0, -500);
+    CHECK([level pickTargetFor:hunter] == nil);
+    hunter.order = @"strike"; hunter.orderTarget = @"dummy";
+    CHECK([level pickTargetFor:hunter] == drone && [level pilot:hunter mayAttack:drone]);
+    hunter.order = nil; hunter.orderTarget = nil;
+    CHECK(![level pilot:hunter mayAttack:drone]);
+    CHECK(simd_length(drone->move.angularVelocity) > 0.1f && simd_length(drone->move.angularVelocity) < 0.35f);
     [level damageShip:drone amount:10 by:nil shake:0];
     CHECK(!drone.alive);
     [[Cvar find:@"g_aimAssist"] reset];
     [c disconnect]; [server frame:0]; [server stop];
     printf("PASS ion gun: %lu ion bolts, drone disabled with its hull whole, lasers still destroy it\n", (unsigned long)view.ionBolts);
+}
+// The player's own ship is disabled: commands are ignored, nothing fires, the
+// throttle is zero, and it coasts on, slowing a little and tumbling slowly.
+static void IonPlayer(void) {
+    routes = [NSMutableDictionary dictionary];
+    delay = 0; dropEvery = 0; blackout = NO; assertPendingPrediction = YES;
+    Server *server = [[Server alloc] initWithName:@"ion player"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-1"];
+    Spy *view = [Spy new];
+    view.predictedVelocities = [NSMutableArray array]; view.serverVelocities = [NSMutableArray array];
+    Client *c = [[Client alloc] initWithView:(ClientView *)view];
+    __weak Client *weak = c; c.gamestateHandler = ^{ [weak begin]; };
+    [c connectTo:[NetAddress loopback:1] transport:[Link port:10] name:@"pilot"];
+    Steps(server, @[c], (ControlState){ .throttle = 1 }, 150);
+    GFighter *me = nil;
+    for (GFighter *f in [level fighters]) if (f.client) me = f;
+    CHECK(me && me.alive && !me.disabled && !Latest(c).ps.disabled);
+    NSUInteger bolts = view.bolts;
+    [me takeIonDamage:100];
+    CHECK(me.disabled && me.alive && me.hull == me.definition->hull);
+    float speed0 = simd_length(me.velocity);
+    simd_float3 forward0 = me.forward;
+    CHECK(speed0 > 50);
+    // The first frame is predicted from a snapshot that still says flying: one tolerated correction.
+    assertPendingPrediction = NO;
+    Steps(server, @[c], (ControlState){ .throttle = 1, .pitch = 1, .roll = 1, .boost = YES, .fire = YES }, 3);
+    assertPendingPrediction = YES;
+    NSUInteger shots = view.shots;      // the client stops predicting shots once the snapshot says disabled
+    Steps(server, @[c], (ControlState){ .throttle = 1, .pitch = 1, .roll = 1, .boost = YES, .fire = YES }, 57);
+    PlayerState ps = Latest(c).ps;
+    float speed1 = simd_length(me.velocity);
+    CHECK(ps.disabled && ps.alive && ps.move.throttle == 0 && !ps.move.boosting);
+    CHECK(speed1 < speed0 && speed1 > speed0 * 0.8f);              // coasts, bleeding off slowly
+    float w = simd_length(ps.move.angularVelocity);
+    CHECK(w > 0.1f && w < 0.35f && simd_dot(me.forward, forward0) < 0.9999f);   // a slow tumble, not the stick
+    CHECK(view.shots == shots && view.bolts == bolts);             // no shots, predicted or real
+    CHECK(me.laserEnergy >= 0);
+    float after = me.shield;
+    Steps(server, @[c], (ControlState){0}, 60);
+    CHECK(me.shield == after);                                     // no recharge
+    [c disconnect]; [server frame:0]; [server stop];
+    puts("PASS disabled player ship: commands ignored, no fire, coasts and tumbles, flag on the wire");
 }
 static void UDPSmoke(void) {
     assertPendingPrediction = YES;
@@ -349,6 +405,7 @@ int main(int argc, const char **argv) { @autoreleasepool {
     printf("PASS %lu pending-input prediction comparisons against subsequent authority\n", (unsigned long)predictionChecks);
     AimAssistCheck();
     IonRun();
+    IonPlayer();
     UDPSmoke();
     puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;

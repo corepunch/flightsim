@@ -314,10 +314,10 @@ static const double kNetInterpDelay = TICK_DT * 3;
 // (smoothed) correction.
 - (BOOL)predictFrom:(Snapshot *)s into:(ShipMoveState *)out {
     // The autopilot (a game cvar, visible here on a listen server) flies on
-    // the server and ignores our commands.
+    // the server and ignores our commands; so does the server with a disabled ship.
     BOOL disabled = !_predict.boolValue || [Cvar valueOf:@"g_autopilot"] != 0;
     PlayerState ps = s.ps;
-    if (disabled || !s || !ps.alive || !ps.entity || _sequence - ps.lastCommand >= CMD_BACKUP) return NO;
+    if (disabled || !s || !ps.alive || ps.disabled || !ps.entity || _sequence - ps.lastCommand >= CMD_BACKUP) return NO;
     ShipMoveState m = ps.move;
     for (uint32_t q = ps.lastCommand + 1; q <= _sequence; q++) {
         const UserCmd *c = &_cmds[q % CMD_BACKUP];

@@ -133,6 +133,7 @@ enum {
     EF_MINE       = 1 << 4,     // prop that is a danger to fly near
     EF_ATTACKING  = 1 << 5,     // AI fighter on an attack run at `target`
     EF_SCANNED    = 1 << 6,     // cargo manifest identified
+    EF_DISABLED   = 1 << 7,     // fighter: systems down by ion fire; adrift, not firing
 };
 
 // One visible thing, as of the end of a server tick.
@@ -203,6 +204,7 @@ typedef struct {
     uint16_t model;             // own ship's model, relative to CS_MODELS
     uint8_t team;
     uint8_t alive;
+    uint8_t disabled;           // systems down: the server flies the ship, commands are ignored
     float hull, shield;
     float missionTime;
     int16_t stats[MAX_STATS];
@@ -756,6 +758,8 @@ typedef struct {
 
 void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput in, float dt);
 void ShipMoveReset(ShipMoveState *s, simd_float3 origin, simd_quatf orientation);
+// A ship with no power: it keeps its heading and spin, and its speed bleeds off slowly.
+void ShipDrift(ShipMoveState *s, float dt);
 
 static inline ShipInput ShipInputFromCmd(const UserCmd *c) {
     return (ShipInput){ c->pitch, c->yaw, c->roll, c->throttle, (c->buttons & BUTTON_BOOST) != 0 };

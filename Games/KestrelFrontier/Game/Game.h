@@ -74,7 +74,12 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic, readonly) BOOL shielded;           // the shield still stops a hit
 @property (nonatomic) float systems;                     // ion damage left before it is disabled, up to the ship's
 @property (nonatomic, readonly) float systemsFraction;   // 0..1 of the ship's
-@property (nonatomic) BOOL disabled;                     // systems down: alive, adrift, helpless
+// Systems down by ion fire: the ship is alive and targetable but helpless. It
+// cannot fire, boost or steer, its throttle is zero, it coasts and tumbles
+// slowly, its shield no longer recharges, and its AI pilot stops thinking.
+// Only an ion hit sets it (-disable); -resetAt: clears it.
+@property (nonatomic, readonly) BOOL disabled;
+- (void)disable;
 @property (nonatomic) BOOL alive;
 @property (nonatomic) BOOL departed;              // left the level alive (jumped out or docked); not alive
 @property (nonatomic) double lastShot;
@@ -284,6 +289,8 @@ extern GWorld *level;
 
 @interface GWorld (AI)
 - (void)thinkPilot:(GPilot *)p dt:(float)dt;
+- (id)pickTargetFor:(GPilot *)p;                    // nil: nothing it may attack (disabled fighters are spared)
+- (BOOL)pilot:(GPilot *)p mayAttack:(id)target;       // NO for a disabled fighter, unless the pilot is ordered to destroy it
 - (void)fireTurrets:(GCapital *)c;
 - (void)checkMine:(GCapital *)m;
 @end
