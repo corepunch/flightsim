@@ -84,18 +84,46 @@ def validate_mission(mission):
             callsigns = [name] if count == 1 else [f"{name} {seat + 2}" for seat in range(count)]
         if wave["team"] == "friend":
             friendly_pilots.extend(callsigns or [])
-    if casualty := mission.get("casualty"):
-        assert friendly_pilots.count(casualty["pilot"]) == 1, (index, casualty)
-        assert casualty["after"] in objective_ids and casualty["text"].strip() and casualty["from"].strip(), (index, casualty)
     for objective in objectives:
         assert set(objective.get("after", [])) <= objective_ids - {objective["id"]}, (index, objective)
         assert set(objective.get("targets", [])) <= units, (index, objective)
         assert set(objective.get("navs", [])) <= navs, (index, objective)
-        assert set(objective.get("onComplete", {}).get("setTeam", {})) <= units, (index, objective)
-    for trigger in arrivals + mission["messages"]:
-        assert "after" not in trigger or trigger["after"] in objective_ids, (index, trigger)
-        assert "nav" not in trigger or trigger["nav"] in navs, (index, trigger)
-        assert "spawn" not in trigger or trigger["spawn"] in units, (index, trigger)
+    # Events (level format v2): every name they use exists, and every held
+    # unit has an event that spawns it. The mission runtime checks types,
+    # triggers and actions (Tools/UnitChecks.m).
+    named = units | set(friendly_pilots)
+    held = {item["id"] for item in arrivals if item.get("hold")}
+    spawned_by_events = set()
+
+    def check_when(when):
+        for key, value in when.items():
+            if key in ("all", "any"):
+                for sub in value:
+                    check_when(sub)
+            elif key == "not":
+                check_when(value)
+            elif key == "objective":
+                assert value in objective_ids, (index, when)
+            elif key == "nav":
+                assert value in navs, (index, when)
+            elif key in ("spawned", "destroyed"):
+                assert set([value] if isinstance(value, str) else value) <= named, (index, when)
+
+    for event in mission.get("events", []):
+        check_when(event["when"])
+        for action in event["do"]:
+            (kind, value), = action.items()
+            if kind == "spawn":
+                names = [value] if isinstance(value, str) else value
+                assert set(names) <= held, (index, action)
+                spawned_by_events.update(names)
+            elif kind == "radio":
+                assert value["text"].strip() and value["from"].strip(), (index, action)
+            elif kind == "set_team":
+                assert set(value) <= named, (index, action)
+            elif kind == "destroy":
+                assert set([value] if isinstance(value, str) else value) <= named, (index, action)
+    assert held <= spawned_by_events, (index, held - spawned_by_events)
     return len(scene["lines"]) + len(epilogue), cast | {line["portrait"] for line in epilogue}
 
 

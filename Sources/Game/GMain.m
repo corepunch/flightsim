@@ -164,7 +164,6 @@ static void RunFrame(void) {
     w->_time += dt;
     if (w->_over) return;
 
-    w->_missionTime += dt;
     for (GClient *cl in w->_clients) {
         if (!cl.inGame || !cl.autopilot || !cl.ship.alive) continue;
         simd_float3 before = cl.ship.position;
@@ -238,7 +237,6 @@ static void ClientBegin(int index) {
     cl.inGame = YES;
     memset(&cl->ps, 0, sizeof cl->ps);
     [w spawnPlayer:cl];
-    w->_objectivesDirty = YES;
     BuildPlayerState(cl);
     [w buildEntityStates];
 }

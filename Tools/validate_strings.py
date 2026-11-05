@@ -21,8 +21,8 @@ STYLE = ROOT / "Sources/Engine/UI/UIStyle.h"
 # Catalog keys are dotted, under one of these areas. Any string literal of
 # that shape in the sources counts as a key, so keys picked by a ternary or
 # from an array are covered too.
-AREAS = ("app", "audio", "briefing", "browser", "cockpit", "controls", "debrief", "game", "hud",
-         "input", "loading", "menu", "missions", "net", "part", "pause", "story", "touch", "units")
+AREAS = ("app", "audio", "briefing", "browser", "cockpit", "combat", "controls", "debrief", "game", "hud",
+         "input", "loading", "menu", "mission", "missions", "net", "part", "pause", "story", "touch", "units")
 KEY = re.compile(r'@"((?:%s)(?:\.[a-z0-9_]+)+)"' % "|".join(AREAS))
 FILES = (".dylib", ".json", ".png", ".jpg", ".cfg")   # file names that look like keys
 # Keys built at run time from a prefix: the catalog must hold these.

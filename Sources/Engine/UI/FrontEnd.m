@@ -110,6 +110,9 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 }
 
 - (void)levelEnded:(NSUInteger)index success:(BOOL)success results:(NSArray<NSString *> *)results remote:(BOOL)remote {
+    NSMutableArray *shown = [NSMutableArray array];
+    for (NSString *line in results) [shown addObject:L10nExpand(line)];
+    results = shown;
     if (success) { ProgressRecordResult(index, results); ProgressMarkCompleted(index); }
     [_briefing showDebrief:index success:success results:results];
     [self present:FrontScreenCampaign];

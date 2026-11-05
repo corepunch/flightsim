@@ -23,6 +23,12 @@ NSArray<NSString *> *L10nList(NSString *key);
 // compile time, so keep the arguments in the order the English string uses.
 NSString *L10nFormat(NSString *key, ...);
 
+// Expands catalog tokens in text that came from the server: "{#key}" or
+// "{#key<US>arg<US>arg}" (US = U+001F), anywhere in the string. The key's
+// string takes the arguments as %@ in order. Text without tokens comes back
+// unchanged, so level text written in one language passes through.
+NSString *L10nExpand(NSString *text);
+
 // Whether the current locale's own catalog defines `key` (no fallback).
 BOOL L10nHasOwn(NSString *key);
 NSString *L10nLocale(void);

@@ -6,6 +6,7 @@
 #include "SharedMath.h"
 #include "ShipMove.h"
 #import "Assets.h"
+#import "MissionRunner.h"
 
 extern GameImport gi;
 
@@ -44,12 +45,6 @@ static inline NSString *GTeamRelations(void) {
 
 typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition };
 
-typedef NS_ENUM(NSInteger, ObjectiveState) {
-    ObjectiveHidden,     // waiting for its "after" objectives or for its targets to arrive
-    ObjectiveActive,
-    ObjectiveComplete,
-    ObjectiveFailed,
-};
 
 @class GClient;
 
@@ -100,7 +95,6 @@ typedef NS_ENUM(NSInteger, ObjectiveState) {
 @property (nonatomic) simd_float3 local;        // centre, capital space
 @property (nonatomic) simd_float3 muzzle;       // turrets: barrel direction, capital space
 @property (nonatomic) double lastShot;
-+ (NSString *)nameForKind:(SubsystemKind)kind;
 @end
 
 // A capital ship, station, prop or rock. Follows an optional path, carries
@@ -175,20 +169,6 @@ typedef NS_ENUM(NSInteger, ObjectiveState) {
 @property (nonatomic, weak) GSubsystem *aim;
 @end
 
-// One objective from missions.json, with its runtime state. Types: reach,
-// destroy, protect, escort, survive, scan, collect, disable.
-@interface GObjective : NSObject
-@property (nonatomic, copy) NSDictionary *def;
-@property (nonatomic, readonly) NSString *identifier, *type, *text;
-@property (nonatomic, readonly) NSArray<NSString *> *targets, *navs, *after;
-@property (nonatomic, readonly) BOOL optional;
-@property (nonatomic) ObjectiveState state;
-@property (nonatomic) double activatedAt;
-@property (nonatomic) NSUInteger navIndex;
-@property (nonatomic, copy) NSString *progress;
-@property (nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *scanTime;
-@end
-
 @interface GClient : NSObject {
 @public
     PlayerState ps;
@@ -233,18 +213,13 @@ typedef struct {
     BOOL _running, _over;
     NSUInteger _missionIndex;
     NSDictionary *_mission;
-    double _missionTime, _endAt;
-    BOOL _success;
-    NSArray<GObjective *> *_objectives;
-    NSMutableArray<NSDictionary *> *_pendingWaves, *_pendingEntities, *_pendingMessages;
-    NSDictionary *_pendingCasualty;
-    NSMutableSet<NSString *> *_spawned, *_navsVisited;
+    double _missionTime;
+    MissionRunner *_runner;                 // objectives, events and rules (engine runtime)
+    NSMutableDictionary<NSString *, NSDictionary *> *_held;   // "hold" entities and waves, by id, until spawned
     NSMutableDictionary<NSString *, NSValue *> *_navs;
     NSMutableDictionary<NSString *, NSString *> *_navNames;
     NSMutableArray<NSString *> *_navOrder;
     NSString *_currentNav;
-    NSString *_objectiveSummary;
-    BOOL _objectivesDirty;
     NSMutableArray *_explosionQueue;    // [time, GCapital, last] break-up sequences
     int _startTorpedoes;
     int _fighterClassNames[TeamCount];  // CS_STRINGS indices for "<faction> fighter"
@@ -265,7 +240,7 @@ extern GWorld *level;
 - (void)clearWorld;
 - (void)spawnPlayer:(GClient *)client;
 - (void)updateMission:(float)dt;
-- (NSArray *)unitsFor:(NSString *)name;
+- (NSArray *)unitsFor:(NSString *)name;      // by entity id, group, wave or callsign
 - (simd_float3)navPosition:(NSString *)nav;
 - (void)jumpFlashAt:(simd_float3)p scale:(float)scale;
 @end

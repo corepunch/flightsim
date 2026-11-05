@@ -293,6 +293,10 @@ typedef struct {
 }
 
 - (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c {
+    // The server sends catalog tokens; show them in the player's language.
+    a = L10nExpand(a);
+    if (type != SVC_BANNER && type != SVC_OBJECTIVES) b = L10nExpand(b);
+    c = L10nExpand(c);
     switch (type) {
         case SVC_RADIO:
             [[GameAudio shared] play:b.length ? @"ui-panel" : @"ui-alert" gain:b.length ? 0.25f : 0.7f pan:0];

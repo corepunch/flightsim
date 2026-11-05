@@ -270,6 +270,25 @@
     "briefing.location": "%@  /  SD %@",
     "briefing.map_player": "LANCER 1",
     "briefing.map_minefield": "MINEFIELD",
-    "briefing.map_wave": "%@x %@"
+    "briefing.map_wave": "%@x %@",
+    "combat.turret_destroyed": "%@ turret destroyed",
+    "combat.engine_destroyed": "%@ engine destroyed",
+    "combat.shield_destroyed": "%@ shield gen destroyed",
+    "combat.core_destroyed": "%@ reactor destroyed",
+    "combat.no_secondary": "No torpedoes left",
+    "combat.select_target": "Select a target to launch a torpedo",
+    "combat.out_of_range": "Target out of torpedo range",
+    "combat.no_targets": "No targets in sight",
+    "mission.arrived": "%@ arrived",
+    "mission.scanning": "SCANNING %@  %@%%",
+    "mission.scanned": "%@ scanned",
+    "mission.collected": "%@ aboard",
+    "mission.objective_complete": "OBJECTIVE COMPLETE",
+    "mission.objective_failed": "OBJECTIVE FAILED",
+    "mission.new_objective": "New objective",
+    "mission.optional_objective": "Optional objective",
+    "mission.complete": "MISSION COMPLETE",
+    "mission.failed": "MISSION FAILED",
+    "mission.optional_suffix": " (optional)"
   }
 }

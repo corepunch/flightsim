@@ -97,8 +97,11 @@ class Project:
             if path.suffix == ".h":
                 continue
             settings = {}
+            # The mission runtime is engine code that links into game modules
+            # (Makefile: MISSION_SOURCES), built like game code.
+            mission = relative.parts[:3] == ("Sources", "Engine", "Mission")
             if path.suffix == ".m":
-                prefix = f'Sources/{relative.parts[1]}/Prefix.h'
+                prefix = f'Sources/{"Game" if mission else relative.parts[1]}/Prefix.h'
                 if (ROOT / prefix).is_file():
                     settings["COMPILER_FLAGS"] = f'-include "$(SRCROOT)/{prefix}"'
             fields = {"settings": settings} if settings else {}
@@ -106,9 +109,9 @@ class Project:
             for platform, files in sources.items():
                 if platform == "ios" and module == "Engine" and path.name in MAC_ONLY:
                     continue
-                if platform == "mac" and (module == "Game" or path.name in IOS_ONLY):
+                if platform == "mac" and (module == "Game" or mission or path.name in IOS_ONLY):
                     continue
-                if platform == "game" and module == "Engine":
+                if platform == "game" and module == "Engine" and not mission:
                     continue
                 files.append(self.add(f"compile/{platform}/{relative}", "PBXBuildFile",
                                       fileRef=reference, **fields))
