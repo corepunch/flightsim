@@ -320,7 +320,7 @@ typedef enum { OrderArgNone, OrderArgUnit, OrderArgNavs } OrderArg;
 static NSDictionary<NSString *, NSNumber *> *OrderVerbs(void) {
     return @{
         @"attack": @(OrderArgNone), @"attack-fighters": @(OrderArgNone), @"attack-capitals": @(OrderArgNone),
-        @"strike": @(OrderArgUnit), @"escort": @(OrderArgUnit), @"disable": @(OrderArgUnit),
+        @"strike": @(OrderArgUnit), @"escort": @(OrderArgUnit), @"disable": @(OrderArgUnit), @"board": @(OrderArgUnit),
         @"evade": @(OrderArgNone), @"ignore": @(OrderArgNone), @"patrol": @(OrderArgNavs),
     };
 }
@@ -364,6 +364,7 @@ static void ReadWave(NSDictionary *j, LevelWave *w, NSMutableArray *problems) {
     if (j[@"reinforcements"] && !reinforcements) [problems addObject:[what stringByAppendingString:@": \"reinforcements\" is not an object"]];
     w->reinforcements = MAX(0, JSONInt(reinforcements, @"count", 0));
     w->reinforcementDelay = fmaxf(0, JSONFloat(reinforcements, @"delay", 0));
+    w->dockSeconds = fmaxf(0, JSONFloat(j, @"dockSeconds", 10));
     w->skill = (LevelSkill)ReadName(j, @"skill", @{
         @"rookie": @(LevelSkillRookie), @"regular": @(LevelSkillRegular),
         @"veteran": @(LevelSkillVeteran), @"ace": @(LevelSkillAce),

@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 # Wave orders: verb -> what follows the colon (nothing, a unit, or navs).
 ORDERS = {'attack': None, 'attack-fighters': None, 'attack-capitals': None, 'evade': None, 'ignore': None,
-          'strike': 'unit', 'escort': 'unit', 'disable': 'unit', 'patrol': 'navs'}
+          'strike': 'unit', 'escort': 'unit', 'disable': 'unit', 'board': 'unit', 'patrol': 'navs'}
 CHAIN = CAST = PLAYER = PORTRAITS = ROOMS = None   # per game, set by load_game
 
 
@@ -190,7 +190,7 @@ def validate_mission(mission):
                 assert value in objective_ids, (index, when)
             elif key == "nav":
                 assert value in navs, (index, when)
-            elif key in ("spawned", "destroyed", "attacked", "scanned", "disabled"):
+            elif key in ("spawned", "destroyed", "attacked", "scanned", "disabled", "captured"):
                 assert set([value] if isinstance(value, str) else value) <= named, (index, when)
 
     for item in arrivals:

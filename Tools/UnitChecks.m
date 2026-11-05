@@ -365,7 +365,7 @@ static void CheckDefinitions(void) {
 @property (nonatomic, strong) NSString *missionKey, *missionName, *group;
 @property (nonatomic) simd_float3 missionPosition;
 @property (nonatomic) float missionRadius, missionHullFraction;
-@property (nonatomic) BOOL missionAlive, missionGone, missionAttacked, missionScanned, missionDisabled;
+@property (nonatomic) BOOL missionAlive, missionGone, missionAttacked, missionScanned, missionDisabled, missionCaptured;
 @property (nonatomic) NSUInteger turrets, turretsAlive;
 @end
 @implementation FakeUnit
@@ -614,6 +614,37 @@ static void CheckUnitStateTriggers(void) {
     LevelRelease(level);
 }
 
+// The captured trigger needs every unit of the name captured; the capture
+// objective completes then, and fails when a target dies first.
+static void CheckCapture(void) {
+    LevelDef *level = LevelCreate(@{
+        @"events": @[@{ @"when": @{ @"captured": @"prize" }, @"do": @[@{ @"set_flag": @"taken" }] }],
+        @"objectives": @[
+            @{ @"id": @"take", @"type": @"capture", @"targets": @[@"prize"], @"text": @"Capture the prize" },
+            @{ @"id": @"lost", @"type": @"capture", @"targets": @[@"other"], @"text": @"Capture the other" },
+        ],
+    });
+    CHECK([MissionRunner problemsWithLevel:level].count == 0);
+    CHECK([MissionRunner problemsWithLevel:LevelCreate(@{ @"objectives": @[@{ @"id": @"x", @"type": @"capture", @"text": @"?" }] })].count == 1);
+    FakeWorld *w = [FakeWorld new];
+    FakeUnit *a = Unit(@"a", @"prize", 0), *b = Unit(@"b", @"prize", 0), *other = Unit(@"o", @"other", 0);
+    [w.units addObjectsFromArray:@[a, b, other]];
+    w.runner = [[MissionRunner alloc] initWithLevel:level world:w];
+    [w.runner noteSpawned:@"prize"]; [w.runner noteSpawned:@"other"];
+    Run(w, 0.5f);
+    CHECK([w.runner objectiveNamed:@"take"].state == MissionObjectiveActive && ![w.runner flag:@"taken"]);
+    a.missionCaptured = YES;
+    Run(w, 0.1f);
+    CHECK([w.runner objectiveNamed:@"take"].state == MissionObjectiveActive && ![w.runner flag:@"taken"]);   // both are needed
+    b.missionCaptured = YES;
+    Run(w, 0.1f);
+    CHECK([w.runner objectiveNamed:@"take"].state == MissionObjectiveComplete && [w.runner flag:@"taken"]);
+    other.missionAlive = NO;
+    Run(w, 0.1f);
+    CHECK([w.runner objectiveNamed:@"lost"].state == MissionObjectiveFailed);
+    LevelRelease(level);
+}
+
 // "percent" on destroy and protect, a single craft named by callsign, and the
 // level's time limit.
 static void CheckQuantifiersAndTimeLimit(void) {
@@ -721,8 +752,10 @@ static void CheckMissionRuntime(void) {
         @{ @"id": @"a", @"ship": @"wasp", @"order": @"attack-fighters" }, @{ @"id": @"b", @"ship": @"wasp", @"order": @"attack-capitals" },
         @{ @"id": @"c", @"ship": @"wasp", @"order": @"disable:base" }, @{ @"id": @"d", @"ship": @"wasp", @"order": @"evade" },
         @{ @"id": @"e", @"ship": @"wasp", @"order": @"ignore" }, @{ @"id": @"f", @"ship": @"wasp", @"order": @"patrol:n1,n2" },
-        @{ @"id": @"g", @"ship": @"wasp", @"order": @"strike:a" }, @{ @"id": @"h", @"ship": @"wasp", @"name": @"Red", @"count": @2, @"order": @"escort:Red 2" } ] });
+        @{ @"id": @"g", @"ship": @"wasp", @"order": @"strike:a" }, @{ @"id": @"h", @"ship": @"wasp", @"name": @"Red", @"count": @2, @"order": @"escort:Red 2" },
+        @{ @"id": @"i", @"ship": @"wasp", @"order": @"board:base", @"dockSeconds": @4 } ] });
     CHECK(orders->problems.count == 0);
+    CHECK(orders->waves[8].dockSeconds == 4 && orders->waves[0].dockSeconds == 10);
     CHECK([orders->waves[5].order isEqualToString:@"patrol"] && [orders->waves[5].orderTarget isEqualToString:@"n1,n2"]);
     LevelRelease(orders);
     LevelDef *wrong = LevelCreate(@{ @"navs": navs, @"entities": units, @"waves": @[
@@ -770,6 +803,7 @@ static void CheckMissionRuntime(void) {
 
     CheckArrivals();
     CheckUnitStateTriggers();
+    CheckCapture();
     CheckQuantifiersAndTimeLimit();
 
     // Tokens expand on the client.

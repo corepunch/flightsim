@@ -75,6 +75,7 @@ static NSString *PartKindName(SubsystemKind kind) {
 - (BOOL)missionAttacked { return self.attacked; }
 - (BOOL)missionScanned { return NO; }       // only capitals carry cargo to scan
 - (BOOL)missionDisabled { return self.disabled; }
+- (BOOL)missionCaptured { return self.captured; }
 - (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly { return 0; }
 @end
 
@@ -91,6 +92,7 @@ static NSString *PartKindName(SubsystemKind kind) {
 - (BOOL)missionAttacked { return self.attacked; }
 - (BOOL)missionScanned { return self.scanned; }
 - (BOOL)missionDisabled { return self.enginesDead; }
+- (BOOL)missionCaptured { return self.captured; }
 - (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly {
     for (SubsystemKind k = SubsystemTurret; k <= SubsystemCore; k++)
         if ([PartKindName(k) isEqualToString:kind]) return aliveOnly ? [self aliveCount:k] : [self totalCount:k];
@@ -327,6 +329,7 @@ static simd_float3 FormationSlot(LevelFormation f, int i) {
         p.orderTarget = w->orderTarget;
         p.mothership = w->mothership;
         p.home = pos;
+        p.dockSeconds = w->dockSeconds;
         p.wave = w->identifier;
         if (i < w->callsigns.count) p.callsign = w->callsigns[i];
         else if (w->name) p.callsign = count > 1 ? [NSString stringWithFormat:@"%@ %d", w->name, i + 2] : w->name;
@@ -342,6 +345,17 @@ static simd_float3 FormationSlot(LevelFormation f, int i) {
     if (jump) [self jumpFlashAt:s.position scale:0.4f];
     s.alive = NO;
     s.departed = YES;
+}
+
+- (void)captureUnit:(id)target by:(GFighter *)boarder {
+    if ([target isKindOfClass:GCapital.class]) {
+        ((GCapital *)target).team = boarder.team;
+        ((GCapital *)target).captured = YES;
+    } else {
+        ((GFighter *)target).team = boarder.team;
+        ((GFighter *)target).captured = YES;
+    }
+    [self missionRadio:MissionText(@"mission.captured", @[((id<MissionUnit>)target).missionName ?: @""]) from:@""];
 }
 
 - (void)buildField:(const LevelField *)f {

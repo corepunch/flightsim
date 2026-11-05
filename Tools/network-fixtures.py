@@ -56,6 +56,13 @@ if len(sys.argv) == 2:
                          entities=[dict(id='cruiser', asset='Corvette', team='enemy', pos=[0, 0, -2000])],
                          waves=[dict(id='drone', ship='dummy', count=1, team='enemy', pos=[0, 0, -600], spread=0)],
                          objectives=[dict(id='hold', type='survive', text='Hold position', seconds=10000)]))
+    # Boarding: two friendly boarders sent to an enemy dummy fighter; capturing it completes the objective.
+    missions.append(dict(name='check-board', seed=6, player=dict(ship='wasp', pos=[0, 0, 0], facing=[0, 0, -1]),
+                         waves=[dict(id='drone', ship='dummy', count=1, team='enemy', pos=[0, 0, -600], spread=0),
+                                dict(id='shuttles', ship='wasp', count=2, team='friend', pos=[0, 0, -250], spread=40,
+                                     order='board:drone', dockSeconds=6)],
+                         objectives=[dict(id='take', type='capture', text='Capture the drone', targets=['drone']),
+                                     dict(id='hold', type='survive', text='Hold position', seconds=10000)]))
     (game / 'Levels').mkdir()
     for mission in missions:
         (game / 'Levels' / (mission['name'] + '.json')).write_text(json.dumps(mission))

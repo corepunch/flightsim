@@ -280,6 +280,7 @@
     "mission.scanning": "SCANNING %@  %@%%",
     "mission.scanned": "%@ scanned",
     "mission.collected": "%@ aboard",
+    "mission.captured": "%@ captured",
     "mission.objective_complete": "OBJECTIVE COMPLETE",
     "mission.objective_failed": "OBJECTIVE FAILED",
     "mission.new_objective": "New objective",

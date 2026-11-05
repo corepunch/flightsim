@@ -456,6 +456,60 @@ static void OrdersRun(void) {
     [server stop];
     puts("PASS orders: attack-fighters/-capitals pick their kind, evade and ignore never fire, patrol loops its navs, disable stops at disabled");
 }
+// Boarders (a "board" wave) wait while the target is whole, then dock with it
+// once disabled and capture it after dockSeconds; losing a docking boarder
+// restarts the count for the other.
+static NSArray<GPilot *> *Boarders(void) {
+    NSMutableArray *b = [NSMutableArray array];
+    for (GPilot *p in level->_pilots) if ([p.order isEqualToString:@"board"]) [b addObject:p];
+    return b;
+}
+static GFighter *BoardTarget(void) {
+    for (GPilot *p in level->_pilots) if ([p.wave isEqualToString:@"drone"]) return p.ship;
+    return nil;
+}
+static MissionObjective *TakeObjective(void) { return [level->_runner objectiveNamed:@"take"]; }
+static void BoardRun(void) {
+    routes = [NSMutableDictionary dictionary];
+    Server *server = [[Server alloc] initWithName:@"board"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-board"];
+    GFighter *drone = BoardTarget();
+    CHECK(drone && Boarders().count == 2 && Boarders()[0].dockSeconds == 6);
+    // Whole: the boarders keep close but never dock, fire or capture.
+    Steps(server, @[], (ControlState){0}, 450);
+    CHECK(!drone.captured && !drone.disabled && drone.team == TeamEnemy && drone.hull == 3 && FriendlyBolts() == 0);
+    for (GPilot *p in Boarders()) CHECK(p.dockSince == 0 && simd_distance(p.ship.position, drone.position) < 700);
+    // Disabled: they close in; not captured before the count is up, captured after.
+    [drone disable];
+    double disabledAt = level->_time;
+    Steps(server, @[], (ControlState){0}, 60);
+    CHECK(!drone.captured);
+    for (int i = 0; i < 900 && !drone.captured; i++) Steps(server, @[], (ControlState){0}, 1);
+    CHECK(drone.captured && drone.disabled && drone.alive && drone.team == TeamFriend);
+    CHECK(level->_time - disabledAt > 6);
+    for (GPilot *p in Boarders()) CHECK(simd_distance(p.ship.position, drone.position) < 70 || p.dockSince == 0);
+    CHECK([(id<MissionUnit>)drone missionCaptured]);
+    Steps(server, @[], (ControlState){0}, 30);
+    CHECK(TakeObjective().state == MissionObjectiveComplete);
+    [server stop];
+
+    // Again, but one boarder dies mid-dock: the other starts over.
+    [server addTransport:[Link port:2]]; [server spawnLevel:@"check-board"];
+    drone = BoardTarget();
+    [drone disable];
+    NSArray<GPilot *> *boarders = Boarders();
+    for (int i = 0; i < 900 && !(boarders[0].dockSince > 0 && boarders[1].dockSince > 0); i++) Steps(server, @[], (ControlState){0}, 1);
+    CHECK(boarders[0].dockSince > 0 && boarders[1].dockSince > 0 && !drone.captured);
+    double lostAt = level->_time;
+    [level damageShip:boarders[0].ship amount:10 by:nil shake:0];
+    CHECK(!boarders[0].ship.alive);
+    Steps(server, @[], (ControlState){0}, 2);
+    CHECK(boarders[1].dockSince >= lostAt && boarders[0].dockSince == 0);
+    for (int i = 0; i < 900 && !drone.captured; i++) Steps(server, @[], (ControlState){0}, 1);
+    CHECK(drone.captured && level->_time - lostAt >= 6);
+    [server stop];
+    puts("PASS boarding: boarders wait for a whole target, capture a disabled one after dockSeconds, restart when one is lost, objective completes");
+}
 static void UDPSmoke(void) {
     assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
@@ -488,6 +542,7 @@ int main(int argc, const char **argv) { @autoreleasepool {
     IonRun();
     IonPlayer();
     OrdersRun();
+    BoardRun();
     UDPSmoke();
     puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;
