@@ -56,7 +56,7 @@ typedef struct {
     BOOL boresightVisible;
     CGPoint mouseStick;     // -1..1
     BOOL mouseCaptured;
-    float throttle, boostEnergy, speed, hull, shield;
+    float throttle, boostEnergy, speed;
     BOOL boosting;
     int kills, deaths;
     BOOL playerDead;
@@ -96,6 +96,9 @@ typedef NSEdgeInsets HUDInsets;
 @interface HUD : SKScene
 @property (atomic) HUDInsets contentInsets;
 @property (nonatomic) BOOL touchLayout;
+// For checks: the condition rows on the right, bottom up (hull, shield,
+// laser), then the secondary rack above them.
+@property (nonatomic, readonly) NSArray<SKNode *> *conditionRows;
 
 - (void)updateFrame:(HUDFrame)frame targets:(const HUDTarget *)targets count:(NSUInteger)count;
 - (void)updateInstruments:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count cockpit:(BOOL)cockpit;

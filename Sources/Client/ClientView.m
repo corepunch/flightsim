@@ -533,8 +533,6 @@ static float Ease(float value, float target, float rate, float dt) {
     f.boosting = ps->move.boosting;
     f.boostEnergy = ps->move.boostEnergy;
     f.speed = simd_length(ps->move.velocity);
-    f.hull = ps->hull;
-    f.shield = ps->shield;
     f.kills = ps->stats[STAT_KILLS];
     f.deaths = ps->stats[STAT_DEATHS];
     f.playerDead = !ps->alive;

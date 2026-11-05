@@ -44,14 +44,56 @@ static SKShapeNode *Bracket(void) {
     return n;
 }
 
+#pragma mark - Condition bars
+
+// One row of the ship's condition on the right: a label, then a skewed bar.
+// What the next second of recharge adds is drawn just ahead of the fill in a
+// fainter shade of the same colour, so a fast-filling bar shows a long chunk.
+@interface ConditionBar : SKNode
+- (instancetype)initWithTitle:(NSString *)title;
+@property (nonatomic) CGFloat width;                // of a full bar, points
+- (void)setLevel:(float)level recharge:(float)perSecond color:(SKColor *)color;
+@end
+
+@implementation ConditionBar {
+    SKShapeNode *_fill, *_chunk;
+}
+
+- (instancetype)initWithTitle:(NSString *)title {
+    if ((self = [super init])) {
+        SKLabelNode *label = Label(12, SKLabelHorizontalAlignmentModeRight);
+        label.text = title;
+        label.position = CGPointMake(-10, 3);
+        [self addChild:label];
+        _fill = [SKShapeNode node];
+        _chunk = [SKShapeNode node];
+        for (SKShapeNode *n in @[_fill, _chunk]) { n.strokeColor = SKColor.clearColor; [self addChild:n]; }
+        _width = 200;
+    }
+    return self;
+}
+
+- (void)setLevel:(float)level recharge:(float)perSecond color:(SKColor *)color {
+    level = clampf(level, 0, 1);
+    float ahead = fminf(1 - level, fmaxf(perSecond, 0));
+    UISetSkewedBar(_fill, _width * level, 6);
+    _fill.fillColor = color;
+    _chunk.hidden = ahead < 0.001f;
+    _chunk.position = CGPointMake(_width * level, 0);
+    UISetSkewedBar(_chunk, _width * ahead, 6);
+    _chunk.fillColor = [color colorWithAlphaComponent:CGColorGetAlpha(color.CGColor) * 0.35];
+}
+
+@end
+
 @implementation HUD {
     SKNode *_root;
     TargetReadout *_targetReadout;
     SensorScope *_forwardScope, *_rearScope;
-    SKLabelNode *_laserLabel, *_rechargeLabel;
+    ConditionBar *_hullBar, *_shieldBar, *_laserBar;     // bottom up, under the secondary rack
     SKShapeNode *_boresight, *_cursor, *_cursorLine, *_ring;
-    SKShapeNode *_throttleFrame, *_throttleFill, *_boostFill, *_hullFill, *_shieldFill;
-    SKLabelNode *_speedLabel, *_throttleLabel, *_scoreLabel, *_inputLabel, *_deadLabel, *_hullLabel, *_shieldLabel;
+    SKShapeNode *_throttleFrame, *_throttleFill, *_boostFill;
+    SKLabelNode *_speedLabel, *_throttleLabel, *_scoreLabel, *_inputLabel, *_deadLabel;
     SKNode *_help;
     SKShapeNode *_damage;
     NSMutableArray<SKShapeNode *> *_brackets, *_arrows, *_leads;
@@ -89,9 +131,6 @@ static SKShapeNode *Bracket(void) {
     for (SKNode *instrument in @[_targetReadout, _forwardScope, _rearScope]) {
         instrument.zPosition = 25; [_root addChild:instrument];
     }
-    _laserLabel = Label(12, SKLabelHorizontalAlignmentModeLeft);
-    _rechargeLabel = Label(10, SKLabelHorizontalAlignmentModeRight);
-    [_root addChild:_laserLabel]; [_root addChild:_rechargeLabel];
     _lensFlare = [LensFlare new];
     [_root addChild:_lensFlare];
 
@@ -158,20 +197,10 @@ static SKShapeNode *Bracket(void) {
     _speedLabel = Label(22, SKLabelHorizontalAlignmentModeLeft);
     [_root addChild:_speedLabel];
 
-    _hullFill = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 1, 6)];
-    _hullFill.fillColor = HUDColor(0.8);
-    _hullFill.strokeColor = [SKColor clearColor];
-    [_root addChild:_hullFill];
-    _shieldFill = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 1, 6)];
-    _shieldFill.fillColor = UIColorWithOpacity(UIShield, 0.85);
-    _shieldFill.strokeColor = [SKColor clearColor];
-    [_root addChild:_shieldFill];
-    _hullLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
-    _hullLabel.text = L10n(@"hud.hull");
-    [_root addChild:_hullLabel];
-    _shieldLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
-    _shieldLabel.text = L10n(@"hud.shield");
-    [_root addChild:_shieldLabel];
+    _hullBar = [[ConditionBar alloc] initWithTitle:L10n(@"hud.hull")];
+    _shieldBar = [[ConditionBar alloc] initWithTitle:L10n(@"hud.shield")];
+    _laserBar = [[ConditionBar alloc] initWithTitle:L10n(@"hud.laser")];
+    for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar]) [_root addChild:bar];
 
     _scoreLabel = Label(16, SKLabelHorizontalAlignmentModeRight);
     [_root addChild:_scoreLabel];
@@ -319,10 +348,9 @@ static SKShapeNode *Bracket(void) {
     _throttleFrame.position = CGPointMake(20, 22);
     _throttleLabel.position = CGPointMake(46, 32);
     _speedLabel.position = CGPointMake(46, 62);
-    _hullLabel.position = CGPointMake(s.width - 222, 32);
-    _shieldLabel.position = CGPointMake(s.width - 222, 50);
-    _hullFill.position = CGPointMake(s.width - 210, 29);
-    _shieldFill.position = CGPointMake(s.width - 210, 47);
+    _hullBar.position = CGPointMake(s.width - 210, 29);
+    _shieldBar.position = CGPointMake(s.width - 210, 47);
+    _laserBar.position = CGPointMake(s.width - 210, 65);
     _scoreLabel.position = CGPointMake(s.width - 40, s.height - 40);
     _inputLabel.position = CGPointMake(40, 30);
     _deadLabel.position = CGPointMake(s.width / 2, s.height / 2 + 80);
@@ -340,10 +368,9 @@ static SKShapeNode *Bracket(void) {
     _throttleLabel.position = CGPointMake(leftStats, stats + 36);
     _speedLabel.position = CGPointMake(leftStats, stats + 17);
     _speedLabel.fontSize = 16;
-    _hullLabel.position = CGPointMake(rightStats - 88, stats + 24);
-    _shieldLabel.position = CGPointMake(rightStats - 88, stats + 40);
-    _hullFill.position = CGPointMake(rightStats - 80, stats + 21);
-    _shieldFill.position = CGPointMake(rightStats - 80, stats + 37);
+    _hullBar.position = CGPointMake(rightStats - 80, stats + 21);
+    _shieldBar.position = CGPointMake(rightStats - 80, stats + 37);
+    _laserBar.position = CGPointMake(rightStats - 80, stats + 53);
     _objectivePanel.position = CGPointMake(left + 100, top);
     _inputLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
     _inputLabel.position = CGPointMake(right - 100, top - 44);
@@ -367,8 +394,6 @@ static SKShapeNode *Bracket(void) {
     CGFloat panelScale = panelWidth / 608;
     [_targetReadout setScale:panelScale];
     _targetReadout.position = CGPointMake((s.width - panelWidth) / 2, edgeBottom);
-    _laserLabel.position = CGPointMake(_throttleLabel.position.x, _throttleLabel.position.y + (_touchLayout ? 20 : 60));
-    _rechargeLabel.position = CGPointMake(edgeRight, _shieldLabel.position.y - 33);
     // Match the actual text edge to the bottom of the target details.
     SKNode *heading = _objectivePanel.children.firstObject;
     CGFloat bottomMargin = edgeBottom + (compact ? 11 : 20) * panelScale;
@@ -376,8 +401,10 @@ static SKShapeNode *Bracket(void) {
     CGFloat headingTop = heading ? CGRectGetMaxY(heading.frame) : 7;
     _objectivePanel.position = CGPointMake(edgeLeft + 128 * scopeScale + 16,
                                            s.height - topMargin - headingTop);
-    _secondaryLabel.position = CGPointMake(_shieldLabel.position.x, _shieldLabel.position.y + 18);
-    _secondaryRack.position = CGPointMake(_shieldFill.position.x, _shieldFill.position.y + 18);
+    CGFloat rowStep = _touchLayout ? 16 : 18;
+    _secondaryRack.position = CGPointMake(_laserBar.position.x, _laserBar.position.y + rowStep);
+    _secondaryLabel.position = CGPointMake(_secondaryRack.position.x - 10, _secondaryRack.position.y + 3);
+    for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar]) bar.width = _touchLayout ? 80 : 200;
     [self layoutSecondary];
     CGPathRef dp = CGPathCreateWithRect(CGRectMake(0, 0, s.width, s.height), NULL);
     _damage.path = dp;
@@ -426,13 +453,15 @@ static SKShapeNode *Bracket(void) {
     [_rearScope updateFrame:frame contacts:contacts count:count];
     _targetReadout.hidden = cockpit;
     if (!cockpit) [_targetReadout updateFrame:frame contacts:contacts count:count];
-    _laserLabel.hidden = _rechargeLabel.hidden = cockpit;
-    _laserLabel.text = L10nFormat(@"hud.laser", (int)lroundf(frame.weaponEnergy * 100));
-    _laserLabel.fontColor = frame.weaponEnergy < frame.weaponShotEnergy ? EnemyColor(1) : HUDColor(0.9);
-    _rechargeLabel.text = frame.shieldRecharge <= 0 ? @""
-                        : frame.shield < 0.999 ? L10nFormat(@"hud.shield_recharging", (int)lroundf(frame.shieldRecharge * 100))
-                        : L10n(@"hud.shield_full");
+    _hullBar.hidden = _laserBar.hidden = cockpit;
+    _shieldBar.hidden = cockpit || frame.shieldRecharge <= 0;     // a ship with no shield shows none
+    [_hullBar setLevel:frame.hull recharge:0 color:frame.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8)];
+    [_shieldBar setLevel:frame.shield recharge:frame.shieldRecharge color:UIColorWithOpacity(UIShield, 0.85)];
+    [_laserBar setLevel:frame.weaponEnergy recharge:frame.weaponRecharge
+                  color:frame.weaponEnergy < frame.weaponShotEnergy ? EnemyColor(0.9) : UIColorWithOpacity(UIYellow, 0.85)];
 }
+
+- (NSArray<SKNode *> *)conditionRows { return @[_hullBar, _shieldBar, _laserBar, _secondaryRack]; }
 
 - (void)setInputText:(NSString *)text { _inputLabel.text = @""; }
 - (void)toggleHelp {
@@ -552,12 +581,8 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     _boostFill.position = CGPointMake(-7, 3);
     _throttleLabel.text = L10nFormat(f.boosting ? @"hud.throttle_boost" : @"hud.throttle", (int)lroundf(f.throttle * 100));
     _speedLabel.text = L10nFormat(@"hud.speed", (int)lroundf(f.speed));
-    CGFloat conditionWidth = _touchLayout ? 80 : 200;
-    UISetSkewedBar(_hullFill, conditionWidth * f.hull, 6);
-    UISetSkewedBar(_shieldFill, conditionWidth * f.shield, 6);
-    _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
     _scoreLabel.text = L10nFormat(@"hud.score", f.kills, f.deaths);
-    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _secondaryLabel, _secondaryRack])
+    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _scoreLabel, _secondaryLabel, _secondaryRack])
         n.hidden = f.cockpit;
     _scoreLabel.hidden = YES;
     if (_touchLayout) _throttleFrame.hidden = YES;

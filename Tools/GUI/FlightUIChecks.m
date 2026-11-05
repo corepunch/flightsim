@@ -55,7 +55,7 @@ static int CheckHUD(void) {
     CockpitContact contact = {.preview=preview, .local={100,50,-1210}, .relation=RelationHostile, .hull=.72, .shield=.4, .systems=.75,
         .name=@"Corsair Cutter Rask", .className=@"Corsair cutter", .cargo=@"Skarn munitions", .component=@"SHIELD GENERATOR",
         .orientation=simd_quaternion(0.7f, simd_make_float3(0,1,0))};
-    CockpitFrame instrument = {.alive=YES, .target=0, .sun={-0.6f, 0.5f, 0.6f}, .weaponEnergy=.85, .weaponShotEnergy=.035, .weaponRecharge=.22, .shieldRecharge=.06, .shield=.6, .closingSpeed=42, .time=2};
+    CockpitFrame instrument = {.alive=YES, .target=0, .sun={-0.6f, 0.5f, 0.6f}, .weaponEnergy=.85, .weaponShotEnergy=.035, .weaponRecharge=.22, .shieldRecharge=.06, .hull=.9, .shield=.6, .closingSpeed=42, .time=2};
     for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(1194,834)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(852,393)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {
         HUD *hud = [[HUD alloc] initWithSize:size.sizeValue];
         hud.backgroundColor = [SKColor colorWithRed:.015 green:.025 blue:.035 alpha:1];
@@ -64,18 +64,25 @@ static int CheckHUD(void) {
         [hud setHelpVisible:NO];
         [hud setInputText:hud.touchLayout ? @"" : @"CONTROLLER: USB  /  T TARGET  /  G TORPEDO  /  ESC PAUSE"];
         [hud setObjectives:@[@"Patrol NAV 1, 2, 3 in order  0/3"] states:@[@0]];
-        HUDFrame frame = {.speed=125, .throttle=.8, .boostEnergy=.6, .hull=.9, .shield=.6, .secondary=2, .secondaryCapacity=4, .secondaryName=@"TORPEDO"};
+        HUDFrame frame = {.speed=125, .throttle=.8, .boostEnergy=.6, .secondary=2, .secondaryCapacity=4, .secondaryName=@"TORPEDO"};
         [hud updateFrame:frame targets:NULL count:0];
         [hud updateInstruments:instrument contacts:&contact count:1 cockpit:NO];
-        SKNode *laser = [hud valueForKey:@"laserLabel"], *speed = [hud valueForKey:@"speedLabel"], *throttle = [hud valueForKey:@"throttleLabel"], *input = [hud valueForKey:@"inputLabel"], *target = [hud valueForKey:@"targetReadout"];
-        CHECK(!CGRectIntersectsRect(laser.frame, speed.frame));
-        CHECK(!CGRectIntersectsRect(laser.frame, throttle.frame));
+        SKNode *speed = [hud valueForKey:@"speedLabel"], *throttle = [hud valueForKey:@"throttleLabel"], *input = [hud valueForKey:@"inputLabel"], *target = [hud valueForKey:@"targetReadout"];
         CHECK(!CGRectIntersectsRect(speed.frame, throttle.frame));
+        // The condition rows stack without overlapping, clear of the target
+        // readout and inside the right edge.
+        NSArray<SKNode *> *rows = hud.conditionRows;
+        CHECK(rows.count == 4);
+        for (NSUInteger i = 0; i < rows.count; i++) {
+            CGRect r = [rows[i] calculateAccumulatedFrame];
+            CHECK(CGRectGetMaxX(r) <= hud.size.width - (hud.touchLayout ? hud.contentInsets.right : 0));
+            CHECK(!CGRectIntersectsRect(r, [target calculateAccumulatedFrame]));
+            if (i + 1 < rows.count) CHECK(CGRectGetMaxY(r) <= CGRectGetMinY([rows[i + 1] calculateAccumulatedFrame]) + 1);
+        }
         if (!hud.touchLayout) CHECK([(SKLabelNode *)input text].length == 0);
         else {
             CHECK(speed.position.x < 90);
-            SKNode *shield = [hud valueForKey:@"shieldFill"];
-            CHECK(shield.position.x > hud.size.width - 170);
+            CHECK(rows[1].position.x > hud.size.width - 170);
         }
         SKNode *forward = [hud valueForKey:@"forwardScope"], *rear = [hud valueForKey:@"rearScope"];
         SKNode *objectives = [hud valueForKey:@"objectivePanel"];
