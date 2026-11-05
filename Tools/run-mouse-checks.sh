@@ -5,14 +5,13 @@ cd "${0:A:h}/.."
 qa=$(mktemp -d "$PWD/build/mouse-checks.XXXXXX")
 app="$qa/MouseChecks.app"
 contents="$app/Contents"
-mkdir -p "$contents/MacOS" "$contents/Resources/Shaders"
+mkdir -p "$contents/MacOS" "$contents/Resources"
 cp Resources/Info.plist "$contents/Info.plist"
-cp Resources/Shaders/*.fsh "$contents/Resources/Shaders/"
-for directory in Strings UI Story; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
 /usr/libexec/PlistBuddy -c 'Set CFBundleExecutable MouseChecks' \
     -c 'Set CFBundleIdentifier com.igor.spacefight.mousechecks' \
     -c 'Set CFBundleName Mouse Checks' -c 'Add LSUIElement bool true' "$contents/Info.plist"
 source Tools/engine-library.sh
+link_check_resources "$contents/Resources"
 clang $engine_cflags Tools/GUI/MouseFlightChecks.m $engine_libs -o "$contents/MacOS/MouseChecks"
 codesign --force --sign - "$app"
 if ! /usr/bin/open -n -g -W --stdout "$qa/stdout.log" --stderr "$qa/stderr.log" "$app"; then

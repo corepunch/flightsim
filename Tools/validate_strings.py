@@ -46,7 +46,7 @@ def main():
     english = catalogs["en"]["strings"]
 
     used = set()
-    for source in (ROOT / "Sources").rglob("*.m"):
+    for source in [*(ROOT / "Sources").rglob("*.m"), *(ROOT / "Games").glob("*/Game/*.m")]:
         used.update(k for k in KEY.findall(source.read_text(encoding="utf-8")) if not k.endswith(FILES))
     # Screen layouts name catalog keys in "text"/"detail" ("$name" is a variable).
     layouts = sorted((ROOT / "Resources/UI/menus").glob("*.json"))
@@ -67,6 +67,24 @@ def main():
     assert not missing, f"en.json lacks keys the code uses: {missing}"
     unused = sorted(k for k in english.keys() - used)
     assert not unused, f"en.json has keys no code uses: {unused}"
+
+    # A game's catalogs (Games/<name>/Strings) layer over the engine's: they
+    # override engine keys, so they hold only English keys, of the same kind
+    # and format, and need no name or direction of their own.
+    overlays = 0
+    for path in sorted((ROOT / "Games").glob("*/Strings/*.json")):
+        overlays += 1
+        locale = f"{path.parent.parent.name}/{path.stem}"
+        strings = json.loads(path.read_text(encoding="utf-8")).get("strings")
+        assert isinstance(strings, dict), f"{locale}: no strings"
+        for key, value in strings.items():
+            assert key in english, f"{locale}: {key} is not an engine key"
+            items, reference = values(value), values(english[key])
+            assert isinstance(value, list) == isinstance(english[key], list), f"{locale}: {key} differs from English in kind"
+            for item in items:
+                assert isinstance(item, str), f"{locale}: {key} must be text or a list of text"
+                assert specifiers(item) == specifiers(reference[0]), \
+                    f"{locale}: {key} has format {specifiers(item)}, English has {specifiers(reference[0])}"
 
     for locale, catalog in catalogs.items():
         assert isinstance(catalog.get("name"), str) and catalog.get("direction") in ("ltr", "rtl"), \
@@ -120,7 +138,7 @@ def main():
         check(json.loads(path.read_text(encoding="utf-8")))
 
     print(f"PASS: {len(english)} strings in {len(catalogs)} locales, {len(used)} used by the code and "
-          f"{len(layouts)} layouts; theme complete")
+          f"{len(layouts)} layouts, {overlays} game catalogs; theme complete")
 
 
 if __name__ == "__main__":

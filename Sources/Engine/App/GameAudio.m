@@ -1,4 +1,5 @@
 #import "GameAudio.h"
+#import "FileSystem.h"
 #import "Localization.h"
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
@@ -32,7 +33,7 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 }
 
 - (AVAudioPlayer *)load:(NSString *)name loop:(BOOL)loop {
-    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"mp3" subdirectory:@"Audio"];
+    NSURL *url = FSURL(@"Audio", name, @"mp3");
     if (!url) { NSLog(@"Audio: missing %@.mp3", name); return nil; }
     NSError *error;
     AVAudioPlayer *player = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];

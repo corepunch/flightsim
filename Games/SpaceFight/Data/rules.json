@@ -1,0 +1,5 @@
+{
+  "defaultShip": "executioner",
+  "secondary": { "projectile": "torpedo", "name": "TORPEDO", "short": "TORP" },
+  "fighterClass": { "friend": "Concord fighter", "enemy": "Skarn fighter", "neutral": "Fighter" }
+}

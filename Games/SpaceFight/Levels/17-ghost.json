@@ -1,0 +1,69 @@
+{
+  "name": "17-ghost",
+  "seed": 17,
+  "title": "Ghost",
+  "loadout": { "torpedoes": 2 },
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "ghost",
+      "asset": "Prototype",
+      "team": "enemy",
+      "name": "Skarn Prototype",
+      "pos": [1200, 100, -3000],
+      "facing": [-1, 0, 0],
+      "path": [[0, 200, -4200], [-1200, 0, -3000], [0, -150, -1900], [1200, 100, -3000]],
+      "speed": 55,
+      "loop": true,
+      "stealth": 700
+    }
+  ],
+  "navs": [
+    { "id": "b1", "name": "BUOY 1", "pos": [-1000, 100, -2200] },
+    { "id": "b2", "name": "BUOY 2", "pos": [0, 0, -3000] },
+    { "id": "b3", "name": "BUOY 3", "pos": [1000, -100, -3800] }
+  ],
+  "fields": [
+    { "type": "buoys", "navs": ["b1", "b2", "b3"] }
+  ],
+  "waves": [
+    {
+      "id": "guards",
+      "ship": "wasp",
+      "count": 4,
+      "team": "enemy",
+      "pos": [1200, 300, -3000],
+      "spread": 150,
+      "order": "escort:ghost",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "ghost", "type": "destroy", "targets": ["ghost"], "text": "Destroy the stealth prototype" },
+    {
+      "id": "buoys",
+      "type": "reach",
+      "navs": ["b1", "b2", "b3"],
+      "optional": true,
+      "range": 250,
+      "text": "Search BUOY 1, 2, 3 in order"
+    }
+  ],
+  "events": [
+    { "when": {"time": 0}, "do": [{"spawn": "guards"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        {
+          "radio": { "from": "Okafor", "text": "Sweep the buoys. The prototype only shows up inside 700 metres." }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "ghost" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Got it. They are blind again."} }
+      ]
+    }
+  ]
+}

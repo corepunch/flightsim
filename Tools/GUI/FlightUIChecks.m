@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
 #import "HUD.h"
+#import "Story.h"
 #import "FlightInstruments.h"
 #import "PauseMenu.h"
 #import "FrontEnd.h"
@@ -266,7 +267,7 @@ static PlayerState Latest(Client *client) { return ((Snapshot *)[[client valueFo
 static int CheckSimulation(void) {
     Server *server = [[Server alloc] initWithName:@"Pause fixture"];
     CHECK(server);
-    [server addTransport:[LoopbackTransport side:1]]; [server spawnMission:0];
+    [server addTransport:[LoopbackTransport side:1]]; [server spawnLevel:CampaignLevelName(0)];
     Client *client = [[Client alloc] initWithView:nil];
     __weak Client *weak = client; client.gamestateHandler = ^{ [weak begin]; };
     [client connectTo:[NetAddress loopback:1] transport:[LoopbackTransport side:0] name:@"Fixture"];

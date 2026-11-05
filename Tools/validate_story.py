@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
-"""Validate campaign references and the art shipped with its story."""
+"""Validate every game's levels, campaign references and the art shipped with its story.
+
+A game is a folder in Games/. Its Levels/<name>.json are what the game module
+builds; Campaign/campaign.json lists missions by level and carries their
+briefings and debriefs; Story/ holds the cast and rooms; Briefing/ the art.
+"""
 import json
 import re
 import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ART = ROOT / "Resources/Briefing"
-STORY = ROOT / "Resources/Story"
-CAST = json.loads((STORY / "characters.json").read_text())
-PLAYER = CAST["player"]
-PORTRAITS = {character["portrait"] for character in CAST["characters"].values()}
-ROOMS = json.loads((STORY / "rooms.json").read_text())["rooms"]
+ART = CAST = PLAYER = PORTRAITS = ROOMS = None   # per game, set by load_game
+
+
+def load_game(game):
+    global ART, CAST, PLAYER, PORTRAITS, ROOMS
+    ART = game / "Briefing"
+    CAST = json.loads((game / "Story/characters.json").read_text())
+    PLAYER = CAST["player"]
+    PORTRAITS = {character["portrait"] for character in CAST["characters"].values()}
+    ROOMS = json.loads((game / "Story/rooms.json").read_text())["rooms"]
 # The page kinds the engine registers (Sources/Engine/Story/Story.m).
 PAGE_KINDS = {"dialogue", "situation", "tactical", "objectives", "intel"}
 
@@ -36,7 +45,7 @@ def check_expression(portrait, expression):
 
 
 def validate_mission(mission):
-    index = mission["id"]
+    index = mission["level"]
     brief = mission["briefing"]
     scene = brief["dialogue"]
     cast = set(scene["cast"])
@@ -134,11 +143,30 @@ def validate_mission(mission):
     return len(scene["lines"]) + len(epilogue), cast | {line["portrait"] for line in epilogue}
 
 
-def main():
-    campaign = json.loads((ROOT / "Resources/Missions/missions.json").read_text())
-    missions = campaign["missions"]
-    expected = list(range(1, 21))
-    assert [mission["id"] for mission in missions] == expected
+def load_levels(game):
+    levels = {}
+    for path in sorted((game / "Levels").glob("*.json")):
+        level = json.loads(path.read_text())
+        assert level.get("name") == path.stem, f"{path}: name differs from the file name"
+        assert level.get("title", "").strip(), f"{path}: no title"
+        levels[path.stem] = level
+    assert levels, f"{game}: no levels"
+    return levels
+
+
+def validate_game(game):
+    levels = load_levels(game)
+    campaign_file = game / "Campaign/campaign.json"
+    if not campaign_file.is_file():
+        print(f"{game.name}: validated {len(levels)} levels (no campaign)")
+        return
+    load_game(game)
+    campaign = json.loads(campaign_file.read_text())
+    entries = campaign["missions"]
+    names = [entry["level"] for entry in entries]
+    assert len(set(names)) == len(names), f"{game.name}: a level appears twice in the campaign"
+    assert set(names) <= set(levels), f"{game.name}: unknown levels {set(names) - set(levels)}"
+    expected = list(range(1, len(entries) + 1))
     assert [index for chapter in campaign["story"]["chapters"] for index in chapter["missions"]] == expected
     defaults = campaign["storyDefaults"]
     assert defaults["officer"] in CAST["characters"] and defaults["room"] in ROOMS
@@ -152,12 +180,20 @@ def main():
     for portrait in PORTRAITS:
         check_art(ART / f"{portrait}.png", transparent=True)
     beats, cast = 0, set()
-    for mission in missions:
-        count, speakers = validate_mission(mission)
+    for entry in entries:
+        count, speakers = validate_mission({**levels[entry["level"]], **entry})
         beats += count
         cast |= speakers
     assert cast == PORTRAITS, f"Unused cast: {PORTRAITS - cast}"
-    print(f"Validated {len(missions)} missions, {len(cast)} illustrated speakers and {beats} story beats")
+    print(f"{game.name}: validated {len(levels)} levels, {len(entries)} missions, "
+          f"{len(cast)} illustrated speakers and {beats} story beats")
+
+
+def main():
+    games = sorted(path for path in (ROOT / "Games").iterdir() if path.is_dir())
+    assert games, "no games in Games/"
+    for game in games:
+        validate_game(game)
 
 
 if __name__ == "__main__":

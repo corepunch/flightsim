@@ -1,4 +1,5 @@
 #import "Exhaust.h"
+#import "FileSystem.h"
 #import <ImageIO/ImageIO.h>
 
 static NSString *const kFlameGeometry =
@@ -148,7 +149,7 @@ static PlatformImage *LuminanceAlphaImage(NSURL *url) {
     @synchronized (cache) {
         PlatformImage *img = cache[name];
         if (!img) {
-            NSURL *url = [[NSBundle mainBundle] URLForResource:name withExtension:@"png" subdirectory:@"Particles"];
+            NSURL *url = FSURL(@"Particles", name, @"png");
             img = url ? LuminanceAlphaImage(url) : nil;
             cache[name] = img ?: [self softDotImage];
             img = cache[name];

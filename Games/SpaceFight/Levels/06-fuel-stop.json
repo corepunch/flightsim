@@ -1,0 +1,111 @@
+{
+  "name": "06-fuel-stop",
+  "seed": 6,
+  "title": "Fuel Stop",
+  "loadout": { "torpedoes": 0 },
+  "player": { "pos": [0, 80, -200], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "depot",
+      "asset": "FuelDepot",
+      "team": "friend",
+      "name": "Brenn Depot",
+      "pos": [0, 0, -1300],
+      "facing": [0, 0, -1],
+      "spin": 2
+    },
+    {
+      "id": "corla",
+      "asset": "Tanker",
+      "team": "friend",
+      "name": "Tanker Corla",
+      "pos": [0, 40, -1100],
+      "facing": [0, 0, -1]
+    }
+  ],
+  "waves": [
+    {
+      "id": "wingman",
+      "ship": "executioner",
+      "count": 1,
+      "team": "friend",
+      "pos": [60, 80, -150],
+      "order": "escort:corla",
+      "name": "Lancer 5"
+    },
+    {
+      "id": "r1",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [-1700, 0, -1500],
+      "spread": 100,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "r2",
+      "ship": "talon",
+      "count": 3,
+      "team": "enemy",
+      "pos": [1500, 200, -2400],
+      "spread": 100,
+      "order": "strike:corla",
+      "hold": true
+    },
+    {
+      "id": "r3",
+      "ship": "talon",
+      "count": 2,
+      "team": "enemy",
+      "pos": [0, -1500, -800],
+      "spread": 100,
+      "order": "strike:depot",
+      "hold": true
+    },
+    {
+      "id": "r4",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [0, -1400, -900],
+      "spread": 100,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    {
+      "id": "protect",
+      "type": "protect",
+      "targets": ["corla", "depot"],
+      "text": "Defend Corla and Brenn Depot"
+    },
+    { "id": "hold", "type": "survive", "seconds": 150, "text": "Cover refuelling for 2:30" }
+  ],
+  "events": [
+    { "when": {"time": 10}, "do": [{"spawn": "r1"}] },
+    { "when": {"time": 45}, "do": [{"spawn": "r2"}] },
+    { "when": {"time": 95}, "do": [{"spawn": "r3"}] },
+    { "when": {"time": 100}, "do": [{"spawn": "r4"}] },
+    {
+      "when": { "time": 2 },
+      "do": [
+        { "radio": {"from": "Corla", "text": "Hose connected. Keep them off us for a few minutes."} }
+      ]
+    },
+    {
+      "when": { "spawned": "r2" },
+      "do": [
+        { "radio": {"from": "Lancer 5", "text": "Talons inbound on Corla. I'm taking the lead bomber."} }
+      ]
+    },
+    { "when": {"time": 75}, "do": [{"radio": {"from": "Corla", "text": "Halfway there."}}] },
+    {
+      "when": { "objective": "hold" },
+      "do": [
+        { "radio": {"from": "Corla", "text": "Tanks full, undocking. Thanks, Lancer."} }
+      ]
+    }
+  ]
+}

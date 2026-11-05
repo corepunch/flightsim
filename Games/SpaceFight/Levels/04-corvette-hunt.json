@@ -1,0 +1,65 @@
+{
+  "name": "04-corvette-hunt",
+  "seed": 4,
+  "title": "Corvette Hunt",
+  "loadout": { "torpedoes": 4 },
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "corvette",
+      "asset": "Corvette",
+      "team": "enemy",
+      "name": "Skarn Corvette Vesk",
+      "pos": [400, 100, -3000],
+      "facing": [-1, 0, 0],
+      "path": [[-600, 100, -3200], [-400, 0, -4200], [600, -100, -4000], [400, 100, -3000]],
+      "speed": 30,
+      "loop": true
+    }
+  ],
+  "navs": [
+    { "id": "p2", "name": "BELT", "pos": [-400, 0, -4200] }
+  ],
+  "fields": [
+    { "type": "asteroids", "center": [0, 0, -3600], "radius": 1800, "count": 26, "seed": 4 }
+  ],
+  "waves": [
+    {
+      "id": "escorts",
+      "ship": "wasp",
+      "count": 4,
+      "team": "enemy",
+      "pos": [400, 200, -2800],
+      "spread": 140,
+      "order": "escort:corvette",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "kill", "type": "destroy", "targets": ["corvette"], "text": "Destroy Corvette Vesk" },
+    {
+      "id": "escorts",
+      "type": "destroy",
+      "targets": ["escorts"],
+      "optional": true,
+      "text": "Destroy Vesk's Wasp escorts"
+    }
+  ],
+  "events": [
+    { "when": {"time": 0}, "do": [{"spawn": "escorts"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        {
+          "radio": { "from": "Bastion Control", "text": "Select Vesk. Close to 1.5 km before launching torpedoes." }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "kill" },
+      "do": [
+        { "radio": {"from": "Bastion Control", "text": "Corvette destroyed! The belt is ours again."} }
+      ]
+    }
+  ]
+}

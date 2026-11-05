@@ -1,0 +1,34 @@
+# Games
+
+Each folder here is one flight game built on the engine in `Sources/`. The
+engine has no game content of its own. `fs_game <name>` picks the game; the
+default is the app's `FSDefaultGame` (build with `GAME=<name> ./build.sh`).
+
+```
+Games/<name>/
+  Game/          the game module: GMain (GetGameAPI), entities, AI, weapons, the level
+                 runner over the engine's mission runtime. Built as PlugIns/<name>.dylib on
+                 macOS; compiled into the app on iOS.
+  Data/Ships/    ship definitions: mesh, guns, nozzles, flight params, AI params
+  Data/Capitals/ capital ships and props: hp, class name, style, flags
+  Data/Styles/   hull material sets
+  Data/Projectiles/
+  Levels/        <name>.json: what the game module builds (entities, waves, navs,
+                 objectives, events, loadout). "name" matches the file name.
+  Campaign/      campaign.json: name, story, storyDefaults, and the missions in order,
+                 each { "level": "<name>", "briefing": …, "debrief": … }
+  Story/         characters.json (cast, player character), rooms.json (briefing rooms)
+  Briefing/      portraits, Expressions/, Schematics/, room art
+  Menu/          background.jpg (main menu), loading.png (loading card)
+  Models/        .obj sources, baked to .scn when the app is bundled
+  Textures/
+  Strings/       <locale>.json: overrides and additions to the engine's catalog
+```
+
+Lookups go through `Sources/Shared/FileSystem.h`: the game's folder first,
+then the engine's own `Resources/`. A game can therefore also replace the
+engine's `UI/theme.json`, `UI/menus/*.json` or `Audio/*.mp3` by shipping a
+file with the same path.
+
+`Tools/validate_story.py` checks every game's levels and campaign;
+`Tools/validate_strings.py` checks every game's string catalogs.

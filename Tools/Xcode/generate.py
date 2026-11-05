@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = ROOT / "KestrelFrontier.xcodeproj"
 GAME = "KestrelFrontier"
 PRODUCT = f"{GAME}.app"
+# The game the app builds with (Games/<name>; build.sh and Makefile: GAME).
+DEFAULT_GAME = "SpaceFight"
 MAC_ONLY = {"FXRecorder.m", "GameView.m", "Input.m", "main.m"}
 IOS_ONLY = {"GameViewIOS.m", "InputIOS.m", "mainIOS.m", "TouchFlightControls.m"}
 IOS_FRAMEWORKS = (
@@ -100,12 +102,14 @@ class Project:
             # The mission runtime is engine code that links into game modules
             # (Makefile: MISSION_SOURCES), built like game code.
             mission = relative.parts[:3] == ("Sources", "Engine", "Mission")
+            game_code = relative.parts[0] == "Games"
             if path.suffix == ".m":
-                prefix = f'Sources/{"Game" if mission else relative.parts[1]}/Prefix.h'
+                prefix = (f"Games/{DEFAULT_GAME}/Game/Prefix.h" if game_code or mission
+                          else f"Sources/{relative.parts[1]}/Prefix.h")
                 if (ROOT / prefix).is_file():
                     settings["COMPILER_FLAGS"] = f'-include "$(SRCROOT)/{prefix}"'
             fields = {"settings": settings} if settings else {}
-            module = relative.parts[1]
+            module = "Game" if game_code else relative.parts[1]
             for platform, files in sources.items():
                 if platform == "ios" and module == "Engine" and path.name in MAC_ONLY:
                     continue
@@ -169,7 +173,7 @@ def generate(args):
         CLANG_ENABLE_OBJC_ARC="YES", ENABLE_USER_SCRIPT_SANDBOXING="NO",
         ALWAYS_SEARCH_USER_PATHS="NO",
         GCC_C_LANGUAGE_STANDARD="gnu11", OTHER_CFLAGS=["$(inherited)", "-Wno-deprecated-declarations"],
-        HEADER_SEARCH_PATHS=["$(inherited)", "$(SRCROOT)/Sources/Shared", "$(SRCROOT)/Sources/Game"] +
+        HEADER_SEARCH_PATHS=["$(inherited)", "$(SRCROOT)/Sources/Shared", f"$(SRCROOT)/Games/{DEFAULT_GAME}/Game"] +
                             [f"$(SRCROOT)/{path.relative_to(ROOT)}"
                              for path in sorted((ROOT / "Sources/Engine").iterdir()) if path.is_dir()],
     )
@@ -195,7 +199,7 @@ def generate(args):
                         INFOPLIST_FILE="$(PROJECT_FILE_PATH)/Generated/macos-Info.plist",
                         OTHER_LDFLAGS=["$(inherited)"] +
                         [item for framework in MAC_FRAMEWORKS for item in ("-framework", framework)])
-    game_settings = dict(mac_platform, PRODUCT_NAME="game", EXECUTABLE_PREFIX="",
+    game_settings = dict(mac_platform, PRODUCT_NAME=DEFAULT_GAME, EXECUTABLE_PREFIX="",
                          MACH_O_TYPE="mh_dylib", SKIP_INSTALL="YES", GCC_SYMBOLS_PRIVATE_EXTERN="YES",
                          DYLIB_INSTALL_NAME_BASE="@rpath", CODE_SIGN_STYLE="Automatic",
                          OTHER_LDFLAGS=["$(inherited)", "-framework", "Foundation"])
@@ -206,6 +210,9 @@ def generate(args):
 
     sources = {"ios": [], "mac": [], "game": []}
     source_group = project.source_group(ROOT / "Sources", sources)
+    game_group = project.source_group(ROOT / "Games" / DEFAULT_GAME / "Game", sources)
+    games_group = project.add(f"group/Games/{DEFAULT_GAME}", "PBXGroup", path=f"Games/{DEFAULT_GAME}",
+                              children=[game_group], sourceTree="<group>")
     resources_ref = project.add("resources/ref", "PBXFileReference", path="Resources", sourceTree="<group>",
                                 lastKnownFileType="folder")
     assets_ref = project.add("assets/ref", "PBXFileReference", path="Resources/Assets.xcassets",
@@ -220,7 +227,9 @@ def generate(args):
     }
     resource_phases = {}
     for platform in ("ios", "mac"):
-        script = ('set -e\ncd "$SRCROOT"\n/bin/zsh Tools/bundle-resources.sh '
+        # The iOS app links one game in, so it ships only that game's folder.
+        games = f"GAMES={DEFAULT_GAME} " if platform == "ios" else ""
+        script = ('set -e\ncd "$SRCROOT"\n' + games + '/bin/zsh Tools/bundle-resources.sh '
                   '"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH" '
                   '"$PROJECT_TEMP_DIR/KestrelFrontierResources"\n')
         if platform == "mac":
@@ -233,18 +242,18 @@ def generate(args):
                           explicitFileType="wrapper.application")
     mac_product = project.add("product/mac", "PBXFileReference", path=PRODUCT, sourceTree="BUILT_PRODUCTS_DIR",
                               explicitFileType="wrapper.application")
-    game_product = project.add("product/game", "PBXFileReference", path="game.dylib", sourceTree="BUILT_PRODUCTS_DIR",
+    game_product = project.add("product/game", "PBXFileReference", path=f"{DEFAULT_GAME}.dylib", sourceTree="BUILT_PRODUCTS_DIR",
                                explicitFileType="compiled.mach-o.dylib")
     products = project.add("products", "PBXGroup", name="Products", children=[product, mac_product, game_product],
                            sourceTree="<group>")
-    main_group = project.add("group/main", "PBXGroup", children=[source_group, resources_ref, assets_ref, products],
+    main_group = project.add("group/main", "PBXGroup", children=[source_group, games_group, resources_ref, assets_ref, products],
                              sourceTree="<group>")
     target = project.add("target", "PBXNativeTarget", name=f"{GAME}-iOS", productName=GAME,
                          productReference=product, productType="com.apple.product-type.application",
                          buildConfigurationList=target_configs,
                          buildPhases=[compile_phases["ios"], assets_phase, resource_phases["ios"]],
                          buildRules=[], dependencies=[])
-    game_target = project.add("target/game", "PBXNativeTarget", name=f"{GAME}-Game", productName="game",
+    game_target = project.add("target/game", "PBXNativeTarget", name=f"{GAME}-Game", productName=DEFAULT_GAME,
                               productReference=game_product, productType="com.apple.product-type.library.dynamic",
                               buildConfigurationList=game_configs, buildPhases=[compile_phases["game"]],
                               buildRules=[], dependencies=[])

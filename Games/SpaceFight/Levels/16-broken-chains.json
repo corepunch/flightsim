@@ -1,0 +1,107 @@
+{
+  "name": "16-broken-chains",
+  "seed": 16,
+  "title": "Broken Chains",
+  "loadout": { "torpedoes": 0 },
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "barge",
+      "asset": "PrisonBarge",
+      "team": "enemy",
+      "name": "Prison Barge Thal",
+      "pos": [0, 0, -2200],
+      "facing": [1, 0, 0]
+    },
+    {
+      "id": "kestrel",
+      "asset": "Frigate",
+      "team": "friend",
+      "name": "CNS Kestrel",
+      "pos": [-2500, 100, -500],
+      "facing": [1, 0, -0.6],
+      "path": [[-400, 50, -1900]],
+      "speed": 45,
+      "hold": true
+    }
+  ],
+  "waves": [
+    {
+      "id": "guards",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [0, 300, -2000],
+      "spread": 150,
+      "order": "escort:barge",
+      "hold": true
+    },
+    {
+      "id": "strike",
+      "ship": "talon",
+      "count": 4,
+      "team": "enemy",
+      "pos": [2000, 200, -3500],
+      "spread": 120,
+      "order": "strike:barge",
+      "hold": true
+    },
+    {
+      "id": "strikecover",
+      "ship": "wasp",
+      "count": 2,
+      "team": "enemy",
+      "pos": [2100, 400, -3600],
+      "spread": 100,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    {
+      "id": "turrets",
+      "type": "disable",
+      "targets": ["barge"],
+      "kind": "Turret",
+      "text": "Destroy Thal's 6 turrets only"
+    },
+    { "id": "protect", "type": "protect", "targets": ["barge"], "text": "Keep the prison barge intact" },
+    {
+      "id": "hold",
+      "type": "survive",
+      "seconds": 70,
+      "after": ["turrets"],
+      "text": "Cover Thal for 70 s until tow"
+    }
+  ],
+  "events": [
+    { "when": {"objective": "turrets"}, "do": [{"spawn": "kestrel"}] },
+    { "when": {"time": 0}, "do": [{"spawn": "guards"}] },
+    { "when": {"objective": "turrets"}, "do": [{"spawn": "strike"}] },
+    { "when": {"objective": "turrets"}, "do": [{"spawn": "strikecover"}] },
+    { "when": {"objective": "turrets"}, "do": [{"set_team": {"barge": "friend"}}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Turrets only, Lancer. Steady hands."} }
+      ]
+    },
+    {
+      "when": { "objective": "turrets" },
+      "do": [
+        {
+          "radio": {
+            "from": "Kesh Ardan",
+            "text": "Thal is ours. Those bombers know exactly where we are. Keep them off the hull!"
+          }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "hold" },
+      "do": [
+        { "radio": {"from": "CNS Kestrel", "text": "Tow lines attached. We are taking them home."} }
+      ]
+    }
+  ]
+}

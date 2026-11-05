@@ -3,6 +3,7 @@
 #import <Cocoa/Cocoa.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import "GameView.h"
+#import "Story.h"
 #import "Host.h"
 #import "FXRecorder.h"
 #import "Server.h"
@@ -11,6 +12,7 @@
 #import "Assets.h"
 #import "Cvar.h"
 #import "Cmd.h"
+#import "GameLoader.h"
 #import "Localization.h"
 #import <QuartzCore/QuartzCore.h>
 
@@ -24,20 +26,28 @@ static int RunDedicated(int mission) {
     UDPTransport *udp = [[UDPTransport alloc] initWithPort:port > 0 ? port : PORT_SERVER attempts:4];
     if (!server || !udp) return 1;
     [server addTransport:udp];
-    NSUInteger count = CampaignMissions().count;
-    __block int index = MAX(0, MIN(mission, (int)count - 1));
+    // Rotate through the campaign's levels, or every level in the game
+    // folder when the game has no campaign.
+    NSMutableArray<NSString *> *rotation = [NSMutableArray array];
+    for (NSDictionary *mission in CampaignMissions()) [rotation addObject:mission[@"level"]];
+    if (!rotation.count) [rotation addObjectsFromArray:LevelNames()];
+    if (!rotation.count) { NSLog(@"Dedicated: game %@ has no levels", FSGame()); return 1; }
+    NSUInteger count = rotation.count;
+    __block NSUInteger index = (NSUInteger)MAX(0, MIN(mission, (int)count - 1));
     __block double endedAt = 0;
-    [Cmd add:@"map" help:@"map <mission number>: runs that mission" handler:^(NSArray<NSString *> *a) {
-        int n = a.count > 1 ? a[1].intValue : 0;
-        if (n < 1 || (NSUInteger)n > count) { NSLog(@"usage: map <1..%lu>", (unsigned long)count); return; }
-        index = n - 1;
+    [Cmd add:@"map" help:@"map <number or level name>: runs that level" handler:^(NSArray<NSString *> *a) {
+        NSString *arg = a.count > 1 ? a[1] : @"";
+        NSUInteger found = [rotation indexOfObject:arg];
+        if (found == NSNotFound && arg.intValue >= 1 && (NSUInteger)arg.intValue <= count) found = (NSUInteger)arg.intValue - 1;
+        if (found == NSNotFound) { NSLog(@"usage: map <1..%lu | level name>", (unsigned long)count); return; }
+        index = found;
         endedAt = 0;
-        NSLog(@"Dedicated: mission %d", index + 1);
-        [server spawnMission:index];
+        NSLog(@"Dedicated: level %@", rotation[index]);
+        [server spawnLevel:rotation[index]];
     }];
     [Cmd add:@"quit" help:@"Exits" handler:^(NSArray<NSString *> *a) { exit(0); }];
-    NSLog(@"Dedicated: mission %d, UDP port %d", index + 1, udp.port);
-    [server spawnMission:index];
+    NSLog(@"Dedicated: level %@, UDP port %d", rotation[index], udp.port);
+    [server spawnLevel:rotation[index]];
     [Cmd executeLateCommands];
     double last = CACurrentMediaTime();
     for (;;) {
@@ -49,9 +59,9 @@ static int RunDedicated(int mission) {
             if (server.missionEnded && !endedAt) endedAt = now;
             if (endedAt && now - endedAt > 10) {
                 endedAt = 0;
-                index = (index + 1) % (int)count;
-                NSLog(@"Dedicated: next mission %d", index + 1);
-                [server spawnMission:index];
+                index = (index + 1) % count;
+                NSLog(@"Dedicated: next level %@", rotation[index]);
+                [server spawnLevel:rotation[index]];
             }
             usleep(2000);
         }
@@ -112,6 +122,7 @@ int main(int argc, const char *argv[]) {
         // once the game has booted.
         [Cmd setArguments:NSProcessInfo.processInfo.arguments];
         [Cmd executeEarlyCommands];
+        GameLoaderSelectGame();
         // Offline effect preview: SpaceFight --record-fx <effect> <out.mp4> [seconds]
         if (argc >= 4 && !strcmp(argv[1], "--record-fx"))
             return [FXRecorder recordEffect:@(argv[2]) toFile:@(argv[3]) seconds:argc >= 5 ? atof(argv[4]) : 3.0];

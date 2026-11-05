@@ -33,7 +33,7 @@ typedef NS_ENUM(NSInteger, ClientState) {
 @property (nonatomic, readonly) ClientState state;
 @property (nonatomic) BOOL inputSuspended; // keep the connection alive without flight commands
 @property (nonatomic, readonly) NSArray<NSString *> *configStrings;
-@property (nonatomic, readonly) int missionIndex;
+@property (nonatomic, readonly) NSString *levelName;   // CS_LEVEL
 @property (nonatomic, readonly) NetAddress *serverAddress;
 
 // All called on the thread that calls -readPackets.

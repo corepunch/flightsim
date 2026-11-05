@@ -1,0 +1,180 @@
+{
+  "name": "20-hammerfall",
+  "seed": 20,
+  "title": "Hammerfall",
+  "loadout": { "torpedoes": 10 },
+  "player": { "pos": [0, 100, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "bastion",
+      "asset": "Carrier",
+      "team": "friend",
+      "name": "CNS Bastion",
+      "pos": [0, -100, 1800],
+      "facing": [0, 0, -1]
+    },
+    {
+      "id": "kestrel",
+      "asset": "Frigate",
+      "team": "friend",
+      "name": "CNS Kestrel",
+      "pos": [500, 80, 900],
+      "facing": [0, 0, -1],
+      "path": [[400, 80, -500]],
+      "speed": 15
+    },
+    {
+      "id": "dread",
+      "asset": "Dreadnought",
+      "team": "enemy",
+      "name": "Skarn Dreadnought Hammer of Skarn",
+      "pos": [0, 0, -4500],
+      "facing": [0, 0, 1],
+      "path": [[0, 0, -1200]],
+      "speed": 10
+    },
+    {
+      "id": "cv1",
+      "asset": "Corvette",
+      "team": "enemy",
+      "name": "Skarn Corvette Teeth",
+      "pos": [-700, 150, -3500],
+      "facing": [0, 0, 1],
+      "path": [[-500, 100, -800], [-800, 0, -2500]],
+      "speed": 30,
+      "loop": true
+    },
+    {
+      "id": "cv2",
+      "asset": "Corvette",
+      "team": "enemy",
+      "name": "Skarn Corvette Claw",
+      "pos": [700, -150, -3500],
+      "facing": [0, 0, 1],
+      "path": [[500, -100, -800], [800, 0, -2500]],
+      "speed": 30,
+      "loop": true
+    }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "executioner",
+      "count": 3,
+      "team": "friend",
+      "pos": [80, 130, 100],
+      "spread": 70,
+      "order": "attack",
+      "name": "Lancer Flight",
+      "callsigns": ["Lancer 3", "Lancer 4", "Lancer 6"]
+    },
+    {
+      "id": "screen",
+      "ship": "wasp",
+      "count": 6,
+      "team": "enemy",
+      "pos": [0, 400, -3800],
+      "spread": 250,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "t1",
+      "ship": "talon",
+      "count": 4,
+      "team": "enemy",
+      "pos": [-1800, 0, -2500],
+      "spread": 150,
+      "order": "strike:bastion",
+      "hold": true
+    },
+    {
+      "id": "w2",
+      "ship": "wasp",
+      "count": 4,
+      "team": "enemy",
+      "pos": [1800, 300, -3000],
+      "spread": 150,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "t2",
+      "ship": "talon",
+      "count": 4,
+      "team": "enemy",
+      "pos": [1800, -300, -2600],
+      "spread": 150,
+      "order": "strike:bastion",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect CNS Bastion" },
+    {
+      "id": "shields",
+      "type": "disable",
+      "targets": ["dread"],
+      "kind": "Shield",
+      "text": "Hit 4 dorsal shield generators"
+    },
+    {
+      "id": "engines",
+      "type": "disable",
+      "targets": ["dread"],
+      "kind": "Engine",
+      "after": ["shields"],
+      "text": "Destroy 4 engines at the stern"
+    },
+    {
+      "id": "core",
+      "type": "destroy",
+      "targets": ["dread"],
+      "after": ["engines"],
+      "text": "Hit the reactor in the trench"
+    }
+  ],
+  "events": [
+    { "when": {"time": 5}, "do": [{"spawn": "screen"}] },
+    { "when": {"time": 50}, "do": [{"spawn": "t1"}] },
+    { "when": {"time": 100}, "do": [{"spawn": "w2"}] },
+    { "when": {"time": 150}, "do": [{"spawn": "t2"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Commander Varn", "text": "This is it. Every pilot, every gun. Hammerfall."} }
+      ]
+    },
+    {
+      "when": { "time": 8 },
+      "do": [
+        {
+          "radio": {
+            "from": "Dr. Imani",
+            "text": "I have its charging signal. Kesh and I will talk you through the run."
+          }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "shields" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Shields down! Now the engines at the stern!"} }
+      ]
+    },
+    {
+      "when": { "objective": "engines" },
+      "do": [
+        {
+          "radio": { "from": "Commander Varn", "text": "Hit the reactor in the upper trench ahead of the tower." }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "core" },
+      "do": [
+        { "radio": {"from": "Commander Varn", "text": "It is breaking up... It is over. Bring them home."} }
+      ]
+    }
+  ]
+}

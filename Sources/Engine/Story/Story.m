@@ -2,29 +2,66 @@
 #import "Assets.h"
 #import "Localization.h"
 
-static NSDictionary *StoryFile(NSString *name) {
-    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:@"Story"];
-    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
-    NSError *error = nil;
-    id json = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;
+static NSDictionary *StoryFile(NSString *directory, NSString *name) {
+    id json = FSJSON(FSURL(directory, name, @"json"));
     if (![json isKindOfClass:NSDictionary.class]) {
-        NSLog(@"Story: cannot load Story/%@.json: %@", name, error);
+        NSLog(@"Story: cannot load %@/%@.json", directory, name);
         return @{};
     }
     return json;
 }
 
+NSDictionary *CampaignData(void) {
+    static NSDictionary *campaign;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ campaign = StoryFile(@"Campaign", @"campaign"); });
+    return campaign;
+}
+
+NSArray<NSDictionary *> *CampaignMissions(void) {
+    static NSArray *missions;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSMutableArray *merged = [NSMutableArray array];
+        for (NSDictionary *entry in CampaignData()[@"missions"]) {
+            NSDictionary *level = LevelNamed(entry[@"level"]);
+            if (!level) {
+                NSLog(@"Campaign: no level named \"%@\"", entry[@"level"]);
+                continue;
+            }
+            NSMutableDictionary *mission = [level mutableCopy];
+            [mission addEntriesFromDictionary:entry];
+            [merged addObject:mission];
+        }
+        missions = merged;
+    });
+    return missions;
+}
+
+NSDictionary *CampaignMission(NSUInteger index) {
+    NSArray *all = CampaignMissions();
+    return index < all.count ? all[index] : nil;
+}
+
+NSString *CampaignLevelName(NSUInteger index) { return CampaignMission(index)[@"level"]; }
+
+NSUInteger CampaignIndexOfLevel(NSString *level) {
+    NSArray<NSDictionary *> *all = CampaignMissions();
+    for (NSUInteger i = 0; i < all.count; i++) if ([all[i][@"level"] isEqualToString:level]) return i;
+    return NSNotFound;
+}
+
 static NSDictionary *Cast(void) {
     static NSDictionary *cast;
     static dispatch_once_t once;
-    dispatch_once(&once, ^{ cast = StoryFile(@"characters"); });
+    dispatch_once(&once, ^{ cast = StoryFile(@"Story", @"characters"); });
     return cast;
 }
 
 static NSDictionary *Rooms(void) {
     static NSDictionary *rooms;
     static dispatch_once_t once;
-    dispatch_once(&once, ^{ rooms = StoryFile(@"rooms")[@"rooms"] ?: @{}; });
+    dispatch_once(&once, ^{ rooms = StoryFile(@"Story", @"rooms")[@"rooms"] ?: @{}; });
     return rooms;
 }
 

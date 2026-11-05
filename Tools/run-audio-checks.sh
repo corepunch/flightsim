@@ -8,8 +8,8 @@ cp Resources/Info.plist "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set CFBundleExecutable AudioChecks' \
     -c 'Set CFBundleIdentifier com.igor.spacefight.audiochecks' \
     -c 'Set CFBundleName Audio Checks' -c 'Add LSUIElement bool true' "$contents/Info.plist"
-for directory in Audio Menu Strings UI; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
 source Tools/engine-library.sh
+link_check_resources "$contents/Resources"
 clang $engine_cflags Tools/GUI/AudioChecks.m $engine_libs -o "$contents/MacOS/AudioChecks"
 codesign --force --sign - "$qa/AudioChecks.app"
 /usr/bin/open -n -g -W --stdout "$qa/stdout.log" --stderr "$qa/stderr.log" "$qa/AudioChecks.app" --args "$qa"

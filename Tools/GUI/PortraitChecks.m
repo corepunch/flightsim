@@ -1,5 +1,6 @@
 #import <AppKit/AppKit.h>
 #import "Assets.h"
+#import "Story.h"
 #import "Briefing.h"
 #import "UIMotion.h"
 

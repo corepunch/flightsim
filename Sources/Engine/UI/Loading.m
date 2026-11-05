@@ -1,4 +1,5 @@
 #import "Loading.h"
+#import "FileSystem.h"
 #import "GameAudio.h"
 #import "UIStyle.h"
 #import "Localization.h"
@@ -42,7 +43,7 @@ static NSArray<NSString *> *Tips(void) {
         _tip = arc4random_uniform((uint32_t)Tips().count);
         _title = _kicker = _detail = @"";
         _status = L10n(@"loading.loading_mission");
-        NSURL *hangar = [NSBundle.mainBundle URLForResource:@"Hangar" withExtension:@"png" subdirectory:@"Menu"];
+        NSURL *hangar = FSURL(@"Menu", @"loading", @"png");
         PlatformImage *image = hangar ? [[PlatformImage alloc] initWithContentsOfFile:hangar.path] : nil;
         if (image) _hangarTexture = [SKTexture textureWithImage:image];
     }

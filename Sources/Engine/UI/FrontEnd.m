@@ -1,4 +1,5 @@
 #import "FrontEnd.h"
+#import "Story.h"
 #import "MainMenu.h"
 #import "Briefing.h"
 #import "ServerBrowser.h"

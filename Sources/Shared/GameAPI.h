@@ -7,7 +7,7 @@
 #include "Protocol.h"
 #include "CvarFlags.h"
 
-#define GAME_API_VERSION 2
+#define GAME_API_VERSION 3
 
 typedef struct {
     float radius;
@@ -59,9 +59,10 @@ typedef struct {
     void (*init)(void);
     void (*shutdown)(void);
 
-    // Clears the world and builds a campaign mission. May be slow (collision
-    // meshes); the server calls it off the render thread.
-    void (*spawnMission)(int missionIndex);
+    // Clears the world and builds a level by name (Levels/<name>.json in the
+    // game folder). May be slow (collision meshes); the server calls it off
+    // the render thread.
+    void (*spawnLevel)(const char *name);
 
     bool (*clientConnect)(int client, const char *name);
     void (*clientBegin)(int client);        // spawns the player's ship

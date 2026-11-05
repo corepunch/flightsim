@@ -1,0 +1,120 @@
+{
+  "name": "07-lifeline",
+  "seed": 7,
+  "title": "Lifeline",
+  "loadout": { "torpedoes": 0 },
+  "player": { "pos": [0, 0, -200], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "mercy",
+      "asset": "HospitalShip",
+      "team": "friend",
+      "name": "Hospital Ship Mercy",
+      "pos": [0, -40, -700],
+      "facing": [1, 0, -1]
+    },
+    {
+      "id": "pod1",
+      "asset": "EscapePod",
+      "team": "neutral",
+      "name": "Pod 1",
+      "pos": [-900, 120, -1800],
+      "group": "pods",
+      "spin": 20
+    },
+    {
+      "id": "pod2",
+      "asset": "EscapePod",
+      "team": "neutral",
+      "name": "Pod 2",
+      "pos": [-300, -200, -2500],
+      "group": "pods",
+      "spin": -25
+    },
+    {
+      "id": "pod3",
+      "asset": "EscapePod",
+      "team": "neutral",
+      "name": "Pod 3",
+      "pos": [500, 300, -2900],
+      "group": "pods",
+      "spin": 15
+    },
+    {
+      "id": "pod4",
+      "asset": "EscapePod",
+      "team": "neutral",
+      "name": "Pod 4",
+      "pos": [1300, 0, -2100],
+      "group": "pods",
+      "spin": -18
+    },
+    {
+      "id": "pod5",
+      "asset": "EscapePod",
+      "team": "neutral",
+      "name": "Pod 5",
+      "pos": [1500, -250, -1100],
+      "group": "pods",
+      "spin": 22
+    }
+  ],
+  "fields": [
+    { "type": "asteroids", "center": [200, 0, -2300], "radius": 900, "count": 8, "seed": 7, "small": true }
+  ],
+  "waves": [
+    {
+      "id": "hunters",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [200, 400, -3800],
+      "spread": 150,
+      "order": "strike:pods",
+      "hold": true
+    },
+    {
+      "id": "bombers",
+      "ship": "talon",
+      "count": 3,
+      "team": "enemy",
+      "pos": [-1800, 0, 400],
+      "spread": 100,
+      "order": "strike:mercy",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    {
+      "id": "rescue",
+      "type": "collect",
+      "targets": ["pods"],
+      "range": 30,
+      "text": "Rescue 5 pods (within 30 m)"
+    },
+    { "id": "protect", "type": "protect", "targets": ["mercy"], "text": "Defend hospital ship Mercy" },
+    { "id": "pods", "type": "protect", "targets": ["pods"], "text": "Keep unrescued pods intact" }
+  ],
+  "events": [
+    { "when": {"time": 15}, "do": [{"spawn": "hunters"}] },
+    { "when": {"time": 70}, "do": [{"spawn": "bombers"}] },
+    {
+      "when": { "time": 2 },
+      "do": [
+        { "radio": {"from": "Mercy", "text": "Beacons are on your scope, Lancer. Please hurry."} }
+      ]
+    },
+    {
+      "when": { "spawned": "hunters" },
+      "do": [
+        { "radio": {"from": "Mercy", "text": "Skarn fighters going for the pods!"} }
+      ]
+    },
+    {
+      "when": { "spawned": "bombers" },
+      "do": [
+        { "radio": {"from": "Mercy", "text": "Bombers on our tail! Help!"} }
+      ]
+    }
+  ]
+}

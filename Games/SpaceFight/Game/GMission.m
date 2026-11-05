@@ -12,11 +12,24 @@ static Team TeamNamed(NSString *s) {
 }
 
 static NSString *const kRed = @"red";
-static NSString *const kDefaultPlayerShip = @"executioner";
+// Data/rules.json: the content this module names, so a game built on it
+// (game.json "base") can rename its sides, ships and secondary weapon.
+NSDictionary *GRules(void) {
+    static NSDictionary *rules;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        id json = FSJSON(FSURL(@"Data", @"rules", @"json"));
+        rules = [json isKindOfClass:NSDictionary.class] ? json : @{};
+    });
+    return rules;
+}
+
+static NSString *DefaultPlayerShip(void) { return GRules()[@"defaultShip"] ?: ShipDefNames().firstObject ?: @""; }
 
 // What the cockpit calls a fighter of each side.
 static NSString *FighterClassName(Team t) {
-    return t == TeamFriend ? @"Concord fighter" : (t == TeamEnemy ? @"Skarn fighter" : @"Fighter");
+    NSString *side = t == TeamFriend ? @"friend" : (t == TeamEnemy ? @"enemy" : @"neutral");
+    return GRules()[@"fighterClass"][side] ?: @"Fighter";
 }
 
 static NSString *PartKindName(SubsystemKind kind) {
@@ -106,21 +119,21 @@ static NSString *PartKindName(SubsystemKind kind) {
     return f ? simd_normalize(Vec3(f)) : simd_make_float3(0, 0, -1);
 }
 
-- (void)spawnMission:(NSUInteger)index {
+- (void)spawnLevel:(NSString *)name {
     CFTimeInterval t0 = CFAbsoluteTimeGetCurrent();
     [self clearWorld];
-    _missionIndex = index;
-    _mission = CampaignMission(index);
+    _mission = LevelNamed(name) ?: @{ @"name": name ?: @"" };
     NSDictionary *mission = _mission;
     NSArray *problems = [MissionRunner problemsWithLevel:mission];
-    for (NSString *p in problems) GPrint(@"Mission %@: %@", mission[@"id"], p);
-    gi.configString(CS_MISSION, [NSString stringWithFormat:@"%lu", (unsigned long)index].UTF8String);
-    uint32_t seed = 1337 + (uint32_t)[mission[@"id"] intValue] * 7919;
+    for (NSString *p in problems) GPrint(@"Mission %@: %@", mission[@"name"], p);
+    gi.configString(CS_LEVEL, [mission[@"name"] ?: name UTF8String]);
+    uint32_t seed = 1337 + (uint32_t)[mission[@"seed"] intValue] * 7919;
     gi.configString(CS_SKY, [NSString stringWithFormat:@"%u", seed].UTF8String);
     gi.configString(CS_GAME, ShipDataIdentity().UTF8String);
     gi.configString(CS_TEAMS, GTeamRelations().UTF8String);
-    gi.configString(CS_SECONDARY_NAME, "TORPEDO");
-    gi.configString(CS_SECONDARY_SHORT, "TORP");
+    NSDictionary *secondary = GRules()[@"secondary"];
+    gi.configString(CS_SECONDARY_NAME, [secondary[@"name"] ?: @"SECONDARY" UTF8String]);
+    gi.configString(CS_SECONDARY_SHORT, [secondary[@"short"] ?: @"SEC" UTF8String]);
     for (int i = 0; i < MAX_NAVS; i++) gi.configString(CS_NAVS + i, "");
     for (int t = 0; t < TeamCount; t++) _fighterClassNames[t] = gi.stringIndex(FighterClassName((Team)t).UTF8String);
 
@@ -142,8 +155,8 @@ static NSString *PartKindName(SubsystemKind kind) {
     _runner = [[MissionRunner alloc] initWithLevel:mission world:self];
     _held = [NSMutableDictionary dictionary];
 
-    gi.modelIndex(ShipModelName(mission[@"player"][@"ship"] ?: kDefaultPlayerShip).UTF8String);
-    gi.modelIndex(ProjectileModelName(GTorpedoProjectile).UTF8String);
+    gi.modelIndex(ShipModelName(mission[@"player"][@"ship"] ?: DefaultPlayerShip()).UTF8String);
+    gi.modelIndex(ProjectileModelName(GTorpedoProjectile()).UTF8String);
     // Units marked "hold" arrive when an event spawns them; precache them now.
     for (NSDictionary *e in mission[@"entities"]) {
         if ([e[@"hold"] boolValue]) {
@@ -164,7 +177,7 @@ static NSString *PartKindName(SubsystemKind kind) {
     }
     _running = YES;
     [self buildEntityStates];
-    GPrint(@"Mission %@ spawned in %.2f s", mission[@"id"], CFAbsoluteTimeGetCurrent() - t0);
+    GPrint(@"Mission %@ spawned in %.2f s", mission[@"name"], CFAbsoluteTimeGetCurrent() - t0);
 }
 
 - (void)spawnPlayer:(GClient *)cl {
@@ -173,7 +186,7 @@ static NSString *PartKindName(SubsystemKind kind) {
     simd_quatf q = LookRotation(facing, simd_make_float3(0, 1, 0));
     // Wingmen form up to the right of the start point.
     simd_float3 pos = Vec3(pl[@"pos"]) + QuatRight(q) * 30.0f * cl.index;
-    GFighter *s = [GFighter fighterWithShip:pl[@"ship"] ?: kDefaultPlayerShip ai:NO] ?: [GFighter fighterWithShip:kDefaultPlayerShip ai:NO];
+    GFighter *s = [GFighter fighterWithShip:pl[@"ship"] ?: DefaultPlayerShip() ai:NO] ?: [GFighter fighterWithShip:DefaultPlayerShip() ai:NO];
     s.number = [self allocEntity];
     s.team = TeamFriend;
     s.client = cl;
@@ -432,11 +445,11 @@ static NSString *PartKindName(SubsystemKind kind) {
 - (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
     int kills = 0;
     for (GClient *c in _clients) kills += c.kills;
-    GPrint(@"Mission %@ ended: %@ after %.0f s, kills %d", _mission[@"id"], success ? @"SUCCESS" : @"FAILED", _runner.time, kills);
+    GPrint(@"Mission %@ ended: %@ after %.0f s, kills %d", _mission[@"name"], success ? @"SUCCESS" : @"FAILED", _runner.time, kills);
     _over = YES;
     GCommand(nil, SVC_LEVEL_END, success ? @"1" : @"0", [results componentsJoinedByString:@"\n"], nil);
 }
 
-- (void)missionLog:(NSString *)line { GPrint(@"Mission %@: %@", _mission[@"id"], line); }
+- (void)missionLog:(NSString *)line { GPrint(@"Mission %@: %@", _mission[@"name"], line); }
 
 @end

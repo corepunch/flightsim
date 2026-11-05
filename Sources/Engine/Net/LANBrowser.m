@@ -49,14 +49,14 @@
     while ((packet = [_socket receiveFrom:&from])) {
         NSString *text = [NetChannel outOfBandText:packet];
         if (![text hasPrefix:@"info_response "]) continue;
-        // info_response <players> <max> <mission or -> <name...>
+        // info_response <players> <max> <level or -> <name...>
         NSArray *f = [text componentsSeparatedByString:@" "];
         if (f.count < 5) continue;
         LANServer *s = _found[from] ?: [LANServer new];
         s.address = from;
         s.players = [f[1] intValue];
         s.maxPlayers = [f[2] intValue];
-        s.missionIndex = [f[3] isEqualToString:@"-"] ? -1 : [f[3] intValue];
+        s.levelName = [f[3] isEqualToString:@"-"] ? nil : f[3];
         s.name = [[f subarrayWithRange:NSMakeRange(4, f.count - 4)] componentsJoinedByString:@" "];
         s.lastSeen = now;
         _found[from] = s;

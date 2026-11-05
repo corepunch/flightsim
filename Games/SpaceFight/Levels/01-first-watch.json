@@ -1,0 +1,81 @@
+{
+  "name": "01-first-watch",
+  "seed": 1,
+  "title": "First Watch",
+  "loadout": { "torpedoes": 2 },
+  "player": { "pos": [0, 0, 600], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "bastion",
+      "asset": "Carrier",
+      "team": "friend",
+      "name": "CNS Bastion",
+      "pos": [0, -60, 1500],
+      "facing": [0, 0, -1]
+    }
+  ],
+  "navs": [
+    { "id": "nav1", "name": "NAV 1", "pos": [0, 0, -1600] },
+    { "id": "nav2", "name": "NAV 2", "pos": [1800, 250, -2600] },
+    { "id": "nav3", "name": "NAV 3", "pos": [2600, -150, -400] },
+    { "id": "home", "name": "BASTION", "pos": [300, 0, 900] }
+  ],
+  "fields": [
+    { "type": "buoys", "navs": ["nav1", "nav2", "nav3"] }
+  ],
+  "waves": [
+    {
+      "id": "wingman",
+      "ship": "executioner",
+      "count": 1,
+      "team": "friend",
+      "pos": [65, 15, 570],
+      "order": "attack",
+      "name": "Lancer 2"
+    },
+    {
+      "id": "scouts",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [2300, 300, -3200],
+      "spread": 120,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "Patrol NAV 1, 2, 3 in order" },
+    { "id": "scouts", "type": "destroy", "targets": ["scouts"], "text": "Destroy 3 Wasp scouts" },
+    {
+      "id": "rtb",
+      "type": "reach",
+      "navs": ["home"],
+      "after": ["patrol", "scouts"],
+      "text": "Fly to the BASTION nav marker"
+    }
+  ],
+  "events": [
+    { "when": {"nav": "nav2"}, "do": [{"spawn": "scouts"}] },
+    {
+      "when": { "time": 2 },
+      "do": [
+        {
+          "radio": { "from": "Bastion Control", "text": "Follow the cyan diamonds. Fly close to each to log it." }
+        }
+      ]
+    },
+    {
+      "when": { "spawned": "scouts" },
+      "do": [
+        { "radio": {"from": "Bastion Control", "text": "Contacts near NAV 2! Three Wasps. Engage."} }
+      ]
+    },
+    {
+      "when": { "objective": "scouts" },
+      "do": [
+        { "radio": {"from": "Bastion Control", "text": "Scopes are clean. Nice shooting, Lancer."} }
+      ]
+    }
+  ]
+}

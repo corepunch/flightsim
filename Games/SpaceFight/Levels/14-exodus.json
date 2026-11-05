@@ -1,0 +1,122 @@
+{
+  "name": "14-exodus",
+  "seed": 14,
+  "title": "Exodus",
+  "loadout": { "torpedoes": 0 },
+  "player": { "pos": [0, 60, 300], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "aurora",
+      "asset": "Liner",
+      "team": "friend",
+      "name": "Liner Aurora Star",
+      "pos": [0, 0, 0],
+      "facing": [0, 0, -1],
+      "path": [[0, 0, -5000]],
+      "speed": 50
+    },
+    { "id": "gate", "asset": "JumpGate", "team": "neutral", "name": "Halden Gate", "pos": [0, 0, -5300] }
+  ],
+  "navs": [
+    { "id": "gatenav", "name": "GATE", "pos": [0, 0, -5100] }
+  ],
+  "waves": [
+    {
+      "id": "wingman",
+      "ship": "executioner",
+      "count": 1,
+      "team": "friend",
+      "pos": [60, 60, 350],
+      "order": "escort:aurora",
+      "name": "Lancer 6"
+    },
+    {
+      "id": "w1",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [-1600, 300, -1500],
+      "spread": 120,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "t1",
+      "ship": "talon",
+      "count": 2,
+      "team": "enemy",
+      "pos": [1600, 0, -1800],
+      "spread": 100,
+      "order": "strike:aurora",
+      "hold": true
+    },
+    {
+      "id": "t2",
+      "ship": "talon",
+      "count": 3,
+      "team": "enemy",
+      "pos": [0, 1500, -3000],
+      "spread": 100,
+      "order": "strike:aurora",
+      "hold": true
+    },
+    {
+      "id": "w2",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [0, -1400, -3500],
+      "spread": 120,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "t3",
+      "ship": "talon",
+      "count": 3,
+      "team": "enemy",
+      "pos": [-1500, -300, -4800],
+      "spread": 100,
+      "order": "strike:aurora",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["aurora"], "text": "Keep bombers off Aurora Star" },
+    {
+      "id": "escort",
+      "type": "escort",
+      "targets": ["aurora"],
+      "navs": ["gatenav"],
+      "text": "Escort Aurora to Halden Gate",
+      "depart": true
+    }
+  ],
+  "events": [
+    { "when": {"time": 12}, "do": [{"spawn": "w1"}] },
+    { "when": {"time": 25}, "do": [{"spawn": "t1"}] },
+    { "when": {"time": 55}, "do": [{"spawn": "t2"}] },
+    { "when": {"time": 70}, "do": [{"spawn": "w2"}] },
+    { "when": {"time": 85}, "do": [{"spawn": "t3"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        {
+          "radio": { "from": "Aurora Star", "text": "This is Captain Lusk. We have children aboard, Lancer. Please." }
+        }
+      ]
+    },
+    {
+      "when": { "spawned": "t2" },
+      "do": [
+        { "radio": {"from": "Lancer 6", "text": "Bombers above us, diving on the liner!"} }
+      ]
+    },
+    {
+      "when": { "objective": "escort" },
+      "do": [
+        { "radio": {"from": "Aurora Star", "text": "Gate lock... we are through. God bless you, Lancer."} }
+      ]
+    }
+  ]
+}

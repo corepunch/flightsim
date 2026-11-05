@@ -1,4 +1,5 @@
 #import "UILayout.h"
+#import "FileSystem.h"
 #import "UIStyle.h"
 #import "Localization.h"
 
@@ -34,7 +35,7 @@ static CGRect UnboxRect(NSValue *v) { CGRect r; [v getValue:&r size:sizeof r]; r
 }
 
 + (instancetype)named:(NSString *)name {
-    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:@"UI/menus"];
+    NSURL *url = FSURL(@"UI/menus", name, @"json");
     NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
     NSError *error = nil;
     id root = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;

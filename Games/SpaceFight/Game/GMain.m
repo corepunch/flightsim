@@ -257,6 +257,7 @@ static void ClientDisconnect(int index) {
 #pragma mark - Exports
 
 static void Init(void) {
+    FSSetGame(@(gi.cvarString("fs_game") ?: ""));   // this module's copy of the search path
     gi.cvarRegister("g_god", "0", CVAR_CHEAT, "Players take no damage");
     gi.cvarRegister("g_autopilot", "0", CVAR_CHEAT, "The AI flies the first player's ship");
     gi.cvarRegister("g_warp", "", CVAR_CHEAT, "Entity id to spawn the first player next to, facing it");
@@ -267,7 +268,7 @@ static void Init(void) {
 
 static void Shutdown(void) { level = nil; }
 
-static void SpawnMission(int index) { [level spawnMission:(NSUInteger)index]; }
+static void SpawnLevel(const char *name) { [level spawnLevel:@(name)]; }
 
 static int Entities(const EntityState **out) {
     *out = level->_entityStates.bytes;
@@ -285,7 +286,7 @@ GameExport *GetGameAPI(const GameImport *import) {
         .apiVersion = GAME_API_VERSION,
         .init = Init,
         .shutdown = Shutdown,
-        .spawnMission = SpawnMission,
+        .spawnLevel = SpawnLevel,
         .clientConnect = ClientConnect,
         .clientBegin = ClientBegin,
         .clientDisconnect = ClientDisconnect,

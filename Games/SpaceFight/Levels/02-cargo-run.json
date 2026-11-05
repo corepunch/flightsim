@@ -1,0 +1,124 @@
+{
+  "name": "02-cargo-run",
+  "seed": 2,
+  "title": "Cargo Run",
+  "loadout": { "torpedoes": 2 },
+  "player": { "pos": [0, 40, 400], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "mira",
+      "asset": "Freighter",
+      "team": "friend",
+      "name": "Freighter Mira",
+      "pos": [-120, 0, 0],
+      "facing": [0, 0, -1],
+      "path": [[-120, 0, -4100]],
+      "speed": 42,
+      "group": "convoy"
+    },
+    {
+      "id": "tobin",
+      "asset": "Freighter",
+      "team": "friend",
+      "name": "Freighter Tobin",
+      "pos": [120, 20, 250],
+      "facing": [0, 0, -1],
+      "path": [[120, 20, -3900]],
+      "speed": 42,
+      "group": "convoy"
+    },
+    {
+      "id": "gate",
+      "asset": "JumpGate",
+      "team": "neutral",
+      "name": "Halden Gate",
+      "pos": [0, 0, -4300],
+      "facing": [0, 0, -1]
+    }
+  ],
+  "navs": [
+    { "id": "gatenav", "name": "GATE", "pos": [0, 0, -4100] }
+  ],
+  "waves": [
+    {
+      "id": "wingman",
+      "ship": "executioner",
+      "count": 1,
+      "team": "friend",
+      "pos": [60, 40, 450],
+      "order": "escort:convoy",
+      "name": "Lancer 2"
+    },
+    {
+      "id": "wasps1",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [-1800, 200, -1200],
+      "spread": 150,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "talons",
+      "ship": "talon",
+      "count": 2,
+      "team": "enemy",
+      "pos": [1600, -100, -2400],
+      "spread": 100,
+      "order": "strike:convoy",
+      "hold": true
+    },
+    {
+      "id": "wasps2",
+      "ship": "wasp",
+      "count": 2,
+      "team": "enemy",
+      "pos": [0, 600, -3000],
+      "spread": 120,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "Keep Mira and Tobin intact" },
+    {
+      "id": "escort",
+      "type": "escort",
+      "targets": ["convoy"],
+      "navs": ["gatenav"],
+      "text": "Escort both to Halden Gate",
+      "depart": true
+    },
+    {
+      "id": "bombers",
+      "type": "destroy",
+      "targets": ["talons"],
+      "optional": true,
+      "text": "Destroy the Talon bombers"
+    }
+  ],
+  "events": [
+    { "when": {"time": 20}, "do": [{"spawn": "wasps1"}] },
+    { "when": {"time": 50}, "do": [{"spawn": "talons"}] },
+    { "when": {"time": 80}, "do": [{"spawn": "wasps2"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Mira", "text": "Mira and Tobin are under way. Keep the Talons off us."} }
+      ]
+    },
+    {
+      "when": { "spawned": "talons" },
+      "do": [
+        { "radio": {"from": "Lancer 2", "text": "Bombers inbound on the convoy, two o'clock low!"} }
+      ]
+    },
+    {
+      "when": { "objective": "escort" },
+      "do": [
+        { "radio": {"from": "Tobin", "text": "Gate lock. We owe you a drink, Lancer."} }
+      ]
+    }
+  ]
+}

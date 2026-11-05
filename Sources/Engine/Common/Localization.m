@@ -1,4 +1,5 @@
 #import "Localization.h"
+#import "FileSystem.h"
 
 static NSString *const kFallbackLocale = @"en";
 
@@ -7,7 +8,9 @@ NSDictionary<NSString *, NSDictionary *> *L10nCatalogs(void) {
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         NSMutableDictionary *all = [NSMutableDictionary dictionary];
-        for (NSURL *url in [NSBundle.mainBundle URLsForResourcesWithExtension:@"json" subdirectory:@"Strings"]) {
+        // The engine's catalogs, then the game's: a game adds keys and overrides
+        // the engine's wording (its title, its unit names) locale by locale.
+        for (NSURL *url in FSURLsLayered(@"Strings", @"json")) {
             NSData *data = [NSData dataWithContentsOfURL:url];
             NSError *error = nil;
             NSDictionary *catalog = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;
@@ -15,7 +18,16 @@ NSDictionary<NSString *, NSDictionary *> *L10nCatalogs(void) {
                 NSLog(@"Localization: %@ unreadable: %@", url.lastPathComponent, error.localizedDescription ?: @"no \"strings\"");
                 continue;
             }
-            all[url.lastPathComponent.stringByDeletingPathExtension] = catalog;
+            NSString *locale = url.lastPathComponent.stringByDeletingPathExtension;
+            NSDictionary *base = all[locale];
+            if (base) {
+                NSMutableDictionary *merged = [base mutableCopy], *strings = [base[@"strings"] mutableCopy];
+                [strings addEntriesFromDictionary:catalog[@"strings"]];
+                [merged addEntriesFromDictionary:catalog];
+                merged[@"strings"] = strings;
+                catalog = merged;
+            }
+            all[locale] = catalog;
         }
         if (!all[kFallbackLocale]) NSLog(@"Localization: no Strings/%@.json; showing keys", kFallbackLocale);
         catalogs = all;

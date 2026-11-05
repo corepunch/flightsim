@@ -122,7 +122,7 @@ static void Scenario(int mission, BOOL impaired) {
     assertPendingPrediction = !impaired;
     dropEvery = impaired ? 11 : 0; blackout = NO; sent = dropped = 0;
     Server *server = [[Server alloc] initWithName:@"regression"]; CHECK(server);
-    [server addTransport:[Link port:1]]; [server spawnMission:mission];
+    [server addTransport:[Link port:1]]; [server spawnLevel:[NSString stringWithFormat:@"check-%d", mission + 1]];
     NSMutableArray<Client *> *clients = [NSMutableArray array];
     NSMutableArray<Spy *> *views = [NSMutableArray array];
     for (int i = 0; i < 2; i++) {
@@ -222,7 +222,7 @@ static void UDPSmoke(void) {
     delay = 0; dropEvery = 0; blackout = NO;
     Server *server = [[Server alloc] initWithName:@"UDP localhost"]; CHECK(server);
     UDPTransport *host = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(host);
-    [server addTransport:host]; [server spawnMission:0];
+    [server addTransport:host]; [server spawnLevel:@"check-1"];
     NetAddress *address = [NetAddress addressWithString:@"127.0.0.1" port:host.port];
     NSMutableArray<Client *> *clients = [NSMutableArray array];
     for (int i = 0; i < 2; i++) {

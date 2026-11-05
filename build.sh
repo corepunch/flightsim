@@ -1,9 +1,12 @@
 #!/bin/zsh
 # Builds SpaceFight.app. Usage: ./build.sh [run|ios-simulator|ios-device|iphone|ipad]
 #
-# Sources/Shared  protocol, flight model and data tables (engine and game)
-# Sources/Game    the game module: all gameplay, behind GameAPI.h
-# Sources/Engine  server, client, renderer, UI and the app itself
+# Sources/Shared       protocol, flight model, file system and data tables (engine and game)
+# Sources/Engine       server, client, renderer, UI and the app itself
+# Games/<name>/Game    a game module: all gameplay, behind GameAPI.h
+# Games/<name>/...     that game's data, levels, campaign and art
+#
+# GAME picks the game the app starts with, and the only one the iOS app ships.
 set -e
 cd "$(dirname "$0")"
 
@@ -20,6 +23,7 @@ if ! zsystem flock -t 0 -f build_lock build/.lock 2>/dev/null; then
     zsystem flock -f build_lock build/.lock
 fi
 
+GAME=${GAME:-SpaceFight}
 jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null) || jobs=1
 platform=
 case "$1" in
@@ -30,7 +34,8 @@ if [[ -n $platform ]]; then
     mobile=build/iOS/$platform-$arch
     APP=$mobile/SpaceFight.app
     log "Building for $platform ($arch)"
-    make -j "$jobs" ios IOS_PLATFORM="$platform"
+    make -j "$jobs" ios IOS_PLATFORM="$platform" GAME="$GAME"
+    export GAMES=$GAME
 else
     log "Checking native targets ($jobs parallel jobs)"
     make -j "$jobs" all
@@ -43,6 +48,7 @@ if [[ -n $platform ]]; then
     mkdir -p "$APP"
     cp "$mobile/SpaceFight" "$APP/"
     cp Resources/Info-iOS.plist "$APP/Info.plist"
+    info_plist=$APP/Info.plist
     sdk_version=$(xcrun --sdk "$platform" --show-sdk-version)
     plutil -insert CFBundleSupportedPlatforms -json "[\"$([[ $platform == iphoneos ]] && print iPhoneOS || print iPhoneSimulator)\"]" "$APP/Info.plist"
     plutil -insert MinimumOSVersion -string 16.0 "$APP/Info.plist"
@@ -57,11 +63,13 @@ else
     bundle_resources=$APP/Contents/Resources
     mkdir -p "$APP/Contents/MacOS" "$bundle_resources" "$APP/Contents/PlugIns"
     cp build/Native/SpaceFight "$APP/Contents/MacOS/"
-    cp build/Native/game.dylib "$APP/Contents/PlugIns/"
+    for module in Games/*/Game(N/); do cp "build/Native/${module:h:t}.dylib" "$APP/Contents/PlugIns/"; done
     cp Resources/Info.plist "$APP/Contents/"
+    info_plist=$APP/Contents/Info.plist
     cp Resources/AppIcon.icns "$bundle_resources/"
 fi
 /bin/zsh Tools/bundle-resources.sh "$bundle_resources" build
+plutil -replace FSDefaultGame -string "$GAME" "$info_plist"
 if [[ $1 == iphone || $1 == ipad ]]; then
     log "Signing and deploying $APP"
     python3 Tools/deploy-ios.py "$1" "$APP"

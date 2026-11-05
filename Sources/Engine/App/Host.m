@@ -1,4 +1,5 @@
 #import "Host.h"
+#import "Story.h"
 #import "GameView.h"
 #import "Server.h"
 #import "Client.h"
@@ -189,12 +190,14 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _cockpit = [Cvar get:@"cl_cockpit" defaultValue:@"0" flags:CVAR_ARCHIVE help:@"Fly from the cockpit instead of the chase camera"];
     _autoStart = [Cvar get:@"cl_autoStart" defaultValue:@"0" flags:0 help:@"Skip the loading card's start prompt (scripted runs)"];
     __weak Host *weak = self;
-    [Cmd add:@"map" help:@"map <mission number>: flies that mission" handler:^(NSArray<NSString *> *a) {
+    [Cmd add:@"map" help:@"map <mission number or level name>: flies that campaign mission" handler:^(NSArray<NSString *> *a) {
         Host *host = weak;
         NSUInteger count = host->_frontEnd.levelCount;
-        int n = a.count > 1 ? a[1].intValue : 0;
-        if (n < 1 || (NSUInteger)n > count) { NSLog(@"usage: map <1..%lu>", (unsigned long)count); return; }
-        [weak startLevel:(NSUInteger)n - 1];
+        NSString *arg = a.count > 1 ? a[1] : @"";
+        NSUInteger index = CampaignIndexOfLevel(arg);
+        if (index == NSNotFound && arg.intValue >= 1 && (NSUInteger)arg.intValue <= count) index = (NSUInteger)arg.intValue - 1;
+        if (index == NSNotFound) { NSLog(@"usage: map <1..%lu | level name>", (unsigned long)count); return; }
+        [weak startLevel:index];
     }];
     [Cmd add:@"briefing" help:@"briefing <mission number> [page]: opens that briefing" handler:^(NSArray<NSString *> *a) {
         Host *host = weak;
@@ -567,9 +570,10 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     _server.loading = YES;
     dispatch_async(_loadQueue, ^{
         CFTimeInterval t0 = CACurrentMediaTime();
-        [self->_server spawnMission:(int)index];
+        NSString *level = CampaignLevelName(index);
+        [self->_server spawnLevel:level];
         self->_server.loading = NO;   // the gamestate goes out on the next frame
-        NSLog(@"Server: mission %d spawned in %.2f s", (int)index + 1, CACurrentMediaTime() - t0);
+        NSLog(@"Server: level %@ spawned in %.2f s", level, CACurrentMediaTime() - t0);
     });
 }
 
@@ -590,7 +594,10 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 // Precache its assets off-thread, then begin.
 - (void)gamestateArrived {
     if (_precaching) return;
-    NSUInteger index = (NSUInteger)_client.missionIndex;
+    // A remote host may fly a level our campaign does not list: show it as the
+    // first mission's card rather than refuse it.
+    NSUInteger index = CampaignIndexOfLevel(_client.levelName);
+    if (index == NSNotFound) index = 0;
     if (_state != HostStateLoading || index != _missionIndex) {
         [_clientView clearMission];
         [self showLoadingCard:index];

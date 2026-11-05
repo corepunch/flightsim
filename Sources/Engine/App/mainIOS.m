@@ -4,6 +4,7 @@
 #import "GameView.h"
 #import "Host.h"
 #import "Cmd.h"
+#import "GameLoader.h"
 
 @interface FlightViewController : UIViewController
 @end
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
         // arguments. Sets apply now; the rest once the game has booted.
         [Cmd setArguments:NSProcessInfo.processInfo.arguments];
         [Cmd executeEarlyCommands];
+        GameLoaderSelectGame();
         return UIApplicationMain(argc, argv, nil, NSStringFromClass(IOSAppDelegate.class));
     }
 }

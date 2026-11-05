@@ -18,8 +18,8 @@ for source in Tools/BakeModels.m Tools/ObjLoader.m Tools/ObjLoader.h; do
     fi
 done
 
-# Keep the directory structure used by NSBundle resource lookups.
-for directory in Audio Briefing Fonts Menu Shaders Ships Capitals Styles Projectiles Particles Textures Missions Story Strings UI; do
+# The engine's own resources, at the top level of the bundle.
+for directory in Audio Fonts Shaders Particles Strings UI; do
     if [[ -d $destination/$directory ]]; then
         rsync -a --delete "Resources/$directory/" "$destination/$directory/"
     else
@@ -28,30 +28,45 @@ for directory in Audio Briefing Fonts Menu Shaders Ships Capitals Styles Project
 done
 cp -p CREDITS.md "$destination/"
 
-mkdir -p "$destination/Models"
-rsync -a --delete --exclude '*.obj' --exclude '*.mtl' --exclude '*.scn' Resources/Models/ "$destination/Models/"
-for scene in "$destination"/Models/**/*.scn(N); do
-    relative=${scene#"$destination/"}
-    [[ -f Resources/${relative:r}.obj ]] || rm "$scene"
+# Each game's folder, as Games/<name>/ (Sources/Shared/FileSystem.h): its data,
+# with models baked to .scn. GAMES limits which games ship (the iOS app has one).
+games=(${=GAMES:-${(@)$(print -l Games/*/(N:t))}})
+# A game also needs the games it builds on (game.json "base").
+for (( i = 1; i <= $#games; i++ )); do
+    base=$(plutil -extract base raw -o - "Games/$games[i]/game.json" 2>/dev/null || true)
+    if [[ -n $base && -d Games/$base ]] && (( ! ${games[(Ie)$base]} )); then games+=($base); fi
 done
-
+mkdir -p "$destination/Games"
+for existing in "$destination"/Games/*(N/); do
+    if (( ! ${games[(Ie)${existing:t}]} )); then rm -rf -- "$existing"; fi
+done
 baked=0
-for obj in Resources/Models/**/*.obj; do
-    relative=${obj#Resources/}
-    scene=$cache/${relative:r}.scn
-    mtl=${obj:r}.mtl
-    if [[ ! -f $scene || $obj -nt $scene || $mtl -nt $scene || $baker -nt $scene ]]; then
-        mode=(--scenekit)
-        case "$obj" in
-            Resources/Models/Cockpit.obj|Resources/Models/Capital/*) mode=() ;;
-        esac
-        "$baker" "${mode[@]}" "$scene:h" "$obj"
-        baked=$((baked + 1))
-    fi
-    output=$destination/${relative:r}.scn
-    if [[ ! -f $output || $scene -nt $output ]]; then
-        mkdir -p "$output:h"
-        cp -pc "$scene" "$output"
-    fi
+for game in $games; do
+    source_dir=Games/$game
+    output_dir=$destination/Games/$game
+    mkdir -p "$output_dir"
+    rsync -a --delete --exclude '/Game/' --exclude '*.obj' --exclude '*.mtl' --exclude '*.scn' "$source_dir/" "$output_dir/"
+    for obj in $source_dir/Models/**/*.obj(N); do
+        relative=${obj#$source_dir/}
+        scene=$cache/$game/${relative:r}.scn
+        mtl=${obj:r}.mtl
+        if [[ ! -f $scene || $obj -nt $scene || $mtl -nt $scene || $baker -nt $scene ]]; then
+            mode=(--scenekit)
+            case "$relative" in
+                Models/Cockpit.obj|Models/Capital/*) mode=() ;;
+            esac
+            "$baker" "${mode[@]}" "$scene:h" "$obj"
+            baked=$((baked + 1))
+        fi
+        output=$output_dir/${relative:r}.scn
+        if [[ ! -f $output || $scene -nt $output ]]; then
+            mkdir -p "$output:h"
+            cp -pc "$scene" "$output"
+        fi
+    done
 done
-print "Bundled resources ($baked models baked)"
+# Bundles from before the Games/ layout.
+for stale in Briefing Menu Missions Models Ships Capitals Styles Projectiles Story Textures; do
+    if [[ -e $destination/$stale ]]; then rm -rf -- "$destination/$stale"; fi
+done
+print "Bundled resources for ${games[*]} ($baked models baked)"

@@ -14,14 +14,14 @@
 
 @property (nonatomic, readonly) NSString *name;
 @property (nonatomic, readonly) BOOL running;   // a mission is loaded
-@property (atomic) BOOL loading;                // set while -spawnMission: runs; frame: does nothing
+@property (atomic) BOOL loading;                // set while -spawnLevel: runs; frame: does nothing
 @property (nonatomic, readonly) double time;
 @property (nonatomic, readonly) int clientCount;
 @property (nonatomic, readonly) BOOL missionEnded;   // the game has sent its debrief
 
 // Loads a mission. Slow; call off the render thread with `loading` set.
 // Every connected client gets the new gamestate and must begin again.
-- (void)spawnMission:(int)missionIndex;
+- (void)spawnLevel:(NSString *)name;
 - (void)stop;
 
 // Reads packets, runs whole ticks for the elapsed real time, sends snapshots.

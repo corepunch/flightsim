@@ -3,7 +3,8 @@
 Open `KestrelFrontier.xcodeproj`. Choose the shared `KestrelFrontier-iOS`
 scheme for iPhone and iPad, or `KestrelFrontier-macOS` for a native Mac build.
 Both schemes support Debug, Release, and Archive. The Mac target builds and
-embeds its separate `game.dylib` module automatically.
+embeds the game module (`SpaceFight.dylib`, from `Games/SpaceFight/Game`) automatically;
+the iOS target compiles that game into the app and ships only its `Games/` folder.
 
 For iOS, select an iPhone or iPad simulator to build and run. For a physical device,
 choose your development team under Signing & Capabilities. Xcode compiles

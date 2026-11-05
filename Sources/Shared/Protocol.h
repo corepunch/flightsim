@@ -16,7 +16,7 @@
 
 // Version 4 requires ship-data identity validation before beginning.
 // Version 3 clients do not validate CS_GAME and must not join these servers.
-#define PROTOCOL_VERSION 4
+#define PROTOCOL_VERSION 5
 
 #define TICK_RATE 30
 #define TICK_DT (1.0f / TICK_RATE)
@@ -48,7 +48,7 @@ static inline TeamRelation TeamRelationIn(const char *csTeams, int a, int b) {
 // Indexed strings the server keeps in sync on every client. Models and
 // strings are registered by the game (gi.modelIndex / gi.stringIndex);
 // index 0 of each range means "none".
-#define CS_MISSION 0            // campaign mission index, decimal
+#define CS_LEVEL 0              // the running level's name
 #define CS_SKY 1                // sky seed, decimal
 #define CS_GAME 2               // "<game> <data version>", for the client to check its data
 #define CS_TEAMS 3              // team relations, see TeamRelationIn

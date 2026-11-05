@@ -1,4 +1,5 @@
 #import "ServerBrowser.h"
+#import "Story.h"
 #import "GameAudio.h"
 #import "Assets.h"
 #import "UIStyle.h"
@@ -64,7 +65,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 
 - (void)showServers:(NSArray<LANServer *> *)servers {
     NSMutableString *sig = [NSMutableString string];
-    for (LANServer *s in servers) [sig appendFormat:@"%@|%@|%d|%d;", s.address, s.name, s.players, s.missionIndex];
+    for (LANServer *s in servers) [sig appendFormat:@"%@|%@|%d|%@;", s.address, s.name, s.players, s.levelName ?: @"-"];
     if ([sig isEqualToString:_signature ?: @""] && CGSizeEqualToSize(_laidOut, self.size) && _signature) return;
     _signature = sig;
     LANServer *was = self.selected;
@@ -116,7 +117,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     for (NSUInteger i = _firstVisible; i < _firstVisible + visible; i++) {
         LANServer *srv = _servers[i];
         BOOL sel = i == _index;
-        NSString *mission = srv.missionIndex >= 0 ? CampaignMission((NSUInteger)srv.missionIndex)[@"title"] : nil;
+        NSString *mission = srv.levelName ? LevelNamed(srv.levelName)[@"title"] : nil;
         SKLabelNode *l = Text(M(@"rowSize", 16), sel ? Amber(1) : Ink(0.85));
         l.text = L10nFormat(@"browser.row", sel ? @">" : @" ", srv.name, srv.players, srv.maxPlayers,
                             mission ? L10nFormat(@"browser.flying", mission) : L10n(@"browser.in_menus"), srv.address);

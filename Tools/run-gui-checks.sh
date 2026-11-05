@@ -14,11 +14,9 @@ cp Resources/Info.plist "$contents/Info.plist"
     -c 'Set CFBundleIdentifier com.igor.spacefight.portraitchecks' \
     -c 'Set CFBundleName Portrait Checks' \
     -c 'Add LSUIElement bool true' "$contents/Info.plist"
-cp -R Resources/Briefing Resources/Fonts Resources/Missions Resources/Ships Resources/Capitals "$contents/Resources/"
-ln -s "$PWD/Resources/Audio" "$contents/Resources/Audio"
-for directory in Strings UI Story; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
 
 source Tools/engine-library.sh
+link_check_resources "$contents/Resources"
 clang $engine_cflags Tools/GUI/PortraitChecks.m $engine_libs -o "$contents/MacOS/PortraitChecks"
 /usr/bin/codesign --force --sign - "$app"
 
