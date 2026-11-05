@@ -104,6 +104,11 @@ static SKShader *MenuArtShader(void) {
     _items = _layout.items ?: @[];
 }
 
+// A size from main.json; the fallback when the file is missing.
+- (CGFloat)metric:(NSString *)name flags:(NSSet *)flags fallback:(CGFloat)fallback {
+    return _layout ? [_layout metric:name flags:flags fallback:fallback] : fallback;
+}
+
 - (NSUInteger)itemCount { return MIN(_items.count, (NSUInteger)MenuItemCount); }
 
 - (NSString *)itemId:(NSUInteger)i { return i < [self itemCount] ? _items[i][@"id"] : nil; }
@@ -291,27 +296,27 @@ static SKShader *MenuArtShader(void) {
     }
 
     NSSet *flags = compact ? [NSSet setWithObject:@"compact"] : [NSSet set];
-    CGFloat width = portrait ? availableWidth : MIN([_layout metric:@"width" flags:flags fallback:390], availableWidth);
+    CGFloat width = portrait ? availableWidth : MIN([self metric:@"width" flags:flags fallback:390], availableWidth);
     BOOL oneLine = compact && !portrait && availableWidth >= 330;
-    CGFloat rowHeight = MIN([_layout metric:@"rowHeight" flags:flags fallback:62],
-                            (top - bottom) * [_layout metric:@"rowHeightFraction" flags:flags fallback:1]);
-    CGFloat gap = [_layout metric:@"gap" flags:flags fallback:8];
+    CGFloat rowHeight = MIN([self metric:@"rowHeight" flags:flags fallback:62],
+                            (top - bottom) * [self metric:@"rowHeightFraction" flags:flags fallback:1]);
+    CGFloat gap = [self metric:@"gap" flags:flags fallback:8];
     NSUInteger count = MAX([self itemCount], (NSUInteger)1);
     // Leave room for the wordmark however many rows the layout has.
-    CGFloat minimumHeader = [_layout metric:@"minimumHeader" flags:flags fallback:150];
-    rowHeight = MIN(rowHeight, MAX([_layout metric:@"minimumRowHeight" flags:flags fallback:30],
+    CGFloat minimumHeader = [self metric:@"minimumHeader" flags:flags fallback:150];
+    rowHeight = MIN(rowHeight, MAX([self metric:@"minimumRowHeight" flags:flags fallback:30],
                                    (top - bottom - minimumHeader - gap * (count - 1)) / count));
     CGFloat stack = count * (rowHeight + gap) - gap;
     CGFloat titleSize = portrait ? MIN(52, availableWidth * 0.13) : (compact ? 34 : MIN(82, availableWidth * 0.10));
     CGFloat titleLines = oneLine ? 1 : 1.86;
-    CGFloat headerPadding = [_layout metric:@"headerPadding" flags:flags fallback:62];
+    CGFloat headerPadding = [self metric:@"headerPadding" flags:flags fallback:62];
     titleSize = MIN(titleSize, MAX(18, (top - bottom - stack - headerPadding) / titleLines));
     CGFloat header = titleSize * titleLines + headerPadding;
     CGFloat blockHeight = stack + header;
     CGFloat stackBottom = portrait ? bottom + 8 : MAX(bottom, bottom + (top - bottom - blockHeight) * 0.5);
     CGFloat stackTop = stackBottom + stack;
 
-    [_header addObject:[self label:L10n(@"menu.unit") size:[_layout metric:@"unitSize" flags:flags fallback:13] color:UIAmber
+    [_header addObject:[self label:L10n(@"menu.unit") size:[self metric:@"unitSize" flags:flags fallback:13] color:UIAmber
                            opacity:0.96 x:left + 2 y:stackTop + header - 6]];
     CGFloat titleY = stackTop + header - (compact ? 19 : 29);
     NSArray<NSString *> *words = L10nList(@"menu.wordmark");
@@ -337,9 +342,9 @@ static SKShader *MenuArtShader(void) {
                                selected:i == _selected compact:compact labels:_rowLabels[i]];
     }
     if (!compact) {
-        [_footerLabels addObject:[self label:L10n(TARGET_OS_IOS ? @"menu.footer_touch" : @"menu.footer") size:[_layout metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
+        [_footerLabels addObject:[self label:L10n(TARGET_OS_IOS ? @"menu.footer_touch" : @"menu.footer") size:[self metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
                                            x:left y:bottom]];
-        SKLabelNode *caption = [self label:L10n(@"menu.caption") size:[_layout metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
+        SKLabelNode *caption = [self label:L10n(@"menu.caption") size:[self metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
                                         x:self.size.width - _usedInsets.right - margin y:bottom];
         caption.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
         [_footerLabels addObject:caption];

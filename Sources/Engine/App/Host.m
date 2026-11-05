@@ -4,19 +4,16 @@
 #import "Client.h"
 #import "ClientView.h"
 #import "SceneKitRefresh.h"
-#import "Briefing.h"
-#import "MainMenu.h"
+#import "FrontEnd.h"
 #import "PauseMenu.h"
 #import "Loading.h"
 #import "Localization.h"
-#import "Progress.h"
 #import "NetTransport.h"
 #import "UDPTransport.h"
 #import "LANBrowser.h"
 #import "NetProtocol.h"
-#import "ServerBrowser.h"
 #import "UIMotion.h"
-#import "Assets.h"
+#import "ScreenHost.h"
 #import "GameAudio.h"
 #import "Cvar.h"
 #import "Cmd.h"
@@ -35,7 +32,13 @@ static NSString *PilotName(void) {
 #endif
 }
 
-typedef NS_ENUM(NSInteger, HostState) { HostStateLoading, HostStateMainMenu, HostStateMissions, HostStateFlying, HostStatePaused, HostStateOver, HostStateBrowser };
+// The engine's states. Which menu screen shows is the front end's business.
+typedef NS_ENUM(NSInteger, HostState) {
+    HostStateLoading,   // the loading card: boot, or a level being built and precached
+    HostStateMenus,     // the front end has the screen
+    HostStateFlying,
+    HostStatePaused,    // a level held (or, online, still running) under the pause menu
+};
 
 // What the loading screen says while the background queue is on each step.
 typedef NS_ENUM(int, LoadStage) {
@@ -58,6 +61,9 @@ static NSString *LoadStatus(LoadStage s) {
 
 static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the title card
 
+@interface Host () <UIServices>
+@end
+
 @implementation Host {
     __weak SCNView *_view;
     Input *_input;
@@ -65,13 +71,12 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     Client *_client;
     SceneKitRefresh *_refresh;
     ClientView *_clientView;
-    Briefing *_briefing;
-    MainMenu *_mainMenu;
+    FrontEnd *_frontEnd;
     PauseMenu *_pauseMenu;
     BOOL _resumeMouse;
     Loading *_loading;
 
-    HostState _state, _browserReturnState;
+    HostState _state;
     NSUInteger _missionIndex;
     double _lastTime, _time;
 
@@ -85,14 +90,9 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     // Multiplayer: our server also listens on UDP, so others on the LAN can
     // join whatever we fly; or we join theirs.
     UDPTransport *_serverUDP, *_clientUDP;
-    LANBrowser *_lan;
-    ServerBrowser *_browser;
 
     // Overlay changes wait for the outgoing screen's exit animation.
-    SKScene *_shownOverlay;
-    SKNode *_loadingBackdrop;
-    double _exitDeadline;
-    void (^_afterExit)(void);
+    ScreenHost *_screens;
 
     Cvar *_testInput, *_cockpit, *_autoStart;
 }
@@ -104,8 +104,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _input = input;
         [self registerConsole];
         _loadQueue = dispatch_queue_create("SpaceFight.loading", DISPATCH_QUEUE_SERIAL);
-        _briefing = [[Briefing alloc] initWithSize:view.bounds.size];
-        _mainMenu = [[MainMenu alloc] initWithSize:view.bounds.size];
+        _frontEnd = [[FrontEnd alloc] initWithSize:view.bounds.size services:self];
         _pauseMenu = [[PauseMenu alloc] initWithSize:view.bounds.size];
         _loading = [[Loading alloc] initWithSize:view.bounds.size];
         [_loading showTitle:L10n(@"game.title") kicker:L10n(@"game.kicker") detail:L10n(@"game.unit")];
@@ -129,9 +128,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             _serverUDP = [[UDPTransport alloc] initWithPort:port attempts:4];
             if (_serverUDP) [_server addTransport:_serverUDP];
         }
-        _browser = [[ServerBrowser alloc] initWithSize:view.bounds.size];
-        _browser.hostLine = _serverUDP ? L10nFormat(@"browser.hosting_on", _serverUDP.port)
-                                       : L10n(@"browser.hosting_off");
+        [_frontEnd setHostLine:_serverUDP ? L10nFormat(@"browser.hosting_on", _serverUDP.port) : L10n(@"browser.hosting_off")];
         [self connectLocal];
 
         // Show the loading card over an empty scene right away; the real scene
@@ -141,7 +138,16 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         placeholder.background.contents = [SKColor blackColor];
         view.scene = placeholder;
         view.overlaySKScene = _loading;
-        _shownOverlay = _loading;
+        __weak SCNView *weakSCNView = view;
+        __weak Host *weakHost = self;
+        _screens = [[ScreenHost alloc] initWithScreen:_loading install:^(SKScene *screen, SKNode *cover) {
+            Host *host = weakHost;
+            if (host && screen != host->_clientView.hud) [[GameAudio shared] play:@"ui-panel"];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                weakSCNView.overlaySKScene = screen;
+                [cover removeFromParent];
+            });
+        }];
 #if !TARGET_OS_IOS
         view.delegate = self;
 #endif
@@ -173,13 +179,15 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _autoStart = [Cvar get:@"cl_autoStart" defaultValue:@"0" flags:0 help:@"Skip the loading card's start prompt (scripted runs)"];
     __weak Host *weak = self;
     [Cmd add:@"map" help:@"map <mission number>: flies that mission" handler:^(NSArray<NSString *> *a) {
-        NSUInteger count = CampaignMissions().count;
+        Host *host = weak;
+        NSUInteger count = host->_frontEnd.levelCount;
         int n = a.count > 1 ? a[1].intValue : 0;
         if (n < 1 || (NSUInteger)n > count) { NSLog(@"usage: map <1..%lu>", (unsigned long)count); return; }
-        [weak startMission:(NSUInteger)n - 1];
+        [weak startLevel:(NSUInteger)n - 1];
     }];
     [Cmd add:@"briefing" help:@"briefing <mission number> [page]: opens that briefing" handler:^(NSArray<NSString *> *a) {
-        NSUInteger count = CampaignMissions().count;
+        Host *host = weak;
+        NSUInteger count = host->_frontEnd.levelCount;
         int n = a.count > 1 ? a[1].intValue : 0, page = a.count > 2 ? a[2].intValue : 1;
         if (n < 1 || (NSUInteger)n > count) { NSLog(@"usage: briefing <1..%lu> [page]", (unsigned long)count); return; }
         [weak showBriefing:(NSUInteger)n - 1 page:(NSUInteger)MAX(page - 1, 0)];
@@ -208,29 +216,27 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     }];
 }
 
+- (BOOL)inLevel { return _state == HostStateFlying || _state == HostStatePaused; }
+
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)page {
     if (!_booted || _state == HostStateLoading) { NSLog(@"briefing: not in the menus"); return; }
-    if (_state == HostStateFlying || _state == HostStatePaused || _state == HostStateOver) [self abortToMenu];
-    _state = HostStateMissions;
-    [_briefing showBriefing:index page:page];
-    // Straight after boot the loading card is still up: it fades, then the
-    // reveal presents whatever _state asks for.
-    if (_shownOverlay == _loading && !_revealing) [self reveal:0.5];
-    else if (!_revealing) [self presentOverlay:_briefing];
+    if ([self inLevel]) [self abortToMenu];
+    _state = HostStateMenus;
+    [_frontEnd showBriefing:index page:page];
 }
 
 - (void)connectToAddress:(NetAddress *)address {
     if (!_booted) { NSLog(@"connect: not booted yet"); return; }
-    if (_state == HostStateFlying || _state == HostStatePaused || _state == HostStateOver) [self abortToMenu];
-    if (_shownOverlay == _loading && !_revealing) [self reveal:0.5];
-    [self showBrowser];
+    if ([self inLevel]) [self abortToMenu];
+    _state = HostStateMenus;
+    [_frontEnd showBrowser];
     [self joinServer:address];
 }
 
 - (void)disconnectCommand {
-    if (_state == HostStateFlying || _state == HostStatePaused || _state == HostStateOver) { [self abortToMenu]; return; }
+    if ([self inLevel]) { [self abortToMenu]; return; }
     if (self.remote) { [_client disconnect]; [self connectLocal]; }
-    if (_booted && _state != HostStateLoading) [self showMainMenu];
+    if (_booted && _state != HostStateLoading) [_frontEnd showMainMenu];
 }
 
 - (void)saveScreenshot:(NSString *)path {
@@ -255,6 +261,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 - (BOOL)remote { return _client.serverAddress && !_client.serverAddress.isLoopback; }
 
+#pragma mark - UIServices
+
 // Leave our own server idle and connect to someone else's. The gamestate it
 // sends (now, or when it starts a mission) takes us through loading.
 - (void)joinServer:(NetAddress *)address {
@@ -264,37 +272,36 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (!_clientUDP) _clientUDP = [[UDPTransport alloc] initWithPort:0 attempts:1];
     NSLog(@"Host: joining %@", address);
     [_client connectTo:address transport:_clientUDP name:PilotName()];
-    [_browser setStatus:L10nFormat(@"browser.connecting", address)];
+    [_frontEnd setBrowserStatus:L10nFormat(@"browser.connecting", address)];
 }
 
-- (void)showBrowser {
-    _browserReturnState = _state;
-    _state = HostStateBrowser;
-    if (!_lan) _lan = [LANBrowser new];
-    [_browser setStatus:self.remote ? L10nFormat(@"browser.connected", _client.serverAddress) : @""];
-    if (!_revealing) [self presentOverlay:_browser];
+- (void)cancelJoin {
+    if (self.remote && _client.state != ClientActive) { [_client disconnect]; [self connectLocal]; }
 }
 
-- (void)updateBrowser:(InputAction)actions {
-    [_lan poll];
-    NSMutableArray *list = [NSMutableArray array];
-    for (LANServer *s in _lan.servers)
-        if (!(_serverUDP && s.address.port == _serverUDP.port && [self isOwnAddress:s.address])) [list addObject:s];
-    [_browser showServers:list];
-    switch ([_browser handle:actions]) {
-        case BrowserCommandJoin: [self joinServer:_browser.selected.address]; break;
-        case BrowserCommandBack: {
-            if (self.remote && _client.state != ClientActive) { [_client disconnect]; [self connectLocal]; }
-            if (_browserReturnState == HostStateMainMenu) [self showMainMenu];
-            else {
-                _state = _browserReturnState;
-                [self presentOverlay:_briefing];
-            }
-            break;
-        }
-        default: break;
-    }
-    [_clientView menuFrame:_time];
+- (double)time { return _time; }
+- (NSString *)connectedServer { return self.remote ? _client.serverAddress.string : nil; }
+- (void)drawMenuBackdrop { [_clientView menuFrame:_time]; }
+
+- (BOOL)isOwnServer:(LANServer *)s {
+    return _serverUDP && s.address.port == _serverUDP.port && [self isOwnAddress:s.address];
+}
+
+// Every screen change goes through here. While the loading card fades out,
+// the reveal shows whatever the front end has current; straight after boot,
+// the card is still up and a menu request starts that fade.
+- (void)present:(SKScene *)screen {
+    if (_revealing) return;
+    if (_screens.shown == _loading && _booted && _state == HostStateMenus) { [self reveal:0.5]; return; }
+    [self presentOverlay:screen];
+}
+
+- (void)quitAfter:(NSTimeInterval)seconds {
+#if TARGET_OS_OSX
+    [_screens after:seconds then:^{
+        dispatch_async(dispatch_get_main_queue(), ^{ [NSApp terminate:nil]; });
+    } time:_time];
+#endif
 }
 
 // Our own listen server answers our broadcast too; leave it off the list.
@@ -359,9 +366,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         view.scene = scene;
         view.pointOfView = camera;
     });
-    _state = HostStateMainMenu;
-    [self prepareMainMenu];
-    [_briefing showListSelecting:ProgressUnlockedCount() - 1];
+    _state = HostStateMenus;
+    [_frontEnd prepareAfterBoot];
     // The command line's +map, +connect, +briefing, +exec run now that there
     // is something to act on.
     [Cmd executeLateCommands];
@@ -399,18 +405,15 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [_loading tick:_time];
     if (!_loading.faded) return;
     _revealing = NO;
-    SKScene *next = _briefing;
-    if (_state == HostStateMainMenu) next = _mainMenu;
-    else if (_state == HostStateFlying) next = _clientView.hud;
-    else if (_state == HostStateBrowser) next = _browser;
-    if (_state == HostStateFlying) [_clientView.hud showBanner:[CampaignMission(_missionIndex)[@"title"] uppercaseString] color:nil];
+    SKScene *next = _state == HostStateFlying ? _clientView.hud : _frontEnd.currentScreen;
+    if (_state == HostStateFlying) [_clientView.hud showBanner:[_frontEnd bannerForLevel:_missionIndex] color:nil];
     [self presentOverlay:next];
 }
 
 #pragma mark - Missions
 
 // Render thread: put up the loading card and build the mission off-thread.
-- (void)startMission:(NSUInteger)index {
+- (void)startLevel:(NSUInteger)index {
     if (_state == HostStateLoading) return;
     _client.inputSuspended = NO;
     if (self.remote) { [_client disconnect]; [self connectLocal]; }   // flying our own mission now
@@ -432,13 +435,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _state = HostStateLoading;
     _revealing = NO;
     _missionIndex = index;
-    NSDictionary *mission = CampaignMission(index);
-
-    NSDictionary *b = mission[@"briefing"];
-    NSString *detail = b[@"stardate"] ? L10nFormat(@"loading.location_stardate", b[@"location"] ?: @"", b[@"stardate"]) : b[@"location"];
-    [_loading showTitle:mission[@"title"]
-                 kicker:L10nFormat(@"loading.mission_kicker", (unsigned long)index + 1)
-                 detail:detail];
+    [_frontEnd fillLoadingCard:_loading level:index];
     [self reportStage:LoadStageStart progress:0];
     atomic_store(&_loadDone, false);
     _loadStartedAt = _time;
@@ -481,7 +478,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if ([_view isKindOfClass:GameView.class]) [(GameView *)_view setSecondaryLabel:_client.configStrings[CS_SECONDARY_SHORT]];
 #endif
     [_client begin];
-    if (!self.remote) ProgressMarkStarted();
+    [_frontEnd levelStarted:_missionIndex remote:self.remote];
     _state = HostStateFlying;
     [self reveal:0.6];
 }
@@ -490,13 +487,12 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _client.inputSuspended = NO;
     _loading.readyToStart = NO;
     _precaching = NO;
-    [_browser setStatus:reason];
-    if (_state == HostStateFlying || _state == HostStatePaused || _state == HostStateOver || (_state == HostStateLoading && _booted)) {
-        _state = HostStateMissions;
+    [_frontEnd setBrowserStatus:reason];
+    if ([self inLevel] || (_state == HostStateLoading && _booted)) {
+        _state = HostStateMenus;
         _revealing = NO;
         [_clientView clearMission];
-        [_briefing showListSelecting:_missionIndex];
-        [self presentOverlay:_briefing];
+        [_frontEnd levelLeft:_missionIndex];
     }
     [self connectLocal];   // back to our own server
 }
@@ -505,12 +501,10 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (_state != HostStateFlying && _state != HostStatePaused) return;
     _client.inputSuspended = NO;
     [[GameAudio shared] play:success ? @"ui-success" : @"ui-alert"];
-    _state = HostStateOver;
-    if (success) { ProgressRecordResult(_missionIndex, results); ProgressMarkCompleted(_missionIndex); }
+    _state = HostStateMenus;
     if (!self.remote) [_server stop];   // a remote host decides what comes next
     [_client leaveGame];
-    [_briefing showDebrief:_missionIndex success:success results:results];
-    [self presentOverlay:_briefing];
+    [_frontEnd levelEnded:_missionIndex success:success results:results remote:self.remote];
 }
 
 - (void)pauseFlight {
@@ -538,7 +532,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         case PauseCommandCamera: [_cockpit setInteger:!_cockpit.boolValue]; break;
         case PauseCommandRestart:
             _client.inputSuspended = NO;
-            [self startMission:_missionIndex];
+            [self startLevel:_missionIndex];
             break;
         case PauseCommandMissions: [self abortToMenu]; break;
         default: break;
@@ -548,61 +542,23 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (void)abortToMenu {
     _client.inputSuspended = NO;
     [[GameAudio shared] play:@"ui-back"];
-    _state = HostStateMissions;
+    _state = HostStateMenus;
     [_server stop];
     [_client leaveGame];
     if (self.remote) { [_client disconnect]; [self connectLocal]; }
     [_clientView clearMission];
-    [_briefing showListSelecting:_missionIndex];
-    [self presentOverlay:_briefing];
+    [_frontEnd levelLeft:_missionIndex];
 }
 
 #pragma mark - Overlays
 
 // Render thread. Show next once the current screen has played its exit; if
 // another change arrives meanwhile, the newest one wins.
+// Render thread. The loading card keeps the outgoing screen opaque with its
+// own art while that screen animates away.
 - (void)presentOverlay:(SKScene *)next {
-    if (next == _shownOverlay && _exitDeadline == 0) return;
-    if (next == _loading && _shownOverlay && _shownOverlay != next && !_loadingBackdrop) {
-        // The outgoing screen fades/scales its own content. Keep the hangar
-        // opaque underneath it until the actual loading scene is installed.
-        _loadingBackdrop = [_loading backdropWithSize:_shownOverlay.size];
-        _loadingBackdrop.zPosition = -1;
-        [_shownOverlay addChild:_loadingBackdrop];
-    }
-    __weak Host *weak = self;
-    void (^show)(void) = ^{ [weak showOverlayNow:next]; };
-    if (_exitDeadline > 0) { _afterExit = show; return; }
-    NSTimeInterval exit = [_shownOverlay conformsToProtocol:@protocol(UIMotionScene)]
-        ? [(id<UIMotionScene>)_shownOverlay motionExit] : 0;
-    [self afterExit:exit then:show];
-}
-
-- (void)afterExit:(NSTimeInterval)seconds then:(void (^)(void))then {
-    if (seconds <= 0) { _exitDeadline = 0; _afterExit = nil; then(); return; }
-    _afterExit = then;
-    _exitDeadline = _time + seconds * UIMotionTimeScale() + 0.02;
-}
-
-- (void)showOverlayNow:(SKScene *)next {
-    if (next != _clientView.hud) [[GameAudio shared] play:@"ui-panel"];
-    _shownOverlay = next;
-    SKNode *backdrop = _loadingBackdrop;
-    _loadingBackdrop = nil;
-    if ([next conformsToProtocol:@protocol(UIMotionScene)]) [(id<UIMotionScene>)next motionEnter];
-    SCNView *view = _view;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        view.overlaySKScene = next;
-        [backdrop removeFromParent];
-    });
-}
-
-- (void)pumpOverlay {
-    if (_exitDeadline <= 0 || _time < _exitDeadline) return;
-    void (^then)(void) = _afterExit;
-    _exitDeadline = 0;
-    _afterExit = nil;
-    if (then) then();
+    SKNode *cover = next == _loading ? [_loading backdropWithSize:_screens.shown.size] : nil;
+    [_screens present:next cover:cover time:_time];
 }
 
 #pragma mark - Loop
@@ -631,15 +587,15 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     dt = clampf(dt, 0.0005f, 1.0f / 20.0f);
     _time += dt;
     [[GameAudio shared] frame:dt flying:_state == HostStateFlying];
-    [self pumpOverlay];
+    [_screens pump:_time];
     [Cmd executeBuffer];
 
     InputAction actions = [_input consumeActions];
     NSData *pointer = [_input.pointer drain];
-    if (_exitDeadline > 0 && _state != HostStateFlying) actions = 0, pointer = nil;   // a screen is on its way out
+    if (_screens.changing && _state != HostStateFlying) actions = 0, pointer = nil;   // a screen is on its way out
     // Pointer events go to the screen on show, before it handles this frame's actions.
     const PointerEvent *events = pointer.bytes;
-    for (NSUInteger i = 0; i < pointer.length / sizeof(PointerEvent); i++) ScreenInputDeliver(_shownOverlay, events[i]);
+    for (NSUInteger i = 0; i < pointer.length / sizeof(PointerEvent); i++) ScreenInputDeliver(_screens.shown, events[i]);
     ControlState controls = [_input poll:dt];
     if (_testInput.boolValue) {   // a pilot who weaves and fires, for testing prediction
         float t = (float)_time;
@@ -665,17 +621,12 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (actions & InputActionToggleCamera) { [_cockpit setInteger:!_cockpit.boolValue]; [[GameAudio shared] play:@"ui-confirm"]; }
     if (actions & InputActionToggleHelp) { [_clientView.hud toggleHelp]; [[GameAudio shared] play:@"ui-panel"]; }
 
-    if (_state == HostStateBrowser) {
-        [self updateBrowser:actions];
+    if (_state == HostStateMenus) {
+        if (actions & InputActionMultiplayer) [_frontEnd showBrowser];
+        else [_frontEnd frame:actions];
         return;
     }
-    if (_state != HostStateFlying) {
-        if (actions & InputActionMultiplayer) { [self showBrowser]; return; }
-        if (_state == HostStateMainMenu) [self updateMainMenu:actions];
-        else [self updateBriefing:actions];
-        return;
-    }
-    if ((actions & InputActionRestart) && !self.remote) { [self startMission:_missionIndex]; return; }
+    if ((actions & InputActionRestart) && !self.remote) { [self startLevel:_missionIndex]; return; }
     if (actions & InputActionBack) { [self pauseFlight]; return; }
 
     [_client sendInput:controls actions:actions dt:dt];
@@ -683,59 +634,6 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [_client readPackets];                   // this frame's snapshot, over loopback
     if (_state != HostStateFlying) return;   // the mission ended during that frame
     [_client drawWithControls:controls time:_time dt:dt];
-}
-
-#pragma mark - Front end
-
-- (NSUInteger)campaignEntry {
-    return ProgressCampaignCompleted() ? 0 : ProgressUnlockedCount() - 1;
-}
-
-- (void)prepareMainMenu {
-    NSUInteger index = [self campaignEntry];
-    [_mainMenu showMission:index title:CampaignMission(index)[@"title"]
-                   started:ProgressHasStarted() || index > 0 completed:ProgressCampaignCompleted()];
-}
-
-- (void)showMainMenu {
-    _state = HostStateMainMenu;
-    [self prepareMainMenu];
-    [self presentOverlay:_mainMenu];
-}
-
-- (void)updateMainMenu:(InputAction)actions {
-    switch ([_mainMenu handle:actions]) {
-        case MainMenuCommandCampaign:
-            [_briefing showBriefing:[self campaignEntry]];
-            break;
-        case MainMenuCommandMissions:
-            [_briefing showListSelecting:ProgressUnlockedCount() - 1];
-            break;
-        case MainMenuCommandMultiplayer:
-            [self showBrowser];
-            return;
-        case MainMenuCommandQuit:
-#if TARGET_OS_OSX
-            [self afterExit:[_mainMenu motionPowerDown] then:^{
-                dispatch_async(dispatch_get_main_queue(), ^{ [NSApp terminate:nil]; });
-            }];
-#endif
-            return;
-        case MainMenuCommandNone:
-            return;
-    }
-    _state = HostStateMissions;
-    [self presentOverlay:_briefing];
-}
-
-- (void)updateBriefing:(InputAction)actions {
-    [_briefing tick:_time];
-    switch ([_briefing handle:actions]) {
-        case BriefingCommandLaunch: [self startMission:_briefing.selectedIndex]; return;
-        case BriefingCommandMainMenu: [self showMainMenu]; return;
-        case BriefingCommandNone: break;
-    }
-    [_clientView menuFrame:_time];   // slow drift through the sky behind the menus
 }
 
 @end

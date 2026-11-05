@@ -3,6 +3,10 @@
 #import "HUD.h"
 #import "FlightInstruments.h"
 #import "PauseMenu.h"
+#import "FrontEnd.h"
+#import "MainMenu.h"
+#import "Briefing.h"
+#import "ServerBrowser.h"
 #import "UILayout.h"
 #import "Briefing.h"
 #import "Progress.h"
@@ -198,6 +202,47 @@ static int CheckPause(void) {
     }
     return 0;
 }
+// The front end runs the menus through UIServices alone; a stand-in host
+// records what it is asked to do.
+@interface FakeServices : NSObject <UIServices>
+@property (nonatomic) SKScene *presented;
+@property (nonatomic) NSInteger started, cancels;
+@end
+@implementation FakeServices
+- (void)startLevel:(NSUInteger)index { _started = (NSInteger)index; }
+- (void)joinServer:(NetAddress *)address {}
+- (void)cancelJoin { _cancels++; }
+- (void)present:(SKScene *)screen { _presented = screen; }
+- (void)quitAfter:(NSTimeInterval)seconds {}
+- (void)drawMenuBackdrop {}
+- (BOOL)isOwnServer:(LANServer *)server { return NO; }
+- (double)time { return 0; }
+- (NSString *)connectedServer { return nil; }
+@end
+
+static int CheckFrontEnd(void) {
+    FakeServices *services = [FakeServices new];
+    services.started = -1;
+    FrontEnd *front = [[FrontEnd alloc] initWithSize:CGSizeMake(1440, 900) services:services];
+    [front prepareAfterBoot];
+    CHECK([front.currentScreen isKindOfClass:MainMenu.class] && services.presented == nil);
+    [front showMainMenu];
+    CHECK([services.presented isKindOfClass:MainMenu.class]);
+    [front frame:InputActionDown];                 // campaign -> missions
+    [front frame:InputActionConfirm];
+    CHECK([services.presented isKindOfClass:Briefing.class] && front.currentScreen == services.presented);
+    [front frame:InputActionBack];                 // the mission list goes back to the main menu
+    CHECK([services.presented isKindOfClass:MainMenu.class]);
+    [front showBrowser];
+    CHECK([services.presented isKindOfClass:ServerBrowser.class]);
+    [front frame:InputActionBack];
+    CHECK(services.cancels == 1 && [services.presented isKindOfClass:MainMenu.class]);
+    [front levelEnded:0 success:NO results:@[@"x Objective"] remote:YES];
+    CHECK([services.presented isKindOfClass:Briefing.class]);
+    CHECK(services.started == -1 && front.levelCount >= 1);
+    return 0;
+}
+
 static int CheckProtocol(void) {
     EntityState entity = {.number=1, .name=2, .className=3, .cargo=4, .flags=EF_SCANNED, .scale=1, .orientation={{0,0,0,1}}};
     MsgWriter *writer = [MsgWriter new]; WritePacketEntities(writer,NULL,0,&entity,1);
@@ -247,6 +292,6 @@ static int CheckSimulation(void) {
 int main(int argc, const char **argv) { @autoreleasepool {
     [NSApplication sharedApplication];
     Output = argc>1 ? @(argv[1]) : @"/tmp";
-    if (CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckProtocol() || CheckSimulation()) return 1;
+    if (CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckFrontEnd() || CheckProtocol() || CheckSimulation()) return 1;
     puts("PASS: flight instruments, mission grid, pause, capacitor and cargo protocol.");
 } return 0; }
