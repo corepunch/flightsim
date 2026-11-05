@@ -40,7 +40,7 @@
 // Own ship under prediction: its bolts and muzzle flashes are drawn when the
 // player fires, and the server's copies of them are matched up, not redrawn.
 @property (nonatomic) uint16_t predictedEntity;
-- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal life:(float)life;
+- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal life:(float)life ion:(BOOL)ion;
 - (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c;
 
 @end

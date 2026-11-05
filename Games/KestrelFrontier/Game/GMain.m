@@ -217,7 +217,7 @@ static void ClientThink(int index, const UserCmd *cmd) {
         s.laserEnergy = fmaxf(0, s.laserEnergy - gun.energy);
         simd_float3 muzzle = s.nextGunWorldPosition;
         [w fireFrom:muzzle velocity:s.velocity direction:[w shotDirectionFor:cl from:muzzle] speed:gun.speed life:gun.life team:s.team
-             damage:gun.damage capDamage:gun.capitalDamage owner:cl];
+             damage:gun.damage capDamage:gun.capitalDamage ion:gun.ion owner:cl];
         [w muzzleFlash:s];
     }
     BuildPlayerState(cl);

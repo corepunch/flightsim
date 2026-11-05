@@ -435,10 +435,10 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 
 #pragma mark - Effects
 
-- (void)showBolt:(int)slot at:(simd_float3)position velocity:(simd_float3)velocity friendly:(BOOL)friendly {
+- (void)showBolt:(int)slot at:(simd_float3)position velocity:(simd_float3)velocity friendly:(BOOL)friendly ion:(BOOL)ion {
     if (slot < 0 || slot >= REF_MAX_BOLTS) return;
     SCNNode *n = _boltNodes[slot];
-    [_fx styleBolt:n player:friendly];
+    [_fx styleBolt:n player:friendly ion:ion];
     n.simdPosition = position;
     n.simdOrientation = simd_quaternion(simd_make_float3(0, 1, 0), simd_normalize(velocity));
     n.hidden = NO;

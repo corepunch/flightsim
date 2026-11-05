@@ -194,7 +194,7 @@ typedef struct {
 
 #pragma mark Effects (render thread)
 
-- (void)showBolt:(int)slot at:(simd_float3)position velocity:(simd_float3)velocity friendly:(BOOL)friendly;
+- (void)showBolt:(int)slot at:(simd_float3)position velocity:(simd_float3)velocity friendly:(BOOL)friendly ion:(BOOL)ion;
 - (void)moveBolt:(int)slot to:(simd_float3)position;
 - (void)hideBolt:(int)slot;
 // `local` is in the entity's space; the key may be the player's.

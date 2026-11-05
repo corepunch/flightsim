@@ -31,6 +31,7 @@ static SKColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [SKCol
 @implementation Effects {
     SCNScene *_scene;
     SCNMaterial *_playerCore, *_playerGlow, *_enemyCore, *_enemyGlow;
+    SCNMaterial *_ionCore, *_ionGlow;
     SCNGeometry *_coreGeo, *_glowGeo;
     SCNMaterial *_ringMaterial;
     NSMutableDictionary<NSString *, SCNMaterial *> *_streakMaterials;
@@ -104,6 +105,8 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
         _playerGlow = GlowMaterial(simd_make_float3(0.25f, 2.4f, 0.6f));
         _enemyCore = GlowMaterial(simd_make_float3(9.0f, 5.5f, 4.5f));
         _enemyGlow = GlowMaterial(simd_make_float3(2.6f, 0.25f, 0.12f));
+        _ionCore = GlowMaterial(simd_make_float3(5.5f, 7.5f, 11.0f));
+        _ionGlow = GlowMaterial(simd_make_float3(0.4f, 1.2f, 3.2f));
         SCNCapsule *core = [SCNCapsule capsuleWithCapRadius:0.11 height:9];
         core.radialSegmentCount = 8;
         SCNCapsule *glow = [SCNCapsule capsuleWithCapRadius:0.5 height:11];
@@ -169,9 +172,10 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
     return n;
 }
 
-- (void)styleBolt:(SCNNode *)bolt player:(BOOL)player {
+- (void)styleBolt:(SCNNode *)bolt player:(BOOL)player ion:(BOOL)ion {
     for (SCNNode *c in bolt.childNodes) {
         BOOL core = [c.name isEqualToString:@"core"];
+        if (ion) { c.geometry.firstMaterial = core ? _ionCore : _ionGlow; continue; }
         c.geometry.firstMaterial = core ? (player ? _playerCore : _enemyCore) : (player ? _playerGlow : _enemyGlow);
     }
 }
@@ -394,9 +398,9 @@ static NSString *const kFireFragment =
     ring.geometry.firstMaterial = _ringMaterial;
     SCNNode *streak = [self streakWithColor:RGBA(1, 0.75, 0.5, 1) width:1 height:1];
     SCNNode *bolt = [self makeBoltNode];
-    [self styleBolt:bolt player:YES];
+    [self styleBolt:bolt player:YES ion:NO];
     SCNNode *bolt2 = [self makeBoltNode];
-    [self styleBolt:bolt2 player:NO];
+    [self styleBolt:bolt2 player:NO ion:NO];
     SCNNode *muzzle = [SCNNode nodeWithGeometry:[SCNPlane planeWithWidth:1 height:1]];
     muzzle.geometry.firstMaterial = _muzzlePlayer;
     return @[fire, ring, streak, bolt, bolt2, muzzle];

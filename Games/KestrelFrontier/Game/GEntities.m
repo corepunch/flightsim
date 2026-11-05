@@ -27,6 +27,7 @@
         _laserEnergy = 1;
         _hull = def->hull;
         _shield = def->shield;
+        _systems = def->systems;
         _alive = YES;
     }
     return self;
@@ -34,6 +35,7 @@
 
 - (float)hullFraction { return clampf(_hull / _definition->hull, 0, 1); }
 - (float)shieldFraction { return _definition->shield > 0 ? clampf(_shield / _definition->shield, 0, 1) : 0; }
+- (float)systemsFraction { return clampf(_systems / _definition->systems, 0, 1); }
 - (BOOL)shielded { return self.shieldFraction > 0.02f; }
 
 - (simd_float3)position { return move.origin; }
@@ -52,6 +54,8 @@
     _laserEnergy = 1;
     _hull = _definition->hull;
     _shield = _definition->shield;
+    _systems = _definition->systems;
+    _disabled = NO;
     _alive = YES;
 }
 
@@ -67,6 +71,17 @@
     _gunIndex++;
     _lastGunLocal = local;
     return move.origin + simd_act(move.orientation, local);
+}
+
+- (BOOL)takeIonDamage:(float)amount {
+    BOOL shielded = self.shielded;
+    if (_disabled) return shielded;
+    float drain = amount * ION_SHIELD_DRAIN;
+    float absorbed = fminf(_shield, drain);
+    _shield -= absorbed;
+    _systems -= (drain - absorbed) / ION_SHIELD_DRAIN;
+    if (_systems <= 0) { _systems = 0; _disabled = YES; }
+    return shielded;
 }
 
 - (BOOL)takeDamage:(float)amount {
@@ -198,6 +213,15 @@
     *point = tr.point;
     *subsystem = tr.part >= 0 && tr.part < (int)_subs.count && _subs[tr.part].alive ? _subs[tr.part] : nil;
     return YES;
+}
+
+- (BOOL)ionDamage:(float)amount subsystem:(GSubsystem *)s {
+    if (!_alive || _invulnerable) return YES;
+    if (!s || !s.alive || (s.kind != SubsystemShield && s.kind != SubsystemEngine)) return YES;
+    if (self.shielded && s.kind != SubsystemShield) return YES;
+    s.hp -= amount;
+    if (s.hp <= 0) s.alive = NO;
+    return NO;
 }
 
 - (BOOL)damage:(float)amount subsystem:(GSubsystem *)s {

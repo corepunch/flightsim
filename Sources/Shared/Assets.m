@@ -38,6 +38,7 @@ static ShipGun GunFrom(NSDictionary *d, ShipGun base) {
     g.damage = Number(d, @"damage", g.damage);
     g.capitalDamage = Number(d, @"capitalDamage", g.capitalDamage);
     g.assist = Number(d, @"assist", g.assist);
+    g.ion = JSONBool(d, @"ion", g.ion);
     return g;
 }
 
@@ -100,6 +101,7 @@ static ShipDef *LoadShipDef(NSString *name) {
     s->hull = fmaxf(Number(d, @"hull", 1), 0.01f);
     s->shield = fmaxf(Number(d, @"shield", 1), 0);
     s->shieldRegen = fmaxf(Number(d, @"shieldRegen", 0.06f), 0);
+    s->systems = fmaxf(Number(d, @"systems", 1), 0.01f);
     s->secondary = SecondaryFrom(d[@"secondary"]);
     return s;
 }

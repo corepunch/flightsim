@@ -34,6 +34,20 @@ if len(sys.argv) == 2:
     missions.append(dict(name='check-aim', seed=3, player=dict(ship='executioner', pos=[0, 0, 0], facing=[0, 0, -1]),
                          waves=[dict(id='drone', ship='drone', count=1, team='enemy', pos=[16, 0, -600], spread=0)],
                          objectives=[dict(id='hold', type='survive', text='Hold position', seconds=10000)]))
+    # Ion fire: the player flies an ion variant of the executioner at a drone that
+    # states a shield, systems and a sturdy hull of its own.
+    p = game / 'Data' / 'Ships' / 'ionexec.json'
+    d = json.loads((game / 'Data' / 'Ships' / 'executioner.json').read_text())
+    d['gun']['ion'] = True
+    d['gun']['damage'] = 0.1
+    p.write_text(json.dumps(d))
+    p = game / 'Data' / 'Ships' / 'dummy.json'
+    d = json.loads((game / 'Data' / 'Ships' / 'drone.json').read_text())
+    d.update(hull=3, shield=0.5, shieldRegen=0, systems=0.5)
+    p.write_text(json.dumps(d))
+    missions.append(dict(name='check-ion', seed=4, player=dict(ship='ionexec', pos=[0, 0, 0], facing=[0, 0, -1]),
+                         waves=[dict(id='dummy', ship='dummy', count=1, team='enemy', pos=[16, 0, -600], spread=0)],
+                         objectives=[dict(id='hold', type='survive', text='Hold position', seconds=10000)]))
     (game / 'Levels').mkdir()
     for mission in missions:
         (game / 'Levels' / (mission['name'] + '.json')).write_text(json.dumps(mission))

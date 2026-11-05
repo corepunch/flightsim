@@ -353,7 +353,7 @@ static const EntityState *FindEntity(Snapshot *s, uint16_t number);
     float cone = gun.assist * fmaxf(0, [Cvar valueOf:@"g_aimAssist"]) * (float)M_PI / 180.0f;
     if (t && t->kind == EntityFighter && TeamRelationIn(_cs[CS_TEAMS].UTF8String, ps.team, t->team) == RelationHostile)
         dir = AimAssist(dir, from, m.velocity, t->origin, t->velocity, gun.speed, gun.speed * gun.life, cone);
-    [_view predictedShotFrom:from velocity:m.velocity + dir * gun.speed gun:muzzle life:gun.life];
+    [_view predictedShotFrom:from velocity:m.velocity + dir * gun.speed gun:muzzle life:gun.life ion:gun.ion];
 }
 
 - (BOOL)predictedMove:(ShipMoveState *)out dt:(float)dt {

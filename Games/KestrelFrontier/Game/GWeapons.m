@@ -4,14 +4,14 @@
 @implementation GWorld (Weapons)
 
 - (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life
-               team:(Team)team damage:(float)damage capDamage:(float)capDamage owner:(GClient *)owner {
+               team:(Team)team damage:(float)damage capDamage:(float)capDamage ion:(BOOL)ion owner:(GClient *)owner {
     for (int i = 0; i < MAX_BOLTS; i++) {
         if (_bolts[i].active) continue;
         GBolt *b = &_bolts[i];
         if (++_nextBoltId == 0) _nextBoltId = 1;
         *b = (GBolt){ .position = pos, .velocity = v + dir * speed, .life = life, .damage = damage,
-                      .capDamage = capDamage, .team = team, .owner = owner, .id = _nextBoltId, .active = YES };
-        GEvent((GameEvent){ .type = EV_BOLT, .id = b->id, .team = team, .entity = owner.ship.number, .pos = b->position, .vel = b->velocity,
+                      .capDamage = capDamage, .ion = ion, .team = team, .owner = owner, .id = _nextBoltId, .active = YES };
+        GEvent((GameEvent){ .type = EV_BOLT, .id = b->id, .team = team, .flags = ion ? EVF_ION : 0, .entity = owner.ship.number, .pos = b->position, .vel = b->velocity,
                             .scale = life });
         return b;
     }
@@ -40,6 +40,15 @@
     }
 }
 
+// Ion hits move the shield and systems meters and never the hull, so there is
+// nothing to destroy and no kill to credit.
+- (void)ionShip:(GFighter *)s amount:(float)amount shake:(float)shake {
+    if (!s.alive) return;
+    if (s.client && GCvar("g_god")) amount = 0;
+    BOOL shielded = [s takeIonDamage:amount];
+    GEvent((GameEvent){ .type = EV_DAMAGE, .entity = s.number, .flags = shielded ? EVF_SHIELDED : 0, .scale = shake });
+}
+
 - (void)updateBolts:(float)dt {
     NSArray<GFighter *> *fighters = [self fighters];
     for (int i = 0; i < MAX_BOLTS; i++) {
@@ -55,7 +64,8 @@
             if (SegmentHits(p0, p1, s.position, s.radius * (s.client ? 0.8f : 0.85f))) {
                 BOOL shielded = s.shielded;
                 GEvent((GameEvent){ .type = EV_IMPACT, .id = b->id, .team = b->team, .pos = p1, .flags = shielded ? EVF_SHIELDED : 0 });
-                [self damageShip:s amount:b->damage by:b->owner shake:0.35f];
+                if (b->ion) [self ionShip:s amount:b->damage shake:0.35f];
+                else [self damageShip:s amount:b->damage by:b->owner shake:0.35f];
                 // A hit makes AI pilots jink.
                 for (GPilot *p in _pilots)
                     if (p.ship == s && p.mode == AIModeAttack && frand() < p.skill.jinkChance) {
@@ -74,7 +84,7 @@
                 simd_float3 point;
                 GSubsystem *sub = nil;
                 if (![c hitSegmentFrom:p0 to:p1 point:&point subsystem:&sub]) continue;
-                [self hitCapital:c subsystem:sub amount:b->capDamage at:point by:b->owner team:b->team bolt:b->id];
+                [self hitCapital:c subsystem:sub amount:b->capDamage at:point by:b->owner team:b->team bolt:b->id ion:b->ion];
                 hit = YES;
                 break;
             }
@@ -84,9 +94,9 @@
 }
 
 - (void)hitCapital:(GCapital *)c subsystem:(GSubsystem *)sub amount:(float)amount at:(simd_float3)point
-                by:(GClient *)attacker team:(Team)team bolt:(uint16_t)boltId {
+                by:(GClient *)attacker team:(Team)team bolt:(uint16_t)boltId ion:(BOOL)ion {
     BOOL subAlive = sub.alive;
-    BOOL absorbed = [c damage:amount subsystem:sub];
+    BOOL absorbed = ion ? [c ionDamage:amount subsystem:sub] : [c damage:amount subsystem:sub];
     GEvent((GameEvent){ .type = EV_IMPACT, .id = boltId, .team = team, .pos = point,
                         .flags = absorbed && !c.invulnerable ? EVF_SHIELDED : 0 });
     if (sub && subAlive && !sub.alive) {
@@ -221,7 +231,7 @@ NSString *GSecondaryShort(const ShipDef *def) { return OrRule(def ? def->seconda
                 if (![c hitSegmentFrom:p0 to:p1 point:&point subsystem:&sub]) continue;
                 // Torpedoes are proximity-fused against the subsystem they were aimed at.
                 if (!sub && t.aim.alive && simd_distance(point, [c worldPoint:t.aim.local]) < 25) sub = t.aim;
-                [self hitCapital:c subsystem:sub amount:w.capitalDamage at:point by:t.owner team:t.team bolt:0];
+                [self hitCapital:c subsystem:sub amount:w.capitalDamage at:point by:t.owner team:t.team bolt:0 ion:NO];
                 boom = YES;
                 break;
             }

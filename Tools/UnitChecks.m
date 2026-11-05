@@ -705,6 +705,11 @@ static void CheckGameChain(void) {
         CHECK(w->acceleration == 260 && w->maxSpeed == 420 && w->turn == 3 && w->life == 9 && NEAR(w->damage, 1.2f, 1e-6f));
         CHECK(w->capitalDamage == 4 && w->fuse == 10);
     }
+    // Ion fire is off, and systems 1, unless a ship says so; aiGun inherits "ion" from gun.
+    CHECK(plain && !plain->gun.ion && !plain->aiGun.ion && plain->systems == 1);
+    const ShipDef *ionBoat = ShipDefNamed(@"zcheck-ionboat");
+    CHECK(ionBoat && ionBoat->gun.ion && ionBoat->aiGun.ion && NEAR(ionBoat->systems, 0.4f, 1e-6f));
+    CHECK(ionBoat && NEAR(ionBoat->gun.damage, 0.2f, 1e-6f) && NEAR(ionBoat->aiGun.damage, 0.3f, 1e-6f));
     // Its own ship (run-unit-checks.sh writes it) states durability and a secondary.
     const ShipDef *gunship = ShipDefNamed(@"zcheck-gunship");
     CHECK(gunship && NEAR(gunship->hull, 2.5f, 1e-6f) && gunship->shield == 0 && NEAR(gunship->shieldRegen, 0.2f, 1e-6f));

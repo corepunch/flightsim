@@ -225,18 +225,18 @@ static float Ease(float value, float target, float rate, float dt) {
 // Bolts fired by the player's side look different from the rest.
 - (BOOL)friendly:(uint8_t)team { return [self relationTo:team] == RelationFriendly; }
 
-- (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel life:(float)life friendly:(BOOL)friendly id:(uint16_t)boltId {
+- (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel life:(float)life friendly:(BOOL)friendly ion:(BOOL)ion id:(uint16_t)boltId {
     for (int i = 0; i < REF_MAX_BOLTS; i++) {
         if (_bolts[i].active) continue;
         _bolts[i] = (ClientBolt){ pos, vel, life > 0 ? life : 1.6f, boltId, YES, NO };
-        [_refresh showBolt:i at:pos velocity:vel friendly:friendly];
+        [_refresh showBolt:i at:pos velocity:vel friendly:friendly ion:ion];
         return i;
     }
     return -1;
 }
 
-- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal life:(float)life {
-    int i = [self spawnBolt:pos velocity:velocity life:life friendly:YES id:0];
+- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal life:(float)life ion:(BOOL)ion {
+    int i = [self spawnBolt:pos velocity:velocity life:life friendly:YES ion:ion id:0];
     if (i >= 0) {
         _bolts[i].awaitingId = YES;
         _boltSerial[i] = ++_nextBoltSerial;
@@ -281,7 +281,7 @@ static float Ease(float value, float target, float rate, float dt) {
                 if (simd_dot(simd_normalize(b->velocity), simd_normalize(e->vel)) < 0.99999f) {
                     b->velocity = e->vel;
                     b->position = e->pos + e->vel * b->age;
-                    [_refresh showBolt:best at:b->position velocity:b->velocity friendly:YES];
+                    [_refresh showBolt:best at:b->position velocity:b->velocity friendly:YES ion:(e->flags & EVF_ION) != 0];
                 }
                 return;
             }
@@ -289,7 +289,7 @@ static float Ease(float value, float target, float rate, float dt) {
     }
     switch (e->type) {
         case EV_BOLT:
-            [self spawnBolt:e->pos velocity:e->vel life:e->scale friendly:[self friendly:e->team] id:e->id];
+            [self spawnBolt:e->pos velocity:e->vel life:e->scale friendly:[self friendly:e->team] ion:(e->flags & EVF_ION) != 0 id:e->id];
             break;
         case EV_IMPACT:
             if (e->id)

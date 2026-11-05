@@ -235,7 +235,7 @@ typedef struct {
 #pragma mark - Events (temp entities)
 
 typedef enum {
-    EV_BOLT = 1,        // id, pos, vel, team, scale = flight time in seconds; entity = the player who fired, 0 for AI
+    EV_BOLT = 1,        // id, pos, vel, team, flags EVF_ION, scale = flight time in seconds; entity = the player who fired, 0 for AI
     EV_IMPACT,          // id (bolt, 0 none), pos, team, flags EVF_SHIELDED
     EV_MUZZLE,          // entity, pos = gun in ship space, team
     EV_DAMAGE,          // entity hit, flags EVF_SHIELDED, scale = camera shake if it is you
@@ -243,7 +243,10 @@ typedef enum {
     EV_JUMP,            // pos, scale
 } EventType;
 
-enum { EVF_SHIELDED = 1 };
+enum {
+    EVF_SHIELDED = 1,
+    EVF_ION      = 2,       // EV_BOLT: an ion bolt
+};
 
 typedef struct {
     uint8_t type;
@@ -292,11 +295,18 @@ typedef enum {
 //     "params": { "maxSpeed": 140, "turnRate": 0.8, ... },      // ShipParams, see Protocol above
 //     "ai": { "maxSpeed": 140, "turnRate": 0.8, "speedSpread": 8 },
 //     "hull": 1, "shield": 1, "shieldRegen": 0.06,              // 0 shield: none at all
+//     "systems": 1,                                             // what ion fire drains once the shield is gone
 //     "secondary": { "name": "MISSILE", "short": "MSL", "projectile": "missile", "rounds": 4,
 //                    "range": 2500, "launchSpeed": 120, "acceleration": 260, "maxSpeed": 420,
 //                    "turn": 3, "life": 9, "damage": 1.2, "capitalDamage": 4, "fuse": 10 } }
 //
-// Damage, hull and shield share one unit: 1 is a standard fighter's hull.
+// Damage, hull, shield and systems share one unit: 1 is a standard fighter's hull.
+//
+// An ion gun ("gun": { "ion": true }, and likewise "aiGun", which starts as a
+// copy of "gun") does not harm hulls. Its "damage" drains a fighter's shield
+// ION_SHIELD_DRAIN times as fast as ordinary fire would, then the ship's
+// systems one for one; at zero systems the fighter is disabled. Against
+// capitals only the shield generators and engines take it.
 
 #define SHIP_MAX_GUNS 4
 #define SHIP_MAX_NOZZLES 8
@@ -308,10 +318,14 @@ typedef struct {
     float energy;           // capacitor per shot, 0..1
     float recharge;         // capacitor per second
     float interval;         // seconds between shots
-    float damage;           // to fighters, in hull units
+    float damage;           // to fighters, in hull units (ion: in systems units)
     float capitalDamage;    // to capital subsystems and hulls
     float assist;           // aim-assist cone, degrees; 0 fires straight along the nose
+    bool ion;               // drains shields and systems instead of hull
 } ShipGun;
+
+// Shield units an ion hit removes per unit of ion damage.
+#define ION_SHIELD_DRAIN 2.0f
 
 // The guided round a ship launches at its target. The name, short name and
 // projectile fall back to the game's rules.json "secondary" when empty.
@@ -348,6 +362,7 @@ typedef struct {
     float hull;                             // hull units; more than 0
     float shield;                           // hull units it absorbs first; 0: unshielded
     float shieldRegen;                      // shield units per second
+    float systems;                          // ion damage it takes, after the shield, to be disabled; more than 0
     ShipSecondary secondary;
 } ShipDef;
 

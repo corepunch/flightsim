@@ -105,7 +105,7 @@ static const float kDockRange = 45, kJumpOutAfter = 3;
         if (simd_dot(s.forward, leadDir) > cone && _time - s.lastShot > gun.interval + frand() * p.skill.fireJitter) {
             s.lastShot = _time;
             [self fireFrom:[s nextGunWorldPosition] velocity:s.velocity direction:simd_normalize(s.forward + randomUnit() * 0.008f)
-                     speed:gun.speed life:gun.life team:s.team damage:gun.damage capDamage:gun.capitalDamage owner:s.client];
+                     speed:gun.speed life:gun.life team:s.team damage:gun.damage capDamage:gun.capitalDamage ion:gun.ion owner:s.client];
             [self muzzleFlash:s];
         }
     }
@@ -194,7 +194,7 @@ static const float kDockRange = 45, kJumpOutAfter = 3;
         simd_float3 dir = simd_normalize(simd_normalize(aim - pos) + randomUnit() * 0.015f);
         BOOL vsCap = [best isKindOfClass:[GCapital class]];
         [self fireFrom:pos + out * 4 velocity:c.velocity direction:dir speed:kTurretBoltSpeed life:kTurretBoltLife team:c.team
-                damage:0.05f capDamage:vsCap ? 0.18f : 0.1f owner:nil];
+                damage:0.05f capDamage:vsCap ? 0.18f : 0.1f ion:NO owner:nil];
     }
 }
 
