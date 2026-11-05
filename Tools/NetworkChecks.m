@@ -3,6 +3,7 @@
 #import "Server.h"
 #import "Client.h"
 #import "NetChannel.h"
+#import "UDPTransport.h"
 #import "NetProtocol.h"
 #import "Assets.h"
 #import "ShipMove.h"
@@ -37,6 +38,7 @@ static NSMutableDictionary<NSNumber *, Link *> *routes;
 static double delay;
 static NSUInteger sent, dropped, dropEvery;
 static BOOL blackout;
+static NSUInteger predictionChecks;
 @interface Link : NSObject <NetTransport>
 @property int port;
 @property NSMutableArray<Datagram *> *queue;
@@ -88,12 +90,26 @@ static BOOL blackout;
 static Snapshot *Latest(Client *c) { return [[c valueForKey:@"snapshots"] lastObject]; }
 static void Step(Server *server, NSArray<Client *> *clients, ControlState controls) {
     clockNow += 1.0 / 30;
+    NSMutableArray *predictions = [NSMutableArray array];
+    NSMutableArray *sequences = [NSMutableArray array];
     for (Client *c in clients) {
         [c readPackets]; [c sendInput:controls actions:0 dt:1.0f / 30];
+        ShipMoveState predicted = {0};
+        BOOL valid = delay == 0 && !dropEvery && !blackout && [c predictFrom:Latest(c) into:&predicted];
+        [predictions addObject:valid ? [NSData dataWithBytes:&predicted length:sizeof predicted] : NSData.data];
+        [sequences addObject:[c valueForKey:@"sequence"]];
     }
     [server frame:TICK_DT];
     for (Client *c in clients) {
         [c readPackets]; [c drawWithControls:controls time:clockNow dt:TICK_DT];
+        NSUInteger i = [clients indexOfObjectIdenticalTo:c];
+        NSData *data = predictions[i]; Snapshot *s = Latest(c);
+        if (data.length && s && s.ps.lastCommand == [sequences[i] unsignedIntValue]) {
+            ShipMoveState predicted; [data getBytes:&predicted length:sizeof predicted];
+            CHECK(simd_distance(predicted.origin, s.ps.move.origin) < 0.002);
+            CHECK(simd_distance(predicted.velocity, s.ps.move.velocity) < 0.002);
+            predictionChecks++;
+        }
     }
 }
 static void Steps(Server *s, NSArray *clients, ControlState controls, int n) {
@@ -121,6 +137,7 @@ static void Scenario(int mission, BOOL impaired) {
     const ShipDef *def = ShipDefForModel(clients[0].configStrings[CS_MODELS+a.ps.model]); CHECK(def);
     CHECK(fabs(a.ps.params.maxSpeed - def->params.maxSpeed) < 0.001);
     CHECK(fabs(a.ps.params.turnRate - def->params.turnRate) < 0.001);
+    ShipParams params = a.ps.params; CHECK(!memcmp(&params, &def->params, sizeof params));
     CHECK([clients[0].configStrings isEqual:clients[1].configStrings]);
     ControlState fly = { .pitch = 0.15, .yaw = -0.2, .roll = 0.1, .throttle = 0.85, .boost = YES, .fire = YES };
     simd_float3 start = a.ps.move.origin;
@@ -171,7 +188,10 @@ static void Scenario(int mission, BOOL impaired) {
     [bad connectTo:[NetAddress loopback:1] transport:[Link port:21] name:@"wrong-data"];
     Steps(server, @[bad], (ControlState){0}, 30);
     CHECK(refused && bad.state == ClientDisconnected && server.clientCount == 2);
-    // Connected clients also reject incompatible data on the next gamestate.
+    // Silent peers time out independently of explicit disconnects.
+    clockNow += NET_TIMEOUT + 1; [server frame:0];
+    CHECK(server.clientCount == 0);
+    for (Client *c in clients) { [c readPackets]; CHECK(c.state == ClientDisconnected); }
     for (Client *c in clients) [c disconnect]; [server frame:0];
     CHECK(server.clientCount == 0); [server stop];
     CHECK(!impaired || dropped > 0);
@@ -179,9 +199,34 @@ static void Scenario(int mission, BOOL impaired) {
         impaired ? "200ms RTT" : "0", impaired ? "every 11th + 45-tick blackout" : "0",
         (unsigned long)sent, (unsigned long)dropped);
 }
+static void UDPSmoke(void) {
+    delay = 0; dropEvery = 0; blackout = NO;
+    Server *server = [[Server alloc] initWithName:@"UDP localhost"]; CHECK(server);
+    UDPTransport *host = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(host);
+    [server addTransport:host]; [server spawnMission:0];
+    NetAddress *address = [NetAddress addressWithString:@"127.0.0.1" port:host.port];
+    NSMutableArray<Client *> *clients = [NSMutableArray array];
+    for (int i = 0; i < 2; i++) {
+        UDPTransport *socket = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(socket);
+        Client *client = [[Client alloc] initWithView:(ClientView *)[Spy new]];
+        __weak Client *weak = client; client.gamestateHandler = ^{ [weak begin]; };
+        [client connectTo:address transport:socket name:@"UDP pilot"]; [clients addObject:client];
+    }
+    ControlState fly = { .throttle = 0.8, .pitch = 0.1 };
+    Steps(server, clients, fly, 300);
+    CHECK(server.clientCount == 2 && Latest(clients[0]) && Latest(clients[1]));
+    CHECK(Latest(clients[0]).ps.entity != Latest(clients[1]).ps.entity);
+    CHECK(Latest(clients[0]).ps.lastCommand > 200 && Latest(clients[1]).ps.lastCommand > 200);
+    for (Client *c in clients) [c disconnect];
+    [server frame:0]; CHECK(server.clientCount == 0); [server stop];
+    puts("PASS real IPv4 UDP sockets on localhost, one process, two clients");
+}
 int main(int argc, const char **argv) { @autoreleasepool {
     if (argc > 1 && !strcmp(argv[1], "--identity")) { puts(ShipDataIdentity().UTF8String); return 0; }
     for (int mission = 0; mission < 2; mission++) for (int loss = 0; loss < 2; loss++) Scenario(mission, loss);
-    puts("PASS deterministic simulated transport; no LAN/device or UDP socket claim");
+    CHECK(predictionChecks > 1000);
+    printf("PASS %lu pending-input prediction comparisons against subsequent authority\n", (unsigned long)predictionChecks);
+    UDPSmoke();
+    puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;
 } }
