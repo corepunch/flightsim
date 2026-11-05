@@ -147,6 +147,14 @@ static void Scenario(int mission, BOOL impaired) {
     CHECK(simd_distance(start, Latest(clients[0]).ps.move.origin) > 20);
     for (int i = 0; i < 2; i++) {
         CHECK(views[i].shots > 5 && views[i].bolts > 5);
+        if (!impaired) {
+            // Fixture capacitor never runs dry; cadence must use this ship's
+            // interval, allowing one command of scheduling granularity.
+            CHECK(views[i].shots >= 8.0 / (def->gun.interval + 0.034) - 2);
+            CHECK(views[i].shots <= 8.0 / def->gun.interval + 2);
+            CHECK(views[i].bolts >= 8.0 / (def->gun.interval + 0.034) - 3);
+            CHECK(views[i].bolts <= 8.0 / def->gun.interval + 2);
+        }
         CHECK(fabs(views[i].life - def->gun.life) < 0.001);
         CHECK(fabs(views[i].boltLife - def->gun.life) < 0.02);
         CHECK(fabs(views[i].relativeSpeed - def->gun.speed) < 40);
@@ -186,6 +194,13 @@ static void Scenario(int mission, BOOL impaired) {
         CHECK([[NetChannel outOfBandText:reply] isEqualToString:@"reject protocol"]);
         CHECK(server.clientCount == 2);
     }
+    // Test silence before altering game identity, so rejection cannot mask timeout.
+    clockNow += NET_TIMEOUT + 1; [server frame:0];
+    CHECK(server.clientCount == 0);
+    for (Client *c in clients) { [c readPackets]; CHECK(c.state == ClientDisconnected); }
+    for (int i = 0; i < 2; i++)
+        [clients[i] connectTo:[NetAddress loopback:1] transport:routes[@(10+i)] name:@"after-timeout"];
+    Steps(server, clients, fly, 90); CHECK(server.clientCount == 2);
     // A data mismatch must never invoke begin or leave a multiplayer slot live.
     Client *bad = [[Client alloc] initWithView:nil]; __block BOOL refused = NO;
     bad.disconnectHandler = ^(NSString *reason) { refused = [reason containsString:@"Incompatible"]; };
@@ -194,11 +209,8 @@ static void Scenario(int mission, BOOL impaired) {
     [bad connectTo:[NetAddress loopback:1] transport:[Link port:21] name:@"wrong-data"];
     Steps(server, @[bad], (ControlState){0}, 30);
     CHECK(refused && bad.state == ClientDisconnected && server.clientCount == 2);
-    // Silent peers time out independently of explicit disconnects.
-    clockNow += NET_TIMEOUT + 1; [server frame:0];
-    CHECK(server.clientCount == 0);
     for (Client *c in clients) { [c readPackets]; CHECK(c.state == ClientDisconnected); }
-    for (Client *c in clients) [c disconnect]; [server frame:0];
+    [server frame:0];
     CHECK(server.clientCount == 0); [server stop];
     CHECK(!impaired || dropped > 0);
     printf("PASS mission=%d latency=%s loss=%s sent=%lu dropped=%lu\n", mission,
