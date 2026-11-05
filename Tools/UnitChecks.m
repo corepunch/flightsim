@@ -11,6 +11,7 @@
 #import "Cmd.h"
 #import "NetProtocol.h"
 #import "Localization.h"
+#import "MissionRunner.h"
 
 static int failures;
 
@@ -320,6 +321,181 @@ static void CheckDefinitions(void) {
     CHECK(ProjectileDefForModel(ProjectileModelName(@"torpedo")) == torpedo && ProjectileDefForModel(@"ship:wasp") == NULL);
 }
 
+#pragma mark - Mission runtime
+
+// A stand-in world for the mission runtime: units at positions, players that
+// can be moved, and a record of what the runtime asked for.
+@interface FakeUnit : NSObject <MissionUnit>
+@property (nonatomic, strong) NSString *missionKey, *missionName, *group;
+@property (nonatomic) simd_float3 missionPosition;
+@property (nonatomic) float missionRadius, missionHullFraction;
+@property (nonatomic) BOOL missionAlive, missionGone;
+@property (nonatomic) NSUInteger turrets, turretsAlive;
+@end
+@implementation FakeUnit
+- (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly {
+    return [kind isEqualToString:@"Turret"] ? (aliveOnly ? _turretsAlive : _turrets) : 0;
+}
+@end
+
+static FakeUnit *Unit(NSString *key, NSString *group, simd_float3 p) {
+    FakeUnit *u = [FakeUnit new];
+    u.missionKey = key; u.missionName = key; u.group = group; u.missionPosition = p;
+    u.missionRadius = 10; u.missionHullFraction = 1; u.missionAlive = YES;
+    return u;
+}
+
+@interface FakeWorld : NSObject <MissionWorld>
+@property (nonatomic) NSMutableArray<FakeUnit *> *units, *players;
+@property (nonatomic) NSMutableDictionary<NSString *, FakeUnit *> *held;
+@property (nonatomic) NSMutableArray<NSString *> *radio, *banners;
+@property (nonatomic) NSDictionary<NSString *, NSValue *> *navs;
+@property (nonatomic) NSString *nav, *lastObjectives;
+@property (nonatomic) MissionRunner *runner;
+@property (nonatomic) int ended;      // 0 running, 1 success, 2 failure
+@property (nonatomic) NSArray<NSString *> *results;
+@end
+@implementation FakeWorld
+- (instancetype)init {
+    if ((self = [super init])) {
+        _units = [NSMutableArray array]; _players = [NSMutableArray array]; _held = [NSMutableDictionary dictionary];
+        _radio = [NSMutableArray array]; _banners = [NSMutableArray array];
+    }
+    return self;
+}
+- (NSArray *)missionUnitsNamed:(NSString *)name {
+    NSMutableArray *a = [NSMutableArray array];
+    for (FakeUnit *u in [_units arrayByAddingObjectsFromArray:_players])
+        if ([u.missionKey isEqualToString:name] || [u.group isEqualToString:name]) [a addObject:u];
+    return a;
+}
+- (NSArray *)missionPlayers { return _players; }
+- (NSArray *)missionNavs { return _navs.allKeys; }
+- (BOOL)missionNav:(NSString *)nav position:(simd_float3 *)p {
+    NSValue *v = _navs[nav];
+    if (!v) return NO;
+    [v getValue:p size:sizeof *p];
+    return YES;
+}
+- (void)missionSpawn:(NSString *)name {
+    FakeUnit *u = _held[name];
+    if (!u) return;
+    [_held removeObjectForKey:name];
+    [_units addObject:u];
+    [_runner noteSpawned:u.missionKey];
+    [_runner noteSpawned:u.group];
+}
+- (void)missionSetTeam:(NSString *)team ofUnits:(NSArray *)units {}
+- (void)missionDepart:(id<MissionUnit>)unit { ((FakeUnit *)unit).missionGone = YES; ((FakeUnit *)unit).missionAlive = NO; }
+- (void)missionCollect:(id<MissionUnit>)unit { ((FakeUnit *)unit).missionGone = YES; ((FakeUnit *)unit).missionAlive = NO; }
+- (void)missionMarkScanned:(id<MissionUnit>)unit {}
+- (void)missionDestroy:(id<MissionUnit>)unit { ((FakeUnit *)unit).missionAlive = NO; }
+- (void)missionRadio:(NSString *)text from:(NSString *)from { [_radio addObject:text]; }
+- (void)missionBanner:(NSString *)text alert:(BOOL)alert { [_banners addObject:text]; }
+- (void)missionStatus:(NSString *)status forPlayer:(id<MissionUnit>)player {}
+- (void)missionObjectives:(NSArray *)lines states:(NSString *)states summary:(NSString *)summary { _lastObjectives = states; }
+- (void)missionCurrentNav:(NSString *)nav { _nav = nav; }
+- (void)missionEnded:(BOOL)success results:(NSArray *)results { _ended = success ? 1 : 2; _results = results; }
+- (void)missionLog:(NSString *)line {}
+@end
+
+static NSValue *V3(float x, float y, float z) { simd_float3 v = {x, y, z}; return [NSValue valueWithBytes:&v objCType:"[4f]"]; }
+
+static void Run(FakeWorld *w, float seconds) {
+    for (float t = 0; t < seconds && !w.ended; t += 0.05f) [w.runner update:0.05f];
+}
+
+// A game-registered objective type (the escape hatch): complete once a flag is set.
+@interface FlagObjective : MissionObjective @end
+@implementation FlagObjective
+- (void)updateIn:(id<MissionContext>)ctx dt:(float)dt {
+    if ([(id<MissionEventContext>)ctx flag:self.definition[@"flag"]]) [ctx objective:self becomes:MissionObjectiveComplete];
+}
+@end
+
+static NSDictionary *TestLevel(void) {
+    return @{
+        @"navs": @[@{ @"id": @"n1", @"pos": @[@0, @0, @(-1000)] }],
+        @"objectives": @[
+            @{ @"id": @"go", @"type": @"reach", @"navs": @[@"n1"], @"text": @"Reach N1" },
+            @{ @"id": @"guard", @"type": @"protect", @"targets": @[@"relay"], @"text": @"Keep the relay" },
+            @{ @"id": @"kill", @"type": @"destroy", @"targets": @[@"raiders"], @"after": @[@"go"], @"text": @"Destroy raiders" },
+            @{ @"id": @"guns", @"type": @"disable", @"targets": @[@"relay"], @"kind": @"Turret", @"optional": @YES, @"text": @"Silence turrets" },
+            @{ @"id": @"signal", @"type": @"test_flag", @"flag": @"signal", @"text": @"Wait for the signal" },
+        ],
+        @"events": @[
+            @{ @"when": @{ @"nav": @"n1" }, @"do": @[@{ @"spawn": @"raiders" }] },
+            @{ @"when": @{ @"spawned": @"raiders" }, @"do": @[@{ @"radio": @{ @"from": @"Control", @"text": @"Raiders!" } }] },
+            @{ @"when": @{ @"all": @[@{ @"objective": @"kill" }, @{ @"time": @1 }] }, @"do": @[@{ @"set_flag": @"signal" }] },
+            @{ @"when": @{ @"destroyed": @"relay" }, @"do": @[@{ @"radio": @{ @"from": @"Control", @"text": @"Relay lost" } }] },
+        ],
+    };
+}
+
+static FakeWorld *StartTestLevel(void) {
+    FakeWorld *w = [FakeWorld new];
+    w.navs = @{ @"n1": V3(0, 0, -1000) };
+    [w.players addObject:Unit(@"player", nil, simd_make_float3(0, 0, 0))];
+    FakeUnit *relay = Unit(@"relay", nil, simd_make_float3(500, 0, 0));
+    relay.turrets = relay.turretsAlive = 2;
+    [w.units addObject:relay];
+    w.held[@"raiders"] = Unit(@"raider1", @"raiders", simd_make_float3(0, 0, -1500));
+    w.runner = [[MissionRunner alloc] initWithLevel:TestLevel() world:w];
+    [w.runner noteSpawned:@"relay"];
+    return w;
+}
+
+static void CheckMissionRuntime(void) {
+    [MissionObjective registerType:@"test_flag" class:FlagObjective.class];
+
+    // Every campaign level is valid for the runtime.
+    for (NSDictionary *m in CampaignMissions()) {
+        NSArray *problems = [MissionRunner problemsWithLevel:m];
+        if (problems.count) fprintf(stderr, "mission %s: %s\n", [m[@"id"] description].UTF8String, problems.description.UTF8String);
+        CHECK(problems.count == 0);
+    }
+    // Unknown types, triggers and actions are reported.
+    NSArray *bad = [MissionRunner problemsWithLevel:@{ @"objectives": @[@{ @"id": @"x", @"type": @"teleport", @"text": @"?" }],
+                                                       @"events": @[@{ @"when": @{ @"moon": @1 }, @"do": @[@{ @"dance": @YES }] }] }];
+    CHECK(bad.count == 3);
+    CHECK([MissionRunner problemsWithLevel:TestLevel()].count == 0);
+
+    // Success: reach the nav, the held raiders arrive, destroy them, the
+    // event sets the flag the game-registered objective waits for.
+    FakeWorld *w = StartTestLevel();
+    Run(w, 1);
+    CHECK([w.nav isEqualToString:@"n1"] && w.units.count == 1);
+    w.players[0].missionPosition = simd_make_float3(0, 0, -950);
+    Run(w, 1);
+    CHECK(w.units.count == 2 && [w.radio containsObject:@"Raiders!"]);
+    CHECK([w.runner objectiveNamed:@"kill"].state == MissionObjectiveActive);
+    w.units[1].missionAlive = NO;
+    Run(w, 10);
+    CHECK(w.ended == 1);
+    CHECK([w.results[0] hasPrefix:@"+ Reach"] && [w.results[1] hasPrefix:@"+ Keep"]);   // ongoing protect completes with the mission
+    CHECK([w.results[3] hasPrefix:@"- Silence"] && [w.results[3] containsString:@"{#mission.optional_suffix}"]);
+    CHECK([w.banners containsObject:@"{#mission.complete}"]);
+
+    // Failure: the protected relay is destroyed.
+    w = StartTestLevel();
+    Run(w, 1);
+    w.units[0].missionAlive = NO;
+    Run(w, 10);
+    CHECK(w.ended == 2 && [w.radio containsObject:@"Relay lost"] && [w.banners containsObject:@"{#mission.failed}"]);
+
+    // Failure: every player is down.
+    w = StartTestLevel();
+    w.players[0].missionAlive = NO;
+    Run(w, 10);
+    CHECK(w.ended == 2);
+
+    // Tokens expand on the client.
+    NSString *scanned = [L10nCatalogs()[@"en"][@"strings"][@"mission.scanned"] stringByReplacingOccurrencesOfString:@"%@" withString:@"Relay"];
+    BOOL expanded = [L10nExpand(@"x {#mission.scanned\x1fRelay} y") isEqualToString:[@"x " stringByAppendingString:[scanned stringByAppendingString:@" y"]]];
+    CHECK(expanded || ![L10nLocale() isEqualToString:@"en"]);
+    CHECK([L10nExpand(@"plain") isEqualToString:@"plain"]);
+}
+
 // The catalog lookups the UI relies on: English text, lists, formats, and the
 // key itself when nothing has it. (Tools/validate_strings.py checks the files.)
 static void CheckLocalization(void) {
@@ -345,11 +521,12 @@ int main(void) {
         CheckCampaign();
         CheckDefinitions();
         CheckLocalization();
+        CheckMissionRuntime();
         if (failures) {
             fprintf(stderr, "%d check(s) failed\n", failures);
             return 1;
         }
-        printf("PASS: flight model, wire format, console, campaign, definition data and localization\n");
+        printf("PASS: flight model, wire format, console, campaign, definition data, localization and mission runtime\n");
     }
     return 0;
 }

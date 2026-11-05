@@ -7,12 +7,16 @@ TOOLCHAIN := $(NATIVE)/toolchain
 COMMON_FLAGS := -fobjc-arc -O2 -g -Wall -Wno-unused-function -mmacosx-version-min=13.0
 SHARED := $(wildcard Sources/Shared/*.m Sources/Shared/*.c)
 ENGINE_DIRS := $(wildcard Sources/Engine/*/)
-ENGINE_SOURCES := $(SHARED) $(wildcard Sources/Engine/*/*.m)
-GAME_SOURCES := $(SHARED) $(wildcard Sources/Game/*.m)
+# Sources/Engine/Mission is the engine's mission runtime for game modules: it
+# links into every game module and not into the engine binary, so its
+# classes exist once per process.
+MISSION_SOURCES := $(wildcard Sources/Engine/Mission/*.m)
+ENGINE_SOURCES := $(SHARED) $(filter-out $(MISSION_SOURCES),$(wildcard Sources/Engine/*/*.m))
+GAME_SOURCES := $(SHARED) $(MISSION_SOURCES) $(wildcard Sources/Game/*.m)
 ENGINE_OBJECTS := $(addprefix $(NATIVE)/engine/,$(addsuffix .o,$(ENGINE_SOURCES)))
 GAME_OBJECTS := $(addprefix $(NATIVE)/game/,$(addsuffix .o,$(GAME_SOURCES)))
 ENGINE_FLAGS := -ISources/Shared $(addprefix -I,$(ENGINE_DIRS))
-GAME_FLAGS := -ISources/Shared -ISources/Game -fvisibility=hidden
+GAME_FLAGS := -ISources/Shared -ISources/Engine/Mission -ISources/Game -fvisibility=hidden
 ENGINE_PCH := $(NATIVE)/engine.pch
 GAME_PCH := $(NATIVE)/game.pch
 ENGINE_FRAMEWORKS := Cocoa SceneKit SpriteKit Metal CoreGraphics QuartzCore IOKit Carbon ImageIO AVFoundation CoreMedia CoreVideo
@@ -33,7 +37,7 @@ $(NATIVE)/SpaceFight: $(ENGINE_OBJECTS) Sources/Shared Sources/Engine $(ENGINE_D
 	@mv "$@.tmp" "$@"
 
 # The server loads this module at runtime. Only GetGameAPI is exported.
-$(NATIVE)/game.dylib: $(GAME_OBJECTS) Sources/Shared Sources/Game Makefile
+$(NATIVE)/game.dylib: $(GAME_OBJECTS) Sources/Shared Sources/Engine/Mission Sources/Game Makefile
 	@printf '  Linking %s\n' '$(@F)'
 	@clang $(COMMON_FLAGS) -dynamiclib $(GAME_OBJECTS) -framework Foundation -install_name @rpath/game.dylib -o "$@.tmp"
 	@mv "$@.tmp" "$@"

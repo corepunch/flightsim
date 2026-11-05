@@ -93,8 +93,9 @@
         float scale = sub.kind == SubsystemTurret ? 0.5f : (sub.kind == SubsystemCore ? 2.0f : 1.2f);
         GEvent((GameEvent){ .type = EV_EXPLOSION, .pos = [c worldPoint:sub.local], .vel = c.velocity, .model = c.model, .scale = scale });
         if (attacker)
-            GCommand(attacker, SVC_RADIO, [NSString stringWithFormat:@"%@ %@ destroyed", c.name,
-                                           [[GSubsystem nameForKind:sub.kind] lowercaseString]], @"", nil);
+            GCommand(attacker, SVC_RADIO, MissionText(@[@"combat.turret_destroyed", @"combat.engine_destroyed",
+                                                         @"combat.shield_destroyed", @"combat.core_destroyed"][sub.kind],
+                                                       @[c.name ?: @""]), @"", nil);
     }
     if (!c.alive && !c.collected) {
         if (attacker && c.team == TeamEnemy && !c.isProp) attacker.kills++;
@@ -165,11 +166,11 @@ NSString *const GTorpedoProjectile = @"torpedo";
     id target = cl.selected;
     if (!s.alive) return;
     if (cl.torpedoes <= 0 || !BodyAlive(target)) {
-        GCommand(cl, SVC_RADIO, cl.torpedoes <= 0 ? @"No torpedoes left" : @"Select a target to launch a torpedo", @"", nil);
+        GCommand(cl, SVC_RADIO, MissionText(cl.torpedoes <= 0 ? @"combat.no_secondary" : @"combat.select_target", nil), @"", nil);
         return;
     }
     if (simd_distance(BodyPosition(target), s.position) > 2500) {
-        GCommand(cl, SVC_RADIO, @"Target out of torpedo range", @"", nil);
+        GCommand(cl, SVC_RADIO, MissionText(@"combat.out_of_range", nil), @"", nil);
         return;
     }
     cl.torpedoes--;

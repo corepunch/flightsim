@@ -1,4 +1,6 @@
-// Mission setup from missions.json, arrivals, radio traffic and objectives.
+// The level in this game's world: spawning entities, waves and fields from
+// the level JSON, and the adapter the engine's mission runtime
+// (Sources/Engine/Mission) runs objectives, events and rules through.
 #import "GLocal.h"
 
 static NSValue *Vec3Value(simd_float3 v) { return [NSValue valueWithBytes:&v objCType:"[4f]"]; }
@@ -16,6 +18,54 @@ static NSString *const kDefaultPlayerShip = @"executioner";
 static NSString *FighterClassName(Team t) {
     return t == TeamFriend ? @"Concord fighter" : (t == TeamEnemy ? @"Skarn fighter" : @"Fighter");
 }
+
+static NSString *PartKindName(SubsystemKind kind) {
+    switch (kind) {
+        case SubsystemTurret: return @"Turret";
+        case SubsystemEngine: return @"Engine";
+        case SubsystemShield: return @"Shield";
+        case SubsystemCore: return @"Core";
+    }
+    return @"";
+}
+
+#pragma mark - Units
+
+@interface GFighter (Mission) <MissionUnit>
+@end
+@implementation GFighter (Mission)
+- (NSString *)missionKey { return [NSString stringWithFormat:@"e%u", self.number]; }
+- (NSString *)missionName {
+    for (GPilot *p in level->_pilots) if (p.ship == self && p.callsign) return p.callsign;
+    return self.client.name ?: @(self.definition->displayName);
+}
+- (simd_float3)missionPosition { return self.position; }
+- (float)missionRadius { return self.radius; }
+- (BOOL)missionAlive { return self.alive; }
+- (BOOL)missionGone { return NO; }
+- (float)missionHullFraction { return clampf(self.hull, 0, 1); }
+- (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly { return 0; }
+@end
+
+@interface GCapital (Mission) <MissionUnit>
+@end
+@implementation GCapital (Mission)
+- (NSString *)missionKey { return self.identifier ?: [NSString stringWithFormat:@"e%u", self.number]; }
+- (NSString *)missionName { return self.name; }
+- (simd_float3)missionPosition { return self.position; }
+- (float)missionRadius { return self.radius; }
+- (BOOL)missionAlive { return self.alive && !self.departed; }
+- (BOOL)missionGone { return self.departed || self.collected; }
+- (float)missionHullFraction { return self.maxHull > 0 ? clampf(self.hull / self.maxHull, 0, 1) : 1; }
+- (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly {
+    for (SubsystemKind k = SubsystemTurret; k <= SubsystemCore; k++)
+        if ([PartKindName(k) isEqualToString:kind]) return aliveOnly ? [self aliveCount:k] : [self totalCount:k];
+    return 0;
+}
+@end
+
+@interface GWorld (MissionWorld) <MissionWorld>
+@end
 
 @implementation GWorld (Mission)
 
@@ -37,6 +87,7 @@ static NSString *FighterClassName(Team t) {
     }
     _running = NO;
     _over = NO;
+    _runner = nil;
     _currentNav = nil;
     _entityStates.length = 0;
 }
@@ -61,6 +112,8 @@ static NSString *FighterClassName(Team t) {
     _missionIndex = index;
     _mission = CampaignMission(index);
     NSDictionary *mission = _mission;
+    NSArray *problems = [MissionRunner problemsWithLevel:mission];
+    for (NSString *p in problems) GPrint(@"Mission %@: %@", mission[@"id"], p);
     gi.configString(CS_MISSION, [NSString stringWithFormat:@"%lu", (unsigned long)index].UTF8String);
     uint32_t seed = 1337 + (uint32_t)[mission[@"id"] intValue] * 7919;
     gi.configString(CS_SKY, [NSString stringWithFormat:@"%u", seed].UTF8String);
@@ -72,11 +125,7 @@ static NSString *FighterClassName(Team t) {
     for (int t = 0; t < TeamCount; t++) _fighterClassNames[t] = gi.stringIndex(FighterClassName((Team)t).UTF8String);
 
     _missionTime = 0;
-    _endAt = 0;
-    _success = NO;
     _startTorpedoes = [mission[@"loadout"][@"torpedoes"] intValue];
-    _spawned = [NSMutableSet setWithObject:@"start"];
-    _navsVisited = [NSMutableSet set];
     _navs = [NSMutableDictionary dictionary];
     _navNames = [NSMutableDictionary dictionary];
     _navOrder = [NSMutableArray array];
@@ -90,41 +139,29 @@ static NSString *FighterClassName(Team t) {
             [_navOrder addObject:n[@"id"]];
         }
     }
-    NSMutableArray *objectives = [NSMutableArray array];
-    for (NSDictionary *d in mission[@"objectives"]) {
-        GObjective *o = [GObjective new];
-        o.def = d;
-        o.state = ObjectiveHidden;
-        o.scanTime = [NSMutableDictionary dictionary];
-        o.progress = @"";
-        [objectives addObject:o];
-    }
-    _objectives = objectives;
-    _pendingEntities = [NSMutableArray array];
-    _pendingWaves = [NSMutableArray array];
-    _pendingMessages = [mission[@"messages"] mutableCopy] ?: [NSMutableArray array];
-    _pendingCasualty = mission[@"casualty"];
+    _runner = [[MissionRunner alloc] initWithLevel:mission world:self];
+    _held = [NSMutableDictionary dictionary];
 
     gi.modelIndex(ShipModelName(mission[@"player"][@"ship"] ?: kDefaultPlayerShip).UTF8String);
     gi.modelIndex(ProjectileModelName(GTorpedoProjectile).UTF8String);
+    // Units marked "hold" arrive when an event spawns them; precache them now.
     for (NSDictionary *e in mission[@"entities"]) {
-        if (e[@"at"] || e[@"after"] || e[@"nav"]) {
-            [_pendingEntities addObject:e];
-            gi.modelIndex(CapitalModelName(e[@"asset"], e[@"style"]).UTF8String);   // precache
+        if ([e[@"hold"] boolValue]) {
+            if (e[@"id"]) _held[e[@"id"]] = e;
+            gi.modelIndex(CapitalModelName(e[@"asset"], e[@"style"]).UTF8String);
         } else {
             [self spawnEntity:e jump:NO];
         }
     }
     for (NSDictionary *f in mission[@"fields"]) [self buildField:f];
     for (NSDictionary *w in mission[@"waves"]) {
-        if (w[@"at"] || w[@"after"] || w[@"nav"]) {
-            [_pendingWaves addObject:w];
-            if (ShipDefNamed(w[@"ship"])) gi.modelIndex(ShipModelName(w[@"ship"]).UTF8String);   // precache
+        if ([w[@"hold"] boolValue]) {
+            _held[w[@"id"]] = w;
+            if (ShipDefNamed(w[@"ship"])) gi.modelIndex(ShipModelName(w[@"ship"]).UTF8String);
         } else {
             [self spawnWave:w jump:NO];
         }
     }
-    _objectivesDirty = YES;
     _running = YES;
     [self buildEntityStates];
     GPrint(@"Mission %@ spawned in %.2f s", mission[@"id"], CFAbsoluteTimeGetCurrent() - t0);
@@ -165,6 +202,7 @@ static NSString *FighterClassName(Team t) {
         ap.aimError = 0.3f;
         cl.autopilot = ap;
     }
+    [_runner resendObjectives];
 }
 
 - (GCapital *)spawnEntity:(NSDictionary *)e jump:(BOOL)jump {
@@ -190,8 +228,8 @@ static NSString *FighterClassName(Team t) {
     if (e[@"hull"]) c.maxHull = c.hull = [e[@"hull"] floatValue];
     if (e[@"hullFraction"]) c.hull = c.maxHull * [e[@"hullFraction"] floatValue];
     [_capitals addObject:c];
-    if (c.identifier) [_spawned addObject:c.identifier];
-    if (c.group) [_spawned addObject:c.group];
+    [_runner noteSpawned:c.identifier];
+    [_runner noteSpawned:c.group];
     if (jump) [self jumpFlashAt:c.position scale:c.radius / 30.0f];
     return c;
 }
@@ -229,7 +267,7 @@ static NSString *FighterClassName(Team t) {
         [_pilots addObject:p];
         if (jump) [self jumpFlashAt:pos scale:0.4f];
     }
-    [_spawned addObject:w[@"id"]];
+    [_runner noteSpawned:w[@"id"]];
 }
 
 - (void)buildField:(NSDictionary *)f {
@@ -265,7 +303,7 @@ static NSString *FighterClassName(Team t) {
             c.spin = 20;
             [_capitals addObject:c];
         }
-        [_spawned addObject:f[@"group"]];
+        [_runner noteSpawned:f[@"group"]];
     } else if ([type isEqualToString:@"buoys"]) {
         for (NSString *nav in f[@"navs"]) {
             GCapital *c = [GCapital capitalWithAsset:@"NavBuoy" style:nil team:TeamNeutral];
@@ -286,30 +324,13 @@ static NSString *FighterClassName(Team t) {
 
 #pragma mark - Queries
 
+// Units by entity id, group, wave id or pilot callsign.
 - (NSArray *)unitsFor:(NSString *)name {
     NSMutableArray *u = [NSMutableArray array];
+    if (!name) return u;
     for (GCapital *c in _capitals) if ([c.identifier isEqualToString:name] || [c.group isEqualToString:name]) [u addObject:c];
-    for (GPilot *p in _pilots) if ([p.wave isEqualToString:name]) [u addObject:p.ship];
+    for (GPilot *p in _pilots) if ([p.wave isEqualToString:name] || [p.callsign isEqualToString:name]) [u addObject:p.ship];
     return u;
-}
-
-- (NSArray *)unitsForAll:(NSArray<NSString *> *)names {
-    NSMutableArray *u = [NSMutableArray array];
-    for (NSString *n in names) [u addObjectsFromArray:[self unitsFor:n]];
-    return u;
-}
-
-- (GObjective *)objectiveNamed:(NSString *)name {
-    for (GObjective *o in _objectives) if ([o.identifier isEqualToString:name]) return o;
-    return nil;
-}
-
-- (BOOL)triggered:(NSDictionary *)d {
-    if (d[@"at"] && _missionTime < [d[@"at"] doubleValue]) return NO;
-    if (d[@"after"] && [self objectiveNamed:d[@"after"]].state != ObjectiveComplete) return NO;
-    if (d[@"nav"] && ![_navsVisited containsObject:d[@"nav"]]) return NO;
-    if (d[@"spawn"] && ![_spawned containsObject:d[@"spawn"]]) return NO;
-    return YES;
 }
 
 - (simd_float3)navPosition:(NSString *)nav {
@@ -318,240 +339,104 @@ static NSString *FighterClassName(Team t) {
     return p;
 }
 
-// Live player ships within `range` of p.
-- (NSArray<GFighter *> *)playersNear:(simd_float3)p range:(float)range {
-    NSMutableArray *a = [NSMutableArray array];
-    for (GFighter *s in [self playerShips]) if (s.alive && simd_distance(s.position, p) < range) [a addObject:s];
-    return a;
-}
-
 #pragma mark - Update
 
-- (void)updateCasualty {
-    NSDictionary *casualty = _pendingCasualty;
-    for (GPilot *pilot in _pilots) {
-        GFighter *ship = pilot.ship;
-        if (ship.team != TeamFriend || ![pilot.callsign isEqualToString:casualty[@"pilot"]]) continue;
-        if (ship.alive && ![self triggered:casualty]) return;
-        // Use the regular destruction path if combat hasn't already taken the pilot.
-        _pendingCasualty = nil;
-        if (ship.alive) [self damageShip:ship amount:ship.shield + ship.hull + 1 by:nil shake:0];
-        GCommand(nil, SVC_RADIO, casualty[@"text"], casualty[@"from"], nil);
-        return;
-    }
-}
-
 - (void)updateMission:(float)dt {
-    // Arrivals and radio traffic.
-    for (NSDictionary *e in [_pendingEntities copy])
-        if ([self triggered:e]) { [_pendingEntities removeObject:e]; [self spawnEntity:e jump:YES]; }
-    for (NSDictionary *w in [_pendingWaves copy])
-        if ([self triggered:w]) { [_pendingWaves removeObject:w]; [self spawnWave:w jump:YES]; }
-    for (NSDictionary *m in [_pendingMessages copy])
-        if ([self triggered:m]) { [_pendingMessages removeObject:m]; GCommand(nil, SVC_RADIO, m[@"text"], m[@"from"], nil); }
-    for (NSString *nav in _navs)
-        if ([self playersNear:[self navPosition:nav] range:400].count) [_navsVisited addObject:nav];
-
-    _currentNav = nil;
     for (GClient *c in _clients) c.status = nil;
-    for (GObjective *o in _objectives) [self evaluate:o dt:dt];
-    if (_pendingCasualty) [self updateCasualty];
+    [_runner update:dt];
+    _missionTime = _runner.time;
     for (GClient *c in _clients) {
         if (!c.inGame || [c.status ?: @"" isEqualToString:c.sentStatus ?: @""]) continue;
         c.sentStatus = c.status;
         GCommand(c, SVC_STATUS, c.status, nil, nil);
     }
+}
 
-    if (_objectivesDirty) {
-        _objectivesDirty = NO;
-        NSMutableArray *lines = [NSMutableArray array];
-        NSMutableString *states = [NSMutableString string];
-        _objectiveSummary = nil;
-        for (GObjective *o in _objectives) {
-            if (o.state == ObjectiveHidden) continue;
-            [lines addObject:o.progress.length ? [NSString stringWithFormat:@"%@  %@", o.text, o.progress] : o.text];
-            int st = o.state == ObjectiveComplete ? 1 : (o.state == ObjectiveFailed ? 2 : (o.optional ? 3 : 0));
-            [states appendFormat:@"%d", st];
-            if (o.state == ObjectiveActive && !o.optional && !_objectiveSummary && ![o.type isEqualToString:@"protect"]) _objectiveSummary = o.text;
-        }
-        GCommand(nil, SVC_OBJECTIVES, [lines componentsJoinedByString:@"\n"], states, _objectiveSummary);
-    }
+@end
 
-    // Win when every required objective (other than "protect") is done; lose
-    // when an objective fails or every pilot is down.
-    if (_endAt == 0) {
-        BOOL anyAlive = NO;
-        NSArray *players = [self playerShips];
-        for (GFighter *s in players) if (s.alive) anyAlive = YES;
-        BOOL failed = players.count > 0 && !anyAlive, done = YES;
-        for (GObjective *o in _objectives) {
-            if (o.optional) continue;
-            if (o.state == ObjectiveFailed) failed = YES;
-            if (![o.type isEqualToString:@"protect"] && o.state != ObjectiveComplete) done = NO;
-        }
-        if (failed) {
-            _endAt = _missionTime + 3.5;
-            _success = NO;
-            GCommand(nil, SVC_BANNER, @"MISSION FAILED", kRed, nil);
-        } else if (done) {
-            for (GObjective *o in _objectives)
-                if ([o.type isEqualToString:@"protect"] && o.state == ObjectiveActive) o.state = ObjectiveComplete;
-            _objectivesDirty = YES;
-            _endAt = _missionTime + 4.0;
-            _success = YES;
-            GCommand(nil, SVC_BANNER, @"MISSION COMPLETE", nil, nil);
-        }
-    } else if (_missionTime >= _endAt) {
-        [self endMission];
+#pragma mark - MissionWorld
+
+@implementation GWorld (MissionWorld)
+
+- (NSArray<id<MissionUnit>> *)missionUnitsNamed:(NSString *)name { return [self unitsFor:name]; }
+- (NSArray<id<MissionUnit>> *)missionPlayers { return [self playerShips]; }
+- (NSArray<NSString *> *)missionNavs { return _navs.allKeys; }
+
+- (BOOL)missionNav:(NSString *)nav position:(simd_float3 *)position {
+    NSValue *v = nav ? _navs[nav] : nil;
+    if (!v) return NO;
+    [v getValue:position size:sizeof *position];
+    return YES;
+}
+
+- (void)missionSpawn:(NSString *)name {
+    NSDictionary *def = _held[name];
+    if (!def) { GPrint(@"Mission: nothing held as \"%@\" to spawn", name); return; }
+    [_held removeObjectForKey:name];
+    if (def[@"ship"]) [self spawnWave:def jump:YES];
+    else [self spawnEntity:def jump:YES];
+}
+
+- (void)missionSetTeam:(NSString *)team ofUnits:(NSArray<id<MissionUnit>> *)units {
+    for (id u in units) {
+        if ([u isKindOfClass:GCapital.class]) ((GCapital *)u).team = TeamNamed(team);
+        else ((GFighter *)u).team = TeamNamed(team);
     }
 }
 
-- (void)endMission {
+- (void)missionDepart:(id<MissionUnit>)unit {
+    if (![(id)unit isKindOfClass:GCapital.class]) return;
+    GCapital *c = (GCapital *)unit;
+    if (c.departed) return;
+    c.departed = YES;
+    c.hidden = YES;
+    [self jumpFlashAt:c.position scale:c.radius / 30.0f];
+}
+
+- (void)missionCollect:(id<MissionUnit>)unit {
+    if (![(id)unit isKindOfClass:GCapital.class]) return;
+    GCapital *c = (GCapital *)unit;
+    c.collected = YES;
+    c.alive = NO;
+    c.hidden = YES;
+    [self jumpFlashAt:c.position scale:0.2f];
+}
+
+- (void)missionMarkScanned:(id<MissionUnit>)unit {
+    if ([(id)unit isKindOfClass:GCapital.class]) ((GCapital *)unit).scanned = YES;
+}
+
+- (void)missionDestroy:(id<MissionUnit>)unit {
+    if ([(id)unit isKindOfClass:GFighter.class]) {
+        GFighter *s = (GFighter *)unit;
+        if (s.alive) [self damageShip:s amount:s.shield + s.hull + 1 by:nil shake:0];
+    } else if ([(id)unit isKindOfClass:GCapital.class]) {
+        GCapital *c = (GCapital *)unit;
+        if (c.alive) [self destroyCapital:c];
+    }
+}
+
+- (void)missionRadio:(NSString *)text from:(NSString *)from { GCommand(nil, SVC_RADIO, text, from, nil); }
+- (void)missionBanner:(NSString *)text alert:(BOOL)alert { GCommand(nil, SVC_BANNER, text, alert ? kRed : nil, nil); }
+
+- (void)missionStatus:(NSString *)status forPlayer:(id<MissionUnit>)player {
+    if ([(id)player isKindOfClass:GFighter.class]) ((GFighter *)player).client.status = status;
+}
+
+- (void)missionObjectives:(NSArray<NSString *> *)lines states:(NSString *)states summary:(NSString *)summary {
+    GCommand(nil, SVC_OBJECTIVES, [lines componentsJoinedByString:@"\n"], states, summary);
+}
+
+- (void)missionCurrentNav:(NSString *)nav { _currentNav = nav; }
+
+- (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
     int kills = 0;
     for (GClient *c in _clients) kills += c.kills;
-    GPrint(@"Mission %@ ended: %@ after %.0f s, kills %d", _mission[@"id"], _success ? @"SUCCESS" : @"FAILED", _missionTime, kills);
+    GPrint(@"Mission %@ ended: %@ after %.0f s, kills %d", _mission[@"id"], success ? @"SUCCESS" : @"FAILED", _runner.time, kills);
     _over = YES;
-    NSMutableArray *results = [NSMutableArray array];
-    for (GObjective *o in _objectives) {
-        NSString *mark = o.state == ObjectiveComplete ? @"+" : (o.state == ObjectiveFailed ? @"x" : @"-");
-        [results addObject:[NSString stringWithFormat:@"%@ %@%@", mark, o.text, o.optional ? @" (optional)" : @""]];
-    }
-    GCommand(nil, SVC_LEVEL_END, _success ? @"1" : @"0", [results componentsJoinedByString:@"\n"], nil);
+    GCommand(nil, SVC_LEVEL_END, success ? @"1" : @"0", [results componentsJoinedByString:@"\n"], nil);
 }
 
-- (void)setObjective:(GObjective *)o state:(ObjectiveState)state {
-    if (o.state == state) return;
-    o.state = state;
-    GPrint(@"Mission %@ t=%.0f: objective '%@' -> %@", _mission[@"id"], _missionTime, o.identifier,
-           @[@"hidden", @"active", @"complete", @"FAILED"][state]);
-    _objectivesDirty = YES;
-    if (state == ObjectiveComplete && ![o.type isEqualToString:@"protect"]) {
-        GCommand(nil, SVC_BANNER, @"OBJECTIVE COMPLETE", nil, nil);
-        NSDictionary *set = o.def[@"onComplete"][@"setTeam"];
-        for (NSString *who in set)
-            for (id u in [self unitsFor:who]) {
-                if ([u isKindOfClass:[GCapital class]]) ((GCapital *)u).team = TeamNamed(set[who]);
-                else ((GFighter *)u).team = TeamNamed(set[who]);
-            }
-    }
-    if (state == ObjectiveFailed && !o.optional) GCommand(nil, SVC_BANNER, @"OBJECTIVE FAILED", kRed, nil);
-    if (state == ObjectiveActive && _missionTime > 1)
-        GCommand(nil, SVC_RADIO, o.text, o.optional ? @"Optional objective" : @"New objective", nil);
-}
-
-- (void)evaluate:(GObjective *)o dt:(float)dt {
-    if (o.state == ObjectiveComplete || o.state == ObjectiveFailed) return;
-    NSString *type = o.type;
-    if (o.state == ObjectiveHidden) {
-        for (NSString *a in o.after) if ([self objectiveNamed:a].state != ObjectiveComplete) return;
-        for (NSString *t in o.targets) if (![_spawned containsObject:t]) return;
-        o.activatedAt = _missionTime;
-        [self setObjective:o state:ObjectiveActive];
-    }
-    NSArray *units = [self unitsForAll:o.targets];
-    NSString *oldProgress = o.progress;
-    float range = o.def[@"range"] ? [o.def[@"range"] floatValue] : 0;
-
-    if ([type isEqualToString:@"reach"]) {
-        while (o.navIndex < o.navs.count) {
-            simd_float3 p = [self navPosition:o.navs[o.navIndex]];
-            if ([self playersNear:p range:range ?: 300].count) o.navIndex++;
-            else break;
-        }
-        o.progress = o.navs.count > 1 ? [NSString stringWithFormat:@"%lu/%lu", (unsigned long)o.navIndex, (unsigned long)o.navs.count] : @"";
-        if (o.navIndex >= o.navs.count) { [self setObjective:o state:ObjectiveComplete]; return; }
-        if (!_currentNav) _currentNav = o.navs[o.navIndex];
-    } else if ([type isEqualToString:@"destroy"]) {
-        NSUInteger dead = 0;
-        for (id u in units) if (!BodyAlive(u)) dead++;
-        if (units.count && dead == units.count) [self setObjective:o state:ObjectiveComplete];
-        o.progress = units.count > 1 ? [NSString stringWithFormat:@"%lu/%lu", (unsigned long)dead, (unsigned long)units.count] : @"";
-    } else if ([type isEqualToString:@"protect"]) {
-        for (id u in units) {
-            BOOL safe = [u isKindOfClass:[GCapital class]] && (((GCapital *)u).collected || ((GCapital *)u).departed);
-            if (!BodyAlive(u) && !safe) { [self setObjective:o state:ObjectiveFailed]; return; }
-        }
-        float worst = 1;
-        for (id u in units) if ([u isKindOfClass:[GCapital class]] && BodyAlive(u)) worst = fminf(worst, ((GCapital *)u).hull / ((GCapital *)u).maxHull);
-        o.progress = units.count == 1 || worst < 1 ? [NSString stringWithFormat:@"%d%%", (int)lroundf(worst * 100)] : @"";
-    } else if ([type isEqualToString:@"escort"]) {
-        NSUInteger arrived = 0;
-        simd_float3 nav = [self navPosition:o.navs.firstObject];
-        for (GCapital *c in units) {
-            if (c.departed) { arrived++; continue; }
-            if (!c.alive) { [self setObjective:o state:ObjectiveFailed]; return; }
-            if (simd_distance(c.position, nav) < 400) {
-                arrived++;
-                // At a gate the escortee jumps out; elsewhere it just holds.
-                for (GCapital *g in _capitals)
-                    if ([g.asset isEqualToString:@"JumpGate"] && simd_distance(g.position, nav) < 700) {
-                        c.departed = YES;
-                        c.hidden = YES;
-                        [self jumpFlashAt:c.position scale:c.radius / 30.0f];
-                    }
-            }
-        }
-        if (units.count && arrived == units.count) [self setObjective:o state:ObjectiveComplete];
-        if (!_currentNav) _currentNav = o.navs.firstObject;
-        if (units.count > 1) {
-            o.progress = [NSString stringWithFormat:@"%lu/%lu arrived", (unsigned long)arrived, (unsigned long)units.count];
-        } else if (units.count == 1) {
-            GCapital *c = units.firstObject;
-            o.progress = [NSString stringWithFormat:@"%.1fkm", simd_distance(c.position, nav) / 1000.0f];
-        }
-    } else if ([type isEqualToString:@"survive"]) {
-        double left = [o.def[@"seconds"] doubleValue] - (_missionTime - o.activatedAt);
-        if (left <= 0) { [self setObjective:o state:ObjectiveComplete]; return; }
-        o.progress = [NSString stringWithFormat:@"%d:%02d", (int)left / 60, (int)left % 60];
-    } else if ([type isEqualToString:@"scan"]) {
-        NSUInteger done = 0;
-        for (GCapital *c in units) {
-            NSString *k = c.identifier;
-            float t = o.scanTime[k].floatValue;
-            if (t >= 2.0f) { done++; continue; }
-            if (!c.alive) { [self setObjective:o state:ObjectiveFailed]; return; }
-            NSArray *near = [self playersNear:c.position range:(range ?: 150) + c.radius];
-            if (near.count) {
-                t += dt;
-                o.scanTime[k] = @(t);
-                NSString *status = [NSString stringWithFormat:@"SCANNING %@  %d%%", [c.name uppercaseString], (int)(fminf(t / 2.0f, 1) * 100)];
-                for (GFighter *s in near) s.client.status = status;
-                if (t >= 2.0f) {
-                    c.scanned = YES;
-                    GCommand(nil, SVC_RADIO, [NSString stringWithFormat:@"%@ scanned", c.name], @"", nil);
-                }
-            }
-        }
-        if (units.count && done == units.count) [self setObjective:o state:ObjectiveComplete];
-        o.progress = [NSString stringWithFormat:@"%lu/%lu", (unsigned long)done, (unsigned long)units.count];
-    } else if ([type isEqualToString:@"collect"]) {
-        NSUInteger got = 0;
-        for (GCapital *c in units) {
-            if (c.collected) { got++; continue; }
-            if (c.alive && [self playersNear:c.position range:(range ?: 30) + c.radius].count) {
-                c.collected = YES;
-                c.alive = NO;
-                c.hidden = YES;
-                [self jumpFlashAt:c.position scale:0.2f];
-                GCommand(nil, SVC_RADIO, [NSString stringWithFormat:@"%@ aboard", c.name], @"", nil);
-                got++;
-            }
-        }
-        if (units.count && got == units.count) [self setObjective:o state:ObjectiveComplete];
-        o.progress = [NSString stringWithFormat:@"%lu/%lu", (unsigned long)got, (unsigned long)units.count];
-    } else if ([type isEqualToString:@"disable"]) {
-        NSString *kindName = o.def[@"kind"];
-        SubsystemKind kind = [kindName isEqualToString:@"Engine"] ? SubsystemEngine : ([kindName isEqualToString:@"Shield"] ? SubsystemShield :
-                             ([kindName isEqualToString:@"Core"] ? SubsystemCore : SubsystemTurret));
-        NSUInteger left = 0, total = 0;
-        for (GCapital *c in units) {
-            total += [c totalCount:kind];
-            if (c.alive) left += [c aliveCount:kind];
-        }
-        if (units.count && left == 0) [self setObjective:o state:ObjectiveComplete];
-        o.progress = [NSString stringWithFormat:@"%lu/%lu", (unsigned long)(total - left), (unsigned long)total];
-    }
-    if (![o.progress isEqualToString:oldProgress]) _objectivesDirty = YES;
-}
+- (void)missionLog:(NSString *)line { GPrint(@"Mission %@: %@", _mission[@"id"], line); }
 
 @end

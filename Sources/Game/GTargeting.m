@@ -12,7 +12,7 @@
     NSMutableArray *list = [NSMutableArray array];
     for (GPilot *p in _pilots) if (p.ship.alive && p.ship.team == TeamEnemy) [list addObject:p.ship];
     NSMutableSet *objectiveIds = [NSMutableSet set];
-    for (GObjective *o in _objectives) if (o.state == ObjectiveActive) [objectiveIds addObjectsFromArray:o.targets];
+    for (MissionObjective *o in _runner.objectives) if (o.state == MissionObjectiveActive) [objectiveIds addObjectsFromArray:o.targets];
     for (GCapital *c in _capitals) {
         if (!c.alive || c.departed || c.isAsteroid) continue;
         if (![self capital:c visibleTo:cl.ship]) continue;
@@ -31,7 +31,7 @@
     }];
     if (!list.count) {
         cl.selected = nil;
-        GCommand(cl, SVC_RADIO, @"No targets in sight", @"", nil);
+        GCommand(cl, SVC_RADIO, MissionText(@"combat.no_targets", nil), @"", nil);
         return;
     }
     NSUInteger i = cl.selected ? [list indexOfObject:cl.selected] : NSNotFound;

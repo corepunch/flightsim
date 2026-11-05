@@ -79,15 +79,6 @@
 #pragma mark - Capital
 
 @implementation GSubsystem
-+ (NSString *)nameForKind:(SubsystemKind)kind {
-    switch (kind) {
-        case SubsystemTurret: return @"TURRET";
-        case SubsystemEngine: return @"ENGINE";
-        case SubsystemShield: return @"SHIELD GEN";
-        case SubsystemCore: return @"REACTOR";
-    }
-    return @"";
-}
 @end
 
 @implementation GCapital {
@@ -235,16 +226,6 @@
 @end
 
 @implementation GTorpedo
-@end
-
-@implementation GObjective
-- (NSString *)identifier { return _def[@"id"]; }
-- (NSString *)type { return _def[@"type"]; }
-- (NSString *)text { return _def[@"text"]; }
-- (NSArray<NSString *> *)targets { return _def[@"targets"] ?: @[]; }
-- (NSArray<NSString *> *)navs { return _def[@"navs"] ?: @[]; }
-- (NSArray<NSString *> *)after { return _def[@"after"] ?: @[]; }
-- (BOOL)optional { return [_def[@"optional"] boolValue]; }
 @end
 
 @implementation GClient
