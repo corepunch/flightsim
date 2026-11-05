@@ -393,25 +393,31 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         SKShapeNode *tile = UIReadoutPanel(rect, ink, UIColorWithOpacity(selected ? UIInk : UIPanel, selected ? 0.14 : 0.88));
         tile.name = [NSString stringWithFormat:@"mission-%lu", (unsigned long)i + 1];
         [content addChild:tile];
+        // Top to bottom: number, title, then the stars and the status line
+        // from the bottom up. Each label sits under the measured frame of the
+        // one above, so no two can touch whatever the font metrics are.
+        const CGFloat inset = 16, spacing = 4;
         SKLabelNode *number = Text(compact ? 42 : 52, ink, SKLabelHorizontalAlignmentModeLeft);
         number.fontName = UIInterfaceBoldFont;
         number.text = [NSString stringWithFormat:@"%02lu", (unsigned long)i + 1];
-        number.position = CGPointMake(x + 16, y + tileH - 36);
+        number.position = CGPointMake(x + inset, y + tileH - 12);
         [content addChild:number];
-        SKLabelNode *name = Para(12, ink, tileW - 30);
-        name.fontName = UIInterfaceBoldFont;
-        name.text = open ? [missions[i][@"title"] uppercaseString] : @"CLASSIFIED";
-        name.position = CGPointMake(x + 16, y + tileH - 67);
-        name.numberOfLines = 2;
-        [content addChild:name];
-        SKLabelNode *rating = Text(18, UIColorWithOpacity(stars ? UIAmber : UIInk, stars ? 1 : 0.25), SKLabelHorizontalAlignmentModeLeft);
-        rating.text = [@[@"☆ ☆ ☆", @"★ ☆ ☆", @"★ ★ ☆", @"★ ★ ★"] objectAtIndex:stars];
-        rating.position = CGPointMake(x + 16, y + 36);
-        [content addChild:rating];
         SKLabelNode *status = Text(10, ink, SKLabelHorizontalAlignmentModeLeft);
         status.text = !open ? @"LOCKED" : stars ? @"COMPLETED" : @"READY TO FLY";
-        status.position = CGPointMake(x + 16, y + 15);
+        status.position = CGPointMake(x + inset, y + 10 + status.frame.size.height);
         [content addChild:status];
+        SKLabelNode *rating = Text(18, UIColorWithOpacity(stars ? UIAmber : UIInk, stars ? 1 : 0.25), SKLabelHorizontalAlignmentModeLeft);
+        rating.text = [@[@"☆ ☆ ☆", @"★ ☆ ☆", @"★ ★ ☆", @"★ ★ ★"] objectAtIndex:stars];
+        rating.position = CGPointMake(x + inset, CGRectGetMaxY(status.frame) + spacing + rating.frame.size.height);
+        [content addChild:rating];
+        SKLabelNode *name = Para(12, ink, tileW - 2 * inset);
+        name.fontName = UIInterfaceBoldFont;
+        name.text = open ? [missions[i][@"title"] uppercaseString] : @"CLASSIFIED";
+        name.numberOfLines = 2;
+        CGFloat nameTop = CGRectGetMinY(number.frame) - spacing;
+        if (nameTop - name.frame.size.height < CGRectGetMaxY(rating.frame) + spacing) name.numberOfLines = 1;   // compact tiles
+        name.position = CGPointMake(x + inset, nameTop);
+        [content addChild:name];
     }
     _missionTiles = tiles;
     [_root addChild:[self textViewport:_missionRows content:content]];
