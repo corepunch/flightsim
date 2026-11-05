@@ -131,6 +131,35 @@ static int CheckCampaignCaptions(void) {
     return EXIT_SUCCESS;
 }
 
+// Map steps with a camera or labels: each plays out for a second and a half
+// and is saved, to look at how the camera framed the page.
+static int CheckTimeline(NSString *output) {
+    CGSize size = CGSizeMake(1600, 900);
+    SizeTarget(size);
+    Briefing *scene = [[Briefing alloc] initWithSize:size];
+    SKView *renderer = view;
+    [view presentScene:scene];
+    for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
+        BOOL any = NO;
+        for (BriefingStep *step in CampaignMissionAt(mission).briefing.steps) any |= step.camera || step.labels.count;
+        if (!any) continue;
+        [scene showBriefing:mission];
+        [(id<UIMotionScene>)scene motionEnter];
+        NSArray<BriefingPage *> *pages = [scene valueForKey:@"_pages"];
+        for (NSUInteger page = 0; page < pages.count; page++) {
+            BriefingStep *step = pages[page].step;
+            if (step.camera || step.labels.count) {
+                for (int i = 0; i < 90; i++) @autoreleasepool { Render(renderer, i / 60.0); }
+                Save([output stringByAppendingPathComponent:[NSString stringWithFormat:@"timeline-%lu-%lu.png",
+                                                             (unsigned long)mission + 1, (unsigned long)page + 1]]);
+            }
+            UIMotionFinishTyping(scene.speech);
+            if (page + 1 < pages.count) [scene handle:InputActionRight];
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, const char **argv) {
     @autoreleasepool {
         [NSApplication sharedApplication];
@@ -175,6 +204,7 @@ int main(int argc, const char **argv) {
             CHECK(![speech childNodeWithName:@"motion.caret"]);
             CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == 1);
         }
+        if (CheckTimeline(output) != EXIT_SUCCESS) return EXIT_FAILURE;
         puts("PASS: dialogue caret, line returns, Unicode, skip controls and rendered briefing at desktop and phone sizes.");
     }
     return EXIT_SUCCESS;

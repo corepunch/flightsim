@@ -677,6 +677,13 @@ static void CheckStory(void) {
         CHECK([pages.lastObject.portrait isEqualToString:StoryCharacterNamed(officer).portrait]);
         for (BriefingPage *page in pages) CHECK(page.text.length && page.channel.length && page.portrait);
     }
+    // A step's camera and labels: ids or [x, z] points; malformed labels are dropped.
+    BriefingStep *step = [BriefingStep stepWithJSON:@{
+        @"caption": @"c", @"camera": @{ @"center": @"corvette", @"span": @2500 },
+        @"labels": @[ @{ @"text": @"Kill zone", @"at": @[@1200, @-3400] }, @{ @"text": @"Lost", @"at": @[@1] }, @{ @"at": @"x" } ] }];
+    CHECK([step.camera.center.identifier isEqualToString:@"corvette"] && step.camera.span == 2500);
+    CHECK(step.labels.count == 1 && !step.labels[0].at.identifier && step.labels[0].at.position.y == -3400);
+    CHECK(![BriefingStep stepWithJSON:@{ @"caption": @"c" }].camera);
     // A game-registered page kind, named by a mission's own page order.
     StoryRegisterBriefingPages(@"check_weather", ^NSArray *(CampaignMission *mission, StoryLine *officer) {
         return @[ [BriefingPage pageBy:officer text:@"Fog" channel:@"WX" step:nil readout:nil] ];

@@ -104,11 +104,28 @@ static BOOL CaptionContinues(Caption old, Caption next) {
 // the same map changing emphasis, or no motion.
 typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFresh, CueStyleTween };
 
+// Where the map looks: the x/z point at its middle and how many metres its
+// shorter side spans. A zero span is "not set yet".
+typedef struct {
+    simd_float2 center;
+    float span;
+} MapCamera;
+
+static MapCamera MapCameraLerp(MapCamera a, MapCamera b, float t) {
+    // Zoom in log space so a long move feels even from start to end.
+    return (MapCamera){ .center = a.center + (b.center - a.center) * t, .span = a.span * powf(b.span / a.span, t) };
+}
+
+static BOOL MapCameraNear(MapCamera a, MapCamera b) {
+    return simd_distance(a.center, b.center) < 1 && fabsf(a.span - b.span) < 1;
+}
+
 // What a tactical cue emphasised, so the next one can animate from it.
 typedef struct {
     NSString *focus;
     NSArray<NSString *> *route;
     NSDictionary<NSString *, NSNumber *> *alpha;
+    MapCamera camera;
 } MapEmphasis;
 
 // What the previous build put on screen, so the next one can animate from
@@ -190,8 +207,10 @@ typedef struct {
 @interface MapItem : NSObject
 @property (nonatomic, copy) NSString *identifier, *group;
 @property (nonatomic) BOOL container;
-@property (nonatomic) CGPoint point;
+@property (nonatomic) CGPoint point;                  // where the camera puts it, in the map layer
+@property (nonatomic) simd_float3 world;
 @property (nonatomic, strong) SKNode *node;
+@property (nonatomic, strong) SKNode *extent;         // a drawing in metres (a minefield) that zooms with the camera
 @end
 @implementation MapItem
 @end
@@ -263,17 +282,28 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
 
 @implementation TacticalMap {
     CGRect _rect;
-    CGFloat _scale;                 // map points per metre
+    CGFloat _fitScale;              // map points per metre when everything fits
+    CGFloat _scale;                 // map points per metre under the current camera
+    MapCamera _fit, _camera;
     NSMutableDictionary<NSString *, MapItem *> *_items;
-    SKNode *_layer, *_routeLayer, *_focusLock;
+    NSMutableArray<MapItem *> *_scenery, *_notes;
+    SKNode *_layer, *_routeLayer, *_focusLock, *_noteLayer;
+    SKSpriteNode *_scaleBar;
+    SKLabelNode *_scaleLabel;
     SKShapeNode *_focusRing, *_routeLine;
-    NSArray<NSValue *> *_routePoints;
+    NSArray<NSString *> *_routeIDs;
+    CGFloat _routeFraction;         // how much of the route is drawn while it plots
+    SKShapeNode *_routeDot;
+    MapItem *_focusItem;
 }
 
 - (instancetype)initWithLevel:(const LevelDef *)level rect:(CGRect)rect {
     if (!(self = [super init])) return nil;
     _rect = rect;
     _items = [NSMutableDictionary dictionary];
+    _scenery = [NSMutableArray array];
+    _notes = [NSMutableArray array];
+    _routeFraction = 1;
     SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:[SKColor whiteColor] size:rect.size];
     mask.position = RectCenter(rect);
     self.maskNode = mask;
@@ -288,22 +318,59 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
         hi = simd_max(hi, c.pos);
     });
     simd_float3 extent = hi - lo, centre = (lo + hi) / 2;
-    float span = fmaxf(fmaxf(extent.x, extent.z), 800.0f) * 1.25f;
-    CGFloat scale = _scale = MIN(rect.size.width, rect.size.height) / span;
-    CGPoint mid = RectCenter(rect);
-    CGPoint (^project)(simd_float3) = ^CGPoint(simd_float3 p) {
-        // Forward (-Z) is up on the map.
-        simd_float3 d = (p - centre) * scale;
-        return PointAdd(mid, CGPointMake(d.x, -d.z));
-    };
-    [self addGridWithSpan:span];
-    CGPoint playerPoint = project(level->playerPos);
-    EachContact(level, ^(MapContact c) { [self addContact:c at:project(c.pos) player:playerPoint]; });
+    _fit = (MapCamera){ .center = simd_make_float2(centre.x, centre.z),
+                        .span = fmaxf(fmaxf(extent.x, extent.z), 800.0f) * 1.25f };
+    _camera = _fit;
+    _fitScale = _scale = MIN(rect.size.width, rect.size.height) / _fit.span;
+    [self addGrid];
+    CGPoint playerPoint = [self project:level->playerPos];
+    EachContact(level, ^(MapContact c) { [self addContact:c at:[self project:c.pos] player:playerPoint]; });
     [self addFocusLock];
+    _noteLayer = [SKNode node];
+    [_layer addChild:_noteLayer];
+    [self showCamera:_fit];
     return self;
 }
 
-- (void)addGridWithSpan:(float)span {
+// Forward (-Z) is up on the map.
+- (CGPoint)project:(simd_float3)world {
+    simd_float2 d = (simd_make_float2(world.x, world.z) - _camera.center) * (float)_scale;
+    return PointAdd(RectCenter(_rect), CGPointMake(d.x, -d.y));
+}
+
+// Moves every contact, note and route to where the camera sees it. Drawn
+// things sized in metres (minefields, rocks) zoom; icons and text keep their size.
+- (void)showCamera:(MapCamera)camera {
+    _camera = camera;
+    _scale = MIN(_rect.size.width, _rect.size.height) / camera.span;
+    CGFloat zoom = _scale / _fitScale;
+    for (MapItem *it in _items.allValues) {
+        it.point = [self project:it.world];
+        if (!it.container) it.node.position = it.point;
+        it.extent.xScale = it.extent.yScale = zoom;
+    }
+    for (MapItem *it in [_scenery arrayByAddingObjectsFromArray:_notes]) {
+        it.point = [self project:it.world];
+        it.node.position = it.point;
+    }
+    for (MapItem *it in _scenery) it.node.xScale = it.node.yScale = zoom;
+    if (_focusItem) _focusLock.position = _focusItem.point;
+    [self updateScaleBar];
+    [self drawRoute];
+}
+
+// A bar of a round length that takes up under a third of the map.
+- (void)updateScaleBar {
+    static const float lengths[] = { 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000 };
+    float bar = lengths[0];
+    for (size_t i = 0; i < sizeof lengths / sizeof *lengths; i++)
+        if (lengths[i] * _scale <= MIN(_rect.size.width, _rect.size.height) / 3) bar = lengths[i];
+    _scaleBar.size = CGSizeMake(bar * _scale, 2);
+    _scaleLabel.text = bar >= 1000 ? L10nFormat(@"units.km0", bar / 1000) : L10nFormat(@"units.m_short", (int)bar).uppercaseString;
+}
+
+// A fixed graticule, like a radar scope's: it does not move with the camera.
+- (void)addGrid {
     CGRect rect = _rect;
     CGPoint mid = RectCenter(rect);
     for (int i = 1; i < 8; i++) {
@@ -317,17 +384,15 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
         [_layer addChild:v];
         [_layer addChild:h];
     }
-    float bar = span > 6000 ? 2000 : 1000;
-    SKSpriteNode *sb = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.7) size:CGSizeMake(bar * _scale, 2)];
-    sb.anchorPoint = CGPointMake(0, 0.5);
-    sb.position = PointAdd(rect.origin, CGPointMake(16, 18));
-    sb.name = @"scale";
-    [_layer addChild:sb];
-    SKLabelNode *sl = Text(11, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeLeft);
-    sl.text = L10nFormat(@"units.km0", bar / 1000);
-    sl.position = PointAdd(rect.origin, CGPointMake(16, 36));
-    sl.name = @"scale-label";
-    [_layer addChild:sl];
+    _scaleBar = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.7) size:CGSizeMake(1, 2)];
+    _scaleBar.anchorPoint = CGPointMake(0, 0.5);
+    _scaleBar.position = PointAdd(rect.origin, CGPointMake(16, 18));
+    _scaleBar.name = @"scale";
+    [_layer addChild:_scaleBar];
+    _scaleLabel = Text(11, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeLeft);
+    _scaleLabel.position = PointAdd(rect.origin, CGPointMake(16, 36));
+    _scaleLabel.name = @"scale-label";
+    [_layer addChild:_scaleLabel];
 }
 
 - (SKNode *)iconFor:(MapContact)c {
@@ -360,14 +425,14 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
             return g;
         }
         case ContactMines: {
-            CGSize size = CGSizeMake(c.size.x * _scale, c.size.z * _scale);
+            CGSize size = CGSizeMake(c.size.x * _fitScale, c.size.z * _fitScale);
             SKShapeNode *n = [SKShapeNode shapeNodeWithRect:CGRectMake(-size.width / 2, -size.height / 2, size.width, size.height)];
             n.strokeColor = UIColorWithOpacity(UIRed, 0.6);
             n.fillColor = UIColorWithOpacity(UIRed, 0.08);
             return n;
         }
         case ContactRocks: {
-            SKShapeNode *n = [SKShapeNode shapeNodeWithCircleOfRadius:c.radius * _scale];
+            SKShapeNode *n = [SKShapeNode shapeNodeWithCircleOfRadius:c.radius * _fitScale];
             n.strokeColor = UIColorWithOpacity(UIField, 0.25);
             n.fillColor = UIColorWithOpacity(UIField, 0.06);
             return n;
@@ -391,11 +456,14 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
 
 - (void)addContact:(MapContact)c at:(CGPoint)p player:(CGPoint)playerPoint {
     SKNode *icon = [self iconFor:c];
-    icon.position = p;
     if (c.kind == ContactRocks) {
         // Scenery: drawn, never lit or named.
         icon.name = @"rocks";
         [_layer addChild:icon];
+        MapItem *rocks = [MapItem new];
+        rocks.world = c.pos;
+        rocks.node = icon;
+        [_scenery addObject:rocks];
         return;
     }
     SKNode *holder = [SKNode node];
@@ -404,7 +472,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
     if (c.kind == ContactMines) {
         SKLabelNode *l = Text(11, UIColorWithOpacity(UIRed, 0.9), SKLabelHorizontalAlignmentModeCenter);
         l.text = c.label;
-        l.position = PointAdd(p, CGPointMake(0, -6));
+        l.position = CGPointMake(0, -6);
         [holder addChild:l];
     } else if (c.label.length && !(c.kind == ContactCapital && grouped)) {
         // Put a nearby wingman's callsign opposite the player's callsign.
@@ -412,7 +480,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
         SKLabelNode *l = Text(11, UIColorWithOpacity(UIInk, 0.85),
                               wingman ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeLeft);
         l.text = c.label.uppercaseString;
-        l.position = PointAdd(p, CGPointMake(wingman ? -15 : 12, 6));
+        l.position = CGPointMake(wingman ? -15 : 12, 6);
         [holder addChild:l];
     }
     [_layer addChild:holder];
@@ -421,7 +489,10 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
     item.identifier = c.identifier;
     item.group = grouped ? c.group : nil;
     item.point = p;
+    item.world = c.pos;
     item.node = holder;
+    holder.position = p;
+    if (c.kind == ContactMines) item.extent = icon;
     _items[c.identifier] = item;
     if (!grouped) return;
     // Groups (e.g. containers, pods) answer to the group name too.
@@ -431,6 +502,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
         g.identifier = c.group;
         g.container = YES;
         g.point = p;
+        g.world = c.pos;
         g.node = [SKNode node];
         [_layer addChild:g.node];
         _items[c.group] = g;
@@ -485,45 +557,92 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
                 if (![l.userData[@"ink"] isKindOfClass:[SKColor class]]) l.userData = [@{ @"ink": l.fontColor } mutableCopy];
                 l.fontColor = focused ? UIColorWithOpacity(UIWhite, 1) : l.userData[@"ink"];
                 l.fontName = focused ? UIInterfaceBoldFont : UIInterfaceFont;
-            } else {
+            } else if (c != it.extent) {
                 c.xScale = c.yScale = focused ? 1.3 : 1.0;
             }
         }
     }
     [_routeLayer removeAllChildren];
+    _routeLine = _routeDot = nil;
+    _routeFraction = 1;
     NSArray *route = st.route;
-    if (route.count > 1) {
-        CGMutablePathRef path = CGPathCreateMutable();
-        BOOL first = YES;
-        for (NSString *rid in route) {
-            MapItem *it = _items[rid];
-            if (!it) continue;
-            if (first) CGPathMoveToPoint(path, NULL, it.point.x, it.point.y);
-            else CGPathAddLineToPoint(path, NULL, it.point.x, it.point.y);
-            first = NO;
-        }
-        CGFloat dash[] = { 8, 6 };
-        CGPathRef dashed = CGPathCreateCopyByDashingPath(path, NULL, 0, dash, 2);
-        SKShapeNode *line = [SKShapeNode shapeNodeWithPath:dashed];
-        line.strokeColor = UIColorWithOpacity(UIAmber, 0.9);
-        line.lineWidth = 2;
-        [_routeLayer addChild:line];
-        CGPathRelease(dashed);
-        CGPathRelease(path);
-        NSMutableArray<NSValue *> *points = [NSMutableArray array];
-        for (NSString *rid in route) if (_items[rid]) [points addObject:BoxPoint(_items[rid].point)];
-        _routePoints = points;
-        _routeLine = line;
+    NSMutableArray<NSString *> *routeIDs = [NSMutableArray array];
+    for (NSString *rid in route) if (_items[rid]) [routeIDs addObject:rid];
+    _routeIDs = routeIDs;
+    if (routeIDs.count > 1) {
+        _routeLine = [SKShapeNode node];
+        _routeLine.strokeColor = UIColorWithOpacity(UIAmber, 0.9);
+        _routeLine.lineWidth = 2;
+        [_routeLayer addChild:_routeLine];
     }
-    MapItem *focus = _items[focusID];
-    _focusLock.hidden = !focus;
-    if (focus) _focusLock.position = focus.point;
+    _focusItem = _items[focusID];
+    _focusLock.hidden = !_focusItem;
+    [self placeNotes:st.labels style:style];
+
+    MapCamera target = [self cameraFor:st.camera];
+    BOOL glide = style == CueStyleTween && shown.camera.span > 0 && !MapCameraNear(shown.camera, target) && !UIMotionReduced();
+    [self showCamera:glide ? shown.camera : target];
 
     NSMutableDictionary<NSString *, NSNumber *> *alphas = [NSMutableDictionary dictionary];
     for (MapItem *it in _items.allValues) if (!it.container) alphas[it.identifier] = @(it.node.alpha);
-    MapEmphasis now = { .focus = focusID, .route = route ?: @[], .alpha = alphas };
+    MapEmphasis now = { .focus = focusID, .route = route ?: @[], .alpha = alphas, .camera = target };
     [self animateFrom:shown to:now style:style];
+    if (glide) [self glideFrom:shown.camera to:target];
     return now;
+}
+
+// The step's camera over the default fit; a part it leaves out stays fitted.
+- (MapCamera)cameraFor:(BriefingCamera *)camera {
+    MapCamera result = _fit;
+    simd_float2 at;
+    if (camera.span > 0) result.span = camera.span;
+    if (camera.center && [self resolve:camera.center into:&at]) result.center = at;
+    return result;
+}
+
+// A place as an x/z point; NO for a contact the level does not have.
+- (BOOL)resolve:(BriefingPlace *)place into:(simd_float2 *)point {
+    if (!place.identifier) {
+        *point = place.position;
+        return YES;
+    }
+    MapItem *item = _items[place.identifier];
+    if (item) *point = item.world.xz;
+    return item != nil;
+}
+
+- (void)glideFrom:(MapCamera)from to:(MapCamera)to {
+    const NSTimeInterval duration = 1.0;
+    [self runAction:[SKAction customActionWithDuration:duration actionBlock:^(SKNode *node, CGFloat elapsed) {
+        float t = MIN(1, elapsed / duration);
+        [(TacticalMap *)node showCamera:MapCameraLerp(from, to, t * t * (3 - 2 * t))];
+    }] withKey:@"camera"];
+}
+
+// The step's free text: amber, pinned to a place, flickering in with the cue.
+- (void)placeNotes:(NSArray<BriefingLabel *> *)labels style:(CueStyle)style {
+    [_noteLayer removeAllChildren];
+    [_notes removeAllObjects];
+    for (BriefingLabel *label in labels) {
+        simd_float2 at;
+        if (![self resolve:label.at into:&at]) continue;
+        SKNode *node = [SKNode node];
+        SKShapeNode *dot = [SKShapeNode shapeNodeWithCircleOfRadius:2.5];
+        dot.fillColor = UIColorWithOpacity(UIAmber, 1);
+        dot.strokeColor = [SKColor clearColor];
+        [node addChild:dot];
+        SKLabelNode *text = Text(11, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
+        text.fontName = UIInterfaceBoldFont;
+        text.text = L10nExpand(label.text).uppercaseString;
+        text.position = CGPointMake(8, 5);
+        [node addChild:text];
+        [_noteLayer addChild:node];
+        MapItem *note = [MapItem new];
+        note.world = simd_make_float3(at.x, 0, at.y);
+        note.node = node;
+        [_notes addObject:note];
+        if (style != CueStyleStill) UIMotionFlickerIn(node, style == CueStyleIntro ? 1.1 : 0.35);
+    }
 }
 
 - (void)animateFrom:(MapEmphasis)shown to:(MapEmphasis)now style:(CueStyle)style {
@@ -611,28 +730,36 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     return dashed;
 }
 
+// The route as far as it is plotted, under the current camera.
+- (void)drawRoute {
+    if (!_routeLine) return;
+    NSMutableArray<NSValue *> *points = [NSMutableArray array];
+    for (NSString *rid in _routeIDs) [points addObject:BoxPoint(_items[rid].point)];
+    CGPoint head;
+    CGPathRef path = CreatePartialRoute(points, _routeFraction, &head);
+    _routeLine.path = path;
+    CGPathRelease(path);
+    _routeDot.position = head;
+}
+
 - (void)plotRoute:(NSTimeInterval)delay {
-    if (!_routeLine || _routePoints.count < 2 || UIMotionReduced()) return;
+    if (!_routeLine || UIMotionReduced()) return;
     SKShapeNode *line = _routeLine;
-    NSArray<NSValue *> *points = _routePoints;
-    SKShapeNode *dot = [SKShapeNode shapeNodeWithCircleOfRadius:3.5];
+    SKShapeNode *dot = _routeDot = [SKShapeNode shapeNodeWithCircleOfRadius:3.5];
     dot.fillColor = UIColorWithOpacity(UIAmber, 1);
     dot.strokeColor = UIColorWithOpacity(UIAmber, 0.4);
     dot.lineWidth = 4;
-    dot.position = UnboxPoint(points.firstObject);
     dot.alpha = 0;
     [_routeLayer addChild:dot];
     line.hidden = YES;
     const NSTimeInterval duration = 0.7;
+    __weak TacticalMap *weakSelf = self;
     SKAction *plot = [SKAction customActionWithDuration:duration actionBlock:^(SKNode *node, CGFloat elapsed) {
         CGFloat t = MIN(1, elapsed / duration);
-        t = 1 - pow(1 - t, 3);
-        CGPoint head;
-        CGPathRef path = CreatePartialRoute(points, t, &head);
-        line.path = path;
+        TacticalMap *map = weakSelf;
+        map->_routeFraction = 1 - pow(1 - t, 3);
+        [map drawRoute];
         line.hidden = NO;
-        CGPathRelease(path);
-        dot.position = head;
         dot.alpha = 1;
     }];
     [line runAction:UIAfter(delay, plot)];
