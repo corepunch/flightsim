@@ -1,4 +1,5 @@
 #import "ClientView.h"
+#import "GameAudio.h"
 #import "ShipView.h"
 #import "CapitalView.h"
 #import "SpaceSky.h"
@@ -57,6 +58,9 @@ typedef struct {
     NSString *_status, *_objectiveSummary, *_lastInputText;
     uint16_t _playerEntity;
     BOOL _hadPlayer;
+    uint16_t _audioEntity;
+    int _audioTorpedoes, _audioTarget;
+    BOOL _audioHullLow;
 }
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
@@ -339,6 +343,19 @@ typedef struct {
 
 - (void)handleEvent:(const GameEvent *)e player:(const PlayerState *)ps {
     simd_float3 me = ps->move.origin;
+    // Muzzle events contain ship-local positions, so only world-space events are spatialized.
+    simd_float3 offset = e->pos - me;
+    float distance = simd_length(offset);
+    float gain = distance < 5000 ? 1.0f / (1 + distance / 650.0f) : 0;
+    simd_float3 right = simd_act(ps->move.orientation, simd_make_float3(1, 0, 0));
+    float pan = distance > 1 ? simd_dot(offset / distance, right) * 0.8f : 0;
+    GameAudio *audio = [GameAudio shared];
+    if (e->type == EV_BOLT) {
+        BOOL own = e->entity && e->entity == ps->entity;
+        [audio play:own ? @"laser-player" : @"laser" gain:own ? 0.8f : gain * 0.22f pan:own ? 0 : pan];
+    } else if (e->type == EV_IMPACT) [audio play:@"impact" gain:gain * 0.5f pan:pan];
+    else if (e->type == EV_DAMAGE && e->entity && e->entity == ps->entity) [audio play:@"impact"];
+    else if (e->type == EV_EXPLOSION) [audio play:@"explosion" gain:gain pan:pan];
 #if TARGET_OS_IOS
     // The server confirms each shot once, even if its bolt was already drawn.
     if (e->type == EV_BOLT && e->entity && e->entity == ps->entity) [self weaponFired];
@@ -402,8 +419,11 @@ typedef struct {
 
 - (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c {
     switch (type) {
-        case SVC_RADIO: [_hud showMessage:a from:b]; break;
+        case SVC_RADIO:
+            [[GameAudio shared] play:b.length ? @"ui-panel" : @"ui-alert" gain:b.length ? 0.25f : 0.7f pan:0];
+            [_hud showMessage:a from:b]; break;
         case SVC_BANNER:
+            [[GameAudio shared] play:[b isEqualToString:@"red"] ? @"ui-alert" : @"ui-confirm"];
             [_hud showBanner:a color:[b isEqualToString:@"red"] ? [SKColor colorWithRed:1 green:0.4 blue:0.3 alpha:1] : nil];
             break;
         case SVC_OBJECTIVES: {
@@ -467,6 +487,16 @@ typedef struct {
 
     // Own ship.
     BOOL alive = ps->alive && ps->entity;
+    [[GameAudio shared] shipThrottle:ps->move.throttle boost:ps->move.boosting alive:alive];
+    if (_hadPlayer && _playerEntity == _audioEntity && alive) {
+        if (ps->stats[STAT_TORPEDOES] < _audioTorpedoes) [[GameAudio shared] play:@"torpedo"];
+        if (ps->stats[STAT_TARGET] && ps->stats[STAT_TARGET] != _audioTarget) [[GameAudio shared] play:@"ui-hover"];
+        if (ps->hull < 0.25f && !_audioHullLow) [[GameAudio shared] play:@"ui-alert"];
+    }
+    _audioEntity = ps->entity;
+    _audioTorpedoes = ps->stats[STAT_TORPEDOES];
+    _audioTarget = ps->stats[STAT_TARGET];
+    _audioHullLow = ps->hull < 0.25f;
     if (alive != !_playerView.node.hidden || !_hadPlayer) [_playerView setAlive:alive];
     _hadPlayer = YES;
     _playerView.node.simdPosition = ps->move.origin;

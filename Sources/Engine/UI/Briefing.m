@@ -3,6 +3,7 @@
 #import "Progress.h"
 #import "UIStyle.h"
 #import "UIMotion.h"
+#import "GameAudio.h"
 #import <ImageIO/ImageIO.h>
 
 static NSValue *BoxPoint(CGPoint point) { return [NSValue value:&point withObjCType:@encode(CGPoint)]; }
@@ -1481,6 +1482,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 }
 
 - (void)turnPage {
+    [[GameAudio shared] play:@"ui-panel" gain:0.65f pan:0];
     _transition = UITransitionPage;
     [self rebuild];
 }
@@ -1488,6 +1490,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 // The summary and the conversation are different layouts; beats within the
 // conversation are pages.
 - (void)turnBeat {
+    [[GameAudio shared] play:@"ui-panel" gain:0.65f pan:0];
     BOOL conversation = _debriefBeat > 0 && _shownMode == ModeDebrief && _captionHolder;
     _transition = conversation ? UITransitionPage : UITransitionIntro;
     [self rebuild];
@@ -1532,7 +1535,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
             NSUInteger row = (NSUInteger)((CGRectGetMaxY(_missionRows) - point.y) / _missionRowHeight);
             if (row < CampaignMissions().count) {
                 if (row == _index) a |= InputActionConfirm;
-                else [self showListSelecting:row];
+                else { [[GameAudio shared] play:@"ui-hover"]; [self showListSelecting:row]; }
             }
         } else if (_mode != ModeList &&
                    CGRectContainsPoint((CGRect){ .size = self.size }, point)) {
@@ -1541,6 +1544,11 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         }
     }
     NSUInteger count = CampaignMissions().count;
+    if (a & InputActionBack) [[GameAudio shared] play:@"ui-back"];
+    else if (a & InputActionConfirm) {
+        BOOL locked = _mode == ModeList && _index >= ProgressUnlockedCount();
+        [[GameAudio shared] play:locked ? @"ui-alert" : @"ui-confirm"];
+    } else if (_mode == ModeList && (a & (InputActionUp | InputActionDown))) [[GameAudio shared] play:@"ui-hover"];
     switch (_mode) {
         case ModeList:
             if (a & InputActionBack) return BriefingCommandMainMenu;

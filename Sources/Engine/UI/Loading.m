@@ -1,4 +1,5 @@
 #import "Loading.h"
+#import "GameAudio.h"
 #import "UIStyle.h"
 #import "LoadingLocalization.h"
 #import "PlatformImage.h"
@@ -87,6 +88,7 @@ static NSArray<NSString *> *Tips(void) {
 - (BOOL)readyToStart { return atomic_load(&_readyToStart); }
 
 - (void)setReadyToStart:(BOOL)ready {
+    if (ready && !atomic_load(&_readyToStart)) [[GameAudio shared] play:@"ui-confirm" gain:0.65f pan:0];
     atomic_store(&_startRequested, false);
     atomic_store(&_readyToStart, ready);
     _startLabel.hidden = !ready;

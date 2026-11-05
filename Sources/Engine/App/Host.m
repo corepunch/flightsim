@@ -14,6 +14,7 @@
 #import "ServerBrowser.h"
 #import "UIMotion.h"
 #import "Assets.h"
+#import "GameAudio.h"
 #include "SharedMath.h"
 #import <stdatomic.h>
 #if TARGET_OS_IOS
@@ -88,6 +89,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
     if ((self = [super init])) {
         _view = view;
+        [GameAudio shared];
         _input = input;
         _loadQueue = dispatch_queue_create("SpaceFight.loading", DISPATCH_QUEUE_SERIAL);
         _briefing = [[Briefing alloc] initWithSize:view.bounds.size];
@@ -305,6 +307,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             }
             BOOL tapped = [_loading consumeStartRequest];
             if (!tapped && !(actions & InputActionConfirm)) return;
+            [[GameAudio shared] play:@"ui-confirm"];
             _loading.readyToStart = NO;
         }
         atomic_store(&_loadDone, false);
@@ -417,6 +420,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 - (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
     if (_state != HostStateFlying) return;
+    [[GameAudio shared] play:success ? @"ui-success" : @"ui-alert"];
     _state = HostStateOver;
     if (success) ProgressMarkCompleted(_missionIndex);
     if (!self.remote) [_server stop];   // a remote host decides what comes next
@@ -426,6 +430,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 }
 
 - (void)abortToMenu {
+    [[GameAudio shared] play:@"ui-back"];
     _state = HostStateMissions;
     [_server stop];
     [_client leaveGame];
@@ -456,6 +461,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 }
 
 - (void)showOverlayNow:(SKScene *)next {
+    if (next != _clientView.hud) [[GameAudio shared] play:@"ui-panel"];
     _shownOverlay = next;
     if ([next conformsToProtocol:@protocol(UIMotionScene)]) [(id<UIMotionScene>)next motionEnter];
     SCNView *view = _view;
@@ -495,6 +501,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _lastTime = time;
     dt = clampf(dt, 0.0005f, 1.0f / 20.0f);
     _time += dt;
+    [[GameAudio shared] frame:dt flying:_state == HostStateFlying];
     [self pumpOverlay];
 
     InputAction actions = [_input consumeActions];
@@ -520,8 +527,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         [self updateReveal];
         if (_state != HostStateFlying) return;
     }
-    if (actions & InputActionToggleCamera) _clientView.cockpit = !_clientView.cockpit;
-    if (actions & InputActionToggleHelp) [_clientView.hud toggleHelp];
+    if (actions & InputActionToggleCamera) { _clientView.cockpit = !_clientView.cockpit; [[GameAudio shared] play:@"ui-confirm"]; }
+    if (actions & InputActionToggleHelp) { [_clientView.hud toggleHelp]; [[GameAudio shared] play:@"ui-panel"]; }
 
     if (_state == HostStateBrowser) {
         [self updateBrowser:actions];
