@@ -39,6 +39,8 @@ extern NSNotificationName const InputControllerDidChangeNotification;
 - (void)flagsChanged:(NSEvent *)event;
 - (void)mouseMovedByX:(CGFloat)dx y:(CGFloat)dy;
 - (void)setMouseFire:(BOOL)down;
+- (void)setMouseRoll:(BOOL)down;     // hold to route horizontal mouse input to roll
+- (void)adjustMouseThrottleBy:(float)delta;
 - (void)recenterMouse;
 - (void)releaseAllKeys;
 #endif

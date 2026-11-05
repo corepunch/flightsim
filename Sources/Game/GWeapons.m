@@ -29,7 +29,7 @@
 
 - (void)damageShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake {
     if (!s.alive) return;
-    if (s.client && getenv("SF_GOD")) amount = 0;   // debug: invulnerable players
+    if (s.client && GCvar("g_god")) amount = 0;   // cheat: invulnerable players
     BOOL shielded = [s takeDamage:amount];
     GEvent((GameEvent){ .type = EV_DAMAGE, .entity = s.number, .flags = shielded ? EVF_SHIELDED : 0, .scale = shake });
     if (!s.alive) {

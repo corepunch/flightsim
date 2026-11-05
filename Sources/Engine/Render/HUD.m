@@ -1,6 +1,8 @@
 #import "HUD.h"
+#import "FlightInstruments.h"
 #import "LensFlare.h"
 #import "UIStyle.h"
+#import "PlatformImage.h"
 
 #define MAX_TARGETS 64
 
@@ -45,6 +47,9 @@ static SKShapeNode *Bracket(void) {
 
 @implementation HUD {
     SKNode *_root;
+    TargetReadout *_targetReadout;
+    SensorScope *_forwardScope, *_rearScope;
+    SKLabelNode *_laserLabel, *_rechargeLabel;
     SKShapeNode *_boresight, *_cursor, *_cursorLine, *_ring;
     SKShapeNode *_throttleFrame, *_throttleFill, *_boostFill, *_hullFill, *_shieldFill;
     SKLabelNode *_speedLabel, *_throttleLabel, *_scoreLabel, *_inputLabel, *_deadLabel, *_hullLabel, *_shieldLabel;
@@ -62,13 +67,13 @@ static SKShapeNode *Bracket(void) {
     NSMutableArray<SKLabelNode *> *_messages;
     LensFlare *_lensFlare;
     CGSize _laidOut;
-#if TARGET_OS_IOS
-    UIEdgeInsets _laidOutInsets;
-#endif
+    HUDInsets _laidOutInsets;
+    BOOL _laidOutTouch;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
+        _touchLayout = TARGET_OS_IOS;
         self.scaleMode = SKSceneScaleModeResizeFill;
         self.backgroundColor = [SKColor clearColor];
         _root = [SKNode node];
@@ -79,6 +84,15 @@ static SKShapeNode *Bracket(void) {
 }
 
 - (void)build {
+    _targetReadout = [[TargetReadout alloc] initWithPreview:YES];
+    _forwardScope = [[SensorScope alloc] initRear:NO];
+    _rearScope = [[SensorScope alloc] initRear:YES];
+    for (SKNode *instrument in @[_targetReadout, _forwardScope, _rearScope]) {
+        instrument.zPosition = 25; [_root addChild:instrument];
+    }
+    _laserLabel = Label(12, SKLabelHorizontalAlignmentModeLeft);
+    _rechargeLabel = Label(10, SKLabelHorizontalAlignmentModeRight);
+    [_root addChild:_laserLabel]; [_root addChild:_rechargeLabel];
     _lensFlare = [LensFlare new];
     [_root addChild:_lensFlare];
 
@@ -172,12 +186,12 @@ static SKShapeNode *Bracket(void) {
     [_root addChild:_deadLabel];
 
     _help = [SKNode node];
-    NSArray *lines = @[@"CLICK  capture mouse (virtual stick)   ESC release   right-click recentre",
-                       @"MOUSE  pitch / yaw     Q/E roll     A/D yaw     arrows pitch/yaw",
-                       @"W/S throttle   Z full   X cut   SHIFT/TAB boost   SPACE/LMB fire",
+    NSArray *lines = @[@"CLICK  capture mouse (virtual stick)   ESC release   wheel-click recentre",
+                       @"MOUSE  pitch / yaw   hold RMB + move sideways to roll   Q/E roll   A/D yaw",
+                       @"WHEEL or W/S throttle   Z full   X cut   SHIFT/TAB boost   SPACE/LMB fire",
                        @"C camera   J cycle stick throttle axis   K invert throttle   I invert mouse",
                        @"Joystick: X roll  Y pitch  throttle lever  B1 fire  B2/B4 boost  B3 camera  B5 torpedo  B6 target  hat look",
-                       @"T  next target   G  torpedo   ESC (mouse free) / M  abort to missions",
+                       @"T  next target   G  torpedo   ESC (mouse free) / M  pause / flight options",
                        @"R restart   H toggle this help"];
     for (NSUInteger i = 0; i < lines.count; i++) {
         SKLabelNode *l = Label(12, SKLabelHorizontalAlignmentModeLeft);
@@ -186,6 +200,7 @@ static SKShapeNode *Bracket(void) {
         l.position = CGPointMake(0, -(CGFloat)i * 17);
         [_help addChild:l];
     }
+    _help.hidden = YES;
     [_root addChild:_help];
 
     _navMarks = [NSMutableArray array];
@@ -302,21 +317,19 @@ static SKShapeNode *Bracket(void) {
 
 - (void)layoutIfNeeded {
     CGSize s = self.size;
-#if TARGET_OS_IOS
-    UIEdgeInsets insets = self.contentInsets;
-    if (CGSizeEqualToSize(s, _laidOut) && UIEdgeInsetsEqualToEdgeInsets(insets, _laidOutInsets)) return;
-    _laidOutInsets = insets;
-#else
-    if (CGSizeEqualToSize(s, _laidOut)) return;
-#endif
+    HUDInsets insets = self.contentInsets;
+    if (CGSizeEqualToSize(s, _laidOut) && _touchLayout == _laidOutTouch &&
+        insets.left == _laidOutInsets.left && insets.right == _laidOutInsets.right &&
+        insets.top == _laidOutInsets.top && insets.bottom == _laidOutInsets.bottom) return;
+    _laidOutInsets = insets; _laidOutTouch = _touchLayout;
     _laidOut = s;
-    _throttleFrame.position = CGPointMake(40, 60);
-    _throttleLabel.position = CGPointMake(66, 70);
-    _speedLabel.position = CGPointMake(66, 100);
-    _hullLabel.position = CGPointMake(s.width - 252, 70);
-    _shieldLabel.position = CGPointMake(s.width - 252, 88);
-    _hullFill.position = CGPointMake(s.width - 240, 67);
-    _shieldFill.position = CGPointMake(s.width - 240, 85);
+    _throttleFrame.position = CGPointMake(20, 22);
+    _throttleLabel.position = CGPointMake(46, 32);
+    _speedLabel.position = CGPointMake(46, 62);
+    _hullLabel.position = CGPointMake(s.width - 222, 32);
+    _shieldLabel.position = CGPointMake(s.width - 222, 50);
+    _hullFill.position = CGPointMake(s.width - 210, 29);
+    _shieldFill.position = CGPointMake(s.width - 210, 47);
     _scoreLabel.position = CGPointMake(s.width - 40, s.height - 40);
     _inputLabel.position = CGPointMake(40, 30);
     _deadLabel.position = CGPointMake(s.width / 2, s.height / 2 + 80);
@@ -324,14 +337,13 @@ static SKShapeNode *Bracket(void) {
     _objectivePanel.position = CGPointMake(40, s.height - 40);
     _messagePanel.position = CGPointMake(s.width / 2, s.height - 110);
     _bannerLabel.position = CGPointMake(s.width / 2, s.height * 0.68);
-#if TARGET_OS_IOS
-    // The bottom corners belong to the stick and weapon controls. Keep
-    // telemetry in the open space above them and inside the safe area.
-    CGFloat left = insets.left + 14, right = s.width - insets.right - 14;
+    if (_touchLayout) {
+    // Telemetry follows the safe edges, below the touch control clusters.
+    CGFloat left = insets.left + 8, right = s.width - insets.right - 8;
     CGFloat top = s.height - insets.top - 18;
-    CGFloat stats = insets.bottom + (s.width > s.height ? 18 : 177);
-    CGFloat leftStats = s.width > s.height ? left + 160 : left;
-    CGFloat rightStats = s.width > s.height ? right - 158 : right;
+    CGFloat stats = insets.bottom + (s.width > s.height ? 9 : 177);
+    CGFloat leftStats = left;
+    CGFloat rightStats = right;
     _throttleLabel.position = CGPointMake(leftStats, stats + 36);
     _speedLabel.position = CGPointMake(leftStats, stats + 17);
     _speedLabel.fontSize = 16;
@@ -339,10 +351,38 @@ static SKShapeNode *Bracket(void) {
     _shieldLabel.position = CGPointMake(rightStats - 88, stats + 40);
     _hullFill.position = CGPointMake(rightStats - 80, stats + 21);
     _shieldFill.position = CGPointMake(rightStats - 80, stats + 37);
-    _objectivePanel.position = CGPointMake(left, top);
+    _objectivePanel.position = CGPointMake(left + 100, top);
     _inputLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
-    _inputLabel.position = CGPointMake(right, top - 44);
-#endif
+    _inputLabel.position = CGPointMake(right - 100, top - 44);
+    }
+    BOOL phoneLayout = _touchLayout && MIN(s.width, s.height) < 550 && MAX(s.width, s.height) < 1100;
+    CGFloat edgeLeft = 12, edgeRight = s.width - 12, edgeTop = s.height;
+    CGFloat edgeBottom = phoneLayout ? 2 : (_touchLayout ? insets.bottom + 24 : 40);
+    if (_touchLayout) {
+    edgeLeft = insets.left + 4; edgeRight = s.width - insets.right - 4;
+    edgeTop -= insets.top;
+    }
+    BOOL compact = s.height < 550;
+    CGFloat scopeScale = compact ? 0.56 : 0.86;
+    [_forwardScope setScale:scopeScale]; [_rearScope setScale:scopeScale];
+    // The top label extends 82 points from the centre at the authored scale.
+    CGFloat scopeY = edgeTop - 82 * scopeScale - (_touchLayout ? 4 : 12);
+    _forwardScope.position = CGPointMake(edgeLeft + 64 * scopeScale, scopeY);
+    _rearScope.position = CGPointMake(edgeRight - 64 * scopeScale, scopeY);
+    [_targetReadout setCompact:compact];
+    CGFloat panelWidth = MIN(compact ? 270 : 380, MAX(160, s.width - 380));
+    CGFloat panelScale = panelWidth / 608;
+    [_targetReadout setScale:panelScale];
+    _targetReadout.position = CGPointMake((s.width - panelWidth) / 2, edgeBottom);
+    _laserLabel.position = CGPointMake(_throttleLabel.position.x, _throttleLabel.position.y + (_touchLayout ? 20 : 60));
+    _rechargeLabel.position = CGPointMake(edgeRight, _shieldLabel.position.y - 33);
+    // Match the actual text edge to the bottom of the target details.
+    SKNode *heading = _objectivePanel.children.firstObject;
+    CGFloat bottomMargin = edgeBottom + (compact ? 11 : 20) * panelScale;
+    CGFloat topMargin = phoneLayout ? MAX(insets.top, bottomMargin) : (_touchLayout ? insets.top + 30 : 36);
+    CGFloat headingTop = heading ? CGRectGetMaxY(heading.frame) : 7;
+    _objectivePanel.position = CGPointMake(edgeLeft + 128 * scopeScale + 16,
+                                           s.height - topMargin - headingTop);
     _torpLabel.position = CGPointMake(_shieldLabel.position.x, _shieldLabel.position.y + 18);
     _torpedoRack.position = CGPointMake(_shieldFill.position.x, _shieldFill.position.y + 18);
     [self layoutTorpedoes];
@@ -355,7 +395,7 @@ static SKShapeNode *Bracket(void) {
 - (void)layoutTorpedoes {
     NSUInteger count = _torpedoSegments.count;
     if (!count) return;
-    CGFloat width = TARGET_OS_IOS ? 80 : 200;
+    CGFloat width = _touchLayout ? 80 : 200;
     CGFloat gap = MIN(4, width / (count * 4));
     CGFloat segmentWidth = (width - gap * (count - 1)) / count;
     for (NSUInteger i = 0; i < count; i++) {
@@ -387,14 +427,25 @@ static SKShapeNode *Bracket(void) {
     _torpLabel.text = @"TORPEDO";
 }
 
-- (void)setInputText:(NSString *)text { _inputLabel.text = text; }
+- (void)updateInstruments:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count cockpit:(BOOL)cockpit {
+    [self layoutIfNeeded];
+    [_forwardScope updateFrame:frame contacts:contacts count:count];
+    [_rearScope updateFrame:frame contacts:contacts count:count];
+    _targetReadout.hidden = cockpit;
+    if (!cockpit) [_targetReadout updateFrame:frame contacts:contacts count:count];
+    _laserLabel.hidden = _rechargeLabel.hidden = cockpit;
+    _laserLabel.text = [NSString stringWithFormat:@"LASER %3d%%", (int)lroundf(frame.laserEnergy * 100)];
+    _laserLabel.fontColor = frame.laserEnergy < LASER_SHOT_ENERGY ? EnemyColor(1) : HUDColor(0.9);
+    _rechargeLabel.text = frame.shield < 0.999 ? @"SHIELD +6%/S" : @"SHIELD FULL";
+}
+
+- (void)setInputText:(NSString *)text { _inputLabel.text = @""; }
 - (void)toggleHelp {
-    _help.hidden = !_help.hidden;
-    _objectivePanel.hidden = !_help.hidden;
+    _help.hidden = YES;
 }
 - (void)setHelpVisible:(BOOL)visible {
-    _help.hidden = !visible;
-    _objectivePanel.hidden = visible;
+    _help.hidden = YES;
+    _objectivePanel.hidden = NO;
 }
 
 - (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {
@@ -403,14 +454,50 @@ static SKShapeNode *Bracket(void) {
     head.text = @"OBJECTIVES";
     head.fontColor = HUDColor(0.6);
     [_objectivePanel addChild:head];
+    _laidOut = CGSizeZero; // Heading metrics determine the matching top margin.
+    // The border's outside edge matches the capital D, rather than the font's
+    // point size. All states share exactly the same square control geometry.
+    PlatformFont *font = [PlatformFont fontWithName:UIMonoFont size:14];
+    CGFloat side = font.capHeight;
     for (NSUInteger i = 0; i < lines.count; i++) {
         int st = states[i].intValue;
+        SKNode *row = [SKNode node];
+        row.position = CGPointMake(0, -22.0 * (i + 1));
+        SKColor *ink = st == 2 ? EnemyColor(0.95) : HUDColor(0.95);
+        const CGFloat border = 1.0;
+        SKShapeNode *box = [SKShapeNode shapeNodeWithRect:CGRectMake(border / 2, -side / 2 + border / 2,
+                                                                   side - border, side - border)];
+        box.strokeColor = ink;
+        box.fillColor = SKColor.clearColor;
+        box.lineWidth = border;
+        [row addChild:box];
+        if (st == 1 || st == 2) {
+            CGMutablePathRef path = CGPathCreateMutable();
+            if (st == 1) {
+                CGPathMoveToPoint(path, NULL, side * 0.23, side * -0.02);
+                CGPathAddLineToPoint(path, NULL, side * 0.43, side * -0.27);
+                CGPathAddLineToPoint(path, NULL, side * 0.77, side * 0.27);
+            } else {
+                CGPathMoveToPoint(path, NULL, side * 0.27, side * -0.23);
+                CGPathAddLineToPoint(path, NULL, side * 0.73, side * 0.23);
+                CGPathMoveToPoint(path, NULL, side * 0.27, side * 0.23);
+                CGPathAddLineToPoint(path, NULL, side * 0.73, side * -0.23);
+            }
+            SKShapeNode *mark = [SKShapeNode shapeNodeWithPath:path];
+            CGPathRelease(path);
+            mark.strokeColor = ink;
+            mark.lineWidth = 1.35;
+            mark.lineCap = kCGLineCapRound;
+            mark.lineJoin = kCGLineJoinRound;
+            [row addChild:mark];
+        }
         SKLabelNode *l = Label(14, SKLabelHorizontalAlignmentModeLeft);
-        NSString *mark = st == 1 ? @"[+]" : (st == 2 ? @"[x]" : (st == 3 ? @"[o]" : @"[ ]"));
-        l.text = [NSString stringWithFormat:@"%@ %@", mark, lines[i]];
-        l.fontColor = st == 1 ? FriendColor(0.85) : (st == 2 ? EnemyColor(0.9) : (st == 3 ? HUDColor(0.55) : HUDColor(0.95)));
-        l.position = CGPointMake(0, -20.0 * (i + 1));
-        [_objectivePanel addChild:l];
+        l.verticalAlignmentMode = SKLabelVerticalAlignmentModeBaseline;
+        l.text = lines[i];
+        l.fontColor = ink;
+        l.position = CGPointMake(side + 8, -side / 2);
+        [row addChild:l];
+        [_objectivePanel addChild:row];
     }
 }
 
@@ -470,7 +557,7 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     _boostFill.position = CGPointMake(-7, 3);
     _throttleLabel.text = [NSString stringWithFormat:@"THR %3d%%%@", (int)lroundf(f.throttle * 100), f.boosting ? @" BOOST" : @""];
     _speedLabel.text = [NSString stringWithFormat:@"%4d m/s", (int)lroundf(f.speed)];
-    CGFloat conditionWidth = TARGET_OS_IOS ? 80 : 200;
+    CGFloat conditionWidth = _touchLayout ? 80 : 200;
     UISetSkewedBar(_hullFill, conditionWidth * f.hull, 6);
     UISetSkewedBar(_shieldFill, conditionWidth * f.shield, 6);
     _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
@@ -478,9 +565,7 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _torpLabel, _torpedoRack])
         n.hidden = f.cockpit;
     _scoreLabel.hidden = YES;
-#if TARGET_OS_IOS
-    _throttleFrame.hidden = YES;
-#endif
+    if (_touchLayout) _throttleFrame.hidden = YES;
     [self updateTorpedoes:f.torpedoes capacity:f.torpedoCapacity];
     _aimMark.hidden = !f.aimVisible || f.playerDead;
     _aimMark.position = f.aim;

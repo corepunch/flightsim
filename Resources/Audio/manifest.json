@@ -1,0 +1,132 @@
+{
+  "provider": "Runway",
+  "generated": "2026-11-05",
+  "assets": [
+    {
+      "file": "bastion-watch.mp3",
+      "name": "Kestrel Frontier \u2014 Bastion Watch",
+      "taskId": "3e8b8859-2a5a-4053-872e-ff973dccf4a9",
+      "prompt": "Original cinematic science fiction space combat game soundtrack, instrumental, no voices, no vocals. Quiet hangar and mission briefing music: warm analog synthesizer pads, distant glass arpeggios, restrained low strings, a memorable hopeful four-note motif, subtle mechanical pulse at 90 BPM. Vast frontier, human courage, a little mystery and melancholy. Gentle clear opening, slowly evolving middle, restrained dynamics with space for dialogue. No big percussion, no abrupt ending. Polished stereo game score.",
+      "model": "lyria-3-pro",
+      "durationSeconds": 171.755042,
+      "loop": true
+    },
+    {
+      "file": "lancer-flight.mp3",
+      "name": "Kestrel Frontier \u2014 Lancer Flight",
+      "taskId": "bd83701e-387a-43a8-a385-019870cd1699",
+      "prompt": "Original cinematic science fiction space dogfight game soundtrack, instrumental, absolutely no voices or vocals. Driving hybrid orchestral electronic score at 128 BPM, pulsing analog bass, crisp rhythmic synth arpeggios, urgent string ostinatos, restrained brass, tight cinematic drums, hopeful heroic four-note motif. Flying a nimble fighter to defend a frontier fleet. Energetic but not overwhelming, clear mix leaving room for weapon sounds and alerts. Steady rhythmic flow, evolving layers, minimal quiet breakdowns, no abrupt final hit.",
+      "model": "lyria-3-pro",
+      "durationSeconds": 177.763208,
+      "loop": true
+    },
+    {
+      "file": "ui-hover.mp3",
+      "name": "ui-hover",
+      "taskId": "a7574249-ede4-46d0-8233-a00035a3c08c",
+      "prompt": "Futuristic cockpit UI hover tick, one tiny soft glassy electronic blip with a delicate high-frequency shimmer. Instant attack, very short clean decay. Restrained, pleasant when repeated. No music, no voice, no background noise, one isolated event.",
+      "model": "sound-effects",
+      "durationSeconds": 0.48,
+      "loop": false
+    },
+    {
+      "file": "ui-confirm.mp3",
+      "name": "ui-confirm",
+      "taskId": "0c94cce3-c271-4bf8-81b6-b8117ed1cdbd",
+      "prompt": "Futuristic spacecraft console selection confirmation, one crisp tactile electronic click followed immediately by a short ascending two-tone digital chirp. Precise, satisfying, clean and restrained. Instant attack, no long silence, no voice, no music.",
+      "model": "sound-effects",
+      "durationSeconds": 0.680249,
+      "loop": false
+    },
+    {
+      "file": "ui-back.mp3",
+      "name": "ui-back",
+      "taskId": "f6cab932-8ccb-4029-9b1c-b4d6cdaf9c29",
+      "prompt": "Futuristic spacecraft interface cancel and back sound, one soft tactile click and a short descending digital two-note chirp. Clean, restrained, instant attack, quick decay, no voice, no music, no background ambience.",
+      "model": "sound-effects",
+      "durationSeconds": 0.680249,
+      "loop": false
+    },
+    {
+      "file": "ui-panel.mp3",
+      "name": "ui-panel",
+      "taskId": "6c6bff7f-18d1-41a4-bdc6-17a1cdf20beb",
+      "prompt": "Science fiction holographic tactical panel sliding open: a brief airy electronic swish with a delicate granular digital shimmer resolving into a soft glass tone. One isolated event with immediate onset and clean short tail, no music, no voices.",
+      "model": "sound-effects",
+      "durationSeconds": 1,
+      "loop": false
+    },
+    {
+      "file": "ui-alert.mp3",
+      "name": "ui-alert",
+      "taskId": "8a29b757-7a0b-447f-878f-ddbed3caf0da",
+      "prompt": "Spacecraft cockpit warning alert, three restrained urgent low-mid electronic beeps with a subtle buzzy edge. Clearly audible but not shrill. One short warning sequence, immediate onset, no speech, no music, clean silent background.",
+      "model": "sound-effects",
+      "durationSeconds": 1.36,
+      "loop": false
+    },
+    {
+      "file": "ui-success.mp3",
+      "name": "ui-success",
+      "taskId": "3c05dd39-4190-4669-af4c-759afdd5ab0a",
+      "prompt": "Space mission complete notification, a short uplifting ascending crystalline electronic arpeggio with a warm final resonant chord. Elegant futuristic console, satisfying but restrained, one clean isolated stinger, no voice or background music.",
+      "model": "sound-effects",
+      "durationSeconds": 2,
+      "loop": false
+    },
+    {
+      "file": "laser.mp3",
+      "name": "laser",
+      "taskId": "ed20a786-bb2b-4754-a109-a2cdc50ae981",
+      "prompt": "Fighter spacecraft laser cannon fires a single sharp energy bolt. Punchy electrical snap with a descending resonant plasma zap and a tiny bass thump, immediate onset, short dry tail. One shot only, no ambience, no speech, no music.",
+      "model": "sound-effects",
+      "durationSeconds": 0.6,
+      "loop": false
+    },
+    {
+      "file": "torpedo.mp3",
+      "name": "torpedo",
+      "taskId": "3a94ff20-27ea-4975-8b07-7c076b620319",
+      "prompt": "Spacefighter launches one heavy torpedo: deep mechanical release clunk followed by a quick pressurized rocket whoosh fading away. Immediate onset, one isolated launch, clean dry cockpit perspective, no speech, no music.",
+      "model": "sound-effects",
+      "durationSeconds": 1.48,
+      "loop": false
+    },
+    {
+      "file": "impact.mp3",
+      "name": "impact",
+      "taskId": "8855eda8-6192-42db-87d6-d2437429cf62",
+      "prompt": "One science fiction energy shield hit: sharp electrical crack, resonant metallic thump and brief crackling plasma fizz. Punchy immediate attack, short clean tail, no music, no voices, no background noise.",
+      "model": "sound-effects",
+      "durationSeconds": 0.8,
+      "loop": false
+    },
+    {
+      "file": "explosion.mp3",
+      "name": "explosion",
+      "taskId": "98dcc35e-ae2e-432f-8106-90c686da4119",
+      "prompt": "One distant spacecraft explodes: sharp initial blast, powerful deep cinematic rumble, tearing metallic debris and fading electrical crackle. Immediate onset, compact clean decay. No voices, no music, no other explosions.",
+      "model": "sound-effects",
+      "durationSeconds": 2.48,
+      "loop": false
+    },
+    {
+      "file": "engine.mp3",
+      "name": "engine",
+      "taskId": "fc5bcfbe-8f6f-400e-a0c3-499811160721",
+      "prompt": "Small spacecraft cockpit engine running steadily: smooth deep turbine hum with warm low mechanical rumble and subtle electrical harmonics. Constant sustained sound, no revving, no startup or shutdown, no variation in loudness, seamless loop. No voices, no music.",
+      "model": "sound-effects",
+      "durationSeconds": 6,
+      "loop": true
+    },
+    {
+      "file": "boost.mp3",
+      "name": "boost",
+      "taskId": "4a0deb2c-bd0d-40f3-bd13-bca328988126",
+      "prompt": "Space fighter afterburner sustained at full power: powerful smooth low rocket roar, energetic turbine whine and airy rushing plasma. Constant steady intensity, no startup, no shutdown, no fade, seamless loop. No music, no voices.",
+      "model": "sound-effects",
+      "durationSeconds": 4,
+      "loop": true
+    }
+  ]
+}

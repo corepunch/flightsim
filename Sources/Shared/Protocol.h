@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <simd/simd.h>
 
-#define PROTOCOL_VERSION 1
+#define PROTOCOL_VERSION 2
 
 #define TICK_RATE 30
 #define TICK_DT (1.0f / TICK_RATE)
@@ -21,6 +21,8 @@
 #define BOLT_SPEED 900.0f
 #define TURRET_BOLT_SPEED 700.0f
 #define BOLT_LIFE 1.6f
+#define LASER_SHOT_ENERGY 0.035f
+#define LASER_RECHARGE_RATE 0.22f
 
 typedef enum { TeamFriend, TeamEnemy, TeamNeutral } Team;
 
@@ -67,6 +69,7 @@ enum {
     EF_SHIELDED   = 1 << 2,     // capital: shield generators up
     EF_PROP       = 1 << 3,     // small thing that dies in one blast
     EF_MINE       = 1 << 4,
+    EF_SCANNED    = 1 << 6,     // cargo manifest identified
     EF_ATTACKING  = 1 << 5,     // AI fighter on an attack run at `target`
 };
 
@@ -77,6 +80,7 @@ typedef struct {
     uint8_t team;
     uint16_t model;             // configstring index relative to CS_MODELS
     uint16_t name;              // relative to CS_STRINGS: label / callsign
+    uint16_t cargo;             // manifest in CS_STRINGS; only sent after scanning
     uint16_t className;         // relative to CS_STRINGS
     uint16_t target;            // entity this one is attacking (EF_ATTACKING)
     uint32_t flags;             // EF_*
@@ -114,6 +118,7 @@ enum {
     STAT_TARGET,                // selected entity number, 0 none
     STAT_AIM_PART,              // aimed subsystem of the target, part index + 1
     STAT_NAV,                   // current nav, index + 1 (CS_NAVS)
+    STAT_LASER_ENERGY,          // capacitor, 0..1000
     MAX_STATS = 16,
 };
 

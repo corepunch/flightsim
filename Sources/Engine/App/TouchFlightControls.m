@@ -5,7 +5,7 @@
 typedef NS_ENUM(NSInteger, TouchControl) {
     TouchControlNone = -1,
     TouchControlStick, TouchControlThrottle, TouchControlFire,
-    TouchControlTorpedo, TouchControlTarget, TouchControlMissions, TouchControlCount
+    TouchControlTorpedo, TouchControlTarget, TouchControlPause, TouchControlCount
 };
 
 static const CGFloat ThrottleHeight = 136, ThrottleTravel = 112;
@@ -107,8 +107,8 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     [self addButton:TouchControlFire title:@"FIRE" radius:35 accent:UIInk];
     [self addButton:TouchControlTorpedo title:@"TORP" radius:28 accent:UIAmber];
     [self addButton:TouchControlTarget title:@"TARGET" radius:28 accent:UIInk];
-    _faces[TouchControlMissions] = UIActionButton(CGRectMake(-46, -22, 92, 44), @"MISSIONS", UIInk);
-    [_art addChild:_faces[TouchControlMissions]];
+    _faces[TouchControlPause] = UIActionButton(CGRectMake(-46, -22, 92, 44), @"PAUSE", UIInk);
+    [_art addChild:_faces[TouchControlPause]];
 }
 
 - (void)showInHUD:(SKScene *)hud {
@@ -132,7 +132,10 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     _centers[TouchControlFire] = CGPointMake(right - 35, centerY);
     _centers[TouchControlTorpedo] = CGPointMake(right - 85, centerY - 53);
     _centers[TouchControlTarget] = CGPointMake(right - 85, centerY + 53);
-    _centers[TouchControlMissions] = CGPointMake(right - 46, CGRectGetMinY(safe) + 30);
+    // Keep the pause button beside the rear scanner, which occupies the
+    // upper-right corner at the same height as the forward scanner.
+    CGFloat scannerScale = CGRectGetHeight(self.bounds) < 550 ? 0.56 : 0.86;
+    _centers[TouchControlPause] = CGPointMake(right - 128 * scannerScale - 54, CGRectGetMinY(safe) + 30);
     for (TouchControl control = 0; control < TouchControlCount; control++) {
         CGPoint center = _centers[control];
         _faces[control].position = CGPointMake(center.x, CGRectGetHeight(self.bounds) - center.y);
@@ -141,12 +144,12 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
 
 - (TouchControl)controlAt:(CGPoint)point {
     for (TouchControl control = 0; control < TouchControlCount; control++) {
-        if (_controllerConnected && control != TouchControlMissions) continue;
+        if (_controllerConnected && control != TouchControlPause) continue;
         CGPoint center = _centers[control];
         CGFloat dx = point.x - center.x, dy = point.y - center.y;
         if (control == TouchControlThrottle) {
             if (fabs(dx) <= 22 && fabs(dy) <= ThrottleHeight / 2) return control;
-        } else if (control == TouchControlMissions) {
+        } else if (control == TouchControlPause) {
             if (fabs(dx) <= 46 && fabs(dy) <= 22) return control;
         } else if (hypot(dx, dy) <= _radii[control]) return control;
     }
@@ -268,7 +271,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
 - (void)updateController {
     [self cancelInput];
     _controllerConnected = _input.joystickName != nil;
-    for (TouchControl control = 0; control < TouchControlMissions; control++)
+    for (TouchControl control = 0; control < TouchControlPause; control++)
         _faces[control].hidden = _controllerConnected;
     [self displayThrottle:_input.currentThrottle];
 }

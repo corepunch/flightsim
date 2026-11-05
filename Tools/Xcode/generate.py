@@ -1,4 +1,4 @@
-"""Generate SpaceFight's native iPhone/iPad project using only local files."""
+"""Generate Kestrel Frontier's native iOS and macOS project using only local files."""
 import argparse
 import hashlib
 import json
@@ -10,13 +10,18 @@ import xml.etree.ElementTree as ET
 from pbxproj import load
 
 ROOT = Path(__file__).resolve().parents[2]
-BUNDLE = ROOT / "SpaceFight.xcodeproj"
-TARGET = "SpaceFight-iOS"
-PRODUCT = "SpaceFight.app"
+BUNDLE = ROOT / "KestrelFrontier.xcodeproj"
+GAME = "KestrelFrontier"
+PRODUCT = f"{GAME}.app"
 MAC_ONLY = {"FXRecorder.m", "GameView.m", "Input.m", "main.m"}
-FRAMEWORKS = (
+IOS_ONLY = {"GameViewIOS.m", "InputIOS.m", "mainIOS.m", "TouchFlightControls.m"}
+IOS_FRAMEWORKS = (
     "UIKit", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "QuartzCore",
     "ImageIO", "GameController", "AVFoundation",
+)
+MAC_FRAMEWORKS = (
+    "Cocoa", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "QuartzCore",
+    "IOKit", "Carbon", "ImageIO", "AVFoundation", "CoreMedia", "CoreVideo",
 )
 PRESERVED = ("CODE_SIGN", "DEVELOPMENT_TEAM", "PROVISIONING_PROFILE", "PRODUCT_BUNDLE_IDENTIFIER")
 
@@ -89,7 +94,7 @@ class Project:
             reference = self.add(f"file/{relative}", "PBXFileReference", path=path.name,
                                  sourceTree="<group>", lastKnownFileType=suffixes[path.suffix])
             children.append(reference)
-            if path.suffix == ".h" or (relative.parts[1] == "Engine" and path.name in MAC_ONLY):
+            if path.suffix == ".h":
                 continue
             settings = {}
             if path.suffix == ".m":
@@ -97,14 +102,31 @@ class Project:
                 if (ROOT / prefix).is_file():
                     settings["COMPILER_FLAGS"] = f'-include "$(SRCROOT)/{prefix}"'
             fields = {"settings": settings} if settings else {}
-            sources.append(self.add(f"compile/{relative}", "PBXBuildFile", fileRef=reference, **fields))
+            module = relative.parts[1]
+            for platform, files in sources.items():
+                if platform == "ios" and module == "Engine" and path.name in MAC_ONLY:
+                    continue
+                if platform == "mac" and (module == "Game" or path.name in IOS_ONLY):
+                    continue
+                if platform == "game" and module == "Engine":
+                    continue
+                files.append(self.add(f"compile/{platform}/{relative}", "PBXBuildFile",
+                                      fileRef=reference, **fields))
         return self.add(f"group/{directory.relative_to(ROOT)}", "PBXGroup", path=directory.name,
                         children=children, sourceTree="<group>")
 
 
-def shared_scheme(target):
-    path = BUNDLE / "xcshareddata/xcschemes" / f"{TARGET}.xcscheme"
+def shared_scheme(target, name):
+    path = BUNDLE / "xcshareddata/xcschemes" / f"{name}.xcscheme"
+    reference = dict(BuildableIdentifier="primary", BlueprintIdentifier=target, BuildableName=PRODUCT,
+                     BlueprintName=name, ReferencedContainer=f"container:{BUNDLE.name}")
     if path.exists():
+        root = ET.parse(path).getroot()
+        for buildable in root.iter("BuildableReference"):
+            if buildable.get("BlueprintIdentifier") == target:
+                buildable.attrib.update(reference)
+        ET.indent(root)
+        write(path, ET.tostring(root, encoding="utf-8", xml_declaration=True) + b"\n")
         return  # Keep local launch arguments and environment settings from Xcode.
     root = ET.Element("Scheme", LastUpgradeVersion="1600", version="1.3")
     build = ET.SubElement(root, "BuildAction", parallelizeBuildables="YES", buildImplicitDependencies="YES")
@@ -112,8 +134,6 @@ def shared_scheme(target):
     entry = ET.SubElement(entries, "BuildActionEntry", **{
         f"buildFor{purpose}": "YES" for purpose in ("Testing", "Running", "Profiling", "Archiving", "Analyzing")
     })
-    reference = dict(BuildableIdentifier="primary", BlueprintIdentifier=target, BuildableName=PRODUCT,
-                     BlueprintName=TARGET, ReferencedContainer=f"container:{BUNDLE.name}")
     ET.SubElement(entry, "BuildableReference", **reference)
     ET.SubElement(root, "TestAction", buildConfiguration="Debug")
     for tag, configuration in (("LaunchAction", "Debug"), ("ProfileAction", "Release")):
@@ -134,14 +154,15 @@ def generate(args):
     path = BUNDLE / "project.pbxproj"
     existing = load(path)["objects"] if path.exists() else {}
     project = Project(existing)
-    info = plistlib.loads((ROOT / "Resources/Info-iOS.plist").read_bytes())
-    bundle_id = info["CFBundleIdentifier"]
-    info.pop("UIDeviceFamily", None)  # Xcode inserts this from TARGETED_DEVICE_FAMILY.
-    info.update(CFBundleIdentifier="$(PRODUCT_BUNDLE_IDENTIFIER)", CFBundleExecutable="$(EXECUTABLE_NAME)")
+    bundle_ids = {}
+    for platform, source in (("ios", "Info-iOS.plist"), ("macos", "Info.plist")):
+        info = plistlib.loads((ROOT / "Resources" / source).read_bytes())
+        bundle_ids[platform] = info["CFBundleIdentifier"]
+        info.pop("UIDeviceFamily", None)  # Xcode inserts this from TARGETED_DEVICE_FAMILY.
+        info.update(CFBundleIdentifier="$(PRODUCT_BUNDLE_IDENTIFIER)", CFBundleExecutable="$(EXECUTABLE_NAME)",
+                    CFBundleName="Kestrel Frontier", CFBundleDisplayName="Kestrel Frontier")
+        write(BUNDLE / f"Generated/{platform}-Info.plist", plistlib.dumps(info))
     common = dict(
-        SDKROOT="iphoneos", SUPPORTED_PLATFORMS="iphoneos iphonesimulator",
-        IPHONEOS_DEPLOYMENT_TARGET="16.0", TARGETED_DEVICE_FAMILY="1,2",
-        SUPPORTS_MACCATALYST="NO", SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD="NO",
         CLANG_ENABLE_OBJC_ARC="YES", ENABLE_USER_SCRIPT_SANDBOXING="NO",
         ALWAYS_SEARCH_USER_PATHS="NO",
         GCC_C_LANGUAGE_STANDARD="gnu11", OTHER_CFLAGS=["$(inherited)", "-Wno-deprecated-declarations"],
@@ -149,20 +170,38 @@ def generate(args):
                             [f"$(SRCROOT)/{path.relative_to(ROOT)}"
                              for path in sorted((ROOT / "Sources/Engine").iterdir()) if path.is_dir()],
     )
-    target_settings = dict(
-        PRODUCT_NAME="SpaceFight", PRODUCT_BUNDLE_IDENTIFIER=bundle_id, CODE_SIGN_STYLE="Automatic",
-        INFOPLIST_FILE="$(PROJECT_FILE_PATH)/Generated/ios-Info.plist", GENERATE_INFOPLIST_FILE="NO",
-        ASSETCATALOG_COMPILER_APPICON_NAME="AppIcon",
-        OTHER_LDFLAGS=["$(inherited)"] + [item for framework in FRAMEWORKS for item in ("-framework", framework)],
+    app_settings = dict(
+        PRODUCT_NAME=GAME, CODE_SIGN_STYLE="Automatic", GENERATE_INFOPLIST_FILE="NO",
         SKIP_INSTALL="NO", INSTALL_PATH="$(LOCAL_APPS_DIR)",
     )
     overrides = {key: value for key, value in (
         ("DEVELOPMENT_TEAM", args.team), ("PRODUCT_BUNDLE_IDENTIFIER", args.bundle_id)
     ) if value is not None}
     project_configs = project.configurations("project", common, overrides)
-    target_configs = project.configurations("target", target_settings, overrides)
+    ios_settings = dict(app_settings, SDKROOT="iphoneos", SUPPORTED_PLATFORMS="iphoneos iphonesimulator",
+                        IPHONEOS_DEPLOYMENT_TARGET="16.0", TARGETED_DEVICE_FAMILY="1,2",
+                        SUPPORTS_MACCATALYST="NO", SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD="NO",
+                        PRODUCT_BUNDLE_IDENTIFIER=bundle_ids["ios"],
+                        INFOPLIST_FILE="$(PROJECT_FILE_PATH)/Generated/ios-Info.plist",
+                        ASSETCATALOG_COMPILER_APPICON_NAME="AppIcon",
+                        OTHER_LDFLAGS=["$(inherited)"] +
+                        [item for framework in IOS_FRAMEWORKS for item in ("-framework", framework)])
+    mac_platform = dict(SDKROOT="macosx", SUPPORTED_PLATFORMS="macosx", MACOSX_DEPLOYMENT_TARGET="13.0")
+    mac_settings = dict(app_settings, **mac_platform,
+                        PRODUCT_BUNDLE_IDENTIFIER=bundle_ids["macos"],
+                        INFOPLIST_FILE="$(PROJECT_FILE_PATH)/Generated/macos-Info.plist",
+                        OTHER_LDFLAGS=["$(inherited)"] +
+                        [item for framework in MAC_FRAMEWORKS for item in ("-framework", framework)])
+    game_settings = dict(mac_platform, PRODUCT_NAME="game", EXECUTABLE_PREFIX="",
+                         MACH_O_TYPE="mh_dylib", SKIP_INSTALL="YES", GCC_SYMBOLS_PRIVATE_EXTERN="YES",
+                         DYLIB_INSTALL_NAME_BASE="@rpath", CODE_SIGN_STYLE="Automatic",
+                         OTHER_LDFLAGS=["$(inherited)", "-framework", "Foundation"])
+    target_configs = project.configurations("target", ios_settings, overrides)
+    mac_configs = project.configurations("target/mac", mac_settings, overrides)
+    game_overrides = {key: value for key, value in overrides.items() if key != "PRODUCT_BUNDLE_IDENTIFIER"}
+    game_configs = project.configurations("target/game", game_settings, game_overrides)
 
-    sources = []
+    sources = {"ios": [], "mac": [], "game": []}
     source_group = project.source_group(ROOT / "Sources", sources)
     resources_ref = project.add("resources/ref", "PBXFileReference", path="Resources", sourceTree="<group>",
                                 lastKnownFileType="folder")
@@ -171,33 +210,64 @@ def generate(args):
     assets_file = project.add("assets/file", "PBXBuildFile", fileRef=assets_ref)
     assets_phase = project.add("assets/phase", "PBXResourcesBuildPhase", files=[assets_file],
                                buildActionMask=2147483647, runOnlyForDeploymentPostprocessing=0)
-    compile_phase = project.add("compile", "PBXSourcesBuildPhase", files=sources,
-                                buildActionMask=2147483647, runOnlyForDeploymentPostprocessing=0)
-    resources_phase = project.add("resources/phase", "PBXShellScriptBuildPhase", name="Bundle runtime resources",
-                                  shellPath="/bin/zsh", shellScript=
-                                  'set -e\ncd "$SRCROOT"\n/bin/zsh Tools/bundle-resources.sh '
-                                  '"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH" '
-                                  '"$PROJECT_TEMP_DIR/SpaceFightResources"\n',
-                                  buildActionMask=2147483647, runOnlyForDeploymentPostprocessing=0,
-                                  alwaysOutOfDate=1, files=[])
+    compile_phases = {
+        platform: project.add(f"compile/{platform}", "PBXSourcesBuildPhase", files=files,
+                              buildActionMask=2147483647, runOnlyForDeploymentPostprocessing=0)
+        for platform, files in sources.items()
+    }
+    resource_phases = {}
+    for platform in ("ios", "mac"):
+        script = ('set -e\ncd "$SRCROOT"\n/bin/zsh Tools/bundle-resources.sh '
+                  '"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH" '
+                  '"$PROJECT_TEMP_DIR/KestrelFrontierResources"\n')
+        if platform == "mac":
+            script += 'cp -p Resources/AppIcon.icns "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/"\n'
+        resource_phases[platform] = project.add(
+            f"resources/phase/{platform}", "PBXShellScriptBuildPhase", name="Bundle runtime resources",
+            shellPath="/bin/zsh", shellScript=script, buildActionMask=2147483647,
+            runOnlyForDeploymentPostprocessing=0, alwaysOutOfDate=1, files=[])
     product = project.add("product", "PBXFileReference", path=PRODUCT, sourceTree="BUILT_PRODUCTS_DIR",
                           explicitFileType="wrapper.application")
-    products = project.add("products", "PBXGroup", name="Products", children=[product], sourceTree="<group>")
+    mac_product = project.add("product/mac", "PBXFileReference", path=PRODUCT, sourceTree="BUILT_PRODUCTS_DIR",
+                              explicitFileType="wrapper.application")
+    game_product = project.add("product/game", "PBXFileReference", path="game.dylib", sourceTree="BUILT_PRODUCTS_DIR",
+                               explicitFileType="compiled.mach-o.dylib")
+    products = project.add("products", "PBXGroup", name="Products", children=[product, mac_product, game_product],
+                           sourceTree="<group>")
     main_group = project.add("group/main", "PBXGroup", children=[source_group, resources_ref, assets_ref, products],
                              sourceTree="<group>")
-    target = project.add("target", "PBXNativeTarget", name=TARGET, productName="SpaceFight",
+    target = project.add("target", "PBXNativeTarget", name=f"{GAME}-iOS", productName=GAME,
                          productReference=product, productType="com.apple.product-type.application",
-                         buildConfigurationList=target_configs, buildPhases=[compile_phase, assets_phase, resources_phase],
+                         buildConfigurationList=target_configs,
+                         buildPhases=[compile_phases["ios"], assets_phase, resource_phases["ios"]],
                          buildRules=[], dependencies=[])
+    game_target = project.add("target/game", "PBXNativeTarget", name=f"{GAME}-Game", productName="game",
+                              productReference=game_product, productType="com.apple.product-type.library.dynamic",
+                              buildConfigurationList=game_configs, buildPhases=[compile_phases["game"]],
+                              buildRules=[], dependencies=[])
+    proxy = project.add("game/proxy", "PBXContainerItemProxy",
+                        containerPortal=hashlib.sha256(b"project").hexdigest()[:24].upper(), proxyType=1,
+                        remoteGlobalIDString=game_target, remoteInfo=f"{GAME}-Game")
+    dependency = project.add("game/dependency", "PBXTargetDependency", target=game_target, targetProxy=proxy)
+    embed_file = project.add("game/embed/file", "PBXBuildFile", fileRef=game_product,
+                             settings={"ATTRIBUTES": ["CodeSignOnCopy"]})
+    embed_phase = project.add("game/embed", "PBXCopyFilesBuildPhase", name="Embed game module",
+                              dstPath="", dstSubfolderSpec=13, files=[embed_file],
+                              buildActionMask=2147483647, runOnlyForDeploymentPostprocessing=0)
+    mac_target = project.add("target/mac", "PBXNativeTarget", name=f"{GAME}-macOS", productName=GAME,
+                             productReference=mac_product, productType="com.apple.product-type.application",
+                             buildConfigurationList=mac_configs,
+                             buildPhases=[compile_phases["mac"], embed_phase, resource_phases["mac"]],
+                             buildRules=[], dependencies=[dependency])
     root = project.add("project", "PBXProject", buildConfigurationList=project_configs,
                        compatibilityVersion="Xcode 14.0", developmentRegion="en", knownRegions=["en", "Base"],
                        mainGroup=main_group, productRefGroup=products, projectDirPath="", projectRoot="",
-                       targets=[target])
+                       targets=[target, mac_target, game_target])
     project.objects[root]["attributes"] = existing.get(root, {}).get("attributes", {"LastUpgradeCheck": "1600"})
     contents = encode(dict(archiveVersion=1, classes={}, objectVersion=56, objects=project.objects, rootObject=root))
     write(path, ("// !$*UTF8*$!\n" + contents + "\n").encode())
-    write(BUNDLE / "Generated/ios-Info.plist", plistlib.dumps(info))
-    shared_scheme(target)
+    shared_scheme(target, f"{GAME}-iOS")
+    shared_scheme(mac_target, f"{GAME}-macOS")
     print(BUNDLE)
 
 

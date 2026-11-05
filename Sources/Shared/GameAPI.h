@@ -5,8 +5,9 @@
 // dylib and be rebuilt or swapped without touching the engine.
 #pragma once
 #include "Protocol.h"
+#include "CvarFlags.h"
 
-#define GAME_API_VERSION 1
+#define GAME_API_VERSION 2
 
 typedef struct {
     float radius;
@@ -42,6 +43,14 @@ typedef struct {
     void (*event)(const GameEvent *event);
     // Reliable command to one client, or every client with -1.
     void (*command)(int client, int type, const char *a, const char *b, const char *c);
+
+    // Console variables (engine-owned; see Engine/Common/Cvar.h). Register
+    // in init with CVAR_* flags, then read at use: values can change at any
+    // time. cvarString's result is valid until the cvar changes.
+    void (*cvarRegister)(const char *name, const char *value, int flags, const char *help);
+    const char *(*cvarString)(const char *name);
+    float (*cvarValue)(const char *name);
+    void (*cvarSet)(const char *name, const char *value);
 } GameImport;
 
 typedef struct {

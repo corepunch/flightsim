@@ -44,7 +44,7 @@ static int CheckScrolling(void) {
     CHECK(!CGRectIsEmpty(viewport));
     CGPoint inside = CGPointMake(CGRectGetMidX(viewport) / scene.size.width,
                                  CGRectGetMidY(viewport) / scene.size.height);
-    [scene queueScrollBy:20 atFraction:CGPointMake(0.05, inside.y)];
+    [scene queueScrollBy:20 atFraction:CGPointMake(0.005, inside.y)];
     [scene handle:0];
     CHECK(ScrollOffset(scene) == 0);
     [scene queueScrollBy:10000 atFraction:inside];
@@ -52,16 +52,19 @@ static int CheckScrolling(void) {
     CHECK(ScrollOffset(scene) > 0);
     SKNode *content = [scene valueForKey:@"_scrollContent"];
     CHECK([content.parent isKindOfClass:SKCropNode.class]);
-    SKLabelNode *objectives = (SKLabelNode *)content.children.lastObject;
-    CHECK(fabs(CGRectGetMinY(objectives.frame) + ScrollOffset(scene) - CGRectGetMinY(viewport)) < 1);
+    CHECK([content childNodeWithName:@"mission-20"]);
+    NSArray<NSValue *> *tiles = [scene valueForKey:@"_missionTiles"];
+    CHECK(tiles.count == CampaignMissions().count);
+    for (NSValue *value in tiles) CHECK(value.rectValue.size.width >= 140 && value.rectValue.size.height >= 140);
     [scene queueScrollBy:-10000 atFraction:inside];
     [scene handle:0];
     CHECK(ScrollOffset(scene) == 0);
     [scene handle:InputActionRight];
-    CHECK(ScrollOffset(scene) > 0 && scene.selectedIndex == 0);
+    CHECK(scene.selectedIndex == 1);
+    NSUInteger columns = [[scene valueForKey:@"_missionColumns"] unsignedIntegerValue];
     [scene handle:InputActionDown];
-    CHECK(ScrollOffset(scene) == 0 && scene.selectedIndex == 1);
-    scene.size = CGSizeMake(1600, 900);
+    CHECK(scene.selectedIndex == 1 + columns);
+    scene.size = CGSizeMake(1600, 1100);
     [scene showListSelecting:0];
     CHECK(![scene valueForKey:@"_scrollThumb"]);
 
@@ -94,7 +97,6 @@ static int CheckScrolling(void) {
 int main(void) {
     @autoreleasepool {
         [NSApplication sharedApplication];
-        unsetenv("SF_BRIEFING_PAGE");
         NSUInteger count = CampaignMissions().count;
         CHECK(count > 0);
         if (CheckScrolling() != EXIT_SUCCESS) return EXIT_FAILURE;

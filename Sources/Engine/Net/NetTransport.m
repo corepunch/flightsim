@@ -1,4 +1,5 @@
 #import "NetTransport.h"
+#import "Cvar.h"
 #import <QuartzCore/QuartzCore.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -73,8 +74,7 @@
 
 #pragma mark - Loopback
 
-typedef struct { float loss; double latency; } LoopSim;
-static LoopSim gSim;
+static Cvar *gLoss, *gLatency;
 
 @interface LoopPacket : NSObject
 @property (nonatomic, strong) NSData *data;
@@ -88,8 +88,6 @@ static LoopSim gSim;
     NSMutableArray<LoopPacket *> *_queue;
 }
 
-+ (void)simulateLoss:(float)loss latency:(double)latency { gSim = (LoopSim){ loss, latency }; }
-
 + (instancetype)side:(int)port {
     static LoopbackTransport *sides[2];
     static dispatch_once_t once;
@@ -99,20 +97,21 @@ static LoopSim gSim;
             sides[i]->_port = i;
             sides[i]->_queue = [NSMutableArray array];
         }
-        const char *loss = getenv("SF_NET_LOSS"), *lat = getenv("SF_NET_LATENCY");   // debug: bad network
-        if (loss || lat) [self simulateLoss:loss ? (float)atof(loss) : 0 latency:lat ? atof(lat) / 1000.0 : 0];
+        gLoss = [Cvar get:@"net_loss" defaultValue:@"0" flags:0 help:@"Loopback: fraction of packets dropped (0..1)"];
+        gLatency = [Cvar get:@"net_latency" defaultValue:@"0" flags:0 help:@"Loopback: simulated round trip, ms"];
     });
     return sides[port & 1];
 }
 
 - (void)send:(NSData *)packet to:(NetAddress *)to {
     if (!to.isLoopback) return;
-    if (gSim.loss > 0 && arc4random_uniform(10000) < (uint32_t)(gSim.loss * 10000)) return;
+    float loss = gLoss.value;
+    if (loss > 0 && arc4random_uniform(10000) < (uint32_t)(loss * 10000)) return;
     LoopbackTransport *dest = [LoopbackTransport side:to.port];
     LoopPacket *p = [LoopPacket new];
     p.data = [packet copy];
     // One-way delay is half the simulated round trip.
-    p.deliverAt = CACurrentMediaTime() + gSim.latency * 0.5;
+    p.deliverAt = CACurrentMediaTime() + gLatency.value / 1000.0 * 0.5;
     @synchronized (dest->_queue) { [dest->_queue addObject:p]; }
 }
 

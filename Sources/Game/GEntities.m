@@ -19,7 +19,8 @@
         params.turnRate = 1;
         move.orientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
         move.boostEnergy = 1;
-        _hull = 1;
+        _laserEnergy = 1;
+    _hull = 1;
         _shield = 1;
         _alive = YES;
     }
@@ -39,6 +40,7 @@
 
 - (void)resetAt:(simd_float3)position facing:(simd_quatf)orientation {
     ShipMoveReset(&move, position, orientation);
+    _laserEnergy = 1;
     _hull = 1;
     _shield = 1;
     _alive = YES;
@@ -47,6 +49,7 @@
 - (void)step:(ShipInput)input dt:(float)dt {
     if (!_alive) return;
     ShipMove(&move, &params, input, dt);
+    _laserEnergy = fminf(1, _laserEnergy + LASER_RECHARGE_RATE * dt);
     _shield = fminf(1, _shield + 0.06f * dt);   // shields regenerate slowly
 }
 

@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_OSX
 #import "Input.h"
+#import "Cvar.h"
 #import <Carbon/Carbon.h>
 #import <IOKit/hid/IOHIDManager.h>
 #import <IOKit/hid/IOHIDUsageTables.h>
@@ -47,7 +48,7 @@ static void HIDRemoveCallback(void *ctx, IOReturn result, void *sender, IOHIDDev
 @implementation Input {
     os_unfair_lock _lock;
     NSMutableIndexSet *_keys;
-    BOOL _shift, _mouseFire, _invertMouse;
+    BOOL _shift, _mouseFire, _mouseRoll, _invertMouse;
     CGPoint _stick;
     float _kbThrottle, _throttle;
     InputAction _actions;
@@ -63,6 +64,7 @@ static void HIDRemoveCallback(void *ctx, IOReturn result, void *sender, IOHIDDev
     BOOL _joyThrottleSeen;
     uint32_t _buttons;
     int _hat;
+    Cvar *_testFire;
 }
 
 - (instancetype)init {
@@ -70,8 +72,8 @@ static void HIDRemoveCallback(void *ctx, IOReturn result, void *sender, IOHIDDev
         _lock = OS_UNFAIR_LOCK_INIT;
         _keys = [NSMutableIndexSet indexSet];
         _hat = -1;
-        const char *thr = getenv("SF_THROTTLE");  // debug: start with this throttle
-        if (thr) _kbThrottle = _throttle = (float)atof(thr);
+        _kbThrottle = _throttle = clampf([Cvar get:@"in_throttle" defaultValue:@"0" flags:0 help:@"Throttle at launch (0..1)"].value, 0, 1);
+        _testFire = [Cvar get:@"cl_testFire" defaultValue:@"0" flags:CVAR_CHEAT help:@"Hold the trigger (test drives)"];
         [self startHID];
     }
     return self;
@@ -283,6 +285,9 @@ static NSString *AxisName(uint32_t key) {
     [_keys removeAllIndexes];
     _shift = NO;
     _mouseFire = NO;
+    _mouseRoll = NO;
+    _stick = CGPointZero;
+    self.mouseStick = _stick;
     os_unfair_lock_unlock(&_lock);
 }
 
@@ -301,6 +306,28 @@ static NSString *AxisName(uint32_t key) {
 - (void)setMouseFire:(BOOL)down {
     os_unfair_lock_lock(&_lock);
     _mouseFire = down;
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (void)setMouseRoll:(BOOL)down {
+    os_unfair_lock_lock(&_lock);
+    down = down && self.mouseCaptured;
+    if (_mouseRoll != down) {
+        _mouseRoll = down;
+        // Each horizontal mode starts centred: never turn held yaw into roll,
+        // or leave the ship yawing when the roll modifier is released.
+        _stick.x = 0;
+        self.mouseStick = _stick;
+    }
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (void)adjustMouseThrottleBy:(float)delta {
+    if (!self.mouseCaptured || !isfinite(delta) || delta == 0) return;
+    os_unfair_lock_lock(&_lock);
+    if (self.throttleFromJoystick) _kbThrottle = _throttle;
+    self.throttleFromJoystick = NO;
+    _kbThrottle = _throttle = clampf(_kbThrottle + delta, 0, 1);
     os_unfair_lock_unlock(&_lock);
 }
 
@@ -386,12 +413,12 @@ static NSString *AxisName(uint32_t key) {
     }
 
     c.pitch = clampf(kp + my + jy, -1, 1);
-    c.yaw = clampf(ky + mx + jr, -1, 1);
-    c.roll = clampf(kr + jx, -1, 1);
+    c.yaw = clampf(ky + (_mouseRoll ? 0 : mx) + jr, -1, 1);
+    c.roll = clampf(kr + (_mouseRoll ? mx : 0) + jx, -1, 1);
     c.boost = _shift || [self key:kVK_Tab] || (_buttons & (1u << 1)) || (_buttons & (1u << 3));
     c.fire = [self key:kVK_Space] || _mouseFire || (_buttons & 1u);
     c.hat = _hat;
-    if (getenv("SF_FIRE")) c.fire = YES;  // debug: hold the trigger
+    if (_testFire.boolValue) c.fire = YES;
     os_unfair_lock_unlock(&_lock);
     return c;
 }

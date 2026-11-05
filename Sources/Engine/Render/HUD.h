@@ -1,4 +1,6 @@
 #import <SpriteKit/SpriteKit.h>
+typedef struct CockpitContact CockpitContact;
+typedef struct CockpitFrame CockpitFrame;
 
 typedef struct {
     CGPoint boresight;      // where the guns converge, view points
@@ -36,12 +38,17 @@ typedef struct {
     __unsafe_unretained NSString *label;
 } HUDTarget;
 
-@interface HUD : SKScene
 #if TARGET_OS_IOS
-@property (atomic) UIEdgeInsets contentInsets;
+typedef UIEdgeInsets HUDInsets;
+#else
+typedef NSEdgeInsets HUDInsets;
 #endif
+@interface HUD : SKScene
+@property (atomic) HUDInsets contentInsets;
+@property (nonatomic) BOOL touchLayout;
 
 - (void)updateFrame:(HUDFrame)frame targets:(const HUDTarget *)targets count:(NSUInteger)count;
+- (void)updateInstruments:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count cockpit:(BOOL)cockpit;
 - (void)setInputText:(NSString *)text;
 - (void)toggleHelp;
 - (void)setHelpVisible:(BOOL)visible;

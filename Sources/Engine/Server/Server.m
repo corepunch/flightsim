@@ -3,6 +3,7 @@
 #import "GameLoader.h"
 #import "NetChannel.h"
 #import "NetProtocol.h"
+#import "Cvar.h"
 #import <QuartzCore/QuartzCore.h>
 
 typedef NS_ENUM(NSInteger, SlotState) { SlotFree, SlotConnected, SlotInGame };
@@ -34,6 +35,8 @@ static __unsafe_unretained Server *sv;
     NSMutableData *_events;
     double _accumulator, _statsAt;
     uint32_t _frame, _spawnCount;
+    Cvar *_netStats;
+    BOOL _paused;
 }
 
 #pragma mark - Game imports
@@ -107,6 +110,13 @@ static void SV_Command(int client, int type, const char *a, const char *b, const
     }
 }
 
+static void SV_CvarRegister(const char *name, const char *value, int flags, const char *help) {
+    [Cvar get:@(name ?: "") defaultValue:@(value ?: "") flags:(unsigned)flags help:help ? @(help) : nil];
+}
+static const char *SV_CvarString(const char *name) { return [Cvar stringOf:@(name ?: "")].UTF8String; }
+static float SV_CvarValue(const char *name) { return [Cvar valueOf:@(name ?: "")]; }
+static void SV_CvarSet(const char *name, const char *value) { [Cvar set:@(name ?: "") value:@(value ?: "")]; }
+
 #pragma mark - Lifecycle
 
 - (instancetype)initWithName:(NSString *)name {
@@ -131,7 +141,12 @@ static void SV_Command(int client, int type, const char *a, const char *b, const
             .trace = SV_Trace,
             .event = SV_Event,
             .command = SV_Command,
+            .cvarRegister = SV_CvarRegister,
+            .cvarString = SV_CvarString,
+            .cvarValue = SV_CvarValue,
+            .cvarSet = SV_CvarSet,
         };
+        _netStats = [Cvar get:@"net_stats" defaultValue:@"0" flags:0 help:@"Log bandwidth and prediction error every 5 s"];
         GetGameAPIFunc getGameAPI = GameLoaderOpen();
         if (!getGameAPI) return nil;
         _ge = getGameAPI(&gi);
@@ -202,6 +217,7 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
     [_models removeAllObjects];
     _events.length = 0;
     _missionEnded = NO;
+    [Cvar applyLatched];
     _ge->spawnMission(missionIndex);
     _spawnCount++;
     _accumulator = 0;
@@ -290,7 +306,7 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
                 ReadUserCmd(r, &cmd);
                 if (r.overflow || cmd.sequence <= slot.lastCommand) continue;   // already run (redundant copy)
                 slot.lastCommand = cmd.sequence;
-                if (slot.state == SlotInGame && _running) _ge->clientThink(index, &cmd);
+                if (slot.state == SlotInGame && _running && !_paused) _ge->clientThink(index, &cmd);
             }
         } else if (op == clc_stringcmd) {
             NSArray *args = [[r string] componentsSeparatedByString:@" "];
@@ -340,6 +356,7 @@ static int CompareEntities(const void *a, const void *b) {
 
 - (void)frame:(double)dt paused:(BOOL)paused {
     if (self.loading) return;   // packets wait in the transports
+    _paused = paused;
     [self readPackets];
     if (_running && !paused) {
         _accumulator = fmin(_accumulator + dt, 0.25);   // after a hitch, skip rather than spiral
@@ -351,7 +368,7 @@ static int CompareEntities(const void *a, const void *b) {
         }
     }
     double now = CACurrentMediaTime();
-    if (getenv("SF_NET_STATS") && now - _statsAt >= 5) {   // debug: outgoing bandwidth per client
+    if (_netStats.boolValue && now - _statsAt >= 5) {   // outgoing bandwidth per client
         double span = _statsAt > 0 ? now - _statsAt : 0;
         _statsAt = now;
         for (ServerSlot *slot in _slots) {

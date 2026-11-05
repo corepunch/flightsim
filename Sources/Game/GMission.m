@@ -143,17 +143,17 @@ static NSString *const kRed = @"red";
     cl.cmdTime = 0;
     cl.lastBump = -1;
 
-    const char *warp = getenv("SF_WARP");   // debug: start next to an entity, looking at it
-    if (warp && cl.index == 0)
+    NSString *warp = GCvarString("g_warp");   // cheat: start next to an entity, looking at it
+    if (warp.length && cl.index == 0)
         for (GCapital *c in _capitals)
-            if ([c.identifier isEqualToString:@(warp)]) {
-                float k = getenv("SF_WARPDIST") ? (float)atof(getenv("SF_WARPDIST")) : 2.2f;
+            if ([c.identifier isEqualToString:warp]) {
+                float k = GCvar("g_warpDistance");
                 simd_float3 from = c.position + simd_normalize(simd_make_float3(0.8f, 0.35f, 1.0f)) * fmaxf(c.radius * k, 60);
                 [s resetAt:from facing:LookRotation(c.position - from, simd_make_float3(0, 1, 0))];
                 s->move.throttle = 0;
                 s.velocity = 0;
             }
-    if (getenv("SF_AUTOPILOT") && cl.index == 0) {
+    if (GCvar("g_autopilot") && cl.index == 0) {
         GPilot *ap = [GPilot new];
         ap.ship = s;
         ap.order = @"attack";
@@ -168,6 +168,7 @@ static NSString *const kRed = @"red";
     c.number = [self allocEntity];
     c.identifier = e[@"id"];
     c.name = e[@"name"] ?: c.className;
+    c.cargo = e[@"cargo"];
     c.group = e[@"group"];
     c.position = Vec3(e[@"pos"]);
     simd_float3 facing = e[@"facing"] ? Vec3(e[@"facing"]) : simd_make_float3(0, 0, -1);
@@ -511,7 +512,10 @@ static NSString *const kRed = @"red";
                 o.scanTime[k] = @(t);
                 NSString *status = [NSString stringWithFormat:@"SCANNING %@  %d%%", [c.name uppercaseString], (int)(fminf(t / 2.0f, 1) * 100)];
                 for (GFighter *s in near) s.client.status = status;
-                if (t >= 2.0f) GCommand(nil, SVC_RADIO, [NSString stringWithFormat:@"%@ scanned", c.name], @"", nil);
+                if (t >= 2.0f) {
+                    c.scanned = YES;
+                    GCommand(nil, SVC_RADIO, [NSString stringWithFormat:@"%@ scanned", c.name], @"", nil);
+                }
             }
         }
         if (units.count && done == units.count) [self setObjective:o state:ObjectiveComplete];

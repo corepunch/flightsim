@@ -1,5 +1,15 @@
 # macOS GUI checks
 
+Run `./Tools/run-audio-checks.sh` to decode all generated audio and check music
+crossfades and looping, flight engine/boost response, effect playback, the saved
+sound modes and pausing when the app loses focus. It also exercises the main
+menu sound setting and saves desktop, compact and portrait menu previews.
+
+Run `./Tools/run-mouse-checks.sh` to check mouse flight event routing, held roll,
+roll/yaw transitions, simultaneous fire, wheel-click centring, wheel direction
+with either macOS scrolling setting, throttle limits and input release. It uses
+the native game objects and ignores attached controllers for repeatable checks.
+
 From the logged-in macOS desktop session, run `./Tools/run-gui-checks.sh`.
 It builds and opens a separate app bundle to check portrait transitions
 throughout the campaign at desktop, narrow and iPhone sizes. It checks for a pass message
@@ -28,3 +38,9 @@ and logs remain in the printed `build/flare-checks.*` directory.
 
 The visual references are [Cooke's photographed anamorphic flares](https://cookeoptics.com/news-and-events/an-introduction-to-anamorphic-lenses/)
 and [ShareGrid's Kowa lens tests](https://www.sharegrid.com/learn/lens-sets/kowa-cine-prominar-anamorphic).
+
+Run `./Tools/run-dialogue-checks.sh` for native rendered dialogue and briefing
+checks. It verifies the bundled proportional Oxanium faces, fixed wrapping during
+typing, intact Unicode characters, carriage returns, and click-to-finish controls.
+Desktop and phone PNG previews remain in the printed `build/dialogue-checks.*`
+directory. Run with Reduce Motion disabled to exercise the animation.

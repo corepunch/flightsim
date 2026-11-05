@@ -9,6 +9,10 @@
 
 extern GameImport gi;
 
+// Console variables the game registers in Init; read them at use.
+static inline float GCvar(const char *name) { return gi.cvarValue(name); }
+static inline NSString *GCvarString(const char *name) { return @(gi.cvarString(name) ?: ""); }
+
 static inline float frand(void) { return (float)arc4random_uniform(1000000) / 1000000.0f; }
 static inline float srand1(void) { return frand() * 2.0f - 1.0f; }
 static inline simd_float3 randomUnit(void) {
@@ -44,7 +48,7 @@ typedef NS_ENUM(NSInteger, ObjectiveState) {
 @property (nonatomic) int nameIndex;
 @property (nonatomic, readonly) float radius;
 @property (nonatomic) Team team;
-@property (nonatomic) float hull, shield;
+@property (nonatomic) float hull, shield, laserEnergy;
 @property (nonatomic) BOOL alive;
 @property (nonatomic) double lastShot;
 @property (nonatomic) double deathTime;
@@ -84,6 +88,8 @@ typedef NS_ENUM(NSInteger, ObjectiveState) {
 @property (nonatomic, readonly) int model;
 @property (nonatomic, copy) NSString *identifier, *asset, *group;
 @property (nonatomic, copy) NSString *name;
+@property (nonatomic, copy) NSString *cargo;
+@property (nonatomic) BOOL scanned;
 @property (nonatomic, readonly) NSString *className;
 @property (nonatomic) Team team;
 @property (nonatomic) float hull, maxHull;
@@ -172,7 +178,7 @@ typedef NS_ENUM(NSInteger, ObjectiveState) {
 @property (nonatomic, weak) GSubsystem *aimSubsystem;
 @property (nonatomic) double cmdTime, lastBump;     // seconds of commands run
 @property (nonatomic, copy) NSString *status, *sentStatus;
-@property (nonatomic, strong) GPilot *autopilot;    // debug: SF_AUTOPILOT
+@property (nonatomic, strong) GPilot *autopilot;    // g_autopilot
 @end
 
 #pragma mark - World

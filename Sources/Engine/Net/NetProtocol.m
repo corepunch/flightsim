@@ -76,7 +76,7 @@ void WriteDeltaEntity(MsgWriter *w, const EntityState *from, const EntityState *
     if (from->hull != to->hull || from->shield != to->shield) bits |= U_HEALTH;
     if (from->flags != to->flags) bits |= U_FLAGS;
     if (from->kind != to->kind || from->team != to->team || from->model != to->model) bits |= U_MODEL;
-    if (from->name != to->name || from->className != to->className) bits |= U_NAMES;
+    if (from->name != to->name || from->className != to->className || from->cargo != to->cargo) bits |= U_NAMES;
     if (from->target != to->target) bits |= U_TARGET;
     if (from->scale != to->scale) bits |= U_SCALE;
     if (from->stealthRange != to->stealthRange) bits |= U_STEALTH;
@@ -98,7 +98,7 @@ void WriteDeltaEntity(MsgWriter *w, const EntityState *from, const EntityState *
     if (bits & U_HEALTH) { [w u8:QuantizeUnit(to->hull)]; [w u8:QuantizeUnit(to->shield)]; }
     if (bits & U_FLAGS) [w u32:to->flags];
     if (bits & U_MODEL) { [w u8:to->kind]; [w u8:to->team]; [w u16:to->model]; }
-    if (bits & U_NAMES) { [w u16:to->name]; [w u16:to->className]; }
+    if (bits & U_NAMES) { [w u16:to->name]; [w u16:to->className]; [w u16:to->cargo]; }
     if (bits & U_TARGET) [w u16:to->target];
     if (bits & U_SCALE) [w f32:to->scale];
     if (bits & U_STEALTH) [w f32:to->stealthRange];
@@ -136,7 +136,7 @@ static void ReadDeltaEntity(MsgReader *r, uint16_t bits, EntityState *e) {
     if (bits & U_HEALTH) { e->hull = [r u8] / 255.0f; e->shield = [r u8] / 255.0f; }
     if (bits & U_FLAGS) e->flags = [r u32];
     if (bits & U_MODEL) { e->kind = [r u8]; e->team = [r u8]; e->model = [r u16]; }
-    if (bits & U_NAMES) { e->name = [r u16]; e->className = [r u16]; }
+    if (bits & U_NAMES) { e->name = [r u16]; e->className = [r u16]; e->cargo = [r u16]; }
     if (bits & U_TARGET) e->target = [r u16];
     if (bits & U_SCALE) e->scale = [r f32];
     if (bits & U_STEALTH) e->stealthRange = [r f32];
