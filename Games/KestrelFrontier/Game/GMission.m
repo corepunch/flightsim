@@ -326,6 +326,7 @@ static simd_float3 FormationSlot(LevelFormation f, int i) {
         p.order = w->order;
         p.orderTarget = w->orderTarget;
         p.mothership = w->mothership;
+        p.home = pos;
         p.wave = w->identifier;
         if (i < w->callsigns.count) p.callsign = w->callsigns[i];
         else if (w->name) p.callsign = count > 1 ? [NSString stringWithFormat:@"%@ %d", w->name, i + 2] : w->name;

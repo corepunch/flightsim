@@ -192,6 +192,8 @@ typedef NS_ENUM(NSInteger, PilotLeaving) { PilotStaying, PilotDocking, PilotJump
 @property (nonatomic) PilotSkill skill;
 @property (nonatomic, copy) NSString *order, *orderTarget, *wave, *callsign;
 @property (nonatomic, copy) NSString *mothership;   // entity it launched from and docks with; nil: none
+@property (nonatomic) simd_float3 home;             // where it arrived: evade and ignore loiter about it
+@property (nonatomic) NSInteger patrolIndex;        // the nav of a patrol it flies to next
 @property (nonatomic) PilotLeaving leaving;
 @property (nonatomic) double leavingSince;
 @property (nonatomic, weak) id target;
@@ -292,7 +294,7 @@ extern GWorld *level;
 @interface GWorld (AI)
 - (void)thinkPilot:(GPilot *)p dt:(float)dt;
 - (id)pickTargetFor:(GPilot *)p;                    // nil: nothing it may attack (disabled fighters are spared)
-- (BOOL)pilot:(GPilot *)p mayAttack:(id)target;       // NO for a disabled fighter, unless the pilot is ordered to destroy it
+- (BOOL)pilot:(GPilot *)p mayAttack:(id)target;       // NO for what the order forbids and for a disabled fighter, unless the pilot is ordered to destroy it
 - (void)fireTurrets:(GCapital *)c;
 - (void)checkMine:(GCapital *)m;
 @end

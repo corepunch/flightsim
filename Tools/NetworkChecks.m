@@ -377,6 +377,85 @@ static void IonPlayer(void) {
     [c disconnect]; [server frame:0]; [server stop];
     puts("PASS disabled player ship: commands ignored, no fire, coasts and tumbles, flag on the wire");
 }
+// AI flight-group orders against an enemy fighter 600 m ahead and an enemy
+// capital 2 km ahead, driving pilots straight through thinkPilot.
+static GPilot *OrderPilot(NSString *order, NSString *target, simd_float3 pos) {
+    GPilot *p = [GPilot new];
+    p.ship = [GFighter fighterWithShip:@"wasp" ai:YES]; p.ship.team = TeamFriend;
+    [p.ship resetAt:pos facing:LookRotation(simd_make_float3(0, 0, -1), simd_make_float3(0, 1, 0))];
+    p.home = pos; p.order = order; p.orderTarget = target;
+    p.skill = PilotSkillFor(LevelSkillAce, TeamFriend);
+    return p;
+}
+static int FriendlyBolts(void) {
+    int n = 0;
+    for (int i = 0; i < MAX_BOLTS; i++) if (level->_bolts[i].active && level->_bolts[i].team == TeamFriend) n++;
+    return n;
+}
+static void Fly(GPilot *p, int steps) {
+    for (int i = 0; i < steps; i++) { level->_time += TICK_DT; [level thinkPilot:p dt:TICK_DT]; }
+}
+static void OrdersRun(void) {
+    Server *server = [[Server alloc] initWithName:@"orders"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-orders"];
+    GFighter *drone = nil;
+    for (GFighter *f in [level fighters]) drone = f;
+    GCapital *cruiser = [level capitalNamed:@"cruiser"];
+    CHECK(drone && cruiser && drone.team == TeamEnemy && cruiser.team == TeamEnemy);
+    simd_float3 start = simd_make_float3(0, 0, -300);
+
+    // Who each order picks.
+    CHECK([level pickTargetFor:OrderPilot(@"attack", nil, start)] == drone);
+    CHECK([level pickTargetFor:OrderPilot(@"attack-fighters", nil, start)] == drone);
+    CHECK([level pickTargetFor:OrderPilot(@"attack-capitals", nil, start)] == cruiser);
+    CHECK([level pickTargetFor:OrderPilot(@"disable", @"cruiser", start)] == cruiser);
+    CHECK([level pickTargetFor:OrderPilot(@"evade", nil, start)] == nil && [level pickTargetFor:OrderPilot(@"ignore", nil, start)] == nil);
+    GPilot *capitals = OrderPilot(@"attack-capitals", nil, start), *fighters = OrderPilot(@"attack-fighters", nil, start);
+    CHECK([level pilot:capitals mayAttack:cruiser] && ![level pilot:capitals mayAttack:drone]);
+    CHECK([level pilot:fighters mayAttack:drone] && ![level pilot:fighters mayAttack:cruiser]);
+    // Patrols only see what is within 1.2 km of them.
+    CHECK([level pickTargetFor:OrderPilot(@"patrol", @"n1", simd_make_float3(0, 0, 400))] == drone);
+    CHECK([level pickTargetFor:OrderPilot(@"patrol", @"n1", simd_make_float3(2500, 0, 500))] == nil);
+
+    // An attacker shoots; evaders and the ignoring never do, and evaders back away.
+    GPilot *attacker = OrderPilot(@"attack", nil, start);
+    Fly(attacker, 90);
+    int shots = FriendlyBolts();
+    CHECK(shots > 0 && attacker.target == drone);
+    GPilot *evader = OrderPilot(@"evade", nil, start);
+    Fly(evader, 120);
+    CHECK(FriendlyBolts() == shots);
+    CHECK(simd_distance(evader.ship.position, drone.position) > 900 && evader.target == nil);
+    GPilot *ignorer = OrderPilot(@"ignore", nil, start);
+    Fly(ignorer, 240);
+    CHECK(FriendlyBolts() == shots && simd_distance(ignorer.ship.position, start) < 800);
+    GPilot *capitalHunter = OrderPilot(@"attack-capitals", nil, start);
+    Fly(capitalHunter, 30);
+    CHECK(capitalHunter.target == cruiser);
+
+    // A patrol flies its navs in a loop and leaves everyone alone far from them.
+    GPilot *patrol = OrderPilot(@"patrol", @"n1,n2", simd_make_float3(2500, 0, 500));
+    Fly(patrol, 1);
+    CHECK(patrol.patrolIndex == 0);
+    for (int i = 0; i < 1800 && patrol.patrolIndex == 0; i++) Fly(patrol, 1);
+    CHECK(patrol.patrolIndex == 1 && patrol.target == nil && FriendlyBolts() == shots);
+    for (int i = 0; i < 3000 && patrol.patrolIndex == 1; i++) Fly(patrol, 1);
+    CHECK(patrol.patrolIndex == 0);
+
+    // "disable" stops once the target is: it is not shot at (nor chosen) after.
+    GPilot *disabler = OrderPilot(@"disable", @"drone", start);
+    CHECK([level pickTargetFor:disabler] == drone && [level pilot:disabler mayAttack:drone]);
+    [drone disable];
+    CHECK([level pickTargetFor:disabler] == nil && ![level pilot:disabler mayAttack:drone]);
+    int before = FriendlyBolts();
+    Fly(disabler, 120);
+    CHECK(FriendlyBolts() == before && disabler.target == nil);
+    GPilot *striker = OrderPilot(@"strike", @"drone", start);
+    CHECK([level pickTargetFor:striker] == drone && [level pilot:striker mayAttack:drone]);
+    CHECK([level pickTargetFor:OrderPilot(@"attack-fighters", nil, start)] == nil);     // the disabled are spared
+    [server stop];
+    puts("PASS orders: attack-fighters/-capitals pick their kind, evade and ignore never fire, patrol loops its navs, disable stops at disabled");
+}
 static void UDPSmoke(void) {
     assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
@@ -408,6 +487,7 @@ int main(int argc, const char **argv) { @autoreleasepool {
     AimAssistCheck();
     IonRun();
     IonPlayer();
+    OrdersRun();
     UDPSmoke();
     puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;

@@ -48,6 +48,14 @@ if len(sys.argv) == 2:
     missions.append(dict(name='check-ion', seed=4, player=dict(ship='ionexec', pos=[0, 0, 0], facing=[0, 0, -1]),
                          waves=[dict(id='dummy', ship='dummy', count=1, team='enemy', pos=[16, 0, -600], spread=0)],
                          objectives=[dict(id='hold', type='survive', text='Hold position', seconds=10000)]))
+    # Orders: an enemy dummy fighter 600 m ahead and an enemy capital 2 km ahead (capital
+    # definitions only; their models are missing, so they fall back to a 30 m radius).
+    shutil.copytree(root / 'Games' / 'KestrelFrontier' / 'Data' / 'Capitals', game / 'Data' / 'Capitals')
+    missions.append(dict(name='check-orders', seed=5, player=dict(ship='wasp', pos=[0, 0, 0], facing=[0, 0, -1]),
+                         navs=[dict(id='n1', name='N1', pos=[3000, 0, 0]), dict(id='n2', name='N2', pos=[0, 0, 3000])],
+                         entities=[dict(id='cruiser', asset='Corvette', team='enemy', pos=[0, 0, -2000])],
+                         waves=[dict(id='drone', ship='dummy', count=1, team='enemy', pos=[0, 0, -600], spread=0)],
+                         objectives=[dict(id='hold', type='survive', text='Hold position', seconds=10000)]))
     (game / 'Levels').mkdir()
     for mission in missions:
         (game / 'Levels' / (mission['name'] + '.json')).write_text(json.dumps(mission))

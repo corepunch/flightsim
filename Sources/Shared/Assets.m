@@ -314,6 +314,32 @@ static void ReadEntity(NSDictionary *j, LevelEntity *e, NSMutableArray *problems
     e->noHullDamage = JSONBool(j, @"noHullDamage", false);
 }
 
+// What a wave's order may open with, and what follows the colon: a unit (an
+// entity id, group, wave id or callsign), a comma-separated list of navs, or nothing.
+typedef enum { OrderArgNone, OrderArgUnit, OrderArgNavs } OrderArg;
+static NSDictionary<NSString *, NSNumber *> *OrderVerbs(void) {
+    return @{
+        @"attack": @(OrderArgNone), @"attack-fighters": @(OrderArgNone), @"attack-capitals": @(OrderArgNone),
+        @"strike": @(OrderArgUnit), @"escort": @(OrderArgUnit), @"disable": @(OrderArgUnit),
+        @"evade": @(OrderArgNone), @"ignore": @(OrderArgNone), @"patrol": @(OrderArgNavs),
+    };
+}
+
+// A name the mission runtime would resolve to units (MissionWorld).
+static BOOL LevelNamesUnit(const LevelDef *level, NSString *name) {
+    if (LevelEntityNamed(level, name) || LevelWaveNamed(level, name)) return YES;
+    for (int i = 0; i < level->entityCount; i++) if ([level->entities[i].group isEqualToString:name]) return YES;
+    for (int i = 0; i < level->fieldCount; i++) if ([level->fields[i].group isEqualToString:name]) return YES;
+    for (int i = 0; i < level->waveCount; i++) {
+        const LevelWave *w = &level->waves[i];
+        if ([w->callsigns containsObject:name]) return YES;
+        if (!w->name) continue;
+        if ([w->name isEqualToString:name]) return YES;
+        for (int k = 0; k < w->count; k++) if ([[NSString stringWithFormat:@"%@ %d", w->name, k + 2] isEqualToString:name]) return YES;
+    }
+    return NO;
+}
+
 static void ReadWave(NSDictionary *j, LevelWave *w, NSMutableArray *problems) {
     NSString *what = [NSString stringWithFormat:@"wave %@", JSONString(j, @"id") ?: @"?"];
     Require(j, @"id", what, problems);
@@ -403,6 +429,18 @@ LevelDef *LevelCreate(NSDictionary *json) {
         const LevelWave *w = &level->waves[i];
         if (w->mothership && !LevelEntityNamed(level, w->mothership))
             [problems addObject:[NSString stringWithFormat:@"wave %@: mothership \"%@\" is no entity", w->identifier, w->mothership]];
+        NSNumber *arg = OrderVerbs()[w->order];
+        if (!arg) { [problems addObject:[NSString stringWithFormat:@"wave %@: unknown order \"%@\"", w->identifier, w->order]]; continue; }
+        if (arg.intValue == OrderArgNone && w->orderTarget)
+            [problems addObject:[NSString stringWithFormat:@"wave %@: order \"%@\" takes no target", w->identifier, w->order]];
+        if (arg.intValue != OrderArgNone && !w->orderTarget.length)
+            [problems addObject:[NSString stringWithFormat:@"wave %@: order \"%@\" needs a target", w->identifier, w->order]];
+        else if (arg.intValue == OrderArgUnit && !LevelNamesUnit(level, w->orderTarget))
+            [problems addObject:[NSString stringWithFormat:@"wave %@: order target \"%@\" is no unit", w->identifier, w->orderTarget]];
+        else if (arg.intValue == OrderArgNavs)
+            for (NSString *nav in [w->orderTarget componentsSeparatedByString:@","])
+                if (!LevelNavNamed(level, nav))
+                    [problems addObject:[NSString stringWithFormat:@"wave %@: patrol nav \"%@\" is no nav", w->identifier, nav]];
     }
     NSArray *events = JSONArray(json, @"events");
     if (json[@"events"] && !events) [problems addObject:@"\"events\" is not a list"];

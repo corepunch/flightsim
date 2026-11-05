@@ -712,7 +712,25 @@ static void CheckMissionRuntime(void) {
                                       @"objectives": @[@{ @"id": @"o", @"type": @"destroy", @"targets": @"layer" }] });
     CHECK([escort->waves[0].order isEqualToString:@"escort"] && [escort->waves[0].orderTarget isEqualToString:@"layer"]);
     CHECK([escort->objectives[0].targets isEqualToArray:@[@"layer"]] && LevelWaveNamed(escort, @"w") == &escort->waves[0]);
+    CHECK(escort->problems.count == 1);     // "layer" is no unit here
     LevelRelease(escort);
+    // Orders: every verb, its target and the problems with a wrong one.
+    NSArray *navs = @[@{ @"id": @"n1" }, @{ @"id": @"n2" }];
+    NSArray *units = @[@{ @"id": @"base", @"asset": @"Corvette" }];
+    LevelDef *orders = LevelCreate(@{ @"navs": navs, @"entities": units, @"waves": @[
+        @{ @"id": @"a", @"ship": @"wasp", @"order": @"attack-fighters" }, @{ @"id": @"b", @"ship": @"wasp", @"order": @"attack-capitals" },
+        @{ @"id": @"c", @"ship": @"wasp", @"order": @"disable:base" }, @{ @"id": @"d", @"ship": @"wasp", @"order": @"evade" },
+        @{ @"id": @"e", @"ship": @"wasp", @"order": @"ignore" }, @{ @"id": @"f", @"ship": @"wasp", @"order": @"patrol:n1,n2" },
+        @{ @"id": @"g", @"ship": @"wasp", @"order": @"strike:a" }, @{ @"id": @"h", @"ship": @"wasp", @"name": @"Red", @"count": @2, @"order": @"escort:Red 2" } ] });
+    CHECK(orders->problems.count == 0);
+    CHECK([orders->waves[5].order isEqualToString:@"patrol"] && [orders->waves[5].orderTarget isEqualToString:@"n1,n2"]);
+    LevelRelease(orders);
+    LevelDef *wrong = LevelCreate(@{ @"navs": navs, @"entities": units, @"waves": @[
+        @{ @"id": @"a", @"ship": @"wasp", @"order": @"charge" }, @{ @"id": @"b", @"ship": @"wasp", @"order": @"disable" },
+        @{ @"id": @"c", @"ship": @"wasp", @"order": @"disable:nobody" }, @{ @"id": @"d", @"ship": @"wasp", @"order": @"evade:base" },
+        @{ @"id": @"e", @"ship": @"wasp", @"order": @"patrol:n1,n9" } ] });
+    CHECK(wrong->problems.count == 5);
+    LevelRelease(wrong);
     CHECK([MissionRunner problemsWithLevel:TestLevel()].count == 0);
 
     // Success: reach the nav, the held raiders arrive, destroy them, the

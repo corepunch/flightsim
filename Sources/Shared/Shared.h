@@ -521,6 +521,27 @@ typedef enum {
 } LevelFormation;
 
 // A flight of AI fighters.
+//
+// "order" is a verb, with a target after a colon where it takes one. A target
+// names a unit (entity id, group, wave id or callsign) unless it is a nav.
+//   attack                 hostile fighters nearest first, then capitals (the default);
+//                          disabled fighters are spared
+//   attack-fighters        only hostile fighters; with none left it loiters
+//   attack-capitals        only hostile capitals (props and rocks never)
+//   strike:<unit>          the named units first, even disabled ones; then as attack
+//   escort:<unit>          fights within 1.6 km of the unit, forms up on it when it is quiet
+//   disable:<unit>         shoots the named units only until they are disabled (a fighter's
+//                          systems down, a capital's engines dead), then stops and loiters
+//                          about them; a ship fires what it carries, so ion guns are the
+//                          way to do it without destroying the target
+//   evade                  never fires; breaks away from the nearest hostile within 1.5 km,
+//                          otherwise loiters about where it arrived
+//   ignore                 never fires and reacts to nothing; loiters about where it arrived
+//   patrol:<nav>[,<nav>…]  flies the navs in a loop, engaging hostiles that come within
+//                          1.2 km, then resumes
+// An unknown verb, a missing or misplaced target, or a target that names no
+// unit (or nav, for patrol) is a level problem.
+//
 //   { "id", "ship", "team", "name", "callsigns": [], "count", "pos", "spread",
 //     "order": "attack" | "escort:<id>" | …, "hold",
 //     "arrival": LevelCue,                        // implies hold
