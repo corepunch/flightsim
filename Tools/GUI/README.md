@@ -1,4 +1,20 @@
-# macOS GUI checks
+# macOS checks
+
+Every check here runs in CI (`.github/workflows/ci.yml`) on GitHub's macOS
+runners: one job builds the macOS and iOS simulator apps, validates the
+campaign data and runs the unit checks; a job per GUI suite builds the app
+and launches that suite in the runner's desktop session. Previews and logs
+of a GUI suite are kept as workflow artifacts.
+
+Run `./Tools/run-unit-checks.sh` for the headless checks of the shared core
+(`Tools/UnitChecks.m`): the flight model is deterministic and settles where it
+should, entity deltas, player states, events and user commands survive the
+wire bit for bit, the console tokenizes, gates cheats and paces its buffer,
+and the campaign file names only capital assets that exist. It links the
+Shared, Common and Net sources alone, so it needs no window, GPU or game
+module.
+
+## GUI checks
 
 Run `./Tools/run-audio-checks.sh` to decode all generated audio and check music
 crossfades and looping, flight engine/boost response, effect playback, the saved
