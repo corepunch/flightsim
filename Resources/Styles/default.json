@@ -1,0 +1,130 @@
+{
+  "Hull": {
+    "textures": "panels",
+    "tint": [
+      0.85,
+      0.88,
+      0.95
+    ],
+    "normal": 1.0
+  },
+  "HullDark": {
+    "textures": "hex",
+    "tint": [
+      0.42,
+      0.44,
+      0.5
+    ],
+    "normal": 1.0
+  },
+  "Civil": {
+    "textures": "plating",
+    "tint": [
+      0.95,
+      0.95,
+      0.96
+    ],
+    "normal": 0.8
+  },
+  "Trim": {
+    "color": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "roughness": 0.35,
+    "metalness": 0.9
+  },
+  "Windows": {
+    "emissive": "windows",
+    "intensity": 1.8
+  },
+  "Glow": {
+    "emissive": [
+      0.35,
+      0.6,
+      1.0
+    ],
+    "intensity": 3.0
+  },
+  "Lights": {
+    "emissive": [
+      1,
+      1,
+      1
+    ],
+    "intensity": 4.0,
+    "animated": "strobe"
+  },
+  "ShieldGen": {
+    "emissive": [
+      0.3,
+      0.8,
+      1.0
+    ],
+    "intensity": 2.5,
+    "animated": "pulse"
+  },
+  "GateGlow": {
+    "emissive": [
+      0.4,
+      0.8,
+      1.0
+    ],
+    "intensity": 4.0
+  },
+  "Hangar": {
+    "emissive": [
+      1,
+      0.6,
+      0.3
+    ],
+    "intensity": 0.25
+  },
+  "Solar": {
+    "textures": "solar",
+    "tint": [
+      1,
+      1,
+      1
+    ],
+    "normal": 1.0
+  },
+  "Cargo1": {
+    "textures": "industrial",
+    "tint": [
+      0.85,
+      0.45,
+      0.15
+    ],
+    "normal": 1.0
+  },
+  "Cargo2": {
+    "textures": "industrial",
+    "tint": [
+      0.2,
+      0.45,
+      0.65
+    ],
+    "normal": 1.0
+  },
+  "Cargo3": {
+    "textures": "industrial",
+    "tint": [
+      0.75,
+      0.7,
+      0.25
+    ],
+    "normal": 1.0
+  },
+  "Rock": {
+    "textures": "rusted",
+    "color": [
+      0.42,
+      0.39,
+      0.36
+    ],
+    "normal": 1.4,
+    "metalness": 0
+  }
+}

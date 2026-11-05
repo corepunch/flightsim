@@ -166,6 +166,7 @@ typedef NS_ENUM(NSInteger, ObjectiveState) {
 
 @interface GTorpedo : NSObject
 @property (nonatomic) uint16_t number;
+@property (nonatomic) int model;                // "proj:<name>" configstring index
 @property (nonatomic) simd_float3 position, velocity;
 @property (nonatomic) float life;
 @property (nonatomic) Team team;
@@ -274,6 +275,8 @@ extern GWorld *level;
 - (void)fireTurrets:(GCapital *)c;
 - (void)checkMine:(GCapital *)m;
 @end
+
+extern NSString *const GTorpedoProjectile;      // projectile definition the torpedo is drawn with
 
 @interface GWorld (Weapons)
 - (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life

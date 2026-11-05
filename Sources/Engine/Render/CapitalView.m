@@ -82,65 +82,78 @@ static PlatformImage *WindowImage(void) {
     });
 }
 
-static SCNMaterial *gLights, *gShield;
+#pragma mark - Styles
+
+// A hull style is Resources/Styles/<style>.json: material slot name (as in
+// the model's material names) to a spec, over everything in default.json.
+//   { "textures": "panels", "tint": [r, g, b], "normal": 1.0 }   tiling PBR set, optional "color" and "metalness"
+//   { "color": [r, g, b], "roughness": 0.35, "metalness": 0.9 }   plain PBR
+//   { "emissive": [r, g, b] | "windows", "intensity": 3.0 }      unlit emitter; "animated": "strobe" or "pulse"
+
+static SKColor *ColorFrom(NSArray *rgb, SKColor *fallback) {
+    return rgb.count >= 3 ? [SKColor colorWithRed:[rgb[0] floatValue] green:[rgb[1] floatValue] blue:[rgb[2] floatValue] alpha:1] : fallback;
+}
+
+static float NumberIn(NSDictionary *d, NSString *key, float fallback) {
+    NSNumber *n = d[key];
+    return [n isKindOfClass:NSNumber.class] ? n.floatValue : fallback;
+}
+
+// Materials whose intensity the frame animates, with their kind ("strobe", "pulse").
+static NSMutableArray<NSArray *> *gAnimated;
+
+static SCNMaterial *MaterialFromSpec(NSString *slot, NSDictionary *spec) {
+    SCNMaterial *m;
+    if (spec[@"textures"]) {
+        m = TexturedMaterial(spec[@"textures"], ColorFrom(spec[@"tint"], SKColor.whiteColor), NumberIn(spec, @"normal", 1));
+        if (spec[@"color"]) {   // a tinted surface colour instead of the set's colour map
+            m.diffuse.contents = ColorFrom(spec[@"color"], SKColor.grayColor);
+            m.multiply.contents = nil;
+        }
+        if (spec[@"metalness"]) m.metalness.contents = @(NumberIn(spec, @"metalness", 0.6f));
+    } else if (spec[@"emissive"]) {
+        id emissive = spec[@"emissive"];
+        BOOL windows = [emissive isKindOfClass:NSString.class] && [emissive isEqualToString:@"windows"];
+        m = EmissiveMaterial(windows ? (id)WindowImage() : ColorFrom(emissive, SKColor.whiteColor), NumberIn(spec, @"intensity", 1));
+        if (windows) Repeat(m.emission);
+        NSString *animated = spec[@"animated"];
+        if (animated.length) {
+            if (!gAnimated) gAnimated = [NSMutableArray array];
+            [gAnimated addObject:@[m, animated]];
+        }
+    } else {
+        m = PlainMaterial(ColorFrom(spec[@"color"], SKColor.grayColor), NumberIn(spec, @"roughness", 0.5f), NumberIn(spec, @"metalness", 0.5f));
+    }
+    m.name = slot;
+    return m;
+}
+
+static NSDictionary *StyleFile(NSString *style) {
+    NSURL *url = [NSBundle.mainBundle URLForResource:style withExtension:@"json" subdirectory:@"Styles"];
+    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
+    NSDictionary *d = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    return [d isKindOfClass:NSDictionary.class] ? d : nil;
+}
 
 static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) {
     static NSMutableDictionary *cache;
-    if (!cache) cache = [NSMutableDictionary dictionary];
-    if (cache[style]) return cache[style];
-
-    NSString *set = @"panels", *darkSet = @"hex";   // Hull and HullDark texture sets
-    SKColor *tint = [SKColor colorWithRed:0.85 green:0.88 blue:0.95 alpha:1];
-    SKColor *dark = [SKColor colorWithRed:0.42 green:0.44 blue:0.5 alpha:1];
-    SKColor *glow = [SKColor colorWithRed:0.35 green:0.6 blue:1.0 alpha:1];
-    if ([style isEqualToString:@"civil"] || [style isEqualToString:@"medical"]) {
-        set = @"plating";
-        darkSet = @"ribbed";
-        tint = [SKColor colorWithRed:1 green:0.97 blue:0.92 alpha:1];
-        dark = [SKColor colorWithWhite:0.5 alpha:1];
-        glow = [style isEqualToString:@"medical"] ? [SKColor colorWithRed:0.3 green:1 blue:0.5 alpha:1]
-                                                  : [SKColor colorWithRed:1 green:0.75 blue:0.4 alpha:1];
-    } else if ([style isEqualToString:@"skarn"] || [style isEqualToString:@"stealth"]) {
-        BOOL stealth = [style isEqualToString:@"stealth"];
-        set = darkSet = stealth ? @"stealth" : @"armor";
-        // The stealth set is already near-black, so it only needs a light tint.
-        tint = stealth ? [SKColor colorWithWhite:0.85 alpha:1] : [SKColor colorWithRed:0.78 green:0.66 blue:0.63 alpha:1];
-        dark = stealth ? [SKColor colorWithWhite:0.55 alpha:1] : [SKColor colorWithRed:0.4 green:0.34 blue:0.33 alpha:1];
-        glow = [SKColor colorWithRed:1.0 green:0.25 blue:0.12 alpha:1];
-    } else if ([style isEqualToString:@"corsair"]) {
-        set = darkSet = @"rusted";
-        tint = [SKColor colorWithWhite:0.9 alpha:1];
-        dark = [SKColor colorWithWhite:0.45 alpha:1];
-        glow = [SKColor colorWithRed:1 green:0.55 blue:0.2 alpha:1];
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
+    @synchronized (cache) {
+        if (cache[style]) return cache[style];
+        NSMutableDictionary *specs = [StyleFile(@"default") mutableCopy] ?: [NSMutableDictionary dictionary];
+        NSDictionary *own = StyleFile(style);
+        if (!own) NSLog(@"CapitalView: no style \"%@\"; using default", style);
+        [specs addEntriesFromDictionary:own ?: @{}];
+        NSMutableDictionary *m = [NSMutableDictionary dictionary];
+        for (NSString *slot in specs) {
+            NSDictionary *spec = specs[slot];
+            if ([spec isKindOfClass:NSDictionary.class]) m[slot] = MaterialFromSpec(slot, spec);
+        }
+        if (!m[@"Hull"]) m[@"Hull"] = PlainMaterial(SKColor.grayColor, 0.5f, 0.5f);   // never leave a hull unlit
+        cache[style] = m;
+        return m;
     }
-
-    if (!gLights) {
-        gLights = EmissiveMaterial([SKColor whiteColor], 4);
-        gShield = EmissiveMaterial([SKColor colorWithRed:0.3 green:0.8 blue:1 alpha:1], 2.5);
-    }
-    NSMutableDictionary *m = [NSMutableDictionary dictionary];
-    m[@"Hull"] = TexturedMaterial(set, tint, 1.0);
-    m[@"HullDark"] = TexturedMaterial(darkSet, dark, 1.0);
-    m[@"Civil"] = TexturedMaterial(@"plating", [SKColor colorWithRed:0.95 green:0.95 blue:0.96 alpha:1], 0.8);
-    m[@"Trim"] = PlainMaterial([SKColor colorWithWhite:0.5 alpha:1], 0.35, 0.9);
-    m[@"Windows"] = EmissiveMaterial(WindowImage(), 1.8);
-    Repeat(((SCNMaterial *)m[@"Windows"]).emission);
-    m[@"Glow"] = EmissiveMaterial(glow, 3.0);
-    m[@"Lights"] = gLights;
-    m[@"ShieldGen"] = gShield;
-    m[@"GateGlow"] = EmissiveMaterial([SKColor colorWithRed:0.4 green:0.8 blue:1 alpha:1], 4.0);
-    m[@"Hangar"] = EmissiveMaterial([SKColor colorWithRed:1 green:0.6 blue:0.3 alpha:1], 0.25);
-    m[@"Solar"] = TexturedMaterial(@"solar", [SKColor whiteColor], 1.0);
-    m[@"Cargo1"] = TexturedMaterial(@"industrial", [SKColor colorWithRed:0.85 green:0.45 blue:0.15 alpha:1], 1.0);
-    m[@"Cargo2"] = TexturedMaterial(@"industrial", [SKColor colorWithRed:0.2 green:0.45 blue:0.65 alpha:1], 1.0);
-    m[@"Cargo3"] = TexturedMaterial(@"industrial", [SKColor colorWithRed:0.75 green:0.7 blue:0.25 alpha:1], 1.0);
-    SCNMaterial *rock = TexturedMaterial(@"rusted", [SKColor colorWithRed:0.42 green:0.39 blue:0.36 alpha:1], 1.4);
-    rock.diffuse.contents = [SKColor colorWithRed:0.42 green:0.39 blue:0.36 alpha:1];
-    rock.multiply.contents = nil;
-    rock.metalness.contents = @0;
-    m[@"Rock"] = rock;
-    cache[style] = m;
-    return m;
 }
 
 @implementation CapitalView
@@ -176,9 +189,12 @@ static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) 
 }
 
 + (void)updateSharedMaterials:(double)t {
-    // Strobe: a short flash every 1.2 s.
-    gLights.emission.intensity = fmod(t, 1.2) < 0.12 ? 6.0 : 0.6;
-    gShield.emission.intensity = 2.0 + 0.8 * sin(t * 3.0);
+    for (NSArray *entry in gAnimated) {
+        SCNMaterial *m = entry[0];
+        // Strobe: a short flash every 1.2 s. Pulse: a slow breathing glow.
+        if ([entry[1] isEqualToString:@"strobe"]) m.emission.intensity = fmod(t, 1.2) < 0.12 ? 6.0 : 0.6;
+        else if ([entry[1] isEqualToString:@"pulse"]) m.emission.intensity = 2.0 + 0.8 * sin(t * 3.0);
+    }
 }
 
 + (instancetype)viewWithModel:(NSString *)model {

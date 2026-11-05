@@ -1,0 +1,28 @@
+{
+  "Hull": {
+    "textures": "rusted",
+    "tint": [
+      0.9,
+      0.9,
+      0.9
+    ],
+    "normal": 1.0
+  },
+  "HullDark": {
+    "textures": "rusted",
+    "tint": [
+      0.45,
+      0.45,
+      0.45
+    ],
+    "normal": 1.0
+  },
+  "Glow": {
+    "emissive": [
+      1,
+      0.55,
+      0.2
+    ],
+    "intensity": 3.0
+  }
+}

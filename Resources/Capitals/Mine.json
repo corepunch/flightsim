@@ -1,0 +1,7 @@
+{
+  "className": "Mine",
+  "hp": 0.15,
+  "style": "skarn",
+  "prop": true,
+  "mine": true
+}

@@ -15,6 +15,7 @@ ln -s "$PWD/Resources/Briefing" "$contents/Resources/Briefing"
 ln -s "$PWD/Resources/Missions" "$contents/Resources/Missions"
 ln -s "$PWD/Resources/Audio" "$contents/Resources/Audio"
 ln -s "$PWD/Resources/Fonts" "$contents/Resources/Fonts"
+ln -s "$PWD/Resources/Capitals" "$contents/Resources/Capitals"
 ui=Sources/Engine/UI
 clang -fobjc-arc -Wall -mmacosx-version-min=13.0 \
     -ISources/Shared -ISources/Engine/App -ISources/Engine/Common -I"$ui" \

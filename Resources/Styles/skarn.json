@@ -1,0 +1,28 @@
+{
+  "Hull": {
+    "textures": "armor",
+    "tint": [
+      0.78,
+      0.66,
+      0.63
+    ],
+    "normal": 1.0
+  },
+  "HullDark": {
+    "textures": "armor",
+    "tint": [
+      0.4,
+      0.34,
+      0.33
+    ],
+    "normal": 1.0
+  },
+  "Glow": {
+    "emissive": [
+      1.0,
+      0.25,
+      0.12
+    ],
+    "intensity": 3.0
+  }
+}
