@@ -94,7 +94,8 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size);
 // Pointer hover for a screen's buttons: each lights up as the pointer
 // arrives and dims as it leaves. Register buttons on every rebuild.
 @interface UIHover : NSObject
-// Any thread; (-1, -1) when the pointer leaves the view.
+// The latest pointer position, applied at the next -updateInScene:; (-1, -1)
+// when it leaves the view. Same thread as the screen (see ScreenInput.h).
 - (void)queuePointAtFraction:(CGPoint)point;
 - (void)reset;
 // button's children must be laid out in the same space as rect.

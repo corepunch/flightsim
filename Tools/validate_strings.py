@@ -5,7 +5,8 @@
   L10nList, and key literals passed to them indirectly);
 - every other locale has a name and direction, only keys English has, and
   the same format specifiers, in the same order, as English;
-- Resources/UI/theme.json has every colour, font and metric UIStyle.h names.
+- Resources/UI/theme.json has every colour, font and metric UIStyle.h names;
+- every catalog key a screen layout (Resources/UI/menus/*.json) names exists.
 """
 import json
 import re
@@ -46,6 +47,19 @@ def main():
     used = set()
     for source in (ROOT / "Sources").rglob("*.m"):
         used.update(k for k in KEY.findall(source.read_text(encoding="utf-8")) if not k.endswith(FILES))
+    # Screen layouts name catalog keys in "text"/"detail" ("$name" is a variable).
+    layouts = sorted((ROOT / "Resources/UI/menus").glob("*.json"))
+    for path in layouts:
+        def walk(node):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    if key in ("text", "detail") and isinstance(value, str) and not value.startswith("$"):
+                        used.add(value)
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+        walk(json.loads(path.read_text(encoding="utf-8")))
     for prefix, names in DYNAMIC.items():
         used.update(prefix + name for name in names)
     missing = sorted(used - english.keys())
@@ -80,7 +94,25 @@ def main():
             else:
                 assert isinstance(value, (int, float)), f"theme.json: metrics.{name} missing"
 
-    print(f"PASS: {len(english)} strings in {len(catalogs)} locales, {len(used)} used by the code; theme complete")
+    # Colours and fonts a layout names must be in the theme.
+    for path in layouts:
+        def check(node):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    if key in ("color", "stroke", "fill"):
+                        name = value[0] if isinstance(value, list) else value
+                        assert name in theme["colors"], f"{path.name}: unknown theme colour {name!r}"
+                    elif key == "font":
+                        assert value in theme["fonts"], f"{path.name}: unknown theme font {value!r}"
+                    else:
+                        check(value)
+            elif isinstance(node, list):
+                for value in node:
+                    check(value)
+        check(json.loads(path.read_text(encoding="utf-8")))
+
+    print(f"PASS: {len(english)} strings in {len(catalogs)} locales, {len(used)} used by the code and "
+          f"{len(layouts)} layouts; theme complete")
 
 
 if __name__ == "__main__":

@@ -70,6 +70,7 @@ static void HIDRemoveCallback(void *ctx, IOReturn result, void *sender, IOHIDDev
 
 - (instancetype)init {
     if ((self = [super init])) {
+        _pointer = [PointerQueue new];
         _lock = OS_UNFAIR_LOCK_INIT;
         _keys = [NSMutableIndexSet indexSet];
         _hat = -1;

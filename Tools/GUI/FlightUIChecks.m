@@ -3,6 +3,7 @@
 #import "HUD.h"
 #import "FlightInstruments.h"
 #import "PauseMenu.h"
+#import "UILayout.h"
 #import "Briefing.h"
 #import "Progress.h"
 #import "NetProtocol.h"
@@ -152,12 +153,12 @@ static int CheckGrid(void) {
         CHECK(where == nil);
         Save(grid, [NSString stringWithFormat:@"missions-%.0fx%.0f.png", grid.size.width,grid.size.height]);
         CGPoint origin = CGPointMake(CGRectGetMidX(viewport)/grid.size.width, CGRectGetMidY(viewport)/grid.size.height);
-        [grid queueScrollBy:10000 atFraction:origin]; [grid handle:0];
+        [grid pointerScroll:10000 at:origin]; [grid handle:0];
         CGFloat offset = [[grid valueForKey:@"scrollOffset"] doubleValue];
         CGRect last = tiles.lastObject.rectValue;
         CGPoint hit = CGPointMake(CGRectGetMidX(last)/grid.size.width, (CGRectGetMidY(last)+offset)/grid.size.height);
         CHECK(CGRectContainsPoint(viewport, CGPointMake(hit.x*grid.size.width, hit.y*grid.size.height)));
-        [grid queueClickAtFraction:hit]; [grid handle:0];
+        [grid pointerClick:hit]; [grid handle:0];
         CHECK(grid.selectedIndex == tiles.count-1);
         [grid handle:InputActionConfirm];
         CHECK([[grid valueForKey:@"mode"] integerValue] == 0); // Locked stays on the grid.
@@ -171,6 +172,21 @@ static int CheckPause(void) {
         [menu showRemote:NO cockpit:NO];
         CHECK([menu handle:InputActionBack] == PauseCommandResume);
         CHECK([menu handle:InputActionConfirm] == PauseCommandResume);
+        // pause.json reproduces the hand-written layout: a centred panel at most
+        // 400 x 360 with 24/12 pt margins, five rows of at most 44 pt, 6 pt apart.
+        {
+            CGSize s = size.sizeValue;
+            CGFloat w = MIN(400, s.width - 48), h = MIN(360, s.height - 24);
+            CGFloat x = (s.width - w) / 2, y = (s.height - h) / 2, row = MIN(44, (h - 82) / 5 - 6);
+            id layout = [menu valueForKey:@"_layout"];
+            NSArray *ids = @[@"resume", @"camera", @"sound", @"restart", @"missions"];
+            for (NSUInteger i = 0; i < ids.count; i++) {
+                CGRect got = [(UILayoutResult *)layout frame:[@"items." stringByAppendingString:ids[i]]];
+                CGRect want = CGRectMake(x + 22, y + h - 70 - (i + 1) * (row + 6), w - 44, row);
+                CHECK(fabs(got.origin.x - want.origin.x) < 0.01 && fabs(got.origin.y - want.origin.y) < 0.01 &&
+                      fabs(got.size.width - want.size.width) < 0.01 && fabs(got.size.height - want.size.height) < 0.01);
+            }
+        }
         Save(menu, [NSString stringWithFormat:@"pause-%.0fx%.0f.png", menu.size.width,menu.size.height]);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandCamera);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandSound);

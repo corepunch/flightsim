@@ -1,0 +1,22 @@
+{
+  "compactBelow": 550,
+  "items": [
+    { "id": "campaign", "text": "$campaign", "detail": "$mission" },
+    { "id": "missions", "text": "menu.missions" },
+    { "id": "lan", "text": "menu.lan" },
+    { "id": "controls", "text": "menu.controls" },
+    { "id": "sound", "text": "$sound" },
+    { "id": "quit", "text": "menu.quit", "platforms": ["mac"] }
+  ],
+  "metrics": {
+    "width": { "compact": 316, "regular": 390 },
+    "rowHeight": { "compact": 46, "regular": 62 },
+    "rowHeightFraction": { "compact": 1, "regular": 0.105 },
+    "minimumRowHeight": 30,
+    "gap": { "compact": 5, "regular": 8 },
+    "minimumHeader": { "compact": 78, "regular": 150 },
+    "headerPadding": { "compact": 33, "regular": 62 },
+    "unitSize": { "compact": 10, "regular": 13 },
+    "footerSize": 11
+  }
+}

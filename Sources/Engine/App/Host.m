@@ -635,7 +635,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [Cmd executeBuffer];
 
     InputAction actions = [_input consumeActions];
-    if (_exitDeadline > 0 && _state != HostStateFlying) actions = 0;   // a screen is on its way out
+    NSData *pointer = [_input.pointer drain];
+    if (_exitDeadline > 0 && _state != HostStateFlying) actions = 0, pointer = nil;   // a screen is on its way out
+    // Pointer events go to the screen on show, before it handles this frame's actions.
+    const PointerEvent *events = pointer.bytes;
+    for (NSUInteger i = 0; i < pointer.length / sizeof(PointerEvent); i++) ScreenInputDeliver(_shownOverlay, events[i]);
     ControlState controls = [_input poll:dt];
     if (_testInput.boolValue) {   // a pilot who weaves and fires, for testing prediction
         float t = (float)_time;

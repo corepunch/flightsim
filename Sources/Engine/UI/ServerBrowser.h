@@ -1,4 +1,5 @@
 #import <SpriteKit/SpriteKit.h>
+#import "ScreenInput.h"
 #import "Input.h"
 #import "LANBrowser.h"
 
@@ -6,15 +7,13 @@ typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJ
 
 // The multiplayer screen: games found on the local network, plus how to
 // join one by address. Up/Down pick, Return joins, Esc goes back.
-@interface ServerBrowser : SKScene
+// Takes pointer input through <ScreenInput>.
+@interface ServerBrowser : SKScene <ScreenInput>
 
 @property (nonatomic, readonly) LANServer *selected;
 @property (nonatomic, copy) NSString *hostLine;     // "Hosting on port 27910", shown at the bottom
 
 - (void)showServers:(NSArray<LANServer *> *)servers;
-- (void)queueClickAtFraction:(CGPoint)point;
-// Pointer position for button hover; (-1, -1) when it leaves the view.
-- (void)hoverAtFraction:(CGPoint)point;
 - (BrowserCommand)handle:(InputAction)actions;
 - (void)setStatus:(NSString *)status;
 

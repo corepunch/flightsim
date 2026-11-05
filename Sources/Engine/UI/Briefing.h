@@ -1,4 +1,5 @@
 #import <SpriteKit/SpriteKit.h>
+#import "ScreenInput.h"
 #import "Input.h"
 
 typedef NS_ENUM(NSInteger, BriefingCommand) {
@@ -15,7 +16,7 @@ typedef UIEdgeInsets BriefingInsets;
 #else
 typedef NSEdgeInsets BriefingInsets;
 #endif
-@interface Briefing : SKScene
+@interface Briefing : SKScene <ScreenInput>
 @property (nonatomic) BriefingInsets contentInsets;
 
 @property (nonatomic, readonly) NSUInteger selectedIndex;
@@ -25,11 +26,8 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)page;   // opens on a later page
 // results: one line per objective, prefixed "+" done, "x" failed, "-" not done.
 - (void)showDebrief:(NSUInteger)index success:(BOOL)success results:(NSArray<NSString *> *)results;
-- (void)queueClickAtFraction:(CGPoint)point;
-// Positive delta reveals text farther down; point is the wheel or drag origin.
-- (void)queueScrollBy:(CGFloat)delta atFraction:(CGPoint)point;
-// Pointer position for button hover; (-1, -1) when it leaves the view.
-- (void)hoverAtFraction:(CGPoint)point;
+// Pointer input arrives through <ScreenInput>: hover, click, and scroll
+// (positive delta reveals text farther down; the point is the wheel or drag origin).
 - (BriefingCommand)handle:(InputAction)actions;
 - (void)tick:(double)time;
 

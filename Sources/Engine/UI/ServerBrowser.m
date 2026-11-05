@@ -53,13 +53,11 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     [self rebuild];
 }
 
-- (void)hoverAtFraction:(CGPoint)point { [_hover queuePointAtFraction:point]; }
+- (void)pointerHover:(CGPoint)point { [_hover queuePointAtFraction:point]; }
 
-- (void)queueClickAtFraction:(CGPoint)point {
-    @synchronized (self) {
-        _pendingPoint = point;
-        _hasPendingPoint = YES;
-    }
+- (void)pointerClick:(CGPoint)point {
+    _pendingPoint = point;
+    _hasPendingPoint = YES;
 }
 
 - (void)showServers:(NSArray<LANServer *> *)servers {
@@ -171,7 +169,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 }
 
 - (void)motionEnter {
-    @synchronized (self) { _hasPendingPoint = NO; }
+    _hasPendingPoint = NO;
     [_stage removeAllActions];
     _stage.alpha = 1;
     [_stage setScale:1];
@@ -201,10 +199,8 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 - (BrowserCommand)handle:(InputAction)actions {
     [_hover updateInScene:self];
     CGPoint click = CGPointMake(-1, -1);
-    @synchronized (self) {
-        if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
-        _hasPendingPoint = NO;
-    }
+    if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
+    _hasPendingPoint = NO;
     if (CGRectContainsPoint(_backRect, click)) actions |= InputActionBack;
     else if (CGRectContainsPoint(_joinRect, click)) actions |= InputActionConfirm;
     else if (CGRectContainsPoint(_serverRows, click)) {

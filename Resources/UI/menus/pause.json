@@ -1,0 +1,28 @@
+{
+  "children": [
+    { "type": "shade", "color": "black", "opacity": 0.72 },
+    {
+      "type": "panel", "id": "panel", "size": [400, 360], "margin": [24, 12],
+      "stroke": ["ink", 0.8], "fill": ["panel", 0.98],
+      "children": [
+        { "type": "label", "id": "title", "anchor": [0.5, 1], "pivot": [0.5, 0.5], "offset": [0, -28], "size": [0, 20],
+          "text": "pause.title", "font": "interfaceBold", "fontSize": 24,
+          "when": { "online": { "text": "pause.title_online" } } },
+        { "type": "label", "id": "hint", "anchor": [0.5, 1], "pivot": [0.5, 0.5], "offset": [0, -51], "size": [0, 12],
+          "text": "pause.hint", "fontSize": 10, "opacity": 0.65,
+          "when": { "online": { "text": "pause.hint_online" } } },
+        {
+          "type": "buttons", "id": "items", "anchor": [0.5, 1], "pivot": [0.5, 1], "offset": [0, -76], "size": [-44, -82],
+          "rowHeight": 44, "gap": 6,
+          "items": [
+            { "id": "resume", "text": "pause.resume" },
+            { "id": "camera", "text": "pause.camera_chase", "when": { "cockpit": { "text": "pause.camera_cockpit" } } },
+            { "id": "sound", "text": "$sound" },
+            { "id": "restart", "text": "pause.restart", "when": { "online": { "text": "pause.restart_host_only", "disabled": true } } },
+            { "id": "missions", "text": "pause.missions" }
+          ]
+        }
+      ]
+    }
+  ]
+}
