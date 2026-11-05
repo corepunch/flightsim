@@ -429,7 +429,9 @@ static SKShapeNode *Bracket(void) {
     _laserLabel.hidden = _rechargeLabel.hidden = cockpit;
     _laserLabel.text = L10nFormat(@"hud.laser", (int)lroundf(frame.weaponEnergy * 100));
     _laserLabel.fontColor = frame.weaponEnergy < frame.weaponShotEnergy ? EnemyColor(1) : HUDColor(0.9);
-    _rechargeLabel.text = L10n(frame.shield < 0.999 ? @"hud.shield_recharging" : @"hud.shield_full");
+    _rechargeLabel.text = frame.shieldRecharge <= 0 ? @""
+                        : frame.shield < 0.999 ? L10nFormat(@"hud.shield_recharging", (int)lroundf(frame.shieldRecharge * 100))
+                        : L10n(@"hud.shield_full");
 }
 
 - (void)setInputText:(NSString *)text { _inputLabel.text = @""; }

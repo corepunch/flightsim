@@ -654,6 +654,8 @@ static float Ease(float value, float target, float rate, float dt) {
     f.objective = _objectiveSummary;
     f.weaponEnergy = ps->stats[STAT_WEAPON_ENERGY] / 1000.0f;
     f.weaponShotEnergy = _playerDef ? _playerDef->gun.energy : 0;
+    f.weaponRecharge = _playerDef ? _playerDef->gun.recharge : 0;
+    f.shieldRecharge = _playerDef && _playerDef->shield > 0 ? _playerDef->shieldRegen / _playerDef->shield : 0;
 
     simd_quatf inv = simd_inverse(ps->move.orientation);
     f.sun = simd_act(inv, _refresh.sunDirection);

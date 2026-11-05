@@ -228,7 +228,7 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     SKScene *_radar, *_self, *_target, *_status;
 
     // Power panel; hemisphere scopes live at the top edges of the HUD.
-    SKLabelNode *_energyEngine, *_energyLaser, *_energyShield, *_energyBoost;
+    SKLabelNode *_energyEngine, *_energyLaser, *_energyShield, *_energyBoost, *_rechargeRates;
     Bar *_laserBar;
     // Self status
     SCNNode *_selfHolder, *_selfModel;
@@ -457,9 +457,8 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     }
     _laserBar = [[Bar alloc] initWithSize:CGSizeMake(550, 18)];
     _laserBar.position = CGPointMake(24, 254); [_radar addChild:_laserBar];
-    SKLabelNode *rate = Text(20, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.7));
-    rate.text = L10n(@"cockpit.recharge_rates");
-    rate.position = CGPointMake(24, 52); [_radar addChild:rate];
+    _rechargeRates = Text(20, SKLabelHorizontalAlignmentModeLeft, ScreenColor(0.7));
+    _rechargeRates.position = CGPointMake(24, 52); [_radar addChild:_rechargeRates];
 }
 
 static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *barOut, SKLabelNode * __strong *pctOut) {
@@ -577,7 +576,10 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     [self updateLamps:f];
     _energyEngine.text = L10nFormat(@"cockpit.energy_engine", (int)lroundf(f.throttle * 100));
     _energyLaser.text = L10nFormat(@"cockpit.energy_laser", (int)lroundf(f.weaponEnergy * 100));
-    _energyShield.text = L10n(f.shield >= 0.999 ? @"cockpit.energy_shield_full" : @"cockpit.energy_shield_recharging");
+    _energyShield.text = f.shieldRecharge <= 0 ? @""
+                       : L10n(f.shield >= 0.999 ? @"cockpit.energy_shield_full" : @"cockpit.energy_shield_recharging");
+    _rechargeRates.text = L10nFormat(@"cockpit.recharge_rates", (int)lroundf(f.weaponRecharge * 100),
+                                     (int)lroundf(f.shieldRecharge * 100));
     _energyBoost.text = L10nFormat(@"cockpit.energy_boost", (int)lroundf(f.boostEnergy * 100));
     _laserBar.value = f.weaponEnergy;
     _laserBar.fill.color = LevelColor(f.weaponEnergy, 1);

@@ -29,6 +29,7 @@ typedef struct CockpitContact {
 typedef struct CockpitFrame {
     float throttle, speed, maxSpeed, boostEnergy, hull, shield;
     float weaponEnergy, weaponShotEnergy;   // primary weapon capacitor and what one shot costs, 0..1
+    float weaponRecharge, shieldRecharge;   // the ship's, as fractions of full per second; 0 shield: it has none
     float damageFlash;          // 0..1, decays after a hit
     BOOL boosting, firing, alive;
     float pitch, yaw, roll;     // stick deflection, -1..1
