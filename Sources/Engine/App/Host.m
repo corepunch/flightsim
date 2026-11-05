@@ -3,6 +3,7 @@
 #import "Server.h"
 #import "Client.h"
 #import "ClientView.h"
+#import "SceneKitRefresh.h"
 #import "Briefing.h"
 #import "MainMenu.h"
 #import "PauseMenu.h"
@@ -62,6 +63,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     Input *_input;
     Server *_server;
     Client *_client;
+    SceneKitRefresh *_refresh;
     ClientView *_clientView;
     Briefing *_briefing;
     MainMenu *_mainMenu;
@@ -108,7 +110,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _loading = [[Loading alloc] initWithSize:view.bounds.size];
         [_loading showTitle:@"Kestrel Frontier" kicker:@"SPACE FIGHT"
                      detail:@"CNS BASTION  /  LANCER FLIGHT"];
-        _clientView = [[ClientView alloc] initWithView:view input:input];
+        _refresh = [[SceneKitRefresh alloc] initWithRenderer:view size:view.bounds.size];
+        _clientView = [[ClientView alloc] initWithRefresh:_refresh input:input];
         _clientView.cockpit = _cockpit.boolValue;
         __weak ClientView *weakView = _clientView;
         _cockpit.onChange = ^(Cvar *c) { weakView.cockpit = c.boolValue; };
@@ -328,28 +331,20 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     atomic_store(&_loadProgress, progress);
 }
 
-// Upload a hierarchy to the GPU (buffers, textures, shader variants) node by
-// node, so the bar moves and the first rendered frame doesn't stall.
-- (void)prepare:(NSArray *)objects from:(float)p0 to:(float)p1 {
-    SCNView *view = _view;
-    NSUInteger n = objects.count;
-    for (NSUInteger i = 0; i < n; i++) {
-        [view prepareObject:objects[i] shouldAbortBlock:nil];
-        atomic_store(&_loadProgress, p0 + (p1 - p0) * (float)(i + 1) / (float)n);
-    }
+// Upload what the renderer built to the GPU (buffers, textures, shader
+// variants) object by object, so the bar moves and the first rendered frame
+// doesn't stall.
+- (NSUInteger)uploadFrom:(float)p0 to:(float)p1 {
+    return [_refresh upload:^(float f) { atomic_store(&self->_loadProgress, p0 + (p1 - p0) * f); }];
 }
 
 // Load queue: the whole scene, which nobody is rendering yet.
 - (void)bootInBackground {
     CFTimeInterval t0 = CACurrentMediaTime();
     [self reportStage:LoadStageSky progress:0.05f];
-    [SCNTransaction begin];
-    [SCNTransaction setDisableActions:YES];
-    [_clientView buildScene];
-    [SCNTransaction commit];
-    [SCNTransaction flush];
+    [_refresh buildWorld];
     [self reportStage:LoadStageShaders progress:0.7f];
-    [self prepare:[_clientView warmupObjects] from:0.7f to:1.0f];
+    [self uploadFrom:0.7f to:1.0f];
     [self reportStage:LoadStageReady progress:1];
     NSLog(@"Boot loaded in %.2f s", CACurrentMediaTime() - t0);
     atomic_store(&_loadDone, true);
@@ -359,8 +354,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (void)finishBoot {
     _booted = YES;
     SCNView *view = _view;
-    SCNScene *scene = _clientView.scene;
-    SCNNode *camera = _clientView.cameraNode;
+    SCNScene *scene = _refresh.scene;
+    SCNNode *camera = _refresh.cameraNode;
     dispatch_async(dispatch_get_main_queue(), ^{
         view.scene = scene;
         view.pointOfView = camera;
@@ -470,13 +465,12 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 // packets while this runs; the client view isn't drawn.
 - (void)precacheInBackground {
     CFTimeInterval t0 = CACurrentMediaTime();
-    float p = 0;
-    NSArray *objects = [_clientView loadMissionAssets:&p];
+    [_clientView loadMissionAssets:^(float f) { atomic_store(&self->_loadProgress, 0.2f + 0.4f * f); }];
     [self reportStage:LoadStageUpload progress:0.6f];
-    [self prepare:objects from:0.6f to:1.0f];
+    NSUInteger uploaded = [self uploadFrom:0.6f to:1.0f];
     [self reportStage:LoadStageReady progress:1];
-    NSLog(@"Client: mission %lu precached in %.2f s (%lu prototypes)", (unsigned long)_missionIndex + 1,
-          CACurrentMediaTime() - t0, (unsigned long)objects.count);
+    NSLog(@"Client: mission %lu precached in %.2f s (%lu objects uploaded)", (unsigned long)_missionIndex + 1,
+          CACurrentMediaTime() - t0, (unsigned long)uploaded);
     atomic_store(&_loadDone, true);
 }
 
@@ -619,12 +613,12 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 // on the main thread instead of SceneKit's render queue.
 - (void)displayLinkTick:(CADisplayLink *)link {
     [self updateFrameAtTime:link.timestamp];
-    if (_booted) [_clientView renderDisplaysWithQueue:_view.commandQueue time:link.timestamp];
+    if (_booted) [_refresh renderDisplaysWithQueue:_view.commandQueue time:link.timestamp];
 }
 #else
 - (void)renderer:(id<SCNSceneRenderer>)renderer willRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
     if (!_booted) return;   // the cockpit may still be under construction on the load queue
-    [_clientView renderDisplaysWithQueue:renderer.commandQueue time:time];
+    [_refresh renderDisplaysWithQueue:renderer.commandQueue time:time];
 }
 
 - (void)renderer:(id<SCNSceneRenderer>)renderer updateAtTime:(NSTimeInterval)time {

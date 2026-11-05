@@ -20,4 +20,21 @@ if ! "$qa/UnitChecks"; then
     print -u2 "Unit checks failed. Binary: $qa"
     exit 1
 fi
+
+# The client draws only through the Refresh facade (Sources/Engine/Render/Refresh.h):
+# its files must compile, and pull in no header, without SceneKit.
+print '#import <Cocoa/Cocoa.h>\n#import <SpriteKit/SpriteKit.h>' > "$qa/NoSceneKit.h"
+includes=(-ISources/Shared ${(@)$(print -l Sources/Engine/*/(/) | sed 's/^/-I/')})
+for source in Sources/Engine/Client/*.m; do
+    flags=(-fobjc-arc -Wall -mmacosx-version-min=13.0 $includes -include "$qa/NoSceneKit.h")
+    if ! clang $flags -fsyntax-only "$source"; then
+        print -u2 "FAIL: $source does not build without SceneKit"
+        exit 1
+    fi
+    if clang $flags -M "$source" | grep -q 'SceneKit\.framework'; then
+        print -u2 "FAIL: $source includes SceneKit through: $(clang $flags -H -fsyntax-only "$source" 2>&1 | grep -B1 -m1 SceneKit)"
+        exit 1
+    fi
+done
+print "PASS: the client builds without SceneKit"
 rm -rf "$qa"
