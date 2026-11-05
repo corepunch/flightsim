@@ -163,6 +163,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         view.loops = YES;
         view.rendersContinuously = YES;
 #if TARGET_OS_IOS
+        // The frame update runs on the main thread here, so the view's safe
+        // area can be read as the screen enters; laid out with it, the screen
+        // has no reason to rebuild (and lose its entrance) once it is shown.
+        if ([view isKindOfClass:GameView.class])
+            _screens.prepare = ^(SKScene *screen) { [(GameView *)weakSCNView applySafeAreaTo:screen]; };
         view.preferredFramesPerSecond = 60;
         view.antialiasingMode = SCNAntialiasingModeMultisampling2X;
 #else

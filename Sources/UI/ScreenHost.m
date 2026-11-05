@@ -42,6 +42,7 @@
     _shown = next;
     SKNode *cover = _cover;
     _cover = nil;
+    if (_prepare) _prepare(next);
     if ([next conformsToProtocol:@protocol(UIMotionScene)]) [(id<UIMotionScene>)next motionEnter];
     _install(next, cover);
 }

@@ -7,6 +7,13 @@
 #import "Net.h"
 #import "Common.h"
 
+// A screen's safe area, in scene points.
+#if TARGET_OS_IOS
+typedef UIEdgeInsets ScreenInsets;
+#else
+typedef NSEdgeInsets ScreenInsets;
+#endif
+
 // MARK: - Briefing
 
 typedef NS_ENUM(NSInteger, BriefingCommand) {
@@ -219,6 +226,10 @@ void ProgressRecordResult(NSUInteger missionIndex, NSArray<NSString *> *results)
 - (instancetype)initWithScreen:(SKScene *)first install:(void (^)(SKScene *screen, SKNode *cover))install;
 
 @property (nonatomic, readonly) SKScene *shown;
+// Called with the incoming screen just before its entrance, to give it what it
+// needs to lay out as it will be shown (the view's safe area). A screen that
+// has to lay out again once it is on the view rebuilds without its entrance.
+@property (nonatomic, copy) void (^prepare)(SKScene *screen);
 // YES while a screen is playing its exit; input should be held back.
 @property (nonatomic, readonly) BOOL changing;
 
@@ -243,6 +254,8 @@ typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJ
 
 @property (nonatomic, readonly) LANServer *selected;
 @property (nonatomic, copy) NSString *hostLine;     // "Hosting on port 27910", shown at the bottom
+// The safe area in scene points, from the host; a standalone SKView's own wins.
+@property (atomic) ScreenInsets contentInsets;
 
 - (void)showServers:(NSArray<LANServer *> *)servers;
 - (BrowserCommand)handle:(InputAction)actions;
@@ -322,7 +335,8 @@ typedef struct { CGFloat r, g, b; } UIRGB;
 //
 //   { "colors":  { "ink": [0.55, 0.95, 0.85], … },     linear 0..1 RGB
 //     "fonts":   { "interface": "Oxanium-Regular", … },  PostScript names
-//     "metrics": { "slant": 0.36, … } }
+//     "metrics": { "slant": 0.36, … },
+//     "motion":  "full" }                               UIMotionStyle; optional
 //
 // The roles: ink (phosphor text and outlines), amber (emphasis), red
 // (danger); panel, background and map fills; the console variant's steel,
@@ -333,9 +347,20 @@ typedef struct { CGFloat r, g, b; } UIRGB;
 // A missing key logs once and draws magenta / Menlo / 0, so it is easy to
 // spot; Tools/validate_strings.py checks that the file has every key UIStyle uses.
 // Thread-safe; loads once on first use.
+
+// How much the front end moves. A game picks its style with "motion" in its
+// UI/theme.json; the system "reduce motion" setting turns it down to none.
+typedef NS_ENUM(NSInteger, UIMotionStyle) {
+    UIMotionStyleFull,   // the default: decode, glitch, scan sweeps, beam-drawn panels
+    UIMotionStyleFade,   // entrances fade in with the same timing; nothing scrambles or sweeps
+    UIMotionStyleNone,   // everything appears in place
+};
+
 UIRGB UIThemeColor(NSString *name);
 NSString *UIThemeFont(NSString *name);
 CGFloat UIThemeMetric(NSString *name);
+// "motion": "full" (default), "fade" or "none"; see UIMotionStyle.
+UIMotionStyle UIThemeMotion(void);
 
 // MARK: - UIStyle
 
@@ -535,7 +560,11 @@ static const NSTimeInterval UIMotionSlow = 0.55;
 - (NSTimeInterval)motionExit;
 @end
 
-// The system "reduce motion" setting: effects jump to their final state.
+// The style in force: the ui_motion cvar, else none when motion is reduced
+// (ui_reduceMotion, then the system setting), else the theme's.
+UIMotionStyle UIMotionCurrentStyle(void);
+// Anything short of full motion: screens skip their own flourishes (drifting
+// art, selection kicks) and the effects below fade or jump to their end state.
 BOOL UIMotionReduced(void);
 // The ui_timescale cvar plays all front-end motion that many times slower.
 double UIMotionTimeScale(void);
@@ -615,12 +644,6 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size);
 // never at an ad hoc position: the title bar along the top (TitleBar: back,
 // title, actions), the body (lists, grids, the story), and an optional footer
 // for status lines and hints. Compact screens are phones.
-#if TARGET_OS_IOS
-typedef UIEdgeInsets ScreenInsets;
-#else
-typedef NSEdgeInsets ScreenInsets;
-#endif
-
 typedef struct {
     CGRect header, body, footer;   // footer is empty when the screen has none
     CGRect bodyToEdge;             // body run to the bottom screen edge, for scrolling grids on phones

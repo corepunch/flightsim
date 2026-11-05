@@ -47,3 +47,18 @@ NSString *UIThemeFont(NSString *name) {
 CGFloat UIThemeMetric(NSString *name) {
     return [Value(@"metrics", name, NSNumber.class) doubleValue];
 }
+
+UIMotionStyle UIThemeMotion(void) {
+    static UIMotionStyle style;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSString *name = JSONString(Theme(), @"motion") ?: @"full";
+        NSDictionary<NSString *, NSNumber *> *styles = @{
+            @"full": @(UIMotionStyleFull), @"fade": @(UIMotionStyleFade), @"none": @(UIMotionStyleNone),
+        };
+        NSNumber *value = styles[name];
+        if (!value) NSLog(@"UITheme: motion \"%@\" is not full, fade or none; using full", name);
+        style = value ? value.integerValue : UIMotionStyleFull;
+    });
+    return style;
+}

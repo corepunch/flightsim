@@ -64,6 +64,7 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `in_touchOnly` | 0 | | iOS: ignores game controllers |
 | `ui_timescale` | 1 | | Front-end motion runs this many times slower |
 | `ui_reduceMotion` | | | Reduce front-end motion: 0 off, 1 on, empty follows the system setting |
+| `ui_motion` | | | Front-end motion style: full, fade or none; empty follows the game's UI theme |
 | `ui_unlockAll` | 0 | cheat | Every mission is open |
 | `g_aimAssist` | 1 | archive | Scales the aim-assist cone of players' guns (ship `gun.assist`, degrees); 0 turns it off |
 | `g_god` | 0 | cheat | Players take no damage |

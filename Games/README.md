@@ -32,5 +32,10 @@ then the engine's own `Resources/`. A game can therefore also replace the
 engine's `UI/theme.json`, `UI/menus/*.json` or `Audio/*.mp3` by shipping a
 file with the same path.
 
+The theme's `"motion"` picks how the front end moves: `"full"` (the default:
+text decodes, the wordmark glitches, scans sweep, panels are drawn by a beam),
+`"fade"` (the same entrances as plain fades) or `"none"`. The system Reduce
+Motion setting always turns it down to none.
+
 `Tools/validate_story.py` checks every game's levels and campaign;
 `Tools/validate_strings.py` checks every game's string catalogs.

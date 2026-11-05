@@ -12,6 +12,8 @@
 #if TARGET_OS_IOS
 @property (nonatomic, readonly) UIView *flightControlsView;
 - (void)setSecondaryLabel:(NSString *)label;   // the touch controls' secondary weapon button
+// Gives a front-end screen or the HUD this view's safe area. Main thread.
+- (void)applySafeAreaTo:(SKScene *)scene;
 #else
 - (void)releaseMouse;
 #endif

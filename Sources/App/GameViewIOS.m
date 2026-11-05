@@ -65,11 +65,14 @@
     [self updateOverlayInsets];
 }
 
-- (void)updateOverlayInsets {
-    SKScene *overlay = self.overlaySKScene;
-    if ([overlay isKindOfClass:MainMenu.class]) ((MainMenu *)overlay).contentInsets = self.safeAreaInsets;
-    if ([overlay isKindOfClass:HUD.class]) ((HUD *)overlay).contentInsets = self.safeAreaInsets;
-    if ([overlay isKindOfClass:Briefing.class]) ((Briefing *)overlay).contentInsets = self.safeAreaInsets;
+- (void)updateOverlayInsets { [self applySafeAreaTo:self.overlaySKScene]; }
+
+- (void)applySafeAreaTo:(SKScene *)scene {
+    UIEdgeInsets safe = self.safeAreaInsets;
+    if ([scene isKindOfClass:MainMenu.class]) ((MainMenu *)scene).contentInsets = safe;
+    if ([scene isKindOfClass:HUD.class]) ((HUD *)scene).contentInsets = safe;
+    if ([scene isKindOfClass:Briefing.class]) ((Briefing *)scene).contentInsets = safe;
+    if ([scene isKindOfClass:ServerBrowser.class]) ((ServerBrowser *)scene).contentInsets = safe;
 }
 
 - (void)safeAreaInsetsDidChange {

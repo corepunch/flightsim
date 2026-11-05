@@ -363,12 +363,14 @@ static SKShader *MenuArtShader(void) {
     if (boot) {
         _backdropNode.alpha = 0;
         [_backdropNode runAction:[SKAction fadeInWithDuration:0.25]];
-        if (_artNode && !UIMotionReduced()) {
+        if (_artNode && UIMotionCurrentStyle() != UIMotionStyleNone) {
+            // The fade style keeps the art's fade and drops its settle.
+            BOOL settle = !UIMotionReduced();
             _artNode.alpha = 0;
-            [_artNode setScale:1.08];
+            if (settle) [_artNode setScale:1.08];
             [_artNode runAction:[SKAction group:@[
                 UIEased([SKAction fadeInWithDuration:0.9], UICurveOut),
-                UIEased([SKAction scaleTo:1 duration:1.3], UICurveOut),
+                UIEased([SKAction scaleTo:1 duration:settle ? 1.3 : 0], UICurveOut),
             ]] withKey:@"intro"];
         }
         UIMotionSweep(_root, CGRectMake(0, 0, self.size.width, self.size.height),
@@ -389,8 +391,8 @@ static SKShader *MenuArtShader(void) {
         if (!UIMotionReduced()) {
             row.xScale = 0.001;
             [row runAction:UIAfter(at, UIEased([SKAction scaleXTo:1 duration:0.34], UICurveOutExpo))];
-            UIMotionFlickerIn(row, at);
         }
+        UIMotionFlickerIn(row, at);
         for (SKLabelNode *label in _rowLabels[i]) UIMotionDecode(label, at + 0.1, 0.35);
     }
     for (SKLabelNode *label in _footerLabels) UIMotionFlickerIn(label, t + 0.45);

@@ -112,5 +112,6 @@
   "metrics": {
     "slant": 0.36,
     "readoutChamfer": 9.0
-  }
+  },
+  "motion": "full"
 }

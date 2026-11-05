@@ -17,6 +17,9 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 @implementation ServerBrowser {
     SKNode *_stage, *_root;
     UITransition _transition;
+    // From the entrance until the first frame's input: the server list and
+    // status arrive in that frame, and rebuilding for them keeps the entrance.
+    BOOL _entering;
     UIHover *_hover;
     NSArray<LANServer *> *_servers;
     NSUInteger _index;
@@ -73,7 +76,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 }
 
 - (void)rebuild {
-    BOOL intro = _transition == UITransitionIntro;
+    BOOL intro = _transition == UITransitionIntro || _entering;
     _transition = UITransitionNone;
     [_root removeAllChildren];
     [_hover reset];
@@ -90,7 +93,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     [_root addChild:shade];
 
     // Title bar on top, servers in the body, status and notes in the footer.
-    ScreenInsets safe = {0};
+    ScreenInsets safe = self.contentInsets;
 #if TARGET_OS_IOS
     if (self.view) safe = self.view.safeAreaInsets;
 #endif
@@ -172,6 +175,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     _stage.alpha = 1;
     [_stage setScale:1];
     _transition = UITransitionIntro;
+    _entering = YES;
     [self rebuild];
 }
 
@@ -195,6 +199,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 }
 
 - (BrowserCommand)handle:(InputAction)actions {
+    _entering = NO;
     [_hover updateInScene:self];
     CGPoint click = CGPointMake(-1, -1);
     if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);

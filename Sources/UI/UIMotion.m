@@ -25,7 +25,7 @@ static NSString * const CaretName = @"motion.caret";
 @implementation UITypeStop
 @end
 
-BOOL UIMotionReduced(void) {
+static BOOL SystemReducesMotion(void) {
     // ui_reduceMotion overrides the system setting: 0 or 1 forces it, empty
     // follows the system. Checks and scripted runs set it so they see the
     // same motion on every machine.
@@ -42,6 +42,37 @@ BOOL UIMotionReduced(void) {
 #else
     return NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion;
 #endif
+}
+
+UIMotionStyle UIMotionCurrentStyle(void) {
+    static Cvar *c;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        c = [Cvar get:@"ui_motion" defaultValue:@"" flags:0
+                 help:@"Front-end motion style: full, fade or none; empty follows the game's UI theme"];
+    });
+    NSString *forced = c.string;
+    if ([forced isEqualToString:@"full"]) return UIMotionStyleFull;
+    if ([forced isEqualToString:@"fade"]) return UIMotionStyleFade;
+    if ([forced isEqualToString:@"none"]) return UIMotionStyleNone;
+    return SystemReducesMotion() ? UIMotionStyleNone : UIThemeMotion();
+}
+
+BOOL UIMotionReduced(void) { return UIMotionCurrentStyle() != UIMotionStyleFull; }
+
+// The fade style's entrance: the node fades up to its opacity after delay.
+// A node fades in once, however many effects ask for it, so a row that both
+// slides and decodes does not fade from the zero the first call left.
+static NSString * const FadeKey = @"motion.fade";
+
+static BOOL FadeIn(SKNode *node, NSTimeInterval delay, NSTimeInterval duration) {
+    if (UIMotionCurrentStyle() != UIMotionStyleFade) return NO;
+    if ([node actionForKey:FadeKey]) return YES;
+    CGFloat alpha = node.alpha;
+    node.alpha = 0;
+    [node runAction:UIAfter(delay, UIEased([SKAction fadeAlphaTo:alpha duration:MAX(duration, 0.2)], UICurveOut))
+            withKey:FadeKey];
+    return YES;
 }
 
 double UIMotionTimeScale(void) {
@@ -115,7 +146,7 @@ SKNode *UIMotionPivot(SKNode *node, CGPoint pivot) {
 #pragma mark - Entrances
 
 void UIMotionSlideIn(SKNode *node, CGVector offset, NSTimeInterval delay, NSTimeInterval duration) {
-    if (UIMotionReduced()) return;
+    if (FadeIn(node, delay, duration) || UIMotionReduced()) return;
     CGPoint home = node.position;
     CGFloat alpha = node.alpha;
     node.position = PointOffset(home, offset);
@@ -137,7 +168,7 @@ static SKAction *FlickerTo(CGFloat alpha) {
 }
 
 void UIMotionFlickerIn(SKNode *node, NSTimeInterval delay) {
-    if (UIMotionReduced()) return;
+    if (FadeIn(node, delay, 0.22) || UIMotionReduced()) return;
     CGFloat alpha = node.alpha;
     node.alpha = 0;
     [node runAction:UIAfter(delay, FlickerTo(alpha))];
@@ -152,7 +183,7 @@ static unichar ScrambleGlyph(void) {
 
 void UIMotionDecode(SKLabelNode *label, NSTimeInterval delay, NSTimeInterval duration) {
     NSString *text = label.text;
-    if (UIMotionReduced() || !text.length) return;
+    if (!text.length || FadeIn(label, delay, duration) || UIMotionReduced()) return;
     NSUInteger length = text.length;
     // Left-aligned text can grow as it decodes. Centred or right-aligned text
     // keeps its full width so it doesn't slide while resolving.
@@ -210,7 +241,9 @@ static NSAttributedString *Revealed(SKLabelNode *label, NSString *text, NSUInteg
 
 NSTimeInterval UIMotionTypeOn(SKLabelNode *label, NSTimeInterval delay, CGFloat charsPerSecond) {
     NSString *text = label.text;
-    if (UIMotionReduced() || !text.length || charsPerSecond <= 0) return 0;
+    if (!text.length || charsPerSecond <= 0) return 0;
+    if (FadeIn(label, delay, 0.3)) return delay + 0.3;
+    if (UIMotionReduced()) return 0;
     NSUInteger length = text.length;
     if (!label.userData) label.userData = [NSMutableDictionary dictionary];
     label.userData[TypeTextKey] = text;
@@ -247,7 +280,9 @@ NSTimeInterval UIMotionDialogueTypeOn(SKLabelNode *label, NSTimeInterval delay, 
     [label removeActionForKey:TypeKey];
     [[label childNodeWithName:CaretName] removeFromParent];
     NSString *text = label.text;
-    if (UIMotionReduced() || !text.length || charsPerSecond <= 0) return 0;
+    if (!text.length || charsPerSecond <= 0) return 0;
+    if (FadeIn(label, delay, 0.3)) return delay + 0.3;
+    if (UIMotionReduced()) return 0;
     if (!label.userData) label.userData = [NSMutableDictionary dictionary];
     label.userData[TypeTextKey] = text;
     NSAttributedString *full = Revealed(label, text, text.length);
@@ -410,6 +445,7 @@ static void RunGlitch(SKLabelNode *label, NSTimeInterval delay, NSTimeInterval d
 }
 
 void UIMotionGlitchIn(SKLabelNode *label, NSTimeInterval delay, NSTimeInterval duration, SKColor *split) {
+    if (FadeIn(label, delay, duration)) return;
     RunGlitch(label, delay, duration, 1, split, YES);
 }
 
@@ -498,6 +534,10 @@ SKNode *UIMotionDrawPanel(SKNode *panel, CGRect rect, SKColor *color, BOOL fromR
     SKNode *parent = panel.parent;
     SKNode *holder = UIMotionPivot(panel, CGPointMake(CGRectGetMidX(rect), CGRectGetMaxY(rect)));
     if (ready) *ready = delay;
+    if (parent && FadeIn(holder, delay, 0.24)) {
+        if (ready) *ready = delay + 0.12;
+        return holder;
+    }
     if (UIMotionReduced() || !parent) return holder;
 
     const NSTimeInterval run = 0.18, open = 0.24;
@@ -533,6 +573,11 @@ SKNode *UIMotionDrawPanel(SKNode *panel, CGRect rect, SKColor *color, BOOL fromR
 
 NSTimeInterval UIMotionClosePanel(SKNode *holder, CGRect rect, SKColor *color, BOOL toRight) {
     SKNode *parent = holder.parent;
+    if (parent && UIMotionCurrentStyle() == UIMotionStyleFade) {
+        [holder removeAllActions];
+        [holder runAction:[SKAction sequence:@[[SKAction fadeOutWithDuration:0.15], [SKAction removeFromParent]]]];
+        return 0.15;
+    }
     if (UIMotionReduced() || !parent) {
         [holder removeFromParent];
         return 0;
@@ -563,7 +608,7 @@ NSTimeInterval UIMotionClosePanel(SKNode *holder, CGRect rect, SKColor *color, B
 }
 
 void UIMotionWipe(SKNode *node, CGRect rect, SKColor *line, NSTimeInterval delay, NSTimeInterval duration) {
-    if (UIMotionReduced() || !node.parent || CGRectIsEmpty(rect)) return;
+    if (FadeIn(node, delay, duration) || UIMotionReduced() || !node.parent || CGRectIsEmpty(rect)) return;
     SKNode *parent = node.parent;
     SKCropNode *crop = [SKCropNode node];
     SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:[SKColor whiteColor] size:rect.size];
@@ -714,7 +759,7 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
     if (_current >= 0 && _current < (NSInteger)_overlays.count) {
         SKNode *out = _overlays[_current];
         [out removeAllActions];
-        [out runAction:UIMotionReduced() ? [SKAction fadeOutWithDuration:0]
+        [out runAction:UIMotionCurrentStyle() == UIMotionStyleNone ? [SKAction fadeOutWithDuration:0]
                                          : UIEased([SKAction fadeOutWithDuration:0.22], UICurveOut)];
     }
     _current = hit;
@@ -722,7 +767,8 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
     [[GameAudio shared] play:@"ui-hover"];
     SKNode *in = _overlays[hit];
     [in removeAllActions];
-    if (UIMotionReduced()) { in.alpha = 1; return; }
+    if (UIMotionCurrentStyle() == UIMotionStyleNone) { in.alpha = 1; return; }
+    if (UIMotionReduced()) { [in runAction:UIEased([SKAction fadeInWithDuration:0.12], UICurveOut)]; return; }
     in.xScale = 0.92;
     [in runAction:[SKAction group:@[
         UIEased([SKAction fadeInWithDuration:0.12], UICurveOut),

@@ -112,6 +112,11 @@ def main():
                 assert isinstance(value, str) and value, f"theme.json: fonts.{name} missing"
             else:
                 assert isinstance(value, (int, float)), f"theme.json: metrics.{name} missing"
+    # A game picks its front-end motion (UIMotionStyle) in its own UI/theme.json.
+    for path in [THEME, *sorted((ROOT / "Games").glob("*/UI/theme.json"))]:
+        motion = json.loads(path.read_text(encoding="utf-8")).get("motion", "full")
+        assert motion in ("full", "fade", "none"), \
+            f"{path.relative_to(ROOT)}: motion must be full, fade or none, not {motion!r}"
 
     # Every layout the code loads exists.
     named = set()
