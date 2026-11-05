@@ -66,13 +66,18 @@
 //   { "caption": "…", "show": ["corvette", "escorts"], "route": ["start", "n1"],
 //     "focus": "corvette", "schematic": "Engine",
 //     "camera": { "center": "corvette", "span": 2500 },
-//     "labels": [ { "text": "Kill zone", "at": [1200, -3400] } ] }
+//     "labels": [ { "text": "Kill zone", "at": [1200, -3400] } ],
+//     "seconds": 4 }
 @interface BriefingStep : NSObject
 @property (nonatomic, readonly) NSString *caption, *focus;
 @property (nonatomic, readonly) NSString *schematic;                     // a subsystem kind, or nil for the map
 @property (nonatomic, readonly) NSArray<NSString *> *show, *route;
 @property (nonatomic, readonly) BriefingCamera *camera;                  // nil: the default fit
 @property (nonatomic, readonly) NSArray<BriefingLabel *> *labels;        // text is plain or L10nExpand markup
+// Autoplay: seconds to hold after the caption has been typed before the
+// briefing moves on by itself. Without it the step waits for the player.
+@property (nonatomic, readonly) BOOL timed;
+@property (nonatomic, readonly) float seconds;
 + (instancetype)stepWithJSON:(NSDictionary *)json;
 // The map lit on one thing and focused on it.
 + (instancetype)stepFocusing:(NSString *)identifier;

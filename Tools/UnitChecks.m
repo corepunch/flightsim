@@ -684,6 +684,9 @@ static void CheckStory(void) {
     CHECK([step.camera.center.identifier isEqualToString:@"corvette"] && step.camera.span == 2500);
     CHECK(step.labels.count == 1 && !step.labels[0].at.identifier && step.labels[0].at.position.y == -3400);
     CHECK(![BriefingStep stepWithJSON:@{ @"caption": @"c" }].camera);
+    CHECK(![BriefingStep stepWithJSON:@{ @"caption": @"c" }].timed);
+    BriefingStep *timed = [BriefingStep stepWithJSON:@{ @"caption": @"c", @"seconds": @3.5 }];
+    CHECK(timed.timed && timed.seconds == 3.5f);
     // Keyword marks: removed from the text, ranges count visible characters.
     NSArray<NSValue *> *marks;
     CHECK([StoryPlainText(@"Kill *Corvette Vesk* now, *fast*.", &marks) isEqualToString:@"Kill Corvette Vesk now, fast."]);

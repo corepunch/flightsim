@@ -193,6 +193,37 @@ static int CheckTimeline(NSString *output) {
     return EXIT_SUCCESS;
 }
 
+// Autoplay: a timed step moves on after its caption has typed and its
+// seconds are up; any input stops it for the rest of the briefing.
+static int CheckAutoplay(void) {
+    CGSize size = CGSizeMake(1600, 900);
+    for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
+        NSArray<BriefingPage *> *pages = StoryBriefingPages(CampaignMissionAt(mission));
+        for (NSUInteger page = 0; page + 1 < pages.count; page++) {
+            if (!pages[page].step.timed) continue;
+            float seconds = pages[page].step.seconds;
+            for (int touched = 0; touched < 2; touched++) {
+                SizeTarget(size);
+                Briefing *scene = [[Briefing alloc] initWithSize:size];
+                [scene showBriefing:mission page:page];
+                [(id<UIMotionScene>)scene motionEnter];
+                [view presentScene:scene];
+                Render(view, 0);
+                [scene tick:0];
+                UIMotionFinishTyping(scene.speech);
+                [scene tick:1];                                  // starts the clock
+                if (touched) [scene handle:InputActionUp];
+                [scene tick:1 + seconds - 0.1];
+                CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == page);
+                [scene tick:1 + seconds + 0.1];
+                CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == (touched ? page : page + 1));
+            }
+            return EXIT_SUCCESS;
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, const char **argv) {
     @autoreleasepool {
         [NSApplication sharedApplication];
@@ -210,6 +241,7 @@ int main(int argc, const char **argv) {
         if (CheckCampaignCaptions() != EXIT_SUCCESS) return EXIT_FAILURE;
         if (CheckCaret(output) != EXIT_SUCCESS) return EXIT_FAILURE;
         if (CheckHighlight() != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (CheckAutoplay() != EXIT_SUCCESS) return EXIT_FAILURE;
         for (NSValue *value in @[[NSValue valueWithSize:NSMakeSize(1600, 900)], [NSValue valueWithSize:NSMakeSize(852, 393)]]) {
             CGSize size = value.sizeValue;
             SizeTarget(size);

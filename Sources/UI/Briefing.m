@@ -136,6 +136,15 @@ typedef struct {
     MapEmphasis map;
 } Shown;
 
+// A briefing that plays by itself: timed steps advance after their caption
+// has typed plus their seconds, until the player touches anything.
+typedef struct {
+    BOOL stopped;
+    BOOL armed;             // the current page's clock is running
+    NSUInteger page;        // the page it was armed for
+    double due;             // scene time to move on
+} Autoplay;
+
 // Where the footer's buttons are, for clicks.
 typedef struct {
     CGRect confirm, previous, back;
@@ -802,6 +811,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     BOOL _presented;
     NSMutableArray<SKNode *> *_footerNodes;
     Shown _shown;
+    Autoplay _autoplay;
     SKNode *_portraitLayer;
     NSMutableSet<SKSpriteNode *> *_portraitsToDismiss;
     // The speech bubble on screen, and the one being replaced.
@@ -1162,6 +1172,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     _pages = pages;
     _page = MIN(startPage, pages.count - 1);
     _mode = ModeBriefing;
+    _autoplay = (Autoplay){0};
     _transition = UITransitionIntro;
     [self rebuild];
 }
@@ -1728,6 +1739,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         [value getValue:&input size:sizeof(input)];
         if (CGRectContainsPoint(_viewport.rect, PointMultiply(input.point, self.size))) [self scrollBy:input.delta];
     }
+    if (a || click || scrolls.count) _autoplay.stopped = YES;
     // Leave up/down for mission selection and left/right for story pages.
     InputAction scrollUp = _mode == ModeList ? 0 : InputActionUp;
     InputAction scrollDown = _mode == ModeList ? 0 : InputActionDown;
@@ -1848,7 +1860,28 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 - (void)tick:(double)time {
     if (!CGSizeEqualToSize(self.size, _laidOut)) [self rebuild];
-    if (_mode == ModeBriefing) [_map pulse:time];
+    if (_mode == ModeBriefing) {
+        [_map pulse:time];
+        [self autoplayAt:time];
+    }
+}
+
+// Moves a timed page on once its caption is typed and its seconds are up.
+- (void)autoplayAt:(double)time {
+    BriefingStep *step = _pages[_page].step;
+    if (_autoplay.stopped || !step.timed || ![self hasNextBriefingPage] || !_presented) return;
+    if (UIMotionIsTyping(_caption.speech)) {
+        _autoplay.armed = NO;
+        return;
+    }
+    if (!_autoplay.armed || _autoplay.page != _page) {
+        _autoplay = (Autoplay){ .armed = YES, .page = _page, .due = time + step.seconds };
+        return;
+    }
+    if (time < _autoplay.due) return;
+    _autoplay.armed = NO;
+    _page++;
+    [self turnPage];
 }
 
 @end

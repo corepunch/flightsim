@@ -73,7 +73,10 @@ def check_place(index, place, map_ids):
 
 
 def check_camera_and_labels(index, step, map_ids):
-    """Optional "camera": {center, span} and "labels": [{text, at}] on a tactical step."""
+    """Optional "camera": {center, span}, "labels": [{text, at}] and "seconds" on a tactical step."""
+    if "seconds" in step:
+        seconds = step["seconds"]
+        assert isinstance(seconds, (int, float)) and not isinstance(seconds, bool) and 0 <= seconds <= 60, (index, step)
     camera = step.get("camera")
     if camera is not None:
         assert isinstance(camera, dict) and camera and set(camera) <= {"center", "span"}, (index, camera)

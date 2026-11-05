@@ -118,6 +118,9 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
     step->_route = JSONStrings(json, @"route");
     step->_camera = [BriefingCamera cameraWithJSON:JSONObject(json, @"camera")];
     step->_labels = ObjectsOf(json, @"labels", ^id(NSDictionary *label) { return [BriefingLabel labelWithJSON:label]; });
+    NSNumber *seconds = JSONNumber(json, @"seconds");
+    step->_timed = seconds != nil;
+    step->_seconds = MAX(0, seconds.floatValue);
     return step;
 }
 
