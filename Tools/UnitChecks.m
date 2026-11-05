@@ -102,6 +102,15 @@ static void CheckShipMove(void) {
     CHECK(s.boostDepleted && !s.boosting);
     for (int i = 0; i < 3; i++) ShipMove(&s, &params, (ShipInput){ 0, 0, 0, 1, true }, TICK_DT);
     CHECK(!s.boosting);
+
+    // A ship with no power coasts: heading and spin kept, speed bleeding off slowly.
+    ShipMoveReset(&s, 0, simd_quaternion(0.0f, simd_make_float3(0, 1, 0)));
+    s.angularVelocity = simd_make_float3(0.2f, 0, 0);
+    s.throttle = 1;
+    for (int i = 0; i < 30 * 10; i++) ShipDrift(&s, TICK_DT);
+    CHECK(s.throttle == 0 && !s.boosting && NEAR(simd_length(s.angularVelocity), 0.2f, 1e-6f));
+    CHECK(simd_length(s.velocity) > 30 && simd_length(s.velocity) < 60);     // 60 m/s at reset
+    CHECK(simd_dot(QuatForward(s.orientation), simd_make_float3(0, 0, -1)) < 0.9f);
 }
 
 static void CheckAimAssist(void) {
@@ -190,6 +199,7 @@ static void CheckPlayerState(void) {
     ps.params = params;
     ps.entity = 42;
     ps.alive = 1;
+    ps.disabled = 1;
     ps.hull = 0.8f;
     ps.shield = 0.3f;
     ps.missionTime = 123.5f;
@@ -206,7 +216,7 @@ static void CheckPlayerState(void) {
     // wire exactly, not approximately.
     CHECK(MoveEqual(&back.move, &ps.move));
     CHECK(memcmp(&back.params, &ps.params, sizeof ps.params) == 0);
-    CHECK(back.entity == ps.entity && back.alive == ps.alive && back.hull == ps.hull && back.shield == ps.shield);
+    CHECK(back.entity == ps.entity && back.alive == ps.alive && back.disabled == 1 && back.hull == ps.hull && back.shield == ps.shield);
     CHECK(back.missionTime == ps.missionTime && back.commandTime == ps.commandTime && back.lastCommand == ps.lastCommand);
     CHECK(memcmp(back.stats, ps.stats, sizeof ps.stats) == 0);
 }
@@ -734,6 +744,12 @@ static void CheckMissionRuntime(void) {
     Run(w, 10);
     CHECK(w.ended == 2);
 
+    // Failure: the only player's ship is disabled, alive but out of the fight.
+    w = StartTestLevel();
+    w.players[0].missionDisabled = YES;
+    Run(w, 10);
+    CHECK(w.ended == 2);
+
     CheckArrivals();
     CheckUnitStateTriggers();
     CheckQuantifiersAndTimeLimit();
@@ -810,6 +826,11 @@ static void CheckGameChain(void) {
         CHECK(w->acceleration == 260 && w->maxSpeed == 420 && w->turn == 3 && w->life == 9 && NEAR(w->damage, 1.2f, 1e-6f));
         CHECK(w->capitalDamage == 4 && w->fuse == 10);
     }
+    // Ion fire is off, and systems 1, unless a ship says so; aiGun inherits "ion" from gun.
+    CHECK(plain && !plain->gun.ion && !plain->aiGun.ion && plain->systems == 1);
+    const ShipDef *ionBoat = ShipDefNamed(@"zcheck-ionboat");
+    CHECK(ionBoat && ionBoat->gun.ion && ionBoat->aiGun.ion && NEAR(ionBoat->systems, 0.4f, 1e-6f));
+    CHECK(ionBoat && NEAR(ionBoat->gun.damage, 0.2f, 1e-6f) && NEAR(ionBoat->aiGun.damage, 0.3f, 1e-6f));
     // Its own ship (run-unit-checks.sh writes it) states durability and a secondary.
     const ShipDef *gunship = ShipDefNamed(@"zcheck-gunship");
     CHECK(gunship && NEAR(gunship->hull, 2.5f, 1e-6f) && gunship->shield == 0 && NEAR(gunship->shieldRegen, 0.2f, 1e-6f));

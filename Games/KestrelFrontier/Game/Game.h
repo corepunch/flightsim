@@ -72,6 +72,14 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic) float hull, shield, laserEnergy;     // hull and shield in hull units, up to the ship's
 @property (nonatomic, readonly) float hullFraction, shieldFraction;     // 0..1 of the ship's, as the wire carries them
 @property (nonatomic, readonly) BOOL shielded;           // the shield still stops a hit
+@property (nonatomic) float systems;                     // ion damage left before it is disabled, up to the ship's
+@property (nonatomic, readonly) float systemsFraction;   // 0..1 of the ship's
+// Systems down by ion fire: the ship is alive and targetable but helpless. It
+// cannot fire, boost or steer, its throttle is zero, it coasts and tumbles
+// slowly, its shield no longer recharges, and its AI pilot stops thinking.
+// Only an ion hit sets it (-disable); -resetAt: clears it.
+@property (nonatomic, readonly) BOOL disabled;
+- (void)disable;
 @property (nonatomic) BOOL alive;
 @property (nonatomic) BOOL attacked;              // taken hostile damage
 @property (nonatomic) BOOL departed;              // left the level alive (jumped out or docked); not alive
@@ -90,6 +98,9 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 - (void)step:(ShipInput)input dt:(float)dt;
 - (simd_float3)nextGunWorldPosition;
 - (BOOL)takeDamage:(float)amount;   // YES if the shield took the hit
+// Ion fire: drains the shield ION_SHIELD_DRAIN times as fast, then the systems,
+// never the hull. Disables the ship at zero systems. YES if the shield took the hit.
+- (BOOL)takeIonDamage:(float)amount;
 @end
 
 #pragma mark - Capital
@@ -150,6 +161,8 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 - (BOOL)hitSegmentFrom:(simd_float3)a to:(simd_float3)b point:(simd_float3 *)point
              subsystem:(GSubsystem * __autoreleasing *)subsystem;
 - (BOOL)damage:(float)amount subsystem:(GSubsystem *)subsystem;
+// Ion fire hurts only the shield generators and engines, never the hull. YES if absorbed.
+- (BOOL)ionDamage:(float)amount subsystem:(GSubsystem *)subsystem;
 @end
 
 #pragma mark - Pilots, torpedoes, objectives, clients
@@ -219,6 +232,7 @@ typedef NS_ENUM(NSInteger, PilotLeaving) { PilotStaying, PilotDocking, PilotJump
 typedef struct {
     simd_float3 position, velocity;
     float life, damage, capDamage;
+    BOOL ion;                            // drains systems, not hull
     Team team;
     __unsafe_unretained GClient *owner;  // cleared on disconnect; clients outlive bolts in practice
     uint16_t id;
@@ -277,6 +291,8 @@ extern GWorld *level;
 
 @interface GWorld (AI)
 - (void)thinkPilot:(GPilot *)p dt:(float)dt;
+- (id)pickTargetFor:(GPilot *)p;                    // nil: nothing it may attack (disabled fighters are spared)
+- (BOOL)pilot:(GPilot *)p mayAttack:(id)target;       // NO for a disabled fighter, unless the pilot is ordered to destroy it
 - (void)fireTurrets:(GCapital *)c;
 - (void)checkMine:(GCapital *)m;
 @end
@@ -296,10 +312,11 @@ const GameRules *GRules(void);
 
 @interface GWorld (Weapons)
 - (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life
-               team:(Team)team damage:(float)damage capDamage:(float)capDamage owner:(GClient *)owner;
+               team:(Team)team damage:(float)damage capDamage:(float)capDamage ion:(BOOL)ion owner:(GClient *)owner;
 - (void)muzzleFlash:(GFighter *)s;
 - (void)damageShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake;   // hostile fire: marks the ship attacked
 - (void)harmShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake;     // the same without that (collisions, scripted kills)
+- (void)ionShip:(GFighter *)s amount:(float)amount shake:(float)shake;
 - (void)updateBolts:(float)dt;
 - (void)updateTorpedoes:(float)dt;
 - (void)updateExplosions;

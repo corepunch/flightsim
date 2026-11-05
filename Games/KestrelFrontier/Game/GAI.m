@@ -30,7 +30,7 @@ static const float kDockRange = 45, kJumpOutAfter = 3;
         for (id u in units) if (BodyAlive(u)) { anchor = BodyPosition(u); leash = 1600; break; }
     }
     for (GFighter *f in [self fighters]) {
-        if (f == s || !f.alive || !TeamsHostile(s.team, f.team)) continue;
+        if (f == s || !f.alive || f.disabled || !TeamsHostile(s.team, f.team)) continue;
         if (simd_distance(f.position, anchor) > leash) continue;
         float d = simd_distance(f.position, s.position);
         if ([self isPlayerShip:f]) d *= 0.85f;   // players draw a little extra attention
@@ -45,11 +45,21 @@ static const float kDockRange = 45, kJumpOutAfter = 3;
     return best;
 }
 
+// A disabled fighter is spared unless the pilot was ordered to destroy it.
+- (BOOL)pilot:(GPilot *)p mayAttack:(id)target {
+    if (![target isKindOfClass:[GFighter class]] || !((GFighter *)target).disabled) return YES;
+    return [p.order isEqualToString:@"strike"] && p.orderTarget && [[self unitsFor:p.orderTarget] containsObject:target];
+}
+
 - (void)thinkPilot:(GPilot *)p dt:(float)dt {
     GFighter *s = p.ship;
     if (!s.alive) return;
+    if (s.disabled) {
+        [s step:(ShipInput){0} dt:dt];    // coasts, does not think
+        return;
+    }
     if (p.leaving != PilotStaying) { [self flyOut:p dt:dt]; return; }
-    if (_time > p.retargetAt || !BodyAlive(p.target) || (p.target && !TeamsHostile(s.team, BodyTeam(p.target)) && BodyTeam(p.target) != TeamNeutral)) {
+    if (_time > p.retargetAt || !BodyAlive(p.target) || ![self pilot:p mayAttack:p.target] || (p.target && !TeamsHostile(s.team, BodyTeam(p.target)) && BodyTeam(p.target) != TeamNeutral)) {
         p.target = [self pickTargetFor:p];
         p.retargetAt = _time + p.skill.reaction + frand();
     }
@@ -105,7 +115,7 @@ static const float kDockRange = 45, kJumpOutAfter = 3;
         if (simd_dot(s.forward, leadDir) > cone && _time - s.lastShot > gun.interval + frand() * p.skill.fireJitter) {
             s.lastShot = _time;
             [self fireFrom:[s nextGunWorldPosition] velocity:s.velocity direction:simd_normalize(s.forward + randomUnit() * 0.008f)
-                     speed:gun.speed life:gun.life team:s.team damage:gun.damage capDamage:gun.capitalDamage owner:s.client];
+                     speed:gun.speed life:gun.life team:s.team damage:gun.damage capDamage:gun.capitalDamage ion:gun.ion owner:s.client];
             [self muzzleFlash:s];
         }
     }
@@ -176,7 +186,7 @@ static const float kDockRange = 45, kJumpOutAfter = 3;
         float bestD = FLT_MAX;
         if (!fighters) fighters = [self fighters];
         for (GFighter *f in fighters) {
-            if (!f.alive || !TeamsHostile(c.team, f.team)) continue;
+            if (!f.alive || f.disabled || !TeamsHostile(c.team, f.team)) continue;
             float d = simd_distance(f.position, pos);
             if (d < 1100 && d < bestD && simd_dot(simd_normalize(f.position - pos), out) > -0.15f) { bestD = d; best = f; }
         }
@@ -194,7 +204,7 @@ static const float kDockRange = 45, kJumpOutAfter = 3;
         simd_float3 dir = simd_normalize(simd_normalize(aim - pos) + randomUnit() * 0.015f);
         BOOL vsCap = [best isKindOfClass:[GCapital class]];
         [self fireFrom:pos + out * 4 velocity:c.velocity direction:dir speed:kTurretBoltSpeed life:kTurretBoltLife team:c.team
-                damage:0.05f capDamage:vsCap ? 0.18f : 0.1f owner:nil];
+                damage:0.05f capDamage:vsCap ? 0.18f : 0.1f ion:NO owner:nil];
     }
 }
 

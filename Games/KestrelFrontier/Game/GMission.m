@@ -74,7 +74,7 @@ static NSString *PartKindName(SubsystemKind kind) {
 - (float)missionHullFraction { return self.hullFraction; }
 - (BOOL)missionAttacked { return self.attacked; }
 - (BOOL)missionScanned { return NO; }       // only capitals carry cargo to scan
-- (BOOL)missionDisabled { return NO; }
+- (BOOL)missionDisabled { return self.disabled; }
 - (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly { return 0; }
 @end
 

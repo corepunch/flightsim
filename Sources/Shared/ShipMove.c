@@ -42,6 +42,18 @@ void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput c, float dt) {
     s->origin += s->velocity * dt;
 }
 
+void ShipDrift(ShipMoveState *s, float dt) {
+    s->throttle = 0;
+    s->boosting = 0;
+    float w = simd_length(s->angularVelocity);
+    if (w > 1e-5f) {
+        simd_quatf dq = simd_quaternion(w * dt, s->angularVelocity / w);
+        s->orientation = simd_normalize(simd_mul(s->orientation, dq));
+    }
+    s->velocity *= expf(-0.05f * dt);
+    s->origin += s->velocity * dt;
+}
+
 simd_float3 AimAssist(simd_float3 forward, simd_float3 muzzle, simd_float3 shooterVelocity,
                       simd_float3 target, simd_float3 targetVelocity, float boltSpeed, float range, float cone) {
     if (cone <= 0 || boltSpeed <= 0) return forward;

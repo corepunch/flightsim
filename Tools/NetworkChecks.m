@@ -5,6 +5,7 @@
 #import "Net.h"
 #import "Shared.h"
 #import "Common.h"
+#import "Game.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -65,7 +66,7 @@ static BOOL assertPendingPrediction;
 @interface Spy : NSObject
 @property NSArray *configStrings;
 @property uint16_t predictedEntity;
-@property NSUInteger shots, bolts;
+@property NSUInteger shots, bolts, ionShots, ionBolts;
 @property float life, boltLife, relativeSpeed;
 @property ShipMoveState drawn;
 @property NSMutableArray<NSData *> *predictedVelocities, *serverVelocities;
@@ -79,12 +80,14 @@ static BOOL assertPendingPrediction;
         simd_float3 v = e->vel;
         [self.serverVelocities addObject:[NSData dataWithBytes:&v length:sizeof v]];
         self.bolts++; self.boltLife = e->scale;
+        if (e->flags & EVF_ION) self.ionBolts++;
         self.relativeSpeed = simd_length(e->vel - ps->move.velocity);
     }
 }
-- (void)predictedShotFrom:(simd_float3)p velocity:(simd_float3)v gun:(simd_float3)g life:(float)life {
+- (void)predictedShotFrom:(simd_float3)p velocity:(simd_float3)v gun:(simd_float3)g life:(float)life ion:(BOOL)ion {
     [self.predictedVelocities addObject:[NSData dataWithBytes:&v length:sizeof v]];
     self.shots++; self.life = life;
+    if (ion) self.ionShots++;
 }
 - (void)drawEntities:(const EntityState *)e count:(NSUInteger)n player:(const PlayerState *)ps
            controls:(ControlState)c time:(double)t dt:(float)dt { self.drawn = ps->move; }
@@ -265,6 +268,115 @@ static void AimAssistCheck(void) {
     printf("PASS aim assist: %lu/%lu hits off, %lu/%lu on; predicted shots match the server's\n",
            (unsigned long)missed, (unsigned long)off.bolts, (unsigned long)hit, (unsigned long)on.bolts);
 }
+// Ion rules on a bare fighter: the shield drains twice as fast, then the
+// systems, never the hull; at zero systems it is disabled and lasers still kill.
+static void IonRules(void) {
+    GFighter *f = [GFighter fighterWithShip:@"dummy" ai:YES]; CHECK(f);
+    CHECK(f.definition->gun.ion == NO && f.shield == 0.5f && f.systems == 0.5f && f.hull == 3 && !f.disabled);
+    CHECK([f takeIonDamage:0.1f]);                  // shield up: takes 0.2
+    CHECK(fabsf(f.shield - 0.3f) < 1e-5f && f.systems == 0.5f && f.hull == 3);
+    CHECK([f takeIonDamage:0.1f] && fabsf(f.shield - 0.1f) < 1e-5f);
+    CHECK([f takeIonDamage:0.1f]);                  // 0.1 shield left, 0.1 spills over: 0.05 systems
+    CHECK(f.shield == 0 && fabsf(f.systems - 0.45f) < 1e-5f && f.hull == 3 && !f.shielded);
+    CHECK(![f takeIonDamage:0.3f] && fabsf(f.systems - 0.15f) < 1e-5f && !f.disabled);
+    CHECK(f.systemsFraction > 0.29f && f.systemsFraction < 0.31f);
+    [f takeIonDamage:0.3f];
+    CHECK(f.disabled && f.systems == 0 && f.alive && f.hull == 3 && f.hullFraction == 1);
+    [f takeIonDamage:5];                            // nothing more to take
+    CHECK(f.alive && f.hull == 3);
+    CHECK([f takeDamage:1] == NO && f.hull == 2 && f.disabled);
+    [f takeDamage:5];
+    CHECK(!f.alive);
+    [f resetAt:simd_make_float3(0, 0, 0) facing:simd_quaternion(0.0f, simd_make_float3(0, 1, 0))];
+    CHECK(!f.disabled && f.systems == 0.5f && f.alive);
+    printf("PASS ion damage: shield drained at %gx, then systems; hull untouched; disabled at zero\n", ION_SHIELD_DRAIN);
+}
+// A player's ion gun against a drone: the shots are drawn as ion, the drone
+// ends up disabled but alive with its hull whole, and a laser still kills it.
+static void IonRun(void) {
+    routes = [NSMutableDictionary dictionary];
+    delay = 0; dropEvery = 0; blackout = NO; assertPendingPrediction = YES;
+    Server *server = [[Server alloc] initWithName:@"ion"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-ion"];
+    IonRules();       // needs the game module up: a fighter looks its model up in the server
+    CHECK([Cvar set:@"g_aimAssist" value:@"1"]);
+    Spy *view = [Spy new];
+    view.predictedVelocities = [NSMutableArray array]; view.serverVelocities = [NSMutableArray array];
+    Client *c = [[Client alloc] initWithView:(ClientView *)view];
+    __weak Client *weak = c; c.gamestateHandler = ^{ [weak begin]; };
+    [c connectTo:[NetAddress loopback:1] transport:[Link port:10] name:@"gunner"];
+    Steps(server, @[c], (ControlState){0}, 150);
+    GFighter *drone = nil;
+    for (GFighter *f in [level fighters]) if (!f.client) drone = f;
+    CHECK(drone && drone.alive && !drone.disabled && drone.shield == 0.5f);
+    Steps(server, @[c], (ControlState){ .fire = YES }, 200);
+    Steps(server, @[c], (ControlState){0}, 45);
+    CHECK(view.ionShots > 5 && view.ionBolts == view.bolts && view.bolts > 10);
+    CHECK(drone.disabled && drone.alive && drone.hull == 3 && drone.shield == 0 && drone.systems == 0);
+    // The wire says so, and the AI leaves it alone unless ordered to destroy it.
+    const EntityState *seen = NULL;
+    Snapshot *snap = Latest(c);
+    for (NSUInteger i = 0; i < snap.entityCount; i++) if (snap.entityStates[i].number == drone.number) seen = &snap.entityStates[i];
+    CHECK(seen && (seen->flags & EF_DISABLED) && seen->hull == 1);
+    GPilot *hunter = [GPilot new];
+    hunter.ship = [GFighter fighterWithShip:@"wasp" ai:YES]; hunter.ship.team = TeamFriend;
+    hunter.ship.position = simd_make_float3(0, 0, -500);
+    CHECK([level pickTargetFor:hunter] == nil);
+    hunter.order = @"strike"; hunter.orderTarget = @"dummy";
+    CHECK([level pickTargetFor:hunter] == drone && [level pilot:hunter mayAttack:drone]);
+    hunter.order = nil; hunter.orderTarget = nil;
+    CHECK(![level pilot:hunter mayAttack:drone]);
+    CHECK(simd_length(drone->move.angularVelocity) > 0.1f && simd_length(drone->move.angularVelocity) < 0.35f);
+    [level damageShip:drone amount:10 by:nil shake:0];
+    CHECK(!drone.alive);
+    [[Cvar find:@"g_aimAssist"] reset];
+    [c disconnect]; [server frame:0]; [server stop];
+    printf("PASS ion gun: %lu ion bolts, drone disabled with its hull whole, lasers still destroy it\n", (unsigned long)view.ionBolts);
+}
+// The player's own ship is disabled: commands are ignored, nothing fires, the
+// throttle is zero, and it coasts on, slowing a little and tumbling slowly.
+static void IonPlayer(void) {
+    routes = [NSMutableDictionary dictionary];
+    delay = 0; dropEvery = 0; blackout = NO; assertPendingPrediction = YES;
+    Server *server = [[Server alloc] initWithName:@"ion player"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-1"];
+    Spy *view = [Spy new];
+    view.predictedVelocities = [NSMutableArray array]; view.serverVelocities = [NSMutableArray array];
+    Client *c = [[Client alloc] initWithView:(ClientView *)view];
+    __weak Client *weak = c; c.gamestateHandler = ^{ [weak begin]; };
+    [c connectTo:[NetAddress loopback:1] transport:[Link port:10] name:@"pilot"];
+    Steps(server, @[c], (ControlState){ .throttle = 1 }, 150);
+    GFighter *me = nil;
+    for (GFighter *f in [level fighters]) if (f.client) me = f;
+    CHECK(me && me.alive && !me.disabled && !Latest(c).ps.disabled);
+    NSUInteger bolts = view.bolts;
+    [me takeIonDamage:100];
+    CHECK(me.disabled && me.alive && me.hull == me.definition->hull);
+    float speed0 = simd_length(me.velocity);
+    simd_quatf orientation0 = me.orientation;
+    CHECK(speed0 > 50);
+    // The first frame is predicted from a snapshot that still says flying: one tolerated correction.
+    assertPendingPrediction = NO;
+    Steps(server, @[c], (ControlState){ .throttle = 1, .pitch = 1, .roll = 1, .boost = YES, .fire = YES }, 3);
+    assertPendingPrediction = YES;
+    NSUInteger shots = view.shots;      // the client stops predicting shots once the snapshot says disabled
+    Steps(server, @[c], (ControlState){ .throttle = 1, .pitch = 1, .roll = 1, .boost = YES, .fire = YES }, 57);
+    PlayerState ps = Latest(c).ps;
+    float speed1 = simd_length(me.velocity);
+    CHECK(ps.disabled && ps.alive && ps.move.throttle == 0 && !ps.move.boosting);
+    CHECK(speed1 < speed0 && speed1 > speed0 * 0.8f);              // coasts, bleeding off slowly
+    float w = simd_length(ps.move.angularVelocity);
+    // A slow tumble, not the stick. Its axis is random and may lie along the
+    // nose, so compare whole orientations rather than the forward vector.
+    CHECK(w > 0.1f && w < 0.35f && fabsf(simd_dot(me.orientation.vector, orientation0.vector)) < 0.99999f);
+    CHECK(view.shots == shots && view.bolts == bolts);             // no shots, predicted or real
+    CHECK(me.laserEnergy >= 0);
+    float after = me.shield;
+    Steps(server, @[c], (ControlState){0}, 60);
+    CHECK(me.shield == after);                                     // no recharge
+    [c disconnect]; [server frame:0]; [server stop];
+    puts("PASS disabled player ship: commands ignored, no fire, coasts and tumbles, flag on the wire");
+}
 static void UDPSmoke(void) {
     assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
@@ -294,6 +406,8 @@ int main(int argc, const char **argv) { @autoreleasepool {
     CHECK(predictionChecks > 1000);
     printf("PASS %lu pending-input prediction comparisons against subsequent authority\n", (unsigned long)predictionChecks);
     AimAssistCheck();
+    IonRun();
+    IonPlayer();
     UDPSmoke();
     puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;

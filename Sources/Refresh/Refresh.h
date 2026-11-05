@@ -22,6 +22,7 @@ typedef struct CockpitContact {
     BOOL capital;               // a big ship or station (bigger scanner blip)
     BOOL shielded;              // capital with its shield generators up
     BOOL attacking;             // in an attack run on the player
+    BOOL disabled;              // a fighter drifting with its systems down
     __unsafe_unretained id preview;           // Refresh preview handle for the target readout
     __unsafe_unretained NSString *name, *className, *cargo, *component;
 } CockpitContact;
@@ -194,7 +195,7 @@ typedef struct {
 
 #pragma mark Effects (render thread)
 
-- (void)showBolt:(int)slot at:(simd_float3)position velocity:(simd_float3)velocity friendly:(BOOL)friendly;
+- (void)showBolt:(int)slot at:(simd_float3)position velocity:(simd_float3)velocity friendly:(BOOL)friendly ion:(BOOL)ion;
 - (void)moveBolt:(int)slot to:(simd_float3)position;
 - (void)hideBolt:(int)slot;
 // `local` is in the entity's space; the key may be the player's.

@@ -154,7 +154,7 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 // Bolt prototype: node whose children are a core and a glow capsule along +Y.
 - (SCNNode *)makeBoltNode;
-- (void)styleBolt:(SCNNode *)bolt player:(BOOL)player;
+- (void)styleBolt:(SCNNode *)bolt player:(BOOL)player ion:(BOOL)ion;
 
 - (void)muzzleFlashOn:(SCNNode *)parent local:(simd_float3)local player:(BOOL)player;
 - (void)impactAt:(simd_float3)p player:(BOOL)playerBolt shielded:(BOOL)shielded;

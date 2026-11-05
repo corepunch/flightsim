@@ -181,7 +181,7 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
     if (_rules.failWhenPlayersDown) {
         NSArray<id<MissionUnit>> *players = [_world missionPlayers];
         BOOL anyAlive = NO;
-        for (id<MissionUnit> p in players) if (p.missionAlive) anyAlive = YES;
+        for (id<MissionUnit> p in players) if (p.missionAlive && !p.missionDisabled) anyAlive = YES;   // a disabled ship is out of the fight
         if (players.count && !anyAlive) failed = YES;
     }
     for (MissionObjective *o in _objectives) {

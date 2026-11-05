@@ -225,18 +225,18 @@ static float Ease(float value, float target, float rate, float dt) {
 // Bolts fired by the player's side look different from the rest.
 - (BOOL)friendly:(uint8_t)team { return [self relationTo:team] == RelationFriendly; }
 
-- (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel life:(float)life friendly:(BOOL)friendly id:(uint16_t)boltId {
+- (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel life:(float)life friendly:(BOOL)friendly ion:(BOOL)ion id:(uint16_t)boltId {
     for (int i = 0; i < REF_MAX_BOLTS; i++) {
         if (_bolts[i].active) continue;
         _bolts[i] = (ClientBolt){ pos, vel, life > 0 ? life : 1.6f, boltId, YES, NO };
-        [_refresh showBolt:i at:pos velocity:vel friendly:friendly];
+        [_refresh showBolt:i at:pos velocity:vel friendly:friendly ion:ion];
         return i;
     }
     return -1;
 }
 
-- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal life:(float)life {
-    int i = [self spawnBolt:pos velocity:velocity life:life friendly:YES id:0];
+- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal life:(float)life ion:(BOOL)ion {
+    int i = [self spawnBolt:pos velocity:velocity life:life friendly:YES ion:ion id:0];
     if (i >= 0) {
         _bolts[i].awaitingId = YES;
         _boltSerial[i] = ++_nextBoltSerial;
@@ -281,7 +281,7 @@ static float Ease(float value, float target, float rate, float dt) {
                 if (simd_dot(simd_normalize(b->velocity), simd_normalize(e->vel)) < 0.99999f) {
                     b->velocity = e->vel;
                     b->position = e->pos + e->vel * b->age;
-                    [_refresh showBolt:best at:b->position velocity:b->velocity friendly:YES];
+                    [_refresh showBolt:best at:b->position velocity:b->velocity friendly:YES ion:(e->flags & EVF_ION) != 0];
                 }
                 return;
             }
@@ -289,7 +289,7 @@ static float Ease(float value, float target, float rate, float dt) {
     }
     switch (e->type) {
         case EV_BOLT:
-            [self spawnBolt:e->pos velocity:e->vel life:e->scale friendly:[self friendly:e->team] id:e->id];
+            [self spawnBolt:e->pos velocity:e->vel life:e->scale friendly:[self friendly:e->team] ion:(e->flags & EVF_ION) != 0 id:e->id];
             break;
         case EV_IMPACT:
             if (e->id)
@@ -649,7 +649,7 @@ static float Ease(float value, float target, float rate, float dt) {
     f.damageFlash = _damageFlash;
     f.boosting = ps->move.boosting;
     f.alive = ps->alive;
-    f.firing = c.fire && ps->alive;
+    f.firing = c.fire && ps->alive && !ps->disabled;
     f.pitch = c.pitch;
     f.yaw = c.yaw;
     f.roll = c.roll;
@@ -700,6 +700,7 @@ static float Ease(float value, float target, float rate, float dt) {
         k.hull = s.hull;
         k.shield = s.shield;
         k.systems = -1;
+        k.disabled = (s.flags & EF_DISABLED) != 0;
         k.component = L10n(@"part.hull");
         k.cargo = fighter ? L10n(@"cockpit.cargo_none") : (s.flags & EF_SCANNED) ? ([self stringAt:s.cargo].length ? [self stringAt:s.cargo] : L10n(@"cockpit.cargo_no_manifest")) : L10n(@"cockpit.unknown");
         if (fighter) {
@@ -710,7 +711,8 @@ static float Ease(float value, float target, float rate, float dt) {
             k.attacking = hostile && (s.flags & EF_ATTACKING) && s.target == ps->entity &&
                           simd_dot(QuatForward(s.orientation), -rel / fmaxf(dist, 1)) > 0.8f;
             if (k.attacking && dist < 700 && k.local.z > 0) f.six = YES;
-            if (hostile) f.nearest = fminf(f.nearest, dist);
+            if (k.disabled) k.systems = 0;
+            if (hostile && !k.disabled) f.nearest = fminf(f.nearest, dist);
         } else {
             BOOL prop = (s.flags & EF_PROP) != 0;
             k.capital = !prop;

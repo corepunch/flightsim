@@ -191,6 +191,7 @@
     "cockpit.mode_attack": "INCOMING ATTACK",
     "cockpit.mode_shielded": "SHIELDED",
     "cockpit.mode_vulnerable": "VULNERABLE",
+    "cockpit.mode_disabled": "DISABLED",
     "cockpit.mode_tracking": "TRACKING",
     "cockpit.scanner_rear": "REAR",
     "cockpit.scanner_forward": "FORWARD",

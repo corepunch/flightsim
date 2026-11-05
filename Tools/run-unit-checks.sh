@@ -18,6 +18,8 @@ print '{ "name": "check", "title": "Check" }' > "$qa/Games/ZCheckMod/Levels/chec
 mkdir -p "$qa/Games/ZCheckMod/Data/Ships"
 print '{ "displayName": "Plain", "mesh": "Spitfire", "guns": [[0, 0, -3]], "nozzles": [[0, 0, 3, 0.5]] }' \
     > "$qa/Games/ZCheckMod/Data/Ships/zcheck-plain.json"
+print '{ "displayName": "Ion boat", "mesh": "Spitfire", "guns": [[0, 0, -3]], "nozzles": [[0, 0, 3, 0.5]], "systems": 0.4,
+  "gun": { "ion": true, "damage": 0.2 }, "aiGun": { "damage": 0.3 } }' > "$qa/Games/ZCheckMod/Data/Ships/zcheck-ionboat.json"
 print '{ "displayName": "Gunship", "mesh": "Spitfire", "guns": [[0, 0, -3]], "nozzles": [[0, 0, 3, 0.5]],
   "hull": 2.5, "shield": 0, "shieldRegen": 0.2,
   "secondary": { "name": "MISSILE", "short": "MSL", "projectile": "torpedo", "rounds": 6, "range": 1800,

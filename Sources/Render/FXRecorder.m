@@ -119,11 +119,15 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             float x = fmodf((float)t * 60.0f, 120.0f) - 60.0f;  // slowed down to be visible
             simd_float3 a = simd_make_float3(x, 3, -x * 0.3f), b = simd_make_float3(-x, -3, x * 0.3f);
             if (frame == 0) {
-                [refresh showBolt:0 at:a velocity:dir friendly:YES];
-                [refresh showBolt:1 at:b velocity:dir friendly:NO];
+                [refresh showBolt:0 at:a velocity:dir friendly:YES ion:NO];
+                [refresh showBolt:1 at:b velocity:dir friendly:NO ion:NO];
+                [refresh showBolt:2 at:a + simd_make_float3(0, 6, 0) velocity:dir friendly:YES ion:YES];
+                [refresh showBolt:3 at:b - simd_make_float3(0, 6, 0) velocity:dir friendly:NO ion:YES];
             }
             [refresh moveBolt:0 to:a];
             [refresh moveBolt:1 to:b];
+            [refresh moveBolt:2 to:a + simd_make_float3(0, 6, 0)];
+            [refresh moveBolt:3 to:b - simd_make_float3(0, 6, 0)];
         };
     } else if ([effect isEqualToString:@"exhaust"]) {
         // Side-on, nose pointing left, so the flames trail to the right.

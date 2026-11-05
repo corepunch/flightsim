@@ -63,7 +63,7 @@ static EntityState FighterState(GFighter *s, GPilot *p) {
     e.model = s.model;
     e.name = s.nameIndex;
     e.className = s.team < TeamCount ? level->_fighterClassNames[s.team] : 0;
-    e.flags = s.boosting ? EF_BOOST : 0;
+    e.flags = (s.boosting ? EF_BOOST : 0) | (s.disabled ? EF_DISABLED : 0);
     id target = p.target;
     if (p && p.mode == AIModeAttack && [target isKindOfClass:[GFighter class]]) {
         e.flags |= EF_ATTACKING;
@@ -142,6 +142,7 @@ static void BuildPlayerState(GClient *cl) {
         ps->model = (uint16_t)s.model;
         ps->team = (uint8_t)s.team;
         ps->alive = s.alive;
+        ps->disabled = s.disabled;
         ps->hull = s.hullFraction;
         ps->shield = s.shieldFraction;
     }
@@ -212,12 +213,12 @@ static void ClientThink(int index, const UserCmd *cmd) {
     [s step:ShipInputFromCmd(cmd) dt:dt];
     [w collidePlayer:cl from:before];
     ShipGun gun = s.gun;
-    if ((cmd->buttons & BUTTON_FIRE) && s.alive && s.laserEnergy >= gun.energy && cl.cmdTime - s.lastShot > gun.interval) {
+    if ((cmd->buttons & BUTTON_FIRE) && s.alive && !s.disabled && s.laserEnergy >= gun.energy && cl.cmdTime - s.lastShot > gun.interval) {
         s.lastShot = cl.cmdTime;
         s.laserEnergy = fmaxf(0, s.laserEnergy - gun.energy);
         simd_float3 muzzle = s.nextGunWorldPosition;
         [w fireFrom:muzzle velocity:s.velocity direction:[w shotDirectionFor:cl from:muzzle] speed:gun.speed life:gun.life team:s.team
-             damage:gun.damage capDamage:gun.capitalDamage owner:cl];
+             damage:gun.damage capDamage:gun.capitalDamage ion:gun.ion owner:cl];
         [w muzzleFlash:s];
     }
     BuildPlayerState(cl);
