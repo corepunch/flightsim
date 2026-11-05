@@ -41,3 +41,25 @@ void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput c, float dt) {
     s->velocity += (desired - s->velocity) * (1.0f - expf(-grip * dt));
     s->origin += s->velocity * dt;
 }
+
+simd_float3 AimAssist(simd_float3 forward, simd_float3 muzzle, simd_float3 shooterVelocity,
+                      simd_float3 target, simd_float3 targetVelocity, float boltSpeed, float range, float cone) {
+    if (cone <= 0 || boltSpeed <= 0) return forward;
+    // In the shooter's frame the bolt flies at boltSpeed, so solve
+    // |p + v t| = boltSpeed t for the earliest t > 0.
+    simd_float3 p = target - muzzle, v = targetVelocity - shooterVelocity;
+    float a = simd_dot(v, v) - boltSpeed * boltSpeed, b = 2 * simd_dot(p, v), c = simd_dot(p, p);
+    float t;
+    if (fabsf(a) < 1e-4f) {
+        if (b >= 0) return forward;
+        t = -c / b;
+    } else {
+        float disc = b * b - 4 * a * c;
+        if (disc < 0) return forward;
+        float r = sqrtf(disc), t1 = (-b - r) / (2 * a), t2 = (-b + r) / (2 * a);
+        t = t1 > 0 && (t1 < t2 || t2 <= 0) ? t1 : t2;
+    }
+    if (t <= 0 || boltSpeed * t > range) return forward;
+    simd_float3 aim = simd_normalize(p + v * t);
+    return simd_dot(aim, forward) >= cosf(cone) ? aim : forward;
+}

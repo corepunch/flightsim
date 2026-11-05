@@ -104,6 +104,30 @@ static void CheckShipMove(void) {
     CHECK(!s.boosting);
 }
 
+static void CheckAimAssist(void) {
+    simd_float3 fwd = simd_make_float3(0, 0, -1), muzzle = 0, still = 0;
+    float speed = 900, range = 900 * 1.6f, cone = 3 * (float)M_PI / 180;
+    // A target 1 km dead ahead crossing at 30 m/s: its lead point is about 2
+    // degrees off the nose, so the shot goes to where the bolt meets it.
+    simd_float3 target = simd_make_float3(0, 0, -1000), tv = simd_make_float3(30, 0, 0);
+    simd_float3 dir = AimAssist(fwd, muzzle, still, target, tv, speed, range, cone);
+    CHECK(!Vec3Equal(dir, fwd));
+    float t = simd_length(target) / speed;
+    for (int i = 0; i < 4; i++) t = simd_length(target + tv * t) / speed;
+    CHECK(NEAR(simd_length(dir), 1, 1e-4f));
+    CHECK(simd_distance(dir * speed * t, target + tv * t) < 0.5f);
+    // Outside the cone, beyond range, behind, or with the assist off: straight along the nose.
+    CHECK(Vec3Equal(AimAssist(fwd, muzzle, still, simd_make_float3(200, 0, -1000), 0, speed, range, cone), fwd));
+    CHECK(Vec3Equal(AimAssist(fwd, muzzle, still, simd_make_float3(0, 0, -3000), 0, speed, range, cone), fwd));
+    CHECK(Vec3Equal(AimAssist(fwd, muzzle, still, simd_make_float3(0, 0, 500), 0, speed, range, cone), fwd));
+    CHECK(Vec3Equal(AimAssist(fwd, muzzle, still, target, tv, speed, range, 0), fwd));
+    // The shooter's velocity is part of the bolt's: chasing a target at the
+    // same velocity, aim straight at it.
+    simd_float3 v = simd_make_float3(30, 0, -140);
+    dir = AimAssist(fwd, muzzle, v, simd_make_float3(10, 0, -800), v, speed, range, cone);
+    CHECK(simd_dot(dir, simd_normalize(simd_make_float3(10, 0, -800))) > 0.99999f);
+}
+
 #pragma mark - Wire format
 
 static EntityState Entity(uint16_t number, float x) {
@@ -744,6 +768,7 @@ static void CheckLocalization(void) {
 int main(void) {
     @autoreleasepool {
         CheckShipMove();
+        CheckAimAssist();
         CheckEntityDeltas();
         CheckPlayerState();
         CheckEventsAndCommands();

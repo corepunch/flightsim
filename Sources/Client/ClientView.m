@@ -12,6 +12,7 @@ typedef struct {
     uint16_t id;
     BOOL active;
     BOOL awaitingId;        // predicted: the server's id comes with its EV_BOLT
+    float age;              // seconds since spawn
 } ClientBolt;
 
 // What the client keeps about one entity in view: a fighter, capital (or
@@ -271,8 +272,17 @@ static float Ease(float value, float target, float rate, float dt) {
             for (int i = 0; i < REF_MAX_BOLTS; i++)
                 if (_bolts[i].active && _bolts[i].awaitingId && (best < 0 || _boltSerial[i] < _boltSerial[best])) best = i;
             if (best >= 0) {
-                _bolts[best].awaitingId = NO;
-                _bolts[best].id = e->id;
+                ClientBolt *b = &_bolts[best];
+                b->awaitingId = NO;
+                b->id = e->id;
+                // The server may have aimed it differently (aim assist against
+                // where the target really is): take its path, as far along as
+                // the prediction has flown.
+                if (simd_dot(simd_normalize(b->velocity), simd_normalize(e->vel)) < 0.99999f) {
+                    b->velocity = e->vel;
+                    b->position = e->pos + e->vel * b->age;
+                    [_refresh showBolt:best at:b->position velocity:b->velocity friendly:YES];
+                }
                 return;
             }
         }
@@ -353,6 +363,7 @@ static float Ease(float value, float target, float rate, float dt) {
         if (!b->active) continue;
         b->position += b->velocity * dt;
         b->life -= dt;
+        b->age += dt;
         if (b->life <= 0) { b->active = NO; [_refresh hideBolt:i]; }
         else [_refresh moveBolt:i to:b->position];
     }

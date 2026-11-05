@@ -309,6 +309,7 @@ const GameRules *GRules(void);
 - (void)cycleTargetFor:(GClient *)cl;
 - (void)updateTargetingFor:(GClient *)cl;
 - (BOOL)capital:(GCapital *)c visibleTo:(GFighter *)ship;
+- (simd_float3)shotDirectionFor:(GClient *)cl from:(simd_float3)muzzle;
 @end
 
 // Generic accessors over the two kinds of things that fly.

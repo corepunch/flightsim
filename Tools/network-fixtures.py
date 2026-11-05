@@ -23,6 +23,17 @@ if len(sys.argv) == 2:
         p.write_text(json.dumps(d))
         missions.append(dict(name=f'check-{i+1}', seed=i+1, player=dict(ship=ship, pos=[0, 0, 0], facing=[0, 0, -1]),
                              loadout=dict(torpedoes=3), objectives=[dict(id='hold', type='survive', text='Hold position', seconds=10000)]))
+    # Aim assist: a drone that cannot move, turn or hurt anyone, 600 m ahead and
+    # 1.5 degrees off the nose (16 m to the side, far outside its hit radius).
+    p = game / 'Data' / 'Ships' / 'drone.json'
+    d = json.loads((game / 'Data' / 'Ships' / 'wasp.json').read_text())
+    d['ai'] = dict(maxSpeed=0.01, turnRate=0, grip=60, boostGrip=60)   # spawns at 100 m/s; stop within 2 m
+    d['aiGun'] = dict(damage=0, capitalDamage=0)
+    d['hull'] = 100   # outlasts every shot, so each one that lands counts
+    p.write_text(json.dumps(d))
+    missions.append(dict(name='check-aim', seed=3, player=dict(ship='executioner', pos=[0, 0, 0], facing=[0, 0, -1]),
+                         waves=[dict(id='drone', ship='drone', count=1, team='enemy', pos=[16, 0, -600], spread=0)],
+                         objectives=[dict(id='hold', type='survive', text='Hold position', seconds=10000)]))
     (game / 'Levels').mkdir()
     for mission in missions:
         (game / 'Levels' / (mission['name'] + '.json')).write_text(json.dumps(mission))

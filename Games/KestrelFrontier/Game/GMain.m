@@ -215,7 +215,8 @@ static void ClientThink(int index, const UserCmd *cmd) {
     if ((cmd->buttons & BUTTON_FIRE) && s.alive && s.laserEnergy >= gun.energy && cl.cmdTime - s.lastShot > gun.interval) {
         s.lastShot = cl.cmdTime;
         s.laserEnergy = fmaxf(0, s.laserEnergy - gun.energy);
-        [w fireFrom:s.nextGunWorldPosition velocity:s.velocity direction:s.forward speed:gun.speed life:gun.life team:s.team
+        simd_float3 muzzle = s.nextGunWorldPosition;
+        [w fireFrom:muzzle velocity:s.velocity direction:[w shotDirectionFor:cl from:muzzle] speed:gun.speed life:gun.life team:s.team
              damage:gun.damage capDamage:gun.capitalDamage owner:cl];
         [w muzzleFlash:s];
     }
@@ -255,6 +256,7 @@ static void ClientDisconnect(int index) {
 
 static void Init(void) {
     FSSetGame(@(gi.cvarString("fs_game") ?: ""));   // this module's copy of the search path
+    gi.cvarRegister("g_aimAssist", "1", CVAR_ARCHIVE, "Scales the aim-assist cone of players' guns; 0 turns it off");
     gi.cvarRegister("g_god", "0", CVAR_CHEAT, "Players take no damage");
     gi.cvarRegister("g_autopilot", "0", CVAR_CHEAT, "The AI flies the first player's ship");
     gi.cvarRegister("g_warp", "", CVAR_CHEAT, "Entity id to spawn the first player next to, facing it");

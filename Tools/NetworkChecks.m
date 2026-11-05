@@ -68,16 +68,22 @@ static BOOL assertPendingPrediction;
 @property NSUInteger shots, bolts;
 @property float life, boltLife, relativeSpeed;
 @property ShipMoveState drawn;
+@property NSMutableArray<NSData *> *predictedVelocities, *serverVelocities;
+@property NSUInteger damageEvents;
 @end
 @implementation Spy
 - (void)serverCommand:(int)t a:(NSString *)a b:(NSString *)b c:(NSString *)c {}
 - (void)handleEvent:(const GameEvent *)e player:(const PlayerState *)ps {
+    if (e->type == EV_DAMAGE && e->entity != ps->entity) self.damageEvents++;
     if (e->type == EV_BOLT && e->entity == ps->entity) {
+        simd_float3 v = e->vel;
+        [self.serverVelocities addObject:[NSData dataWithBytes:&v length:sizeof v]];
         self.bolts++; self.boltLife = e->scale;
         self.relativeSpeed = simd_length(e->vel - ps->move.velocity);
     }
 }
 - (void)predictedShotFrom:(simd_float3)p velocity:(simd_float3)v gun:(simd_float3)g life:(float)life {
+    [self.predictedVelocities addObject:[NSData dataWithBytes:&v length:sizeof v]];
     self.shots++; self.life = life;
 }
 - (void)drawEntities:(const EntityState *)e count:(NSUInteger)n player:(const PlayerState *)ps
@@ -213,6 +219,52 @@ static void Scenario(int mission, BOOL impaired) {
         impaired ? "200ms RTT" : "0", impaired ? "every 11th + 45-tick blackout" : "0",
         (unsigned long)sent, (unsigned long)dropped);
 }
+// One player, one stationary hostile drone 1.5 degrees off the nose. Without
+// assist every shot passes 16 m wide; with it the shots go to the drone. The
+// client's predicted shots must leave in the same direction as the server's.
+static NSUInteger AimRun(NSString *assist, Spy **outView) {
+    routes = [NSMutableDictionary dictionary];
+    delay = 0; dropEvery = 0; blackout = NO; assertPendingPrediction = YES;
+    Server *server = [[Server alloc] initWithName:@"aim"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-aim"];
+    CHECK([Cvar set:@"g_aimAssist" value:assist]);
+    Spy *view = [Spy new];
+    view.predictedVelocities = [NSMutableArray array]; view.serverVelocities = [NSMutableArray array];
+    Client *c = [[Client alloc] initWithView:(ClientView *)view];
+    __weak Client *weak = c; c.gamestateHandler = ^{ [weak begin]; };
+    [c connectTo:[NetAddress loopback:1] transport:[Link port:10] name:@"gunner"];
+    Steps(server, @[c], (ControlState){0}, 150);       // both ships coast to a stop
+    Snapshot *s = Latest(c); CHECK(s && s.ps.stats[STAT_TARGET]);
+    const EntityState *drone = NULL;
+    for (NSUInteger i = 0; i < s.entityCount; i++) if (s.entityStates[i].number == s.ps.stats[STAT_TARGET]) drone = &s.entityStates[i];
+    CHECK(drone && drone->kind == EntityFighter);
+    simd_float3 rel = drone->origin - s.ps.move.origin, fwd = QuatForward(s.ps.move.orientation);
+    float off = acosf(simd_dot(simd_normalize(rel), fwd)) * 180 / (float)M_PI;
+    CHECK(off > 1.2f && off < 2.5f && simd_length(rel) > 450 && simd_length(drone->velocity) < 2);
+    view.damageEvents = 0;
+    Steps(server, @[c], (ControlState){ .fire = YES }, 90);
+    Steps(server, @[c], (ControlState){0}, 45);          // let the last bolts land
+    CHECK(view.bolts > 10);
+    NSUInteger n = MIN(view.predictedVelocities.count, view.serverVelocities.count);
+    CHECK(n + 2 >= view.bolts);
+    for (NSUInteger i = 0; i < n; i++) {
+        simd_float3 p, q;
+        [view.predictedVelocities[i] getBytes:&p length:sizeof p]; [view.serverVelocities[i] getBytes:&q length:sizeof q];
+        CHECK(simd_dot(simd_normalize(p), simd_normalize(q)) > 0.99999f);
+    }
+    [c disconnect]; [server frame:0]; [server stop];
+    *outView = view;
+    return view.damageEvents;
+}
+static void AimAssistCheck(void) {
+    Spy *off, *on;
+    NSUInteger missed = AimRun(@"0", &off), hit = AimRun(@"1", &on);
+    [[Cvar find:@"g_aimAssist"] reset];
+    CHECK(missed == 0);
+    CHECK(hit * 2 >= on.bolts);        // most assisted shots land
+    printf("PASS aim assist: %lu/%lu hits off, %lu/%lu on; predicted shots match the server's\n",
+           (unsigned long)missed, (unsigned long)off.bolts, (unsigned long)hit, (unsigned long)on.bolts);
+}
 static void UDPSmoke(void) {
     assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
@@ -241,6 +293,7 @@ int main(int argc, const char **argv) { @autoreleasepool {
     for (int mission = 0; mission < 2; mission++) for (int loss = 0; loss < 2; loss++) Scenario(mission, loss);
     CHECK(predictionChecks > 1000);
     printf("PASS %lu pending-input prediction comparisons against subsequent authority\n", (unsigned long)predictionChecks);
+    AimAssistCheck();
     UDPSmoke();
     puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;

@@ -330,6 +330,8 @@ static const double kNetInterpDelay = TICK_DT * 3;
 // Guns fire on the same clock the server keeps for us (seconds of commands
 // run), so predicted shots line up with the server's. The gun comes from
 // our ship's definition, which the player state names.
+static const EntityState *FindEntity(Snapshot *s, uint16_t number);
+
 - (void)predictShot:(const UserCmd *)cmd {
     ShipMoveState m;
     Snapshot *newest = _snapshots.lastObject;
@@ -343,9 +345,15 @@ static const double kNetInterpDelay = TICK_DT * 3;
         ps.stats[STAT_WEAPON_ENERGY] < (int)(gun.energy * 1000)) return;
     _lastShot = _fireClock;
     simd_float3 muzzle = def->guns[_gunIndex++ % def->gunCount];
-    [_view predictedShotFrom:m.origin + simd_act(m.orientation, muzzle)
-                    velocity:m.velocity + QuatForward(m.orientation) * gun.speed
-                         gun:muzzle life:gun.life];
+    simd_float3 from = m.origin + simd_act(m.orientation, muzzle), dir = QuatForward(m.orientation);
+    // Aim assist as the game applies it, against the newest snapshot. Capitals
+    // aim at a subsystem the client can't place, so their shots fly straight
+    // until the server's EV_BOLT re-aims them.
+    const EntityState *t = FindEntity(newest, (uint16_t)ps.stats[STAT_TARGET]);
+    float cone = gun.assist * fmaxf(0, [Cvar valueOf:@"g_aimAssist"]) * (float)M_PI / 180.0f;
+    if (t && t->kind == EntityFighter && TeamRelationIn(_cs[CS_TEAMS].UTF8String, ps.team, t->team) == RelationHostile)
+        dir = AimAssist(dir, from, m.velocity, t->origin, t->velocity, gun.speed, gun.speed * gun.life, cone);
+    [_view predictedShotFrom:from velocity:m.velocity + dir * gun.speed gun:muzzle life:gun.life];
 }
 
 - (BOOL)predictedMove:(ShipMoveState *)out dt:(float)dt {

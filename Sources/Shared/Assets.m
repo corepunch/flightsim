@@ -37,6 +37,7 @@ static ShipGun GunFrom(NSDictionary *d, ShipGun base) {
     g.interval = Number(d, @"interval", g.interval);
     g.damage = Number(d, @"damage", g.damage);
     g.capitalDamage = Number(d, @"capitalDamage", g.capitalDamage);
+    g.assist = Number(d, @"assist", g.assist);
     return g;
 }
 
@@ -82,7 +83,7 @@ static ShipDef *LoadShipDef(NSString *name) {
         s->guns[s->gunCount++] = Vec3(g);
     }
     // Sensible defaults so a sparse definition still flies and shoots.
-    ShipGun gun = { .speed = 900, .life = 1.6f, .energy = 0.035f, .recharge = 0.22f, .interval = 0.11f, .damage = 0.1f, .capitalDamage = 0.1f };
+    ShipGun gun = { .speed = 900, .life = 1.6f, .energy = 0.035f, .recharge = 0.22f, .interval = 0.11f, .damage = 0.1f, .capitalDamage = 0.1f, .assist = 3 };
     s->gun = GunFrom(d[@"gun"], gun);
     s->aiGun = GunFrom(d[@"aiGun"], s->gun);
     for (NSArray *n in d[@"nozzles"]) {

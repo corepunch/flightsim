@@ -286,7 +286,7 @@ typedef enum {
 //   { "displayName": "Wasp", "mesh": "Spitfire", "texture": "Spitfire_Red", "radius": 5,
 //     "guns": [[-1.2, -0.2, -3.5], [1.2, -0.2, -3.5]],
 //     "gun": { "speed": 900, "life": 1.6, "energy": 0.035, "recharge": 0.22, "interval": 0.11,
-//              "damage": 0.12, "capitalDamage": 0.12 },
+//              "damage": 0.12, "capitalDamage": 0.12, "assist": 3 },     // assist: aim-assist cone, degrees
 //     "aiGun": { "interval": 0.22, "damage": 0.07 },            // overrides for AI-flown ships
 //     "nozzles": [[-4.5, 0.135, 2.2, 0.6], ...], "exhaustColor": [1, 0.38, 0.18],
 //     "params": { "maxSpeed": 140, "turnRate": 0.8, ... },      // ShipParams, see Protocol above
@@ -310,6 +310,7 @@ typedef struct {
     float interval;         // seconds between shots
     float damage;           // to fighters, in hull units
     float capitalDamage;    // to capital subsystems and hulls
+    float assist;           // aim-assist cone, degrees; 0 fires straight along the nose
 } ShipGun;
 
 // The guided round a ship launches at its target. The name, short name and
@@ -714,6 +715,17 @@ static inline bool SegmentHits(simd_float3 p0, simd_float3 p1, simd_float3 c, fl
     float t = len2 > 0 ? clampf(simd_dot(c - p0, d) / len2, 0, 1) : 0;
     return simd_distance_squared(p0 + d * t, c) < r * r;
 }
+
+// MARK: - Aim assist
+
+// Bends a gun's shot onto a target the pilot is nearly lined up with, so a
+// near miss hits. The shot goes to the target's lead point (where a bolt
+// leaving the muzzle at boltSpeed, plus the shooter's velocity, meets the
+// target) when that point is within `cone` radians of `forward` and within
+// `range`; otherwise it goes along `forward`. The server aims every player
+// shot with it and the client predicts its own shots with the same call.
+simd_float3 AimAssist(simd_float3 forward, simd_float3 muzzle, simd_float3 shooterVelocity,
+                      simd_float3 target, simd_float3 targetVelocity, float boltSpeed, float range, float cone);
 
 // MARK: - ShipMove
 

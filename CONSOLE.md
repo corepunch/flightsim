@@ -65,6 +65,7 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `ui_timescale` | 1 | | Front-end motion runs this many times slower |
 | `ui_reduceMotion` | | | Reduce front-end motion: 0 off, 1 on, empty follows the system setting |
 | `ui_unlockAll` | 0 | cheat | Every mission is open |
+| `g_aimAssist` | 1 | archive | Scales the aim-assist cone of players' guns (ship `gun.assist`, degrees); 0 turns it off |
 | `g_god` | 0 | cheat | Players take no damage |
 | `g_autopilot` | 0 | cheat | The AI flies the first player's ship |
 | `g_warp` | | cheat | Entity id to spawn the first player next to |

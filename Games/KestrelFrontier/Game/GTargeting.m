@@ -53,6 +53,20 @@
     }
 }
 
+// A player's shot leaves along the nose unless the selected hostile target
+// (its aimed subsystem, on a capital) is inside the gun's assist cone; then it
+// goes to the lead point. g_aimAssist scales the cone; 0 turns it off.
+- (simd_float3)shotDirectionFor:(GClient *)cl from:(simd_float3)muzzle {
+    GFighter *s = cl.ship;
+    ShipGun gun = s.gun;
+    id sel = cl.selected;
+    float cone = gun.assist * fmaxf(0, GCvar("g_aimAssist")) * (float)M_PI / 180.0f;
+    if (cone <= 0 || !BodyAlive(sel) || !TeamsHostile(s.team, BodyTeam(sel))) return s.forward;
+    simd_float3 point = BodyPosition(sel);
+    if ([sel isKindOfClass:[GCapital class]] && cl.aimSubsystem.alive) point = [(GCapital *)sel worldPoint:cl.aimSubsystem.local];
+    return AimAssist(s.forward, muzzle, s.velocity, point, BodyVelocity(sel), gun.speed, gun.speed * gun.life, cone);
+}
+
 // On a capital, aim at the live subsystem closest to the nose (shield
 // generators first while they are up).
 - (void)updateTargetingFor:(GClient *)cl {
