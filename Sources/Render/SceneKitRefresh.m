@@ -496,13 +496,6 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 
 - (const GameModelInfo *)infoForModel:(RefModel)model { return [self entry:model].info.info; }
 
-- (id)hologramForModel:(RefModel)model {
-    RefModelEntry *m = [self entry:model];
-    if (m.kind == RefKindShip) return [ShipView geometryForDefinition:m.ship];
-    if (m.kind == RefKindCapital) return [m.prototype childNodeWithName:@"Body" recursively:NO].geometry;
-    return nil;
-}
-
 - (id)previewForModel:(RefModel)model {
     RefModelEntry *m = [self entry:model];
     if (!m.preview) {

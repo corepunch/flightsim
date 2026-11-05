@@ -10,6 +10,5 @@
   "params": { "maxSpeed": 140, "turnRate": 0.8, "pitchRate": 1.45, "yawRate": 0.85, "rollRate": 2.6, "agility": 5.5,
               "grip": 1.4, "boostSpeed": 0.9, "boostGrip": 2.2, "boostTurn": 0.7, "boostDrain": 0.28, "boostRecharge": 0.12 },
   "ai": { "speedSpread": 8 },
-  "hull": 1.3, "shield": 0, "shieldRegen": 0,
-  "hologramScale": 0.0075
+  "hull": 1.3, "shield": 0, "shieldRegen": 0
 }

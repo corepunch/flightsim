@@ -100,7 +100,6 @@ static ShipDef *LoadShipDef(NSString *name) {
     s->shield = fmaxf(Number(d, @"shield", 1), 0);
     s->shieldRegen = fmaxf(Number(d, @"shieldRegen", 0.06f), 0);
     s->secondary = SecondaryFrom(d[@"secondary"]);
-    s->hologramScale = Number(d, @"hologramScale", 0.0075f);
     return s;
 }
 

@@ -172,16 +172,6 @@ static SCNNode *Hologram(SKColor *color, SCNNode * __strong *modelOut) {
     return holder;
 }
 
-// Any mesh as a hologram. Fighter meshes are in OBJ space (+Z nose) and
-// need the half turn; capital meshes were exported in ship space.
-static void SetHologramGeometry(SCNNode *model, SCNGeometry *source, float scale, BOOL fighter) {
-    SCNGeometry *g = [source copy];
-    g.materials = @[[model valueForKey:@"holoMaterial"]];
-    model.geometry = g;
-    model.eulerAngles = SCNVector3Make(0, fighter ? M_PI : 0, 0);
-    model.simdScale = simd_make_float3(scale, scale, scale);
-}
-
 static SKColor *TeamColor(TeamRelation r, CGFloat a) {
     return r == RelationHostile ? EnemyColor(a) : (r == RelationFriendly ? [SKColor colorWithRed:0.4 green:1 blue:0.55 alpha:a]
                                                                          : [SKColor colorWithRed:0.95 green:0.88 blue:0.45 alpha:a]);

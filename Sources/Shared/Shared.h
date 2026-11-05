@@ -348,7 +348,6 @@ typedef struct {
     float shield;                           // hull units it absorbs first; 0: unshielded
     float shieldRegen;                      // shield units per second
     ShipSecondary secondary;
-    float hologramScale;
 } ShipDef;
 
 // NULL if there is no such definition. The result lives for the process.

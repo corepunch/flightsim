@@ -10,8 +10,8 @@
 // MARK: - CockpitFrame
 
 // What the client tells the cockpit and the HUD instruments each frame. No
-// renderer types: the target hologram and preview are opaque handles from
-// -[Refresh hologramForModel:] and -[Refresh previewForModel:].
+// renderer types: the target preview is an opaque handle from
+// -[Refresh previewForModel:].
 #define COCKPIT_MAX_CONTACTS 24
 
 typedef struct CockpitContact {
@@ -22,9 +22,7 @@ typedef struct CockpitContact {
     BOOL capital;               // a big ship or station (bigger scanner blip)
     BOOL shielded;              // capital with its shield generators up
     BOOL attacking;             // in an attack run on the player
-    __unsafe_unretained id hologram;          // Refresh hologram handle for the cockpit MFD
     __unsafe_unretained id preview;           // Refresh preview handle for the target readout
-    float holoScale;            // metres of hologram per metre of ship
     __unsafe_unretained NSString *name, *className, *cargo, *component;
 } CockpitContact;
 
@@ -211,8 +209,6 @@ typedef struct {
 - (float)radiusOfModel:(RefModel)model;
 // Parts and subsystems of a capital model; NULL for anything else.
 - (const GameModelInfo *)infoForModel:(RefModel)model;
-// Mesh for the target hologram (OBJ space), or nil.
-- (id)hologramForModel:(RefModel)model;
 // The model as the world draws it (textures, hull styles), in ship space with
 // -Z forward, for the target preview. The same object for every call with
 // one model; clone it before changing it. nil for models with no shape.

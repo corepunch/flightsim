@@ -9,6 +9,5 @@
   "exhaustColor": [1.0, 0.3, 0.55],
   "params": { "maxSpeed": 120, "turnRate": 0.6, "pitchRate": 1.45, "yawRate": 0.85, "rollRate": 2.6, "agility": 5.5,
               "grip": 1.4, "boostSpeed": 0.9, "boostGrip": 2.2, "boostTurn": 0.7, "boostDrain": 0.28, "boostRecharge": 0.12 },
-  "hull": 1.5, "shield": 1.0, "shieldRegen": 0.03,
-  "hologramScale": 0.0075
+  "hull": 1.5, "shield": 1.0, "shieldRegen": 0.03
 }

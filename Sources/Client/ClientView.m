@@ -693,9 +693,7 @@ static float Ease(float value, float target, float rate, float dt) {
         k.cargo = fighter ? L10n(@"cockpit.cargo_none") : (s.flags & EF_SCANNED) ? ([self stringAt:s.cargo].length ? [self stringAt:s.cargo] : L10n(@"cockpit.cargo_no_manifest")) : L10n(@"cockpit.unknown");
         if (fighter) {
             const ShipDef *def = v.definition;
-            k.hologram = [_refresh hologramForModel:v.refModel];
             k.preview = [_refresh previewForModel:v.refModel];
-            k.holoScale = def ? def->hologramScale : 0.0075f;
             k.name = [self stringAt:s.name] ?: (def ? @(def->displayName) : L10n(@"cockpit.fighter"));
             k.className = [self stringAt:s.className] ?: (def ? @(def->displayName) : @"");
             k.attacking = hostile && (s.flags & EF_ATTACKING) && s.target == ps->entity &&
@@ -705,9 +703,7 @@ static float Ease(float value, float target, float rate, float dt) {
         } else {
             BOOL prop = (s.flags & EF_PROP) != 0;
             k.capital = !prop;
-            k.hologram = [_refresh hologramForModel:v.refModel];
             k.preview = [_refresh previewForModel:v.refModel];
-            k.holoScale = 0.04f / fmaxf(radius, 1);
             k.name = [self stringAt:s.name];
             k.className = [self stringAt:s.className];
             k.shielded = (s.flags & EF_SHIELDED) != 0;
