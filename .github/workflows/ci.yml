@@ -59,5 +59,6 @@ jobs:
           path: |
             build/${{ matrix.check }}-checks.*/**/*.log
             build/${{ matrix.check }}-checks.*/**/*.png
+            !build/${{ matrix.check }}-checks.*/**/*.app/**
           if-no-files-found: ignore
           retention-days: 7

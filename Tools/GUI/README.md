@@ -59,4 +59,5 @@ Run `./Tools/run-dialogue-checks.sh` for native rendered dialogue and briefing
 checks. It verifies the bundled proportional Oxanium faces, fixed wrapping during
 typing, intact Unicode characters, carriage returns, and click-to-finish controls.
 Desktop and phone PNG previews remain in the printed `build/dialogue-checks.*`
-directory. Run with Reduce Motion disabled to exercise the animation.
+directory. It forces motion on (`ui_reduceMotion 0`), so it runs the same
+whatever the machine's Reduce Motion setting is.

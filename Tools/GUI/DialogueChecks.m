@@ -2,6 +2,7 @@
 #import "Assets.h"
 #import "Briefing.h"
 #import "UIMotion.h"
+#import "Cvar.h"
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "Dialogue check failed at line %d: %s\n", __LINE__, #c); return EXIT_FAILURE; } } while (0)
 
@@ -140,6 +141,9 @@ int main(int argc, const char **argv) {
             CHECK([NSFont fontWithName:name size:22]);
         NSDictionary *attributes = @{NSFontAttributeName: [NSFont fontWithName:UIBodyFont size:22]};
         CHECK([@"WWW" sizeWithAttributes:attributes].width > [@"iii" sizeWithAttributes:attributes].width * 1.5);
+        // The typing and caret checks need motion whatever the machine's
+        // accessibility setting says (CI runners have Reduce Motion on).
+        [Cvar set:@"ui_reduceMotion" value:@"0"];
         CHECK(!UIMotionReduced());
         if (CheckCampaignCaptions() != EXIT_SUCCESS) return EXIT_FAILURE;
         if (CheckCaret(output) != EXIT_SUCCESS) return EXIT_FAILURE;
