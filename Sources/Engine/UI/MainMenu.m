@@ -1,6 +1,7 @@
 #import "MainMenu.h"
 #import "UIStyle.h"
 #import "UIMotion.h"
+#import "GameAudio.h"
 #import <ImageIO/ImageIO.h>
 
 static const UIRGB MenuNight = { 4.0 / 255, 6.0 / 255, 11.0 / 255 };
@@ -22,7 +23,7 @@ static SKShader *MenuArtShader(void) {
 }
 
 typedef NS_ENUM(NSInteger, MenuItem) {
-    MenuItemCampaign, MenuItemMissions, MenuItemMultiplayer, MenuItemControls, MenuItemQuit, MenuItemCount
+    MenuItemCampaign, MenuItemMissions, MenuItemMultiplayer, MenuItemControls, MenuItemAudio, MenuItemQuit, MenuItemCount
 };
 
 @interface MainMenu () <UIMotionScene>
@@ -292,6 +293,9 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     CGFloat rowHeight = compact ? 46 : MIN(62, (top - bottom) * 0.105);
     CGFloat gap = compact ? 5 : 8;
     NSUInteger count = [self itemCount];
+    // Leave room for the wordmark when the audio setting adds a sixth desktop row.
+    CGFloat minimumHeader = compact ? 78 : 150;
+    rowHeight = MIN(rowHeight, MAX(30, (top - bottom - minimumHeader - gap * (count - 1)) / count));
     CGFloat stack = count * (rowHeight + gap) - gap;
     CGFloat titleSize = portrait ? MIN(52, availableWidth * 0.13) : (compact ? 34 : MIN(82, availableWidth * 0.10));
     CGFloat titleLines = oneLine ? 1 : 1.86;
@@ -320,7 +324,8 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         [_header addObject:secondLine];
     }
 
-    NSArray<NSString *> *labels = @[_campaignLabel, @"MISSION SELECT", @"LAN CO-OP", @"FLIGHT CONTROLS", @"QUIT GAME"];
+    NSArray<NSString *> *labels = @[_campaignLabel, @"MISSION SELECT", @"LAN CO-OP", @"FLIGHT CONTROLS",
+                                   [[GameAudio shared] mixTitle], @"QUIT GAME"];
     for (NSUInteger i = 0; i < count; i++) {
         CGFloat y = stackTop - (i + 1) * rowHeight - i * gap;
         _rows[i] = CGRectMake(left, y, width, rowHeight);
@@ -545,6 +550,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     }
     if (_controls) {
         if ((actions & (InputActionBack | InputActionConfirm)) || CGRectContainsPoint(_controlsBack, click)) {
+            [[GameAudio shared] play:@"ui-back"];
             _controls = NO;
             _transition = UITransitionPage;
             [self rebuild];
@@ -553,6 +559,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     }
 
     NSUInteger count = [self itemCount];
+    if (actions & (InputActionUp | InputActionDown)) [[GameAudio shared] play:@"ui-hover"];
     if (actions & InputActionUp) { _selected = (_selected + count - 1) % count; [self reselect]; }
     if (actions & InputActionDown) { _selected = (_selected + 1) % count; [self reselect]; }
     for (NSUInteger i = 0; i < count; i++) {
@@ -563,6 +570,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         }
     }
     if (!(actions & InputActionConfirm)) return MainMenuCommandNone;
+    if (_selected != MenuItemAudio) [[GameAudio shared] play:@"ui-confirm"];
     switch ((MenuItem)_selected) {
         case MenuItemCampaign: return MainMenuCommandCampaign;
         case MenuItemMissions: return MainMenuCommandMissions;
@@ -573,6 +581,11 @@ typedef NS_ENUM(NSInteger, MenuItem) {
             [self rebuild];
             break;
         case MenuItemQuit: return MainMenuCommandQuit;
+        case MenuItemAudio:
+            [[GameAudio shared] cycleMix];
+            [[GameAudio shared] play:@"ui-confirm"];
+            [self reselect];
+            break;
         case MenuItemCount: break;
     }
     return MainMenuCommandNone;

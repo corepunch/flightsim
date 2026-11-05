@@ -166,6 +166,25 @@
 			"defaultConfigurationIsVisible" = 0;
 			"defaultConfigurationName" = "Debug";
 		};
+		"46D5F6B01D29435F30D4E715" = {
+			"isa" = "PBXFileReference";
+			"path" = "GameAudio.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"54A6625D3399BA37902C0C94" = {
+			"isa" = "PBXFileReference";
+			"path" = "GameAudio.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"0B3048B46A586012BBDF9F6E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "54A6625D3399BA37902C0C94";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
 		"4DB6850B8BD766CED9162F02" = {
 			"isa" = "PBXFileReference";
 			"path" = "GameView.h";
@@ -283,6 +302,8 @@
 			"isa" = "PBXGroup";
 			"path" = "App";
 			"children" = (
+				"46D5F6B01D29435F30D4E715",
+				"54A6625D3399BA37902C0C94",
 				"4DB6850B8BD766CED9162F02",
 				"E8EFEE7B86FAC508A1E57171",
 				"B6C9C2BDC1D956204FDD3BE9",
@@ -1099,6 +1120,7 @@
 		"EBA8DCD606BD0014B899E362" = {
 			"isa" = "PBXSourcesBuildPhase";
 			"files" = (
+				"0B3048B46A586012BBDF9F6E",
 				"5081A72AE6F38EFE5D182C2D",
 				"5E7994C49FBC4BAEEFCCD691",
 				"E7810EE72621D6B4D3C6C58A",

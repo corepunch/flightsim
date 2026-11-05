@@ -1,5 +1,10 @@
 # macOS GUI checks
 
+Run `./Tools/run-audio-checks.sh` to decode all generated audio and check music
+crossfades and looping, flight engine/boost response, effect playback, the saved
+sound modes and pausing when the app loses focus. It also exercises the main
+menu sound setting and saves desktop, compact and portrait menu previews.
+
 From the logged-in macOS desktop session, run `./Tools/run-gui-checks.sh`.
 It builds and opens a separate app bundle to check portrait transitions
 throughout the campaign at desktop, narrow and iPhone sizes. It checks for a pass message

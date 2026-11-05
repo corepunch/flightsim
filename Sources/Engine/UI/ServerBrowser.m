@@ -1,4 +1,5 @@
 #import "ServerBrowser.h"
+#import "GameAudio.h"
 #import "Assets.h"
 #import "UIStyle.h"
 #import "UIMotion.h"
@@ -206,9 +207,11 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     else if (CGRectContainsPoint(_joinRect, click)) actions |= InputActionConfirm;
     else if (CGRectContainsPoint(_serverRows, click)) {
         NSUInteger row = _firstVisible + (NSUInteger)((CGRectGetMaxY(_serverRows) - click.y) / 36);
-        if (row < _servers.count) { _index = row; [self rebuild]; }
+        if (row < _servers.count) { _index = row; [[GameAudio shared] play:@"ui-hover"]; [self rebuild]; }
     }
-    if (actions & InputActionBack) return BrowserCommandBack;
+    if (actions & InputActionBack) { [[GameAudio shared] play:@"ui-back"]; return BrowserCommandBack; }
+    if (actions & (InputActionUp | InputActionDown)) [[GameAudio shared] play:@"ui-hover"];
+    if (actions & InputActionConfirm) [[GameAudio shared] play:_servers.count ? @"ui-confirm" : @"ui-alert"];
     if (_servers.count) {
         if (actions & InputActionUp) { _index = (_index + _servers.count - 1) % _servers.count; [self rebuild]; }
         if (actions & InputActionDown) { _index = (_index + 1) % _servers.count; [self rebuild]; }

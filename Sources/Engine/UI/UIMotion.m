@@ -1,4 +1,5 @@
 #import "UIMotion.h"
+#import "GameAudio.h"
 #import "UIStyle.h"
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
@@ -563,6 +564,7 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
     }
     _current = hit;
     if (hit < 0) return;
+    [[GameAudio shared] play:@"ui-hover"];
     SKNode *in = _overlays[hit];
     [in removeAllActions];
     if (UIMotionReduced()) { in.alpha = 1; return; }
