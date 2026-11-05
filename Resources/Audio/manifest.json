@@ -84,8 +84,8 @@
       "loop": false
     },
     {
-      "file": "torpedo.mp3",
-      "name": "torpedo",
+      "file": "secondary.mp3",
+      "name": "secondary",
       "taskId": "3a94ff20-27ea-4975-8b07-7c076b620319",
       "prompt": "Spacefighter launches one heavy torpedo: deep mechanical release clunk followed by a quick pressurized rocket whoosh fading away. Immediate onset, one isolated launch, clean dry cockpit perspective, no speech, no music.",
       "model": "sound-effects",

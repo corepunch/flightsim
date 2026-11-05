@@ -22,7 +22,7 @@ typedef struct {
     BOOL awaitingId;        // predicted: the server's id comes with its EV_BOLT
 } ClientBolt;
 
-// The view of one entity: a fighter, capital (or prop, rock, buoy) or torpedo.
+// The view of one entity: a fighter, capital (or prop, rock, buoy) or projectile.
 @interface EntityView : NSObject
 @property (nonatomic) uint16_t number, model;
 @property (nonatomic) uint8_t kind;
@@ -42,7 +42,17 @@ typedef struct {
     SCNNode *_sunLight, *_engineLight, *_dust, *_nextDust, *_world;
     Cockpit *_cockpitModel;
     Effects *_fx;
+    // The player's ship: a node that follows the player state, carrying the
+    // engine light and the cockpit, and under it a view of whatever ship
+    // definition the player state names.
+    SCNNode *_playerNode;
     ShipView *_playerView;
+    const ShipDef *_playerDef;
+    uint16_t _playerModel;
+    uint8_t _playerTeam;
+    // Team relations from CS_TEAMS, parsed once per change.
+    TeamRelation _relations[MAX_TEAMS][MAX_TEAMS];
+    NSString *_relationsCS;
 #if TARGET_OS_IOS
     UIImpactFeedbackGenerator *_weaponFeedback, *_damageFeedback;
 #endif
@@ -59,7 +69,7 @@ typedef struct {
     uint16_t _playerEntity;
     BOOL _hadPlayer;
     uint16_t _audioEntity;
-    int _audioTorpedoes, _audioTarget;
+    int _audioSecondary, _audioTarget;
     BOOL _audioHullLow;
 }
 
@@ -87,6 +97,22 @@ typedef struct {
 }
 - (NSString *)stringAt:(uint16_t)i { return i ? [self cs:CS_STRINGS + i] : nil; }
 - (NSString *)modelAt:(uint16_t)i { return i ? [self cs:CS_MODELS + i] : @""; }
+
+- (void)refreshRelations {
+    NSString *cs = [self cs:CS_TEAMS];
+    if ([cs isEqualToString:_relationsCS]) return;
+    _relationsCS = cs;
+    const char *s = cs.UTF8String;
+    for (int a = 0; a < MAX_TEAMS; a++)
+        for (int b = 0; b < MAX_TEAMS; b++) _relations[a][b] = TeamRelationIn(s, a, b);
+}
+
+// How a team stands to the player's.
+- (TeamRelation)relationTo:(uint8_t)team {
+    return team < MAX_TEAMS && _playerTeam < MAX_TEAMS ? _relations[_playerTeam][team] : RelationNeutral;
+}
+
+- (float)gunSpeed { return _playerDef ? _playerDef->gun.speed : 900; }
 
 #pragma mark - Scene
 
@@ -133,8 +159,9 @@ typedef struct {
     _cameraNode.camera = cam;
     [_scene.rootNode addChildNode:_cameraNode];
 
-    _playerView = [ShipView shipWithClass:ShipClassExecutioner smoke:YES];
-    [_scene.rootNode addChildNode:_playerView.node];
+    _playerNode = [SCNNode node];
+    _playerNode.name = @"Player";
+    [_scene.rootNode addChildNode:_playerNode];
 
     SCNLight *glow = [SCNLight light];
     glow.type = SCNLightTypeOmni;
@@ -145,12 +172,12 @@ typedef struct {
     _engineLight = [SCNNode node];
     _engineLight.light = glow;
     _engineLight.position = SCNVector3Make(0, 0.5, 6.0);
-    [_playerView.node addChildNode:_engineLight];
+    [_playerNode addChildNode:_engineLight];
 
     _cockpitModel = [[Cockpit alloc] initWithDevice:_view.device];
     _cockpitModel.node.simdPosition = kCockpitEye;
     _cockpitModel.node.hidden = YES;
-    [_playerView.node addChildNode:_cockpitModel.node];
+    [_playerNode addChildNode:_cockpitModel.node];
 
     _fx = [[Effects alloc] initWithScene:_scene];
     for (int i = 0; i < MAX_BOLT_NODES; i++) {
@@ -159,8 +186,23 @@ typedef struct {
         [_scene.rootNode addChildNode:n];
         _boltNodes[i] = n;
     }
-    _playerView.node.hidden = YES;
+    _playerNode.hidden = YES;
     _camOrientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
+}
+
+// Render thread: the player state names our ship's model; (re)build the view
+// of it when that changes. The mission precache already uploaded its geometry.
+- (void)ensurePlayerShip:(uint16_t)model {
+    if (model == _playerModel && (_playerView || !model)) return;
+    _playerModel = model;
+    [_playerView.node removeFromParentNode];
+    _playerView = nil;
+    _playerDef = ShipDefForModel([self modelAt:model]);
+    if (!_playerDef) return;
+    _playerView = [ShipView shipWithDefinition:_playerDef smoke:YES];
+    [_playerNode addChildNode:_playerView.node];
+    [_cockpitModel setSelfGeometry:[ShipView geometryForDefinition:_playerDef]];
+    _hadPlayer = NO;   // a new hull: reset the alive/hidden bookkeeping
 }
 
 - (NSArray *)warmupObjects {
@@ -234,9 +276,10 @@ typedef struct {
     [_world removeFromParentNode];
     _world = nil;
     for (int i = 0; i < MAX_BOLT_NODES; i++) { _bolts[i].active = NO; _boltNodes[i].hidden = YES; }
-    _playerView.node.hidden = YES;
+    _playerNode.hidden = YES;
     _cockpitModel.node.hidden = YES;
     _playerEntity = 0;
+    [self ensurePlayerShip:0];
 }
 
 #pragma mark - Entities
@@ -247,7 +290,7 @@ typedef struct {
     v.model = s->model;
     v.kind = s->kind;
     NSString *model = [self modelAt:s->model];
-    if (s->kind == EntityTorpedo) {
+    if (s->kind == EntityProjectile) {
         SCNNode *n = [SCNNode node];
         SCNPlane *glow = [SCNPlane planeWithWidth:7 height:7];
         glow.firstMaterial = [Effects additiveTextureMaterial:@"flare_01" tint:simd_make_float3(3.0f, 1.6f, 0.6f)];
@@ -257,8 +300,9 @@ typedef struct {
         [n addChildNode:g];
         v.node = n;
     } else if (s->kind == EntityFighter) {
-        v.ship = [ShipView viewWithModel:model] ?: [ShipView shipWithClass:ShipClassSpitfire smoke:YES];
-        v.node = v.ship.node;
+        v.ship = [ShipView viewWithModel:model];
+        if (!v.ship) NSLog(@"Client: no ship definition for model \"%@\"", model);
+        v.node = v.ship.node ?: [SCNNode node];
     } else {
         v.capital = [CapitalView viewWithModel:model];
         v.node = v.capital.node ?: [SCNNode node];
@@ -270,7 +314,7 @@ typedef struct {
 - (void)drawEntity:(EntityView *)v state:(const EntityState *)s dt:(float)dt {
     v.state = *s;
     v.node.simdPosition = s->origin;
-    if (s->kind != EntityTorpedo) v.node.simdOrientation = s->orientation;
+    if (s->kind != EntityProjectile) v.node.simdOrientation = s->orientation;
     if (v.ship) {
         [v.ship updateThrottle:s->throttle boost:(s->flags & EF_BOOST) != 0 hull:s->hull alive:YES dt:dt];
     } else if (v.capital) {
@@ -283,7 +327,7 @@ typedef struct {
 - (EntityView *)viewFor:(uint16_t)number { return number ? _views[@(number)] : nil; }
 
 - (SCNNode *)nodeFor:(uint16_t)number {
-    if (number && number == _playerEntity) return _playerView.node;
+    if (number && number == _playerEntity) return _playerNode;
     return [self viewFor:number].node;
 }
 
@@ -295,10 +339,7 @@ typedef struct {
 
 - (SCNMaterial *)hullMaterialForModel:(uint16_t)model {
     NSString *m = [self modelAt:model];
-    if ([m hasPrefix:@"ship:"]) {
-        int c = FighterClassForMesh([m substringFromIndex:5]);
-        return c >= 0 ? [ShipView geometryForClass:(ShipClass)c].firstMaterial : nil;
-    }
+    if ([m hasPrefix:@"ship:"]) return [ShipView geometryForDefinition:ShipDefForModel(m)].firstMaterial;
     if ([m hasPrefix:@"cap:"]) {
         NSArray *f = [m componentsSeparatedByString:@":"];
         if (f.count < 3) return nil;
@@ -317,12 +358,15 @@ typedef struct {
 }
 #endif
 
-- (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel team:(int)team id:(uint16_t)boltId {
+// Bolts fired by the player's side look different from the rest.
+- (BOOL)friendly:(uint8_t)team { return [self relationTo:team] == RelationFriendly; }
+
+- (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel life:(float)life friendly:(BOOL)friendly id:(uint16_t)boltId {
     for (int i = 0; i < MAX_BOLT_NODES; i++) {
         if (_bolts[i].active) continue;
-        _bolts[i] = (ClientBolt){ pos, vel, BOLT_LIFE, boltId, YES, NO };
+        _bolts[i] = (ClientBolt){ pos, vel, life > 0 ? life : 1.6f, boltId, YES, NO };
         SCNNode *n = _boltNodes[i];
-        [_fx styleBolt:n player:team == TeamFriend];
+        [_fx styleBolt:n player:friendly];
         n.simdPosition = pos;
         n.simdOrientation = simd_quaternion(simd_make_float3(0, 1, 0), simd_normalize(vel));
         n.hidden = NO;
@@ -331,17 +375,18 @@ typedef struct {
     return -1;
 }
 
-- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal {
-    int i = [self spawnBolt:pos velocity:velocity team:TeamFriend id:0];
+- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal life:(float)life {
+    int i = [self spawnBolt:pos velocity:velocity life:life friendly:YES id:0];
     if (i >= 0) {
         _bolts[i].awaitingId = YES;
         _boltSerial[i] = ++_nextBoltSerial;
     }
-    [_fx muzzleFlashOn:_playerView.node local:gunLocal player:YES];
+    [_fx muzzleFlashOn:_playerNode local:gunLocal player:YES];
 }
 
 - (void)handleEvent:(const GameEvent *)e player:(const PlayerState *)ps {
     simd_float3 me = ps->move.origin;
+    _playerTeam = ps->team;
     // Muzzle events contain ship-local positions, so only world-space events are spatialized.
     simd_float3 offset = e->pos - me;
     float distance = simd_length(offset);
@@ -375,17 +420,17 @@ typedef struct {
     }
     switch (e->type) {
         case EV_BOLT:
-            [self spawnBolt:e->pos velocity:e->vel team:e->team id:e->id];
+            [self spawnBolt:e->pos velocity:e->vel life:e->scale friendly:[self friendly:e->team] id:e->id];
             break;
         case EV_IMPACT:
             if (e->id)
                 for (int i = 0; i < MAX_BOLT_NODES; i++)
                     if (_bolts[i].active && _bolts[i].id == e->id) { _bolts[i].active = NO; _boltNodes[i].hidden = YES; break; }
-            [_fx impactAt:e->pos player:e->team == TeamFriend shielded:(e->flags & EVF_SHIELDED) != 0];
+            [_fx impactAt:e->pos player:[self friendly:e->team] shielded:(e->flags & EVF_SHIELDED) != 0];
             break;
         case EV_MUZZLE: {
             SCNNode *n = [self nodeFor:e->entity];
-            if (n) [_fx muzzleFlashOn:n local:e->pos player:e->team == TeamFriend];
+            if (n) [_fx muzzleFlashOn:n local:e->pos player:[self friendly:e->team]];
             break;
         }
         case EV_DAMAGE:
@@ -441,7 +486,7 @@ typedef struct {
 #pragma mark - Frame
 
 - (void)menuFrame:(double)time {
-    _playerView.node.hidden = YES;
+    _playerNode.hidden = YES;
     _cockpitModel.node.hidden = YES;
     _cameraNode.simdPosition = simd_make_float3(0, 0, 0);
     _cameraNode.simdOrientation = simd_quaternion((float)time * 0.02f, simd_make_float3(0, 1, 0));
@@ -463,6 +508,9 @@ typedef struct {
     _time = time;
     [CapitalView updateSharedMaterials:time];
     _playerEntity = ps->entity;
+    _playerTeam = ps->team;
+    [self refreshRelations];
+    [self ensurePlayerShip:ps->model];
 
     for (EntityView *v in _views.allValues) v.seen = NO;
     for (NSUInteger i = 0; i < count; i++) {
@@ -488,20 +536,23 @@ typedef struct {
     BOOL alive = ps->alive && ps->entity;
     [[GameAudio shared] shipThrottle:ps->move.throttle boost:ps->move.boosting alive:alive];
     if (_hadPlayer && _playerEntity == _audioEntity && alive) {
-        if (ps->stats[STAT_TORPEDOES] < _audioTorpedoes) [[GameAudio shared] play:@"torpedo"];
+        if (ps->stats[STAT_SECONDARY] < _audioSecondary) [[GameAudio shared] play:@"secondary"];
         if (ps->stats[STAT_TARGET] && ps->stats[STAT_TARGET] != _audioTarget) [[GameAudio shared] play:@"ui-hover"];
         if (ps->hull < 0.25f && !_audioHullLow) [[GameAudio shared] play:@"ui-alert"];
     }
     _audioEntity = ps->entity;
-    _audioTorpedoes = ps->stats[STAT_TORPEDOES];
+    _audioSecondary = ps->stats[STAT_SECONDARY];
     _audioTarget = ps->stats[STAT_TARGET];
     _audioHullLow = ps->hull < 0.25f;
-    if (alive != !_playerView.node.hidden || !_hadPlayer) [_playerView setAlive:alive];
+    if (alive != !_playerNode.hidden || !_hadPlayer) {
+        [_playerView setAlive:alive];
+        _playerNode.hidden = !alive;
+    }
     _hadPlayer = YES;
-    _playerView.node.simdPosition = ps->move.origin;
-    _playerView.node.simdOrientation = ps->move.orientation;
+    _playerNode.simdPosition = ps->move.origin;
+    _playerNode.simdOrientation = ps->move.orientation;
     if (alive) [_playerView updateThrottle:ps->move.throttle boost:ps->move.boosting hull:ps->hull alive:YES dt:dt];
-    _engineLight.light.intensity = alive ? 60 + 900 * _playerView.exhaust.level : 0;
+    _engineLight.light.intensity = alive && _playerView ? 60 + 900 * _playerView.exhaust.level : 0;
 
     [self updateBolts:dt];
     [self updateCamera:dt player:ps controls:controls];
@@ -612,8 +663,9 @@ typedef struct {
         float d = simd_distance(pos, camPos);
         t->size = clampf(radius * 2.6f / fmaxf(d, 1.0f) * (float)size.height * 0.75f, 22, 260);
         simd_float3 relV = vel - ps->move.velocity;
-        float tHit = t->distance / BOLT_SPEED;
-        for (int k = 0; k < 2; k++) tHit = simd_distance(pos + relV * tHit, me) / BOLT_SPEED;
+        float gunSpeed = [self gunSpeed];
+        float tHit = t->distance / gunSpeed;
+        for (int k = 0; k < 2; k++) tHit = simd_distance(pos + relV * tHit, me) / gunSpeed;
         CGPoint lp = CGPointZero;
         t->hasLead = t->distance < 1500 && [self project:pos + relV * tHit into:&lp];
         t->lead = lp;
@@ -662,8 +714,9 @@ typedef struct {
     f.playerDead = !ps->alive;
     f.damageFlash = _damageFlash;
     f.cockpit = _cockpit;
-    f.torpedoes = ps->stats[STAT_TORPEDOES];
-    f.torpedoCapacity = [CampaignMission((NSUInteger)[self cs:CS_MISSION].integerValue)[@"loadout"][@"torpedoes"] intValue];
+    f.secondary = ps->stats[STAT_SECONDARY];
+    f.secondaryCapacity = ps->stats[STAT_SECONDARY_CAPACITY];
+    f.secondaryName = [self cs:CS_SECONDARY_NAME];
     f.status = _status;
     int aim = ps->stats[STAT_AIM_PART] - 1;
     if (target.capital && aim >= 0 && aim < target.capital.info.info->numParts) {
@@ -707,7 +760,8 @@ typedef struct {
         if (v.kind != EntityFighter || n >= MAX_HUD) continue;
         EntityState s = v.state;
         HUDTarget t = {0};
-        t.kind = s.team == TeamEnemy ? HUDKindEnemy : HUDKindFriend;
+        TeamRelation r = [self relationTo:s.team];
+        t.kind = r == RelationHostile ? HUDKindEnemy : (r == RelationFriendly ? HUDKindFriend : HUDKindNeutral);
         t.selected = s.number == selected;
         t.health = s.hull;
         t.label = [self stringAt:s.name];
@@ -722,7 +776,8 @@ typedef struct {
         float d = simd_distance(s.origin, me);
         if (prop && d > ((s.flags & EF_MINE) ? 1500 : 3000) && !sel) continue;
         HUDTarget t = {0};
-        t.kind = s.team == TeamEnemy ? HUDKindEnemy : (s.team == TeamFriend ? HUDKindFriend : HUDKindNeutral);
+        TeamRelation r = [self relationTo:s.team];
+        t.kind = r == RelationHostile ? HUDKindEnemy : (r == RelationFriendly ? HUDKindFriend : HUDKindNeutral);
         t.capital = !prop;
         t.selected = sel;
         NSString *name = [self stringAt:s.name];
@@ -747,10 +802,11 @@ typedef struct {
     NSString *controller = _input.joystickName;
     NSString *inputText = controller ? [NSString stringWithFormat:@"CONTROLLER: %@", controller] : @"";
 #else
-    NSString *inputText = [NSString stringWithFormat:@"%@%@  |  %@  |  T target  G torpedo  H help  ESC pause",
+    NSString *inputText = [NSString stringWithFormat:@"%@%@  |  %@  |  T target  G %@  H help  ESC pause",
                            _input.joystickName ? [NSString stringWithFormat:@"Joystick: %@ (%@)", _input.joystickName, _input.axisDescription] : @"No joystick",
                            _input.throttleFromJoystick ? @" [throttle: stick]" : @" [throttle: wheel/keys]",
-                           _input.mouseCaptured ? @"mouse captured (ESC releases)" : @"click to capture mouse"];
+                           _input.mouseCaptured ? @"mouse captured (ESC releases)" : @"click to capture mouse",
+                           [self cs:CS_SECONDARY_NAME].lowercaseString];
 #endif
     if (![inputText isEqualToString:_lastInputText]) {
         _lastInputText = inputText;
@@ -782,9 +838,11 @@ typedef struct {
     f.time = ps->missionTime;
     f.target = -1;
     f.nearest = FLT_MAX;
-    f.torpedoes = ps->stats[STAT_TORPEDOES];
+    f.secondary = ps->stats[STAT_SECONDARY];
+    f.secondaryName = [self cs:CS_SECONDARY_SHORT];
     f.objective = _objectiveSummary;
-    f.laserEnergy = ps->stats[STAT_LASER_ENERGY] / 1000.0f;
+    f.weaponEnergy = ps->stats[STAT_WEAPON_ENERGY] / 1000.0f;
+    f.weaponShotEnergy = _playerDef ? _playerDef->gun.energy : 0;
 
     simd_quatf inv = simd_inverse(ps->move.orientation);
     CockpitContact contacts[COCKPIT_MAX_CONTACTS];
@@ -811,8 +869,10 @@ typedef struct {
         float dist = simd_length(rel);
         float radius = [self radiusOf:v];
         CockpitContact k = {0};
+        TeamRelation relation = [self relationTo:s.team];
+        BOOL hostile = relation == RelationHostile;
         k.local = simd_act(inv, rel);
-        k.team = (Team)s.team;
+        k.relation = relation;
         k.orientation = simd_mul(inv, s.orientation);
         k.hull = s.hull;
         k.shield = s.shield;
@@ -820,14 +880,15 @@ typedef struct {
         k.component = @"FUSELAGE";
         k.cargo = fighter ? @"NONE" : (s.flags & EF_SCANNED) ? ([self stringAt:s.cargo].length ? [self stringAt:s.cargo] : @"NO MANIFEST") : @"UNKNOWN";
         if (fighter) {
-            k.geometry = [ShipView geometryForClass:v.ship.shipClass];
-            k.holoScale = 0.0075f;
-            k.name = [self stringAt:s.name] ?: @(FighterSpecFor(v.ship.shipClass).displayName);
-            k.className = s.team == TeamEnemy ? @"Skarn fighter" : @"Concord fighter";
-            k.attacking = s.team == TeamEnemy && (s.flags & EF_ATTACKING) && s.target == ps->entity &&
+            const ShipDef *def = v.ship.definition;
+            k.geometry = [ShipView geometryForDefinition:def];
+            k.holoScale = def ? def->hologramScale : 0.0075f;
+            k.name = [self stringAt:s.name] ?: (def ? @(def->displayName) : @"FIGHTER");
+            k.className = [self stringAt:s.className] ?: (def ? @(def->displayName) : @"");
+            k.attacking = hostile && (s.flags & EF_ATTACKING) && s.target == ps->entity &&
                           simd_dot(QuatForward(s.orientation), -rel / fmaxf(dist, 1)) > 0.8f;
             if (k.attacking && dist < 700 && k.local.z > 0) f.six = YES;
-            if (s.team == TeamEnemy) f.nearest = fminf(f.nearest, dist);
+            if (hostile) f.nearest = fminf(f.nearest, dist);
         } else {
             BOOL prop = (s.flags & EF_PROP) != 0;
             k.capital = !prop;
@@ -847,14 +908,15 @@ typedef struct {
                     k.component = names[MIN(info->parts[aim].kind, 3)];
                 }
             }
-            if (s.team == TeamEnemy && ((s.flags & EF_MINE) || !prop)) f.nearest = fminf(f.nearest, dist - radius);
+            if (hostile && ((s.flags & EF_MINE) || !prop)) f.nearest = fminf(f.nearest, dist - radius);
         }
         if (s.number == selected) {
             f.target = (int)n;
             simd_float3 relV = s.velocity - ps->move.velocity;
             f.closingSpeed = -simd_dot(relV, rel / fmaxf(dist, 1));
-            float tHit = dist / BOLT_SPEED;
-            for (int kk = 0; kk < 2; kk++) tHit = simd_distance(s.origin + relV * tHit, me) / BOLT_SPEED;
+            float gunSpeed = [self gunSpeed];
+            float tHit = dist / gunSpeed;
+            for (int kk = 0; kk < 2; kk++) tHit = simd_distance(s.origin + relV * tHit, me) / gunSpeed;
             simd_float3 lead = simd_normalize(s.origin + relV * tHit - me);
             float cone = fighter ? 2.5f : 2.5f + atanf(radius / fmaxf(dist, 1)) * 57.3f;
             f.lock = dist < 1200 + (fighter ? 0 : radius) && simd_dot(lead, fwd) > cosf(cone * (float)M_PI / 180.0f);

@@ -60,7 +60,7 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
             [AVAudioSession.sharedInstance setActive:YES error:nil];
 #endif
             for (NSString *name in @[@"ui-hover", @"ui-confirm", @"ui-back", @"ui-panel", @"ui-alert",
-                                      @"ui-success", @"laser", @"laser-player", @"torpedo", @"impact", @"explosion"]) {
+                                      @"ui-success", @"laser", @"laser-player", @"secondary", @"impact", @"explosion"]) {
                 NSMutableArray *voices = [NSMutableArray array];
                 NSUInteger count = [@[@"laser", @"laser-player", @"impact", @"explosion"] containsObject:name] ? 4 : 2;
                 for (NSUInteger i = 0; i < count; i++) {

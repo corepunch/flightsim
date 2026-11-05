@@ -191,7 +191,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
             case svc_command: {
                 int type = [r u8];
                 NSString *a = [r string], *b = [r string], *c = [r string];
-                if (type == SVC_MISSION_END) {
+                if (type == SVC_LEVEL_END) {
                     if (_missionEndHandler) _missionEndHandler([a isEqualToString:@"1"], b.length ? [b componentsSeparatedByString:@"\n"] : @[]);
                 } else {
                     [_view serverCommand:type a:a b:b c:c];
@@ -236,7 +236,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
     Snapshot *last = _snapshots.lastObject;
     if (last && ps.entity) {
         PlayerState previous = last.ps;
-        if (ps.entity == previous.entity && ps.stats[STAT_TORPEDOES] < previous.stats[STAT_TORPEDOES])
+        if (ps.entity == previous.entity && ps.stats[STAT_SECONDARY] < previous.stats[STAT_SECONDARY])
             [_view weaponFired];
     }
 #endif
@@ -262,7 +262,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
         return;
     }
 
-    BOOL impulse = (actions & (InputActionTarget | InputActionTorpedo)) != 0;
+    BOOL impulse = (actions & (InputActionTarget | InputActionSecondary)) != 0;
     _msecRemainder += dt * 1000.0;
     int msec = (int)_msecRemainder;
     if (msec >= 1 || impulse) {
@@ -275,7 +275,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
         cmd.roll = c.roll;
         cmd.throttle = c.throttle;
         cmd.buttons = (c.fire ? BUTTON_FIRE : 0) | (c.boost ? BUTTON_BOOST : 0);
-        cmd.impulse = (actions & InputActionTorpedo) ? IMPULSE_TORPEDO : ((actions & InputActionTarget) ? IMPULSE_TARGET : IMPULSE_NONE);
+        cmd.impulse = (actions & InputActionSecondary) ? IMPULSE_SECONDARY : ((actions & InputActionTarget) ? IMPULSE_TARGET : IMPULSE_NONE);
         QuantizeUserCmd(&cmd);
         _cmds[cmd.sequence % CMD_BACKUP] = cmd;
         [self predictShot:&cmd];
@@ -320,19 +320,24 @@ static const double kNetInterpDelay = TICK_DT * 3;
 }
 
 // Guns fire on the same clock the server keeps for us (seconds of commands
-// run), so predicted shots line up with the server's.
+// run), so predicted shots line up with the server's. The gun comes from
+// our ship's definition, which the player state names.
 - (void)predictShot:(const UserCmd *)cmd {
     ShipMoveState m;
-    if (![self predictFrom:_snapshots.lastObject into:&m]) return;
+    Snapshot *newest = _snapshots.lastObject;
+    if (![self predictFrom:newest into:&m]) return;
     _fireClock += clampf(cmd->msec / 1000.0f, 0, 0.1f);
-    if (!(cmd->buttons & BUTTON_FIRE) || _fireClock - _lastShot <= 0.11 ||
-        _snapshots.lastObject.ps.stats[STAT_LASER_ENERGY] < (int)(LASER_SHOT_ENERGY * 1000)) return;
+    PlayerState ps = newest.ps;
+    const ShipDef *def = ps.model ? ShipDefForModel(_cs[CS_MODELS + ps.model]) : NULL;
+    if (!def || !def->gunCount) return;
+    ShipGun gun = def->gun;
+    if (!(cmd->buttons & BUTTON_FIRE) || _fireClock - _lastShot <= gun.interval ||
+        ps.stats[STAT_WEAPON_ENERGY] < (int)(gun.energy * 1000)) return;
     _lastShot = _fireClock;
-    FighterSpec spec = FighterSpecFor(ShipClassExecutioner);
-    simd_float3 gun = spec.guns[_gunIndex++ % spec.gunCount];
-    [_view predictedShotFrom:m.origin + simd_act(m.orientation, gun)
-                    velocity:m.velocity + QuatForward(m.orientation) * BOLT_SPEED
-                         gun:gun];
+    simd_float3 muzzle = def->guns[_gunIndex++ % def->gunCount];
+    [_view predictedShotFrom:m.origin + simd_act(m.orientation, muzzle)
+                    velocity:m.velocity + QuatForward(m.orientation) * gun.speed
+                         gun:muzzle life:gun.life];
 }
 
 - (BOOL)predictedMove:(ShipMoveState *)out dt:(float)dt {

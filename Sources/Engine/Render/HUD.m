@@ -60,10 +60,10 @@ static SKShapeNode *Bracket(void) {
     NSMutableArray<SKShapeNode *> *_navMarks;
     SKShapeNode *_aimMark;
     SKShapeNode *_selectedOutline, *_selectedLeadOutline, *_selectedLabelBacking;
-    SKLabelNode *_statusLabel, *_torpLabel, *_bannerLabel;
+    SKLabelNode *_statusLabel, *_secondaryLabel, *_bannerLabel;
     SKNode *_objectivePanel, *_messagePanel;
-    SKNode *_torpedoRack;
-    NSMutableArray<SKShapeNode *> *_torpedoSegments;
+    SKNode *_secondaryRack;
+    NSMutableArray<SKShapeNode *> *_secondarySegments;
     NSMutableArray<SKLabelNode *> *_messages;
     LensFlare *_lensFlare;
     CGSize _laidOut;
@@ -221,12 +221,12 @@ static SKShapeNode *Bracket(void) {
     [_root addChild:_aimMark];
     _statusLabel = Label(13, SKLabelHorizontalAlignmentModeCenter);
     [_root addChild:_statusLabel];
-    _torpLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
-    _torpLabel.fontColor = UIColorWithOpacity(UIAmber, 0.9);
-    [_root addChild:_torpLabel];
-    _torpedoRack = [SKNode node];
-    _torpedoSegments = [NSMutableArray array];
-    [_root addChild:_torpedoRack];
+    _secondaryLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
+    _secondaryLabel.fontColor = UIColorWithOpacity(UIAmber, 0.9);
+    [_root addChild:_secondaryLabel];
+    _secondaryRack = [SKNode node];
+    _secondarySegments = [NSMutableArray array];
+    [_root addChild:_secondaryRack];
     _bannerLabel = Label(30, SKLabelHorizontalAlignmentModeCenter);
     _bannerLabel.fontName = UIMonoBoldFont;
     _bannerLabel.alpha = 0;
@@ -383,48 +383,48 @@ static SKShapeNode *Bracket(void) {
     CGFloat headingTop = heading ? CGRectGetMaxY(heading.frame) : 7;
     _objectivePanel.position = CGPointMake(edgeLeft + 128 * scopeScale + 16,
                                            s.height - topMargin - headingTop);
-    _torpLabel.position = CGPointMake(_shieldLabel.position.x, _shieldLabel.position.y + 18);
-    _torpedoRack.position = CGPointMake(_shieldFill.position.x, _shieldFill.position.y + 18);
-    [self layoutTorpedoes];
+    _secondaryLabel.position = CGPointMake(_shieldLabel.position.x, _shieldLabel.position.y + 18);
+    _secondaryRack.position = CGPointMake(_shieldFill.position.x, _shieldFill.position.y + 18);
+    [self layoutSecondary];
     CGPathRef dp = CGPathCreateWithRect(CGRectMake(0, 0, s.width, s.height), NULL);
     _damage.path = dp;
     CGPathRelease(dp);
     _ring.position = _cursor.position = CGPointMake(s.width / 2, s.height / 2);
 }
 
-- (void)layoutTorpedoes {
-    NSUInteger count = _torpedoSegments.count;
+- (void)layoutSecondary {
+    NSUInteger count = _secondarySegments.count;
     if (!count) return;
     CGFloat width = _touchLayout ? 80 : 200;
     CGFloat gap = MIN(4, width / (count * 4));
     CGFloat segmentWidth = (width - gap * (count - 1)) / count;
     for (NSUInteger i = 0; i < count; i++) {
-        SKShapeNode *segment = _torpedoSegments[i];
+        SKShapeNode *segment = _secondarySegments[i];
         segment.position = CGPointMake(i * (segmentWidth + gap), 0);
         UISetSkewedBar(segment, segmentWidth, 6);
     }
 }
 
-- (void)updateTorpedoes:(int)remaining capacity:(int)capacity {
+- (void)updateSecondary:(int)remaining capacity:(int)capacity name:(NSString *)name {
     capacity = MAX(0, MAX(capacity, remaining));
     remaining = MAX(0, remaining);
-    if (_torpedoSegments.count != (NSUInteger)capacity) {
-        [_torpedoRack removeAllChildren];
-        [_torpedoSegments removeAllObjects];
+    if (_secondarySegments.count != (NSUInteger)capacity) {
+        [_secondaryRack removeAllChildren];
+        [_secondarySegments removeAllObjects];
         for (int i = 0; i < capacity; i++) {
             SKShapeNode *segment = [SKShapeNode node];
             segment.lineWidth = 0.75;
-            [_torpedoRack addChild:segment];
-            [_torpedoSegments addObject:segment];
+            [_secondaryRack addChild:segment];
+            [_secondarySegments addObject:segment];
         }
-        [self layoutTorpedoes];
+        [self layoutSecondary];
     }
-    for (NSUInteger i = 0; i < _torpedoSegments.count; i++) {
+    for (NSUInteger i = 0; i < _secondarySegments.count; i++) {
         BOOL loaded = i < (NSUInteger)remaining;
-        _torpedoSegments[i].fillColor = UIColorWithOpacity(UIAmber, loaded ? 0.9 : 0.04);
-        _torpedoSegments[i].strokeColor = UIColorWithOpacity(UIAmber, loaded ? 0.95 : 0.4);
+        _secondarySegments[i].fillColor = UIColorWithOpacity(UIAmber, loaded ? 0.9 : 0.04);
+        _secondarySegments[i].strokeColor = UIColorWithOpacity(UIAmber, loaded ? 0.95 : 0.4);
     }
-    _torpLabel.text = @"TORPEDO";
+    _secondaryLabel.text = name.length ? name : @"";
 }
 
 - (void)updateInstruments:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count cockpit:(BOOL)cockpit {
@@ -434,8 +434,8 @@ static SKShapeNode *Bracket(void) {
     _targetReadout.hidden = cockpit;
     if (!cockpit) [_targetReadout updateFrame:frame contacts:contacts count:count];
     _laserLabel.hidden = _rechargeLabel.hidden = cockpit;
-    _laserLabel.text = [NSString stringWithFormat:@"LASER %3d%%", (int)lroundf(frame.laserEnergy * 100)];
-    _laserLabel.fontColor = frame.laserEnergy < LASER_SHOT_ENERGY ? EnemyColor(1) : HUDColor(0.9);
+    _laserLabel.text = [NSString stringWithFormat:@"LASER %3d%%", (int)lroundf(frame.weaponEnergy * 100)];
+    _laserLabel.fontColor = frame.weaponEnergy < frame.weaponShotEnergy ? EnemyColor(1) : HUDColor(0.9);
     _rechargeLabel.text = frame.shield < 0.999 ? @"SHIELD +6%/S" : @"SHIELD FULL";
 }
 
@@ -562,11 +562,11 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     UISetSkewedBar(_shieldFill, conditionWidth * f.shield, 6);
     _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
     _scoreLabel.text = [NSString stringWithFormat:@"KILLS %d   DEATHS %d", f.kills, f.deaths];
-    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _torpLabel, _torpedoRack])
+    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _secondaryLabel, _secondaryRack])
         n.hidden = f.cockpit;
     _scoreLabel.hidden = YES;
     if (_touchLayout) _throttleFrame.hidden = YES;
-    [self updateTorpedoes:f.torpedoes capacity:f.torpedoCapacity];
+    [self updateSecondary:f.secondary capacity:f.secondaryCapacity name:f.secondaryName];
     _aimMark.hidden = !f.aimVisible || f.playerDead;
     _aimMark.position = f.aim;
     _aimMark.zRotation = 0.0;

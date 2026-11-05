@@ -23,6 +23,25 @@ static inline simd_float3 randomUnit(void) {
 
 void GPrint(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
 
+// This game's sides. The engine only knows team numbers and the relations
+// the game publishes in CS_TEAMS (see GTeamRelations).
+typedef enum { TeamFriend, TeamEnemy, TeamNeutral, TeamCount } Team;
+
+static inline bool TeamsHostile(Team a, Team b) {
+    return (a == TeamFriend && b == TeamEnemy) || (a == TeamEnemy && b == TeamFriend);
+}
+
+// The CS_TEAMS configstring for TeamsHostile: a team is friendly to itself,
+// hostile where TeamsHostile says so, neutral otherwise.
+static inline NSString *GTeamRelations(void) {
+    char s[MAX_TEAMS * MAX_TEAMS + 1];
+    for (int a = 0; a < MAX_TEAMS; a++)
+        for (int b = 0; b < MAX_TEAMS; b++)
+            s[a * MAX_TEAMS + b] = a == b ? '1' : (a < TeamCount && b < TeamCount && TeamsHostile((Team)a, (Team)b) ? '2' : '0');
+    s[MAX_TEAMS * MAX_TEAMS] = 0;
+    return @(s);
+}
+
 typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition };
 
 typedef NS_ENUM(NSInteger, ObjectiveState) {
@@ -36,14 +55,18 @@ typedef NS_ENUM(NSInteger, ObjectiveState) {
 
 #pragma mark - Fighter
 
+// A ship flown by a player or the AI, built from a ship definition
+// (Resources/Ships/<name>.json): flight params, guns and the primary weapon
+// come from there, with the definition's AI variants for AI-flown ships.
 @interface GFighter : NSObject {
 @public
     ShipMoveState move;
     ShipParams params;
 }
-+ (instancetype)fighterWithClass:(ShipClass)shipClass;
++ (instancetype)fighterWithShip:(NSString *)name ai:(BOOL)ai;   // nil if there is no such definition
 @property (nonatomic) uint16_t number;
-@property (nonatomic, readonly) ShipClass shipClass;
+@property (nonatomic, readonly) const ShipDef *definition;
+@property (nonatomic, readonly) ShipGun gun;      // the primary weapon as flown
 @property (nonatomic, readonly) int model;
 @property (nonatomic) int nameIndex;
 @property (nonatomic, readonly) float radius;
@@ -223,6 +246,7 @@ typedef struct {
     BOOL _objectivesDirty;
     NSMutableArray *_explosionQueue;    // [time, GCapital, last] break-up sequences
     int _startTorpedoes;
+    int _fighterClassNames[TeamCount];  // CS_STRINGS indices for "<faction> fighter"
 
     NSMutableData *_entityStates;
 }
@@ -252,8 +276,8 @@ extern GWorld *level;
 @end
 
 @interface GWorld (Weapons)
-- (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed team:(Team)team
-             damage:(float)damage capDamage:(float)capDamage owner:(GClient *)owner;
+- (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life
+               team:(Team)team damage:(float)damage capDamage:(float)capDamage owner:(GClient *)owner;
 - (void)muzzleFlash:(GFighter *)s;
 - (void)damageShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake;
 - (void)updateBolts:(float)dt;

@@ -37,6 +37,7 @@
 @synthesize input = _input;
 
 - (UIView *)flightControlsView { return _flightControls; }
+- (void)setSecondaryLabel:(NSString *)label { [_flightControls setSecondaryLabel:label]; }
 
 - (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 

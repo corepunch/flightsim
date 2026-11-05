@@ -8,7 +8,7 @@ contents="$app/Contents"
 mkdir -p "$contents/MacOS" "$contents/Resources" "$contents/PlugIns"
 cp Resources/Info.plist "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set CFBundleExecutable FlightUIChecks' -c 'Set CFBundleIdentifier com.igor.spacefight.flightuichecks' -c 'Set CFBundleName Flight UI Checks' -c 'Add LSUIElement bool true' "$contents/Info.plist"
-for directory in Audio Briefing Fonts Missions Shaders Textures; do
+for directory in Audio Briefing Fonts Missions Shaders Ships Textures; do
     ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"
 done
 # Bake only the changed cockpit into the existing small model cache.

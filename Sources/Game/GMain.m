@@ -62,6 +62,7 @@ static EntityState FighterState(GFighter *s, GPilot *p) {
     e.team = s.team;
     e.model = s.model;
     e.name = s.nameIndex;
+    e.className = s.team < TeamCount ? level->_fighterClassNames[s.team] : 0;
     e.flags = s.boosting ? EF_BOOST : 0;
     id target = p.target;
     if (p && p.mode == AIModeAttack && [target isKindOfClass:[GFighter class]]) {
@@ -116,7 +117,7 @@ static EntityState FighterState(GFighter *s, GPilot *p) {
     for (GTorpedo *t in _torpedoes) {
         e = (EntityState){0};
         e.number = t.number;
-        e.kind = EntityTorpedo;
+        e.kind = EntityProjectile;
         e.team = t.team;
         e.origin = t.position;
         e.velocity = t.velocity;
@@ -137,13 +138,16 @@ static void BuildPlayerState(GClient *cl) {
         ps->move = s->move;
         ps->params = s->params;
         ps->entity = s.number;
+        ps->model = (uint16_t)s.model;
+        ps->team = (uint8_t)s.team;
         ps->alive = s.alive;
         ps->hull = s.hull;
         ps->shield = s.shield;
     }
     ps->missionTime = (float)level->_missionTime;
-    ps->stats[STAT_LASER_ENERGY] = (int16_t)lroundf(s.laserEnergy * 1000);
-    ps->stats[STAT_TORPEDOES] = (int16_t)cl.torpedoes;
+    ps->stats[STAT_WEAPON_ENERGY] = (int16_t)lroundf(s.laserEnergy * 1000);
+    ps->stats[STAT_SECONDARY] = (int16_t)cl.torpedoes;
+    ps->stats[STAT_SECONDARY_CAPACITY] = (int16_t)level->_startTorpedoes;
     ps->stats[STAT_KILLS] = (int16_t)cl.kills;
     ps->stats[STAT_DEATHS] = (int16_t)cl.deaths;
     ps->stats[STAT_TARGET] = BodyAlive(cl.selected) ? (int16_t)BodyNumber(cl.selected) : 0;
@@ -200,18 +204,19 @@ static void ClientThink(int index, const UserCmd *cmd) {
     GFighter *s = cl.ship;
     float dt = clampf(cmd->msec / 1000.0f, 0, 0.1f);
     if (cmd->impulse == IMPULSE_TARGET) [w cycleTargetFor:cl];
-    if (cmd->impulse == IMPULSE_TORPEDO) [w fireTorpedoFor:cl];
+    if (cmd->impulse == IMPULSE_SECONDARY) [w fireTorpedoFor:cl];
     if (cl.autopilot || !s.alive) return;
 
     cl.cmdTime += dt;
     simd_float3 before = s.position;
     [s step:ShipInputFromCmd(cmd) dt:dt];
     [w collidePlayer:cl from:before];
-    if ((cmd->buttons & BUTTON_FIRE) && s.alive && s.laserEnergy >= LASER_SHOT_ENERGY && cl.cmdTime - s.lastShot > 0.11) {
+    ShipGun gun = s.gun;
+    if ((cmd->buttons & BUTTON_FIRE) && s.alive && s.laserEnergy >= gun.energy && cl.cmdTime - s.lastShot > gun.interval) {
         s.lastShot = cl.cmdTime;
-        s.laserEnergy = fmaxf(0, s.laserEnergy - LASER_SHOT_ENERGY);
-        [w fireFrom:s.nextGunWorldPosition velocity:s.velocity direction:s.forward speed:BOLT_SPEED team:TeamFriend
-             damage:0.12f capDamage:0.12f owner:cl];
+        s.laserEnergy = fmaxf(0, s.laserEnergy - gun.energy);
+        [w fireFrom:s.nextGunWorldPosition velocity:s.velocity direction:s.forward speed:gun.speed life:gun.life team:s.team
+             damage:gun.damage capDamage:gun.capitalDamage owner:cl];
         [w muzzleFlash:s];
     }
     BuildPlayerState(cl);

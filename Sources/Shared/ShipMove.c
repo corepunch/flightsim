@@ -20,14 +20,14 @@ void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput c, float dt) {
     if (s->boostEnergy <= 0.02f) s->boostDepleted = 1;
     else if (s->boostEnergy >= 0.15f) s->boostDepleted = 0;
     bool boost = c.boost && !s->boostDepleted;
-    s->boostEnergy = fminf(1, fmaxf(0, s->boostEnergy + (boost ? -0.28f : 0.12f) * dt));
+    s->boostEnergy = fminf(1, fmaxf(0, s->boostEnergy + (boost ? -p->boostDrain : p->boostRecharge) * dt));
     s->boosting = boost;
     s->throttle = c.throttle;
 
     // Angular rates chase the stick, giving a little weight to the controls.
-    simd_float3 target = simd_make_float3(c.pitch * 1.45f, -c.yaw * 0.85f, -c.roll * 2.6f) * p->turnRate;
-    if (boost) target *= 0.7f;
-    s->angularVelocity += (target - s->angularVelocity) * (1.0f - expf(-5.5f * dt));
+    simd_float3 target = simd_make_float3(c.pitch * p->pitchRate, -c.yaw * p->yawRate, -c.roll * p->rollRate) * p->turnRate;
+    if (boost) target *= p->boostTurn;
+    s->angularVelocity += (target - s->angularVelocity) * (1.0f - expf(-p->agility * dt));
     float w = simd_length(s->angularVelocity);
     if (w > 1e-5f) {
         simd_quatf dq = simd_quaternion(w * dt, s->angularVelocity / w);
@@ -36,9 +36,9 @@ void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput c, float dt) {
 
     // Arcade space flight: velocity is pulled toward the nose, so hard turns
     // drift before the engines catch up.
-    float speed = s->throttle * p->maxSpeed + (boost ? p->maxSpeed * 0.9f : 0);
+    float speed = s->throttle * p->maxSpeed + (boost ? p->maxSpeed * p->boostSpeed : 0);
     simd_float3 desired = QuatForward(s->orientation) * speed;
-    float grip = boost ? 2.2f : 1.4f;
+    float grip = boost ? p->boostGrip : p->grip;
     s->velocity += (desired - s->velocity) * (1.0f - expf(-grip * dt));
     s->origin += s->velocity * dt;
 }

@@ -3,24 +3,29 @@
 #pragma mark - Fighter
 
 @implementation GFighter {
-    FighterSpec _spec;
     NSUInteger _gunIndex;
 }
 
-+ (instancetype)fighterWithClass:(ShipClass)shipClass { return [[self alloc] initWithClass:shipClass]; }
++ (instancetype)fighterWithShip:(NSString *)name ai:(BOOL)ai {
+    const ShipDef *def = ShipDefNamed(name);
+    if (!def) {
+        GPrint(@"No ship definition \"%@\"", name);
+        return nil;
+    }
+    return [[self alloc] initWithDefinition:def ai:ai];
+}
 
-- (instancetype)initWithClass:(ShipClass)shipClass {
+- (instancetype)initWithDefinition:(const ShipDef *)def ai:(BOOL)ai {
     if ((self = [super init])) {
-        _shipClass = shipClass;
-        _spec = FighterSpecFor(shipClass);
-        _radius = _spec.radius;
-        _model = gi.modelIndex(FighterModelName(shipClass).UTF8String);
-        params.maxSpeed = 150;
-        params.turnRate = 1;
+        _definition = def;
+        _gun = ai ? def->aiGun : def->gun;
+        _radius = def->radius;
+        _model = gi.modelIndex(ShipModelName(@(def->name)).UTF8String);
+        params = ai ? def->aiParams : def->params;
         move.orientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
         move.boostEnergy = 1;
         _laserEnergy = 1;
-    _hull = 1;
+        _hull = 1;
         _shield = 1;
         _alive = YES;
     }
@@ -49,12 +54,12 @@
 - (void)step:(ShipInput)input dt:(float)dt {
     if (!_alive) return;
     ShipMove(&move, &params, input, dt);
-    _laserEnergy = fminf(1, _laserEnergy + LASER_RECHARGE_RATE * dt);
+    _laserEnergy = fminf(1, _laserEnergy + _gun.recharge * dt);
     _shield = fminf(1, _shield + 0.06f * dt);   // shields regenerate slowly
 }
 
 - (simd_float3)nextGunWorldPosition {
-    simd_float3 local = _spec.guns[_gunIndex % _spec.gunCount];
+    simd_float3 local = _definition->gunCount ? _definition->guns[_gunIndex % _definition->gunCount] : simd_make_float3(0, 0, -_radius);
     _gunIndex++;
     _lastGunLocal = local;
     return move.origin + simd_act(move.orientation, local);

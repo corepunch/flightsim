@@ -3,15 +3,16 @@
 
 @implementation GWorld (Weapons)
 
-- (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed team:(Team)team
-             damage:(float)damage capDamage:(float)capDamage owner:(GClient *)owner {
+- (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life
+               team:(Team)team damage:(float)damage capDamage:(float)capDamage owner:(GClient *)owner {
     for (int i = 0; i < MAX_BOLTS; i++) {
         if (_bolts[i].active) continue;
         GBolt *b = &_bolts[i];
         if (++_nextBoltId == 0) _nextBoltId = 1;
-        *b = (GBolt){ .position = pos, .velocity = v + dir * speed, .life = BOLT_LIFE, .damage = damage,
+        *b = (GBolt){ .position = pos, .velocity = v + dir * speed, .life = life, .damage = damage,
                       .capDamage = capDamage, .team = team, .owner = owner, .id = _nextBoltId, .active = YES };
-        GEvent((GameEvent){ .type = EV_BOLT, .id = b->id, .team = team, .entity = owner.ship.number, .pos = b->position, .vel = b->velocity });
+        GEvent((GameEvent){ .type = EV_BOLT, .id = b->id, .team = team, .entity = owner.ship.number, .pos = b->position, .vel = b->velocity,
+                            .scale = life });
         return b;
     }
     return NULL;

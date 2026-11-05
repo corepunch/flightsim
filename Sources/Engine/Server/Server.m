@@ -96,7 +96,7 @@ static void SV_Event(const GameEvent *e) {
 }
 
 static void SV_Command(int client, int type, const char *a, const char *b, const char *c) {
-    if (type == SVC_MISSION_END) sv->_missionEnded = YES;
+    if (type == SVC_LEVEL_END) sv->_missionEnded = YES;
     MsgWriter *w = [MsgWriter new];
     [w u8:svc_command];
     [w u8:(uint8_t)type];

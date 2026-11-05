@@ -29,9 +29,9 @@ static CGRect FrameInScene(SKNode *node, SKScene *scene) {
 static int CheckSensors(void) {
     CockpitFrame frame = {.alive=YES, .target=0};
     CockpitContact contacts[3] = {
-        {.local={0,0,-1000}, .team=TeamEnemy},
-        {.local={1000,0,-1000}, .team=TeamFriend},
-        {.local={0,0,1000}, .team=TeamNeutral}
+        {.local={0,0,-1000}, .relation=RelationHostile},
+        {.local={1000,0,-1000}, .relation=RelationFriendly},
+        {.local={0,0,1000}, .relation=RelationNeutral}
     };
     SensorScope *front = [[SensorScope alloc] initRear:NO], *rear = [[SensorScope alloc] initRear:YES];
     [front updateFrame:frame contacts:contacts count:3]; [rear updateFrame:frame contacts:contacts count:3];
@@ -48,11 +48,11 @@ static int CheckSensors(void) {
     return 0;
 }
 static int CheckHUD(void) {
-    CockpitContact contact = {.local={100,50,-1210}, .team=TeamEnemy, .hull=.72, .shield=.4, .systems=.75,
+    CockpitContact contact = {.local={100,50,-1210}, .relation=RelationHostile, .hull=.72, .shield=.4, .systems=.75,
         .name=@"Corsair Cutter Rask", .className=@"Corsair cutter", .cargo=@"Skarn munitions", .component=@"SHIELD GENERATOR",
-        .geometry=[ShipView geometryForClass:ShipClassExecutioner], .holoScale=.0075,
+        .geometry=[ShipView geometryForDefinition:ShipDefNamed(@"executioner")], .holoScale=.0075,
         .orientation=simd_quaternion(0.7f, simd_make_float3(0,1,0))};
-    CockpitFrame instrument = {.alive=YES, .target=0, .laserEnergy=.85, .shield=.6, .closingSpeed=42, .time=2};
+    CockpitFrame instrument = {.alive=YES, .target=0, .weaponEnergy=.85, .weaponShotEnergy=.035, .shield=.6, .closingSpeed=42, .time=2};
     for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(1194,834)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(852,393)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {
         HUD *hud = [[HUD alloc] initWithSize:size.sizeValue];
         hud.backgroundColor = [SKColor colorWithRed:.015 green:.025 blue:.035 alpha:1];
@@ -61,7 +61,7 @@ static int CheckHUD(void) {
         [hud setHelpVisible:NO];
         [hud setInputText:hud.touchLayout ? @"" : @"CONTROLLER: USB  /  T TARGET  /  G TORPEDO  /  ESC PAUSE"];
         [hud setObjectives:@[@"Patrol NAV 1, 2, 3 in order  0/3"] states:@[@0]];
-        HUDFrame frame = {.speed=125, .throttle=.8, .boostEnergy=.6, .hull=.9, .shield=.6, .torpedoes=2, .torpedoCapacity=4};
+        HUDFrame frame = {.speed=125, .throttle=.8, .boostEnergy=.6, .hull=.9, .shield=.6, .secondary=2, .secondaryCapacity=4, .secondaryName=@"TORPEDO"};
         [hud updateFrame:frame targets:NULL count:0];
         [hud updateInstruments:instrument contacts:&contact count:1 cockpit:NO];
         SKNode *laser = [hud valueForKey:@"laserLabel"], *speed = [hud valueForKey:@"speedLabel"], *throttle = [hud valueForKey:@"throttleLabel"], *input = [hud valueForKey:@"inputLabel"], *target = [hud valueForKey:@"targetReadout"];
@@ -219,12 +219,12 @@ static int CheckSimulation(void) {
     [server frame:TICK_DT paused:NO]; [client readPackets];
     PlayerState after = Latest(client);
     CHECK(simd_distance(before.move.origin,after.move.origin) < .01);
-    CHECK(after.stats[STAT_LASER_ENERGY] == before.stats[STAT_LASER_ENERGY]);
+    CHECK(after.stats[STAT_WEAPON_ENERGY] == before.stats[STAT_WEAPON_ENERGY]);
     for (int i=0;i<120;i++) Pump(client,server,(ControlState){.hat=-1,.fire=YES},NO);
-    int depleted = Latest(client).stats[STAT_LASER_ENERGY];
+    int depleted = Latest(client).stats[STAT_WEAPON_ENERGY];
     CHECK(depleted < 950 && depleted >= 0);
     for (int i=0;i<150;i++) Pump(client,server,(ControlState){.hat=-1},NO);
-    CHECK(Latest(client).stats[STAT_LASER_ENERGY] > depleted);
+    CHECK(Latest(client).stats[STAT_WEAPON_ENERGY] > depleted);
     [client disconnect]; [server stop];
     return 0;
 }

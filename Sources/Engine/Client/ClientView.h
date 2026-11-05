@@ -25,7 +25,7 @@
 - (NSArray *)loadMissionAssets:(float *)progress;
 // Render thread: swap in what -loadMissionAssets: built.
 - (void)attachMission;
-// Render thread: drop every entity view, bolt and torpedo.
+// Render thread: drop every entity view, bolt and projectile.
 - (void)clearMission;
 
 - (void)menuFrame:(double)time;
@@ -38,7 +38,7 @@
 // Own ship under prediction: its bolts and muzzle flashes are drawn when the
 // player fires, and the server's copies of them are matched up, not redrawn.
 @property (nonatomic) uint16_t predictedEntity;
-- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal;
+- (void)predictedShotFrom:(simd_float3)pos velocity:(simd_float3)velocity gun:(simd_float3)gunLocal life:(float)life;
 - (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c;
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time;
 

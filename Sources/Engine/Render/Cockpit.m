@@ -174,12 +174,6 @@ static SCNNode *Hologram(SKColor *color, SCNNode * __strong *modelOut) {
     return holder;
 }
 
-static void SetHologramShip(SCNNode *model, ShipClass c) {
-    SCNGeometry *g = [[ShipView geometryForClass:c] copy];
-    g.materials = @[[model valueForKey:@"holoMaterial"]];
-    model.geometry = g;
-}
-
 // Any mesh as a hologram. Fighter meshes are in OBJ space (+Z nose) and
 // need the half turn; capital meshes were exported in ship space.
 static void SetHologramGeometry(SCNNode *model, SCNGeometry *source, float scale, BOOL fighter) {
@@ -190,9 +184,9 @@ static void SetHologramGeometry(SCNNode *model, SCNGeometry *source, float scale
     model.simdScale = simd_make_float3(scale, scale, scale);
 }
 
-static SKColor *TeamColor(Team t, CGFloat a) {
-    return t == TeamEnemy ? EnemyColor(a) : (t == TeamFriend ? [SKColor colorWithRed:0.4 green:1 blue:0.55 alpha:a]
-                                                             : [SKColor colorWithRed:0.95 green:0.88 blue:0.45 alpha:a]);
+static SKColor *TeamColor(TeamRelation r, CGFloat a) {
+    return r == RelationHostile ? EnemyColor(a) : (r == RelationFriendly ? [SKColor colorWithRed:0.4 green:1 blue:0.55 alpha:a]
+                                                                         : [SKColor colorWithRed:0.95 green:0.88 blue:0.45 alpha:a]);
 }
 
 #pragma mark - Lamps
@@ -501,7 +495,6 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     _self = MakeScreen(size, @"SHIP STATUS");
 
     _selfHolder = Hologram(ScreenColor(0.5), &_selfModel);
-    SetHologramShip(_selfModel, ShipClassExecutioner);
 
     CGPathRef ring = CGPathCreateWithEllipseInRect(CGRectMake(-142, -128, 284, 256), NULL);
     _shieldRing = Stroke(ring, ShieldColor(0.9), 6);
@@ -595,11 +588,11 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
 
     [self updateLamps:f];
     _energyEngine.text = [NSString stringWithFormat:@"ENGINE   %3d%%", (int)lroundf(f.throttle * 100)];
-    _energyLaser.text = [NSString stringWithFormat:@"LASER    %3d%%", (int)lroundf(f.laserEnergy * 100)];
+    _energyLaser.text = [NSString stringWithFormat:@"LASER    %3d%%", (int)lroundf(f.weaponEnergy * 100)];
     _energyShield.text = f.shield >= 0.999 ? @"SHIELD   FULL" : @"SHIELD   RECHARGING";
     _energyBoost.text = [NSString stringWithFormat:@"BOOST    %3d%%", (int)lroundf(f.boostEnergy * 100)];
-    _laserBar.value = f.laserEnergy;
-    _laserBar.fill.color = LevelColor(f.laserEnergy, 1);
+    _laserBar.value = f.weaponEnergy;
+    _laserBar.fill.color = LevelColor(f.weaponEnergy, 1);
     [self updateSelf:f];
     [self updateTarget:f contacts:contacts count:count];
     [self updateStatus:f];
@@ -665,8 +658,14 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
 
 }
 
+- (void)setSelfGeometry:(SCNGeometry *)geometry {
+    SCNGeometry *g = [geometry copy];
+    g.materials = @[[_selfModel valueForKey:@"holoMaterial"]];
+    _selfModel.geometry = g;
+}
+
 - (void)updateStatus:(CockpitFrame)f {
-    _killsLabel.text = [NSString stringWithFormat:@"KILLS %d  TORP %d", f.kills, f.torpedoes];
+    _killsLabel.text = [NSString stringWithFormat:@"KILLS %d  %@ %d", f.kills, f.secondaryName.length ? f.secondaryName : @"AMMO", f.secondary];
     NSString *obj = [f.objective uppercaseString] ?: @"";
     if (obj.length > 30) obj = [[obj substringToIndex:29] stringByAppendingString:@"."];
     _deathsLabel.text = obj;
