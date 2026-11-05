@@ -6,7 +6,8 @@
 - every other locale has a name and direction, only keys English has, and
   the same format specifiers, in the same order, as English;
 - Resources/UI/theme.json has every colour, font and metric UIStyle.h names;
-- every catalog key a screen layout (Resources/UI/menus/*.json) names exists.
+- every catalog key a screen layout (Resources/UI/menus/*.json) names exists, and
+  every layout the code loads is there.
 """
 import json
 import re
@@ -93,6 +94,13 @@ def main():
                 assert isinstance(value, str) and value, f"theme.json: fonts.{name} missing"
             else:
                 assert isinstance(value, (int, float)), f"theme.json: metrics.{name} missing"
+
+    # Every layout the code loads exists.
+    named = set()
+    for source in (ROOT / "Sources").rglob("*.m"):
+        named.update(re.findall(r'\[UILayout named:@"(\w+)"\]', source.read_text(encoding="utf-8")))
+    missing_layouts = sorted(n for n in named if not (ROOT / "Resources/UI/menus" / f"{n}.json").is_file())
+    assert not missing_layouts, f"layouts the code loads but Resources/UI/menus lacks: {missing_layouts}"
 
     # Colours and fonts a layout names must be in the theme.
     for path in layouts:
