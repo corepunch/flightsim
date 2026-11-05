@@ -1,11 +1,16 @@
 #import "Loading.h"
 #import "UIStyle.h"
+#import "LoadingLocalization.h"
+#import "PlatformImage.h"
+#import <stdatomic.h>
 
 static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMode h) {
     return UIMonoLabel(size, c, h, SKLabelVerticalAlignmentModeBaseline);
 }
 
 static NSArray<NSString *> *Tips(void) {
+    if (![LoadingLocale() isEqualToString:@"en"])
+        return @[LoadingText(@"mission_tip", @"Review your mission objectives before launch.")];
     return @[
         @"Hold SHIFT or TAB to boost. Boost energy recharges while you cruise.",
         @"T cycles targets. The lead marker shows where to shoot, not where the target is.",
@@ -27,6 +32,9 @@ static NSArray<NSString *> *Tips(void) {
     SKLabelNode *_titleLabel, *_kickerLabel, *_detailLabel, *_statusLabel, *_percentLabel, *_tipLabel;
     SKShapeNode *_barFill;
     SKNode *_spinner;
+    SKLabelNode *_startLabel;
+    SKTexture *_hangarTexture;
+    _Atomic bool _readyToStart, _startRequested;
     NSMutableArray<SKSpriteNode *> *_stars;
     CGFloat _barWidth;
     float _target, _shown;
@@ -44,7 +52,10 @@ static NSArray<NSString *> *Tips(void) {
         _stars = [NSMutableArray array];
         _tip = arc4random_uniform((uint32_t)Tips().count);
         _title = _kicker = _detail = @"";
-        _status = @"LOADING";
+        _status = LoadingText(@"loading_mission", @"Loading mission…");
+        NSURL *hangar = [NSBundle.mainBundle URLForResource:@"Hangar" withExtension:@"png" subdirectory:@"Menu"];
+        PlatformImage *image = hangar ? [[PlatformImage alloc] initWithContentsOfFile:hangar.path] : nil;
+        if (image) _hangarTexture = [SKTexture textureWithImage:image];
     }
     return self;
 }
@@ -53,7 +64,8 @@ static NSArray<NSString *> *Tips(void) {
     _title = [title.uppercaseString copy] ?: @"";
     _kicker = [kicker copy] ?: @"";
     _detail = [detail copy] ?: @"";
-    _status = @"LOADING";
+    _status = LoadingText(@"loading_mission", @"Loading mission…");
+    self.readyToStart = NO;
     _target = _shown = 0;
     _fadeRequested = NO;
     _fadeStart = _fadeLength = 0;
@@ -72,11 +84,26 @@ static NSArray<NSString *> *Tips(void) {
 }
 
 - (BOOL)barFull { return _shown > 0.995f; }
+- (BOOL)readyToStart { return atomic_load(&_readyToStart); }
+
+- (void)setReadyToStart:(BOOL)ready {
+    atomic_store(&_startRequested, false);
+    atomic_store(&_readyToStart, ready);
+    _startLabel.hidden = !ready;
+}
+
+- (void)queueClickAtFraction:(CGPoint)fraction {
+    if (fraction.x < 0 || fraction.x > 1 || fraction.y < 0 || fraction.y > 1) return;
+    if (atomic_load(&_readyToStart)) atomic_store(&_startRequested, true);
+}
+
+- (BOOL)consumeStartRequest { return atomic_exchange(&_startRequested, false); }
 - (BOOL)fading { return _fadeRequested; }
 - (BOOL)faded { return _fadeRequested && _fadeStart >= 0 && _now - _fadeStart >= _fadeLength; }
 
 - (void)fadeOut:(double)seconds {
     if (_fadeRequested) return;
+    self.readyToStart = NO;
     _fadeRequested = YES;
     _fadeLength = fmax(seconds, 0.01);
     _fadeStart = -1;   // stamped at the next tick, on the render clock
@@ -94,9 +121,21 @@ static NSArray<NSString *> *Tips(void) {
     bg.anchorPoint = CGPointZero;
     [_root addChild:bg];
 
+    if (_hangarTexture) {
+        SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_hangarTexture];
+        CGSize image = _hangarTexture.size;
+        CGFloat scale = MAX(s.width / MAX(image.width, 1), s.height / MAX(image.height, 1));
+        art.size = CGSizeMake(image.width * scale, image.height * scale);
+        art.position = CGPointMake(s.width * 0.5, s.height * 0.5);
+        [_root addChild:art];
+        SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:0.55] size:s];
+        shade.anchorPoint = CGPointZero;
+        [_root addChild:shade];
+    }
+
     // A slow parallax star drift: bigger stars are "nearer" and move faster.
     srand48(4242);
-    for (int i = 0; i < 220; i++) {
+    for (int i = 0; i < (_hangarTexture ? 0 : 220); i++) {
         CGFloat z = drand48();
         CGFloat r = 0.6 + z * z * 1.8;
         SKSpriteNode *st = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIWhite, 1) size:CGSizeMake(r, r)];
@@ -119,7 +158,7 @@ static NSArray<NSString *> *Tips(void) {
         [_root addChild:rule];
     }
 
-    CGFloat x = 60, mid = s.height * 0.53;
+    CGFloat x = MIN(60, s.width * 0.08), mid = MAX(250, s.height * 0.57);
     _kickerLabel = Text(15, UIColorWithOpacity(UIInk, 0.6), SKLabelHorizontalAlignmentModeLeft);
     _kickerLabel.text = _kicker;
     _kickerLabel.position = CGPointMake(x, mid + 52);
@@ -137,7 +176,7 @@ static NSArray<NSString *> *Tips(void) {
     [_root addChild:_detailLabel];
 
     // Progress bar along the bottom.
-    _barWidth = MAX(1, MIN(720, s.width - 220));
+    _barWidth = MAX(1, MIN(720, s.width - 2 * x - 80));
     CGFloat barY = 104;
     [_root addChild:UISkewedShape(CGRectMake(x - 3, barY - 3, _barWidth + 6, 12),
                                     UIColorWithOpacity(UIInk, 0.45), UIColorWithOpacity(UIInk, 0.05))];
@@ -155,6 +194,13 @@ static NSArray<NSString *> *Tips(void) {
     _statusLabel = Text(13, UIColorWithOpacity(UIInk, 0.75), SKLabelHorizontalAlignmentModeLeft);
     _statusLabel.text = _status;
     _statusLabel.position = CGPointMake(x, barY + 20);
+    _statusLabel.fontName = UIBodyFont;
+    _statusLabel.numberOfLines = 2;
+    _statusLabel.preferredMaxLayoutWidth = MAX(1, _barWidth - 64);
+    if (LoadingIsRTL()) {
+        _statusLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
+        _statusLabel.position = CGPointMake(x + _barWidth - 64, barY + 20);
+    }
     [_root addChild:_statusLabel];
     _percentLabel = Text(13, UIColorWithOpacity(UIInk, 0.75), SKLabelHorizontalAlignmentModeRight);
     _percentLabel.position = CGPointMake(x + _barWidth, barY + 20);
@@ -165,8 +211,23 @@ static NSArray<NSString *> *Tips(void) {
     _tipLabel.preferredMaxLayoutWidth = _barWidth;
     _tipLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
     _tipLabel.position = CGPointMake(x, barY - 22);
-    _tipLabel.text = [@"TIP  /  " stringByAppendingString:Tips()[_tip]];
+    _tipLabel.fontName = UIBodyFont;
+    _tipLabel.text = Tips()[_tip];
+    if (LoadingIsRTL()) {
+        _tipLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
+        _tipLabel.position = CGPointMake(x + _barWidth, barY - 22);
+    }
     [_root addChild:_tipLabel];
+
+    _startLabel = Text(18, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeCenter);
+    _startLabel.fontName = UIBodyFont;
+    _startLabel.numberOfLines = 0;
+    _startLabel.preferredMaxLayoutWidth = MAX(1, s.width - 2 * x);
+    _startLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeBottom;
+    _startLabel.text = LoadingText(@"continue_prompt", @"Tap anywhere to start mission");
+    _startLabel.position = CGPointMake(s.width * 0.5, 172);
+    _startLabel.hidden = !self.readyToStart;
+    [_root addChild:_startLabel];
 
     // Three-segment ring that spins while work is in flight.
     _spinner = [SKNode node];
@@ -228,7 +289,7 @@ static NSArray<NSString *> *Tips(void) {
     if (time - _tipChanged > 6.5) {
         _tipChanged = time;
         _tip = (_tip + 1) % Tips().count;
-        _tipLabel.text = [@"TIP  /  " stringByAppendingString:Tips()[_tip]];
+        _tipLabel.text = Tips()[_tip];
     }
 
     if (_fadeRequested) {

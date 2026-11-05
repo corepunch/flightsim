@@ -6,6 +6,7 @@
 #import "MainMenu.h"
 #import "Briefing.h"
 #import "ServerBrowser.h"
+#import "Loading.h"
 
 @implementation GameView {
     TouchFlightControls *_flightControls;
@@ -13,6 +14,8 @@
     __weak Briefing *_touchBriefing;
     CGPoint _touchStart, _touchLast;
     BOOL _touchDragged;
+    UITouch *_loadingTouch;
+    __weak Loading *_touchLoading;
 }
 
 - (void)setInput:(Input *)input {
@@ -47,6 +50,8 @@
 - (void)controllerChanged:(NSNotification *)note { [_flightControls updateController]; }
 
 - (void)resignActive:(NSNotification *)note {
+    _loadingTouch = nil;
+    _touchLoading = nil;
     [_input setApplicationActive:NO];
     [_flightControls cancelInput];
 }
@@ -57,6 +62,8 @@
 }
 
 - (void)setOverlaySKScene:(SKScene *)scene {
+    _loadingTouch = nil;
+    _touchLoading = nil;
     [super setOverlaySKScene:scene];
     [self updateFlightControls];
     [self updateOverlayInsets];
@@ -82,6 +89,14 @@
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     SKScene *overlay = self.overlaySKScene;
+    if ([overlay isKindOfClass:Loading.class]) {
+        // A touch held while loading must not become a ready-screen tap.
+        if (!_loadingTouch && ((Loading *)overlay).readyToStart) {
+            _loadingTouch = touches.anyObject;
+            _touchLoading = (Loading *)overlay;
+        }
+        return;
+    }
     if (![overlay isKindOfClass:Briefing.class]) {
         [super touchesBegan:touches withEvent:event];
         return;
@@ -110,6 +125,16 @@
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     SKScene *overlay = self.overlaySKScene;
+    if ([overlay isKindOfClass:Loading.class]) {
+        if (!_loadingTouch || ![touches containsObject:_loadingTouch]) return;
+        UITouch *startTouch = _loadingTouch;
+        _loadingTouch = nil;
+        if (_touchLoading != overlay) return;
+        CGPoint point = [startTouch locationInView:self];
+        if (CGRectContainsPoint(self.bounds, point))
+            [(Loading *)overlay queueClickAtFraction:[self fractionForPoint:point]];
+        return;
+    }
     UITouch *touch = touches.anyObject;
     if (_briefingTouch) {
         if (![touches containsObject:_briefingTouch]) return;
@@ -124,6 +149,7 @@
 }
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    if (_loadingTouch && [touches containsObject:_loadingTouch]) _loadingTouch = nil;
     if (_briefingTouch && [touches containsObject:_briefingTouch]) _briefingTouch = nil;
     [super touchesCancelled:touches withEvent:event];
 }

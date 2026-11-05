@@ -11,6 +11,10 @@
 - (void)setProgress:(float)progress status:(NSString *)status;
 // YES once the displayed bar has caught up with a progress of 1.
 @property (nonatomic, readonly) BOOL barFull;
+// Host enables this only when the mission and the displayed bar are ready.
+@property (nonatomic) BOOL readyToStart;
+- (void)queueClickAtFraction:(CGPoint)fraction;
+- (BOOL)consumeStartRequest;
 // Fades the whole card out over `seconds`, starting at the next tick.
 - (void)fadeOut:(double)seconds;
 // YES while fading or after the fade finished.

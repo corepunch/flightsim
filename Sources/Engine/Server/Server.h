@@ -26,5 +26,8 @@
 
 // Reads packets, runs whole ticks for the elapsed real time, sends snapshots.
 - (void)frame:(double)dt;
+// Keep networking alive without advancing the mission while the host waits
+// for the player to dismiss its mission loading screen.
+- (void)frame:(double)dt paused:(BOOL)paused;
 
 @end

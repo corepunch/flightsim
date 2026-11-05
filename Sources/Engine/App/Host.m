@@ -5,6 +5,7 @@
 #import "Briefing.h"
 #import "MainMenu.h"
 #import "Loading.h"
+#import "LoadingLocalization.h"
 #import "Progress.h"
 #import "NetTransport.h"
 #import "UDPTransport.h"
@@ -37,16 +38,16 @@ typedef NS_ENUM(int, LoadStage) {
 };
 static NSString *LoadStatus(LoadStage s) {
     switch (s) {
-        case LoadStageStart: return @"LOADING";
-        case LoadStageSky: return @"CHARTING STARFIELD";
-        case LoadStageCockpit: return @"POWERING UP COCKPIT";
-        case LoadStageFleet: return @"PLOTTING CAPITAL SHIPS";
-        case LoadStageWings: return @"SCRAMBLING FIGHTER WINGS";
-        case LoadStageUpload: return @"UPLOADING GEOMETRY AND TEXTURES";
-        case LoadStageShaders: return @"COMPILING SHADERS";
-        case LoadStageReady: return @"READY";
+        case LoadStageStart: return LoadingText(@"loading_mission", @"Loading mission…");
+        case LoadStageSky: return LoadingText(@"charting_starfield", @"Charting starfield…");
+        case LoadStageCockpit: return LoadingText(@"preparing_ship", @"Preparing spacecraft…");
+        case LoadStageFleet: return LoadingText(@"plotting_capital_ships", @"Plotting capital ships…");
+        case LoadStageWings: return LoadingText(@"scrambling_fighter_wings", @"Scrambling fighter wings…");
+        case LoadStageUpload: return LoadingText(@"uploading_assets", @"Uploading geometry and textures…");
+        case LoadStageShaders: return LoadingText(@"compiling_shaders", @"Compiling shaders…");
+        case LoadStageReady: return LoadingText(@"mission_ready", @"Mission ready");
     }
-    return @"LOADING";
+    return LoadingText(@"loading_mission", @"Loading mission…");
 }
 
 static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the title card
@@ -292,11 +293,20 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [_loading fadeOut:seconds];
 }
 
-- (void)updateLoading {
+- (void)updateLoading:(InputAction)actions {
     [_loading setProgress:atomic_load(&_loadProgress) status:LoadStatus((LoadStage)atomic_load(&_loadStage))];
     [_loading tick:_time];
     double minimum = _booted ? kMinMissionLoadSeconds : 0;
     if (atomic_load(&_loadDone) && _loading.barFull && _time - _loadStartedAt >= minimum) {
+        if (_booted) {
+            if (!_loading.readyToStart) {
+                _loading.readyToStart = YES;
+                return; // Discard actions from before the ready prompt appeared.
+            }
+            BOOL tapped = [_loading consumeStartRequest];
+            if (!tapped && !(actions & InputActionConfirm)) return;
+            _loading.readyToStart = NO;
+        }
         atomic_store(&_loadDone, false);
         if (_booted) [self finishMission];
         else [self finishBoot];
@@ -392,6 +402,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 }
 
 - (void)disconnected:(NSString *)reason {
+    _loading.readyToStart = NO;
     _precaching = NO;
     [_browser setStatus:reason];
     if (_state == HostStateFlying || _state == HostStateOver || (_state == HostStateLoading && _booted)) {
@@ -502,9 +513,9 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (_state != HostStateFlying) {
         // Keep both ends of the connection alive while nothing is flown.
         [_client sendInput:(ControlState){ .hat = -1 } actions:0 dt:dt];
-        [_server frame:dt];
+        [_server frame:dt paused:_booted && _state == HostStateLoading && !self.remote];
     }
-    if (_state == HostStateLoading) { [self updateLoading]; return; }
+    if (_state == HostStateLoading) { [self updateLoading:actions]; return; }
     if (_revealing) {
         [self updateReveal];
         if (_state != HostStateFlying) return;
