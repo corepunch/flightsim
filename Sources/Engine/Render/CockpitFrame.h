@@ -3,8 +3,8 @@
 #include "Protocol.h"
 
 // What the client tells the cockpit and the HUD instruments each frame. No
-// renderer types: the target hologram is an opaque handle from
-// -[Refresh hologramForModel:].
+// renderer types: the target hologram and preview are opaque handles from
+// -[Refresh hologramForModel:] and -[Refresh previewForModel:].
 #define COCKPIT_MAX_CONTACTS 24
 
 typedef struct CockpitContact {
@@ -15,7 +15,8 @@ typedef struct CockpitContact {
     BOOL capital;               // a big ship or station (bigger scanner blip)
     BOOL shielded;              // capital with its shield generators up
     BOOL attacking;             // in an attack run on the player
-    __unsafe_unretained id hologram;          // Refresh hologram handle for the target display
+    __unsafe_unretained id hologram;          // Refresh hologram handle for the cockpit MFD
+    __unsafe_unretained id preview;           // Refresh preview handle for the target readout
     float holoScale;            // metres of hologram per metre of ship
     __unsafe_unretained NSString *name, *className, *cargo, *component;
 } CockpitContact;
@@ -28,6 +29,7 @@ typedef struct CockpitFrame {
     float pitch, yaw, roll;     // stick deflection, -1..1
     int kills, deaths;
     double time;
+    simd_float3 sun;            // toward the sun, player ship space (lights the target preview)
     int target;                 // index into the contacts, -1 for none
     float closingSpeed;         // towards the target, m/s
     BOOL lock;                  // lead marker under the boresight

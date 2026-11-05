@@ -1,7 +1,6 @@
 #import "FlightInstruments.h"
 #import "UIStyle.h"
 #import "Localization.h"
-#import "MonitorSignal.h"
 #import "UIMotion.h"
 #import "PlatformImage.h"
 #import <Metal/Metal.h>
@@ -27,9 +26,10 @@ static NSString *Short(NSString *text, NSUInteger length) {
     SKSpriteNode *_preview;
     SCNRenderer *_previewRenderer;
     double _previewAt;
-    SCNNode *_holder, *_mesh;
-    SCNGeometry *_source;
-    SCNMaterial *_material;
+    SCNNode *_camera, *_holder, *_model, *_key;
+    id _source;
+    simd_float3 _boundsMin, _boundsMax;   // the model's box, in holder space
+    float _fit;                           // eased orthographic half-height
 }
 - (instancetype)initWithPreview:(BOOL)preview {
     if ((self = [super init])) {
@@ -47,25 +47,37 @@ static NSString *Short(NSString *text, NSUInteger length) {
         _cargo = Readout(_info, @"", 22, 65, 20, SKLabelHorizontalAlignmentModeLeft);
         _component = Readout(_info, @"", 22, 30, 20, SKLabelHorizontalAlignmentModeLeft);
         if (preview) {
-            _preview = [SKSpriteNode spriteNodeWithColor:SKColor.clearColor size:CGSizeMake(220, 205)];
+            // The free space between the stat columns and the name and mode lines.
+            _preview = [SKSpriteNode spriteNodeWithColor:SKColor.clearColor size:CGSizeMake(300, 205)];
             _preview.position = CGPointMake(304, 220);
+            // The target as the world draws it, lit by the sun from where we
+            // look at it, framed to fill the display.
             SCNScene *scene = [SCNScene scene];
             scene.background.contents = SKColor.clearColor;
-            _holder = [SCNNode node]; _mesh = [SCNNode node];
-            [_holder addChildNode:_mesh]; [scene.rootNode addChildNode:_holder];
-            SCNNode *camera = [SCNNode node]; camera.camera = [SCNCamera camera];
-            camera.camera.usesOrthographicProjection = YES; camera.camera.orthographicScale = 1.05;
-            camera.position = SCNVector3Make(0, 0, 4);
-            [scene.rootNode addChildNode:camera];
+            scene.lightingEnvironment.contents = [SKColor colorWithWhite:0.32 alpha:1];
+            scene.lightingEnvironment.intensity = 1;
+            _holder = [SCNNode node];
+            [scene.rootNode addChildNode:_holder];
+            _camera = [SCNNode node]; _camera.camera = [SCNCamera camera];
+            _camera.camera.usesOrthographicProjection = YES; _camera.camera.orthographicScale = 1.05;
+            _camera.camera.zNear = 0.1; _camera.camera.zFar = 20;
+            _camera.position = SCNVector3Make(0, 0, 6);
+            [scene.rootNode addChildNode:_camera];
+            _key = [SCNNode node]; _key.light = [SCNLight light];
+            _key.light.type = SCNLightTypeDirectional; _key.light.intensity = 1400;
+            [scene.rootNode addChildNode:_key];
+            SCNNode *fill = [SCNNode node]; fill.light = [SCNLight light];
+            fill.light.type = SCNLightTypeDirectional; fill.light.intensity = 350;
+            fill.light.color = [SKColor colorWithRed:0.7 green:0.8 blue:1 alpha:1];
+            fill.simdOrientation = simd_quaternion(simd_make_float3(0, 0, -1), simd_normalize(simd_make_float3(0.4f, 0.25f, -1)));
+            [scene.rootNode addChildNode:fill];
+            SCNNode *ambient = [SCNNode node]; ambient.light = [SCNLight light];
+            ambient.light.type = SCNLightTypeAmbient; ambient.light.intensity = 220;
+            [scene.rootNode addChildNode:ambient];
             _previewRenderer = [SCNRenderer rendererWithDevice:MTLCreateSystemDefaultDevice() options:nil];
-            _previewRenderer.scene = scene; _previewRenderer.pointOfView = camera;
-            _preview.shader = UIMotionReduced() ? nil : UIMonitorSignalShader(YES);
-            [_preview setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){220, 205}] forAttributeNamed:@"a_screen_size"];
+            _previewRenderer.scene = scene; _previewRenderer.pointOfView = _camera;
             [_info addChild:_preview];
             _previewAt = -1;
-            _material = [SCNMaterial material];
-            _material.lightingModelName = SCNLightingModelConstant;
-            _material.fillMode = SCNFillModeLines; _material.doubleSided = YES;
         }
     }
     return self;
@@ -85,9 +97,8 @@ static NSString *Short(NSString *text, NSUInteger length) {
     _mode.position = CGPointMake(compact ? 586 : 304, compact ? 21 : 109);
     _cargo.position = CGPointMake(22, compact ? 48 : 65);
     _component.position = CGPointMake(22, compact ? 21 : 30);
-    _preview.size = CGSizeMake(compact ? 240 : 220, compact ? 150 : 205);
+    _preview.size = CGSizeMake(compact ? 280 : 300, compact ? 150 : 205);
     _preview.position = CGPointMake(304, compact ? 155 : 220);
-    [_preview setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){compact ? 240 : 220, compact ? 150 : 205}] forAttributeNamed:@"a_screen_size"];
 }
 - (void)updateFrame:(CockpitFrame)f contacts:(const CockpitContact *)contacts count:(NSUInteger)count {
     BOOL has = f.alive && f.target >= 0 && f.target < (int)count;
@@ -107,18 +118,28 @@ static NSString *Short(NSString *text, NSUInteger length) {
     _mode.text = L10n(f.lock ? @"cockpit.mode_lock" : c.attacking ? @"cockpit.mode_attack" : c.capital ? (c.shielded ? @"cockpit.mode_shielded" : @"cockpit.mode_vulnerable") : @"cockpit.mode_tracking");
     _mode.fontColor = UIColorWithOpacity(c.attacking ? UIRed : f.lock ? UIFriendly : UIAmber, 1);
     if (_preview) {
-        if (_source != c.hologram) {
-            _source = c.hologram;
-            _mesh.geometry = [(SCNGeometry *)c.hologram copy]; _mesh.geometry.materials = @[_material];
-            SCNVector3 lo, hi;
-            if ([_mesh getBoundingBoxMin:&lo max:&hi]) {
-                float radius = fmaxf(0.001, simd_length(SCNVector3ToFloat3(hi) - SCNVector3ToFloat3(lo)) / 2);
-                _mesh.pivot = SCNMatrix4MakeTranslation((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, (lo.z + hi.z) / 2);
-                _mesh.scale = SCNVector3Make(1 / radius, 1 / radius, 1 / radius);
+        if (_source != c.preview) {
+            _source = c.preview;
+            [_model removeFromParentNode];
+            // A clone shares geometry and materials (hull styles, running
+            // lights) with the world's copies.
+            _model = [(SCNNode *)c.preview clone];
+            if (_model) {
+                [_holder addChildNode:_model];
+                SCNVector3 lo, hi;
+                if ([_model getBoundingBoxMin:&lo max:&hi]) {
+                    // Normalise to a unit radius about the box centre.
+                    simd_float3 min = SCNVector3ToFloat3(lo), max = SCNVector3ToFloat3(hi);
+                    float radius = fmaxf(0.001f, simd_length(max - min) / 2);
+                    _model.simdPivot = matrix_identity_float4x4;
+                    _model.simdPosition = -(min + max) / 2 / radius;
+                    _model.simdScale = simd_make_float3(1, 1, 1) / radius;
+                    _boundsMin = (min - (min + max) / 2) / radius;
+                    _boundsMax = (max - (min + max) / 2) / radius;
+                }
             }
-            _mesh.eulerAngles = SCNVector3Make(0, fabsf(c.holoScale - 0.0075f) < 1e-5 ? M_PI : 0, 0);
+            _fit = 0;
         }
-        _material.diffuse.contents = ContactInk(c.relation);
         // Look along the player-to-target line, using the player's up as the
         // horizon. Transform the target into that view, not merely into the
         // player's forward-facing coordinate system.
@@ -130,10 +151,31 @@ static NSString *Short(NSString *text, NSUInteger length) {
         right = simd_normalize(right);
         up = simd_normalize(simd_cross(right, direction));
         simd_quatf view = simd_quaternion(simd_matrix(right, up, -direction));
-        _holder.simdOrientation = simd_mul(simd_inverse(view), c.orientation);
+        simd_quatf toView = simd_inverse(view);
+        _holder.simdOrientation = simd_mul(toView, c.orientation);
+        // The sun lights it from the side it lights the real ship.
+        simd_float3 sun = simd_length_squared(f.sun) > 1e-6f ? simd_normalize(simd_act(toView, f.sun)) : simd_make_float3(-0.5f, 0.6f, 0.6f);
+        _key.simdOrientation = simd_quaternion(simd_make_float3(0, 0, -1), -sun);
+        // Frame the box as it faces us now: fit its projected extent to the
+        // display, so a fighter seen nose-on fills it as well as side-on.
+        if (_model) {
+            simd_float2 lo = simd_make_float2(FLT_MAX, FLT_MAX), hi = -lo;
+            for (int i = 0; i < 8; i++) {
+                simd_float3 corner = simd_make_float3(i & 1 ? _boundsMax.x : _boundsMin.x, i & 2 ? _boundsMax.y : _boundsMin.y,
+                                                      i & 4 ? _boundsMax.z : _boundsMin.z);
+                simd_float3 p = simd_act(_holder.simdOrientation, corner);
+                lo = simd_min(lo, p.xy); hi = simd_max(hi, p.xy);
+            }
+            float aspect = (float)(_preview.size.width / fmax(1, _preview.size.height));
+            float fit = fmaxf(0.05f, fmaxf((hi.y - lo.y) / 2, (hi.x - lo.x) / 2 / aspect)) * 1.12f;
+            _fit = _fit > 0 ? _fit + (fit - _fit) * 0.35f : fit;
+            simd_float2 centre = (lo + hi) / 2;
+            _camera.camera.orthographicScale = _fit;
+            _camera.simdPosition = simd_make_float3(centre.x, centre.y, 6);
+        }
         if (_previewAt < 0 || f.time < _previewAt || f.time - _previewAt >= 0.12) {
             _previewAt = f.time;
-            PlatformImage *picture = [_previewRenderer snapshotAtTime:f.time withSize:CGSizeMake(240, 240 * _preview.size.height / _preview.size.width) antialiasingMode:SCNAntialiasingModeMultisampling2X];
+            PlatformImage *picture = [_previewRenderer snapshotAtTime:f.time withSize:CGSizeMake(_preview.size.width * 2, _preview.size.height * 2) antialiasingMode:SCNAntialiasingModeMultisampling4X];
             if (picture) _preview.texture = [SKTexture textureWithImage:picture];
         }
     }
