@@ -1381,7 +1381,7 @@
         "text": [
           "Someone has been feeding the Skarn our patrol routes. We finally know how: a Skarn stealth prototype shadowing our fleet.",
           "It does not show on scanners beyond seven hundred metres. Our sensor buoys have caught it passing, so it is somewhere in this volume.",
-          "Find it and kill it. It is fragile once you have found it, but its escorts are not."
+          "Find it and kill it. It is fragile once you have found it, but its escorts are not, and it will jump out of the system in eight minutes."
         ],
         "steps": [
           {
@@ -1395,14 +1395,31 @@
             "focus": "ghost"
           },
           {
-            "caption": "Four Wasps guard it. Kill the prototype first if you can.",
+            "caption": "Four *veteran* Wasps guard it. Kill the prototype first if you can.",
             "show": ["guards"],
-            "focus": "ghost"
+            "focus": "ghost",
+            "seconds": 4
+          },
+          {
+            "caption": "Hurt the escorts and an *ace pair*, Strix, comes in from the nebula.",
+            "show": ["aces", "guards"],
+            "focus": "aces",
+            "camera": { "center": [0, -4000], "span": 3600 },
+            "labels": [ { "text": "Strix arrives", "at": [0, -4800] } ],
+            "seconds": 5
+          },
+          {
+            "caption": "You have *eight minutes*. After that the prototype jumps out with our routes and the mission fails.",
+            "show": ["ghost"],
+            "focus": "ghost",
+            "seconds": 4
           }
         ],
         "intel": [
           "Target: Skarn stealth prototype (radar range 700 m)",
-          "Hostile: 4x Wasp",
+          "Hostile: 4x veteran Wasp",
+          "Hostile: Strix, 2x ace Wasp (called in when the escorts are attacked)",
+          "Time limit: 8 minutes",
           "Visit the buoys to narrow the search"
         ]
       },

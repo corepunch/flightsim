@@ -2,6 +2,8 @@
   "name": "17-ghost",
   "seed": 17,
   "title": "Ghost",
+  "timeLimit": 480,
+  "onTimeLimit": "failure",
   "loadout": { "torpedoes": 2 },
   "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
   "entities": [
@@ -35,7 +37,23 @@
       "pos": [1200, 300, -3000],
       "spread": 150,
       "order": "escort:ghost",
-      "hold": true
+      "skill": "veteran",
+      "formation": "finger-four",
+      "arrival": { "when": { "time": 0 } }
+    },
+    {
+      "id": "aces",
+      "ship": "wasp",
+      "count": 2,
+      "team": "enemy",
+      "name": "Strix",
+      "callsigns": ["Strix 1", "Strix 2"],
+      "pos": [0, 500, -4800],
+      "spread": 80,
+      "order": "attack",
+      "skill": "ace",
+      "formation": "line-abreast",
+      "arrival": { "when": { "attacked": "guards" }, "delay": 12 }
     }
   ],
   "objectives": [
@@ -50,13 +68,24 @@
     }
   ],
   "events": [
-    { "when": {"time": 0}, "do": [{"spawn": "guards"}] },
     {
       "when": { "time": 3 },
       "do": [
         {
           "radio": { "from": "Okafor", "text": "Sweep the buoys. The prototype only shows up inside 700 metres." }
         }
+      ]
+    },
+    {
+      "when": { "time": 300 },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Three minutes, Lancer. Once the prototype has relayed our patrol routes it will jump out."} }
+      ]
+    },
+    {
+      "when": { "spawned": "aces" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Two more Wasps, flying like aces. The Strix pair came in on the escorts' call."} }
       ]
     },
     {
