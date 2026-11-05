@@ -8,14 +8,11 @@ contents="$app/Contents"
 mkdir -p "$contents/MacOS" "$contents/Resources" "$contents/PlugIns"
 cp Resources/Info.plist "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set CFBundleExecutable FlightUIChecks' -c 'Set CFBundleIdentifier com.igor.spacefight.flightuichecks' -c 'Set CFBundleName Flight UI Checks' -c 'Add LSUIElement bool true' "$contents/Info.plist"
-for directory in Audio Briefing Fonts Missions Shaders Ships Capitals Styles Projectiles Textures Strings UI; do
-    ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"
-done
-# Bake only the changed cockpit into the existing small model cache.
-build/tools/BakeModels build/ModelCache/Models Resources/Models/Cockpit.obj
-ln -s "$PWD/build/ModelCache/Models" "$contents/Resources/Models"
-ln -s "$PWD/build/Native/game.dylib" "$contents/PlugIns/game.dylib"
 source Tools/engine-library.sh
+# Bake only the changed cockpit into the existing small model cache.
+build/tools/BakeModels build/ModelCache/SpaceFight/Models Games/SpaceFight/Models/Cockpit.obj
+link_check_resources "$contents/Resources"
+for module in build/Native/*.dylib; do ln -s "$PWD/$module" "$contents/PlugIns/${module:t}"; done
 clang $engine_cflags Tools/GUI/FlightUIChecks.m $engine_libs -o "$contents/MacOS/FlightUIChecks"
 codesign --force --sign - "$app"
 /usr/bin/open -n -g -W --stdout "$qa/stdout.log" --stderr "$qa/stderr.log" "$app" --args "$qa"

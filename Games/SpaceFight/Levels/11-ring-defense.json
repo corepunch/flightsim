@@ -1,0 +1,103 @@
+{
+  "name": "11-ring-defense",
+  "seed": 11,
+  "title": "Ring Defense",
+  "loadout": { "torpedoes": 3 },
+  "player": { "pos": [0, 100, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "ring",
+      "asset": "RingStation",
+      "team": "friend",
+      "name": "Tannhal Station",
+      "pos": [0, -100, -1500],
+      "spin": 1.5
+    },
+    {
+      "id": "cv",
+      "asset": "Corvette",
+      "team": "enemy",
+      "name": "Skarn Corvette Harrow",
+      "pos": [2500, 300, -3500],
+      "facing": [-1, 0, 0.6],
+      "path": [[600, 100, -1700]],
+      "speed": 35,
+      "hold": true
+    }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "executioner",
+      "count": 2,
+      "team": "friend",
+      "pos": [80, 120, 100],
+      "spread": 60,
+      "order": "attack",
+      "name": "Lancer"
+    },
+    {
+      "id": "w1",
+      "ship": "wasp",
+      "count": 5,
+      "team": "enemy",
+      "pos": [-2000, 200, -2500],
+      "spread": 150,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "w2",
+      "ship": "talon",
+      "count": 4,
+      "team": "enemy",
+      "pos": [1800, -300, -500],
+      "spread": 120,
+      "order": "strike:ring",
+      "hold": true
+    },
+    {
+      "id": "w3",
+      "ship": "talon",
+      "count": 3,
+      "team": "enemy",
+      "pos": [2400, 400, -3300],
+      "spread": 120,
+      "order": "strike:ring",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["ring"], "text": "Defend Tannhal through 3 waves" },
+    {
+      "id": "waves",
+      "type": "destroy",
+      "targets": ["w1", "w2", "w3", "cv"],
+      "text": "Defeat all 3 attack waves"
+    }
+  ],
+  "events": [
+    { "when": {"time": 120}, "do": [{"spawn": "cv"}] },
+    { "when": {"time": 10}, "do": [{"spawn": "w1"}] },
+    { "when": {"time": 60}, "do": [{"spawn": "w2"}] },
+    { "when": {"time": 120}, "do": [{"spawn": "w3"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Tannhal Control", "text": "Three waves incoming. Give the bombers priority."} }
+      ]
+    },
+    {
+      "when": { "spawned": "w2" },
+      "do": [
+        { "radio": {"from": "Lancer 2", "text": "Bombers! Coming in from starboard, low!"} }
+      ]
+    },
+    {
+      "when": { "spawned": "cv" },
+      "do": [
+        { "radio": {"from": "Tannhal Control", "text": "Corvette jumping in, bearing zero-nine-zero!"} }
+      ]
+    }
+  ]
+}

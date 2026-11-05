@@ -1,0 +1,116 @@
+{
+  "name": "15-destroyer-ambush",
+  "seed": 15,
+  "title": "Destroyer Ambush",
+  "loadout": { "torpedoes": 6 },
+  "player": { "pos": [0, 0, 200], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "bastion",
+      "asset": "Carrier",
+      "team": "friend",
+      "name": "CNS Bastion",
+      "pos": [0, -60, 1300],
+      "facing": [1, 0, 0]
+    },
+    {
+      "id": "destroyer",
+      "asset": "Destroyer",
+      "team": "enemy",
+      "name": "Skarn Destroyer Gorran",
+      "pos": [1800, 200, -2200],
+      "facing": [-0.6, 0, 1],
+      "path": [[700, 0, 400]],
+      "speed": 22,
+      "hold": true
+    }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "executioner",
+      "count": 2,
+      "team": "friend",
+      "pos": [60, 30, 300],
+      "spread": 60,
+      "order": "attack",
+      "name": "Lancer"
+    },
+    {
+      "id": "talons",
+      "ship": "talon",
+      "count": 3,
+      "team": "enemy",
+      "pos": [1700, 300, -2000],
+      "spread": 120,
+      "order": "strike:bastion",
+      "hold": true
+    },
+    {
+      "id": "wasps",
+      "ship": "wasp",
+      "count": 4,
+      "team": "enemy",
+      "pos": [1800, -200, -2300],
+      "spread": 150,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "talons2",
+      "ship": "talon",
+      "count": 2,
+      "team": "enemy",
+      "pos": [1500, 600, -1500],
+      "spread": 100,
+      "order": "strike:bastion",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Keep bombers off the Bastion" },
+    {
+      "id": "engines",
+      "type": "disable",
+      "targets": ["destroyer"],
+      "kind": "Engine",
+      "text": "Hit Gorran's 3 stern engines"
+    },
+    {
+      "id": "kill",
+      "type": "destroy",
+      "targets": ["destroyer"],
+      "after": ["engines"],
+      "text": "Destroy the Skarn destroyer"
+    }
+  ],
+  "events": [
+    { "when": {"time": 12}, "do": [{"spawn": "destroyer"}] },
+    { "when": {"time": 25}, "do": [{"spawn": "talons"}] },
+    { "when": {"time": 30}, "do": [{"spawn": "wasps"}] },
+    { "when": {"time": 100}, "do": [{"spawn": "talons2"}] },
+    {
+      "when": { "time": 2 },
+      "do": [
+        {
+          "radio": {
+            "from": "Bastion Control",
+            "text": "Jump signature ahead. Stay with Bastion and watch for bombers."
+          }
+        }
+      ]
+    },
+    {
+      "when": { "spawned": "destroyer" },
+      "do": [
+        { "radio": {"from": "Bastion Control", "text": "Destroyer in the anchorage! Go for the engines!"} }
+      ]
+    },
+    {
+      "when": { "objective": "engines" },
+      "do": [
+        { "radio": {"from": "Commander Varn", "text": "It is dead in space. Finish it."} }
+      ]
+    }
+  ]
+}

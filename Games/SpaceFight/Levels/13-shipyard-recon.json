@@ -1,0 +1,87 @@
+{
+  "name": "13-shipyard-recon",
+  "seed": 13,
+  "title": "Shipyard Recon",
+  "loadout": { "torpedoes": 2 },
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "yard",
+      "asset": "Shipyard",
+      "team": "enemy",
+      "name": "Skarn Shipyard Corvid",
+      "pos": [0, 0, -4500],
+      "facing": [1, 0, 0],
+      "invulnerable": true
+    }
+  ],
+  "navs": [
+    { "id": "scanA", "name": "SENSOR A", "pos": [-350, 150, -4200] },
+    { "id": "scanB", "name": "SENSOR B", "pos": [0, -200, -4500] },
+    { "id": "scanC", "name": "SENSOR C", "pos": [350, 150, -4800] },
+    { "id": "exit", "name": "EXIT", "pos": [2500, 0, -2000] }
+  ],
+  "fields": [
+    { "type": "asteroids", "center": [0, 0, -4500], "radius": 2200, "count": 30, "seed": 13 }
+  ],
+  "waves": [
+    {
+      "id": "scramble1",
+      "ship": "wasp",
+      "count": 4,
+      "team": "enemy",
+      "pos": [0, 300, -5200],
+      "spread": 150,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "scramble2",
+      "ship": "talon",
+      "count": 2,
+      "team": "enemy",
+      "pos": [-600, 0, -5300],
+      "spread": 100,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    {
+      "id": "recon",
+      "type": "reach",
+      "navs": ["scanA", "scanB", "scanC"],
+      "range": 200,
+      "text": "Pass SENSOR A/B/C (200 m)"
+    },
+    {
+      "id": "exit",
+      "type": "reach",
+      "navs": ["exit"],
+      "after": ["recon"],
+      "text": "Fly to EXIT after the scan"
+    }
+  ],
+  "events": [
+    { "when": {"nav": "scanA"}, "do": [{"spawn": "scramble1"}] },
+    { "when": {"nav": "scanC"}, "do": [{"spawn": "scramble2"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Fly within 200 metres of A, B, then C. Keep moving."} }
+      ]
+    },
+    {
+      "when": { "nav": "scanA" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "You have been spotted! Keep going!"} }
+      ]
+    },
+    {
+      "when": { "objective": "recon" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Got it all. That hull is a dreadnought. Get out of there!"} }
+      ]
+    }
+  ]
+}

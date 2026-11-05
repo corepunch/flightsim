@@ -1,0 +1,102 @@
+{
+  "name": "10-frigate-down",
+  "seed": 10,
+  "title": "Frigate Down",
+  "loadout": { "torpedoes": 4 },
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "kestrel",
+      "asset": "Frigate",
+      "team": "friend",
+      "name": "CNS Kestrel",
+      "pos": [0, 0, -1600],
+      "facing": [1, 0, -0.3],
+      "hullFraction": 0.55
+    },
+    {
+      "id": "cv1",
+      "asset": "Corvette",
+      "team": "enemy",
+      "name": "Skarn Corvette Ruun",
+      "pos": [-700, 100, -2200],
+      "facing": [1, 0, 0.6],
+      "path": [[-400, 100, -1900], [-600, -100, -1300], [-700, 100, -2200]],
+      "speed": 25,
+      "loop": true
+    },
+    {
+      "id": "cv2",
+      "asset": "Corvette",
+      "team": "enemy",
+      "name": "Skarn Corvette Ilk",
+      "pos": [800, -80, -2100],
+      "facing": [-1, 0, 0.5],
+      "path": [[500, 0, -1800], [700, 200, -1200], [800, -80, -2100]],
+      "speed": 25,
+      "loop": true
+    }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "executioner",
+      "count": 2,
+      "team": "friend",
+      "pos": [80, 30, 100],
+      "spread": 60,
+      "order": "attack",
+      "name": "Lancer"
+    },
+    {
+      "id": "screen",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [0, 300, -2600],
+      "spread": 120,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "talons",
+      "ship": "talon",
+      "count": 2,
+      "team": "enemy",
+      "pos": [0, -900, -2900],
+      "spread": 100,
+      "order": "strike:kestrel",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["kestrel"], "text": "Protect the damaged Kestrel" },
+    {
+      "id": "corvettes",
+      "type": "destroy",
+      "targets": ["cv1", "cv2"],
+      "text": "Destroy corvettes Ruun and Ilk"
+    }
+  ],
+  "events": [
+    { "when": {"time": 0}, "do": [{"spawn": "screen"}] },
+    { "when": {"time": 50}, "do": [{"spawn": "talons"}] },
+    {
+      "when": { "time": 2 },
+      "do": [
+        {
+          "radio": {
+            "from": "CNS Kestrel",
+            "text": "Kestrel to any Concord fighter - we are losing shields, please hurry!"
+          }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "corvettes" },
+      "do": [
+        { "radio": {"from": "CNS Kestrel", "text": "That was the last of them. Thank you, Lancer."} }
+      ]
+    }
+  ]
+}

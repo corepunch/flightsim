@@ -211,7 +211,6 @@ typedef struct {
 
     // Mission
     BOOL _running, _over;
-    NSUInteger _missionIndex;
     NSDictionary *_mission;
     double _missionTime;
     MissionRunner *_runner;                 // objectives, events and rules (engine runtime)
@@ -236,7 +235,7 @@ typedef struct {
 extern GWorld *level;
 
 @interface GWorld (Mission)
-- (void)spawnMission:(NSUInteger)index;
+- (void)spawnLevel:(NSString *)name;
 - (void)clearWorld;
 - (void)spawnPlayer:(GClient *)client;
 - (void)updateMission:(float)dt;
@@ -251,7 +250,8 @@ extern GWorld *level;
 - (void)checkMine:(GCapital *)m;
 @end
 
-extern NSString *const GTorpedoProjectile;      // projectile definition the torpedo is drawn with
+NSString *GTorpedoProjectile(void);             // projectile definition the torpedo is drawn with
+NSDictionary *GRules(void);                     // Data/rules.json
 
 @interface GWorld (Weapons)
 - (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life

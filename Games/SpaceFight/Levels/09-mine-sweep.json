@@ -1,0 +1,63 @@
+{
+  "name": "09-mine-sweep",
+  "seed": 9,
+  "title": "Mine Sweep",
+  "loadout": { "torpedoes": 2 },
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "layer",
+      "asset": "Minelayer",
+      "team": "enemy",
+      "name": "Skarn Minelayer",
+      "pos": [0, 0, -3600],
+      "facing": [1, 0, 0],
+      "path": [[600, 0, -3600], [-600, 0, -3600]],
+      "speed": 15,
+      "loop": true
+    }
+  ],
+  "fields": [
+    {
+      "type": "mines",
+      "group": "mines",
+      "center": [0, 0, -2000],
+      "size": [800, 400, 1600],
+      "count": 16,
+      "seed": 9
+    }
+  ],
+  "waves": [
+    {
+      "id": "guards",
+      "ship": "wasp",
+      "count": 2,
+      "team": "enemy",
+      "pos": [0, 200, -3400],
+      "spread": 80,
+      "order": "escort:layer",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "layer", "type": "destroy", "targets": ["layer"], "text": "Destroy the Skarn minelayer" },
+    { "id": "mines", "type": "destroy", "targets": ["mines"], "text": "Shoot all 16 mines from range" }
+  ],
+  "events": [
+    { "when": {"time": 0}, "do": [{"spawn": "guards"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        {
+          "radio": { "from": "Bastion Control", "text": "Mines trigger within 60 metres. Shoot from a distance." }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "mines" },
+      "do": [
+        { "radio": {"from": "Bastion Control", "text": "Corridor clear. The Bastion is moving."} }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "name": "08-into-the-rocks",
+  "seed": 8,
+  "title": "Into the Rocks",
+  "loadout": { "torpedoes": 0 },
+  "player": { "pos": [0, 60, 300], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "halcyon",
+      "asset": "ResearchVessel",
+      "team": "friend",
+      "name": "Survey Ship Halcyon",
+      "pos": [0, 0, 0],
+      "facing": [0, 0, -1],
+      "path": [[200, 100, -1600], [0, 0, -3400]],
+      "speed": 38
+    }
+  ],
+  "navs": [
+    { "id": "survey", "name": "SURVEY POINT", "pos": [0, 0, -3400] }
+  ],
+  "fields": [
+    { "type": "asteroids", "center": [0, 0, -2000], "radius": 1600, "count": 55, "seed": 8 }
+  ],
+  "waves": [
+    {
+      "id": "ambush1",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [-800, 0, -1700],
+      "spread": 100,
+      "order": "strike:halcyon",
+      "hold": true
+    },
+    {
+      "id": "ambush2",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [700, 200, -2600],
+      "spread": 100,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "ambush3",
+      "ship": "talon",
+      "count": 2,
+      "team": "enemy",
+      "pos": [0, 800, -3800],
+      "spread": 100,
+      "order": "strike:halcyon",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["halcyon"], "text": "Protect Survey Ship Halcyon" },
+    {
+      "id": "escort",
+      "type": "escort",
+      "targets": ["halcyon"],
+      "navs": ["survey"],
+      "text": "Escort Halcyon to SURVEY POINT"
+    },
+    {
+      "id": "survey",
+      "type": "survive",
+      "seconds": 40,
+      "after": ["escort"],
+      "text": "Cover Halcyon's 40-second scan"
+    }
+  ],
+  "events": [
+    { "when": {"time": 25}, "do": [{"spawn": "ambush1"}] },
+    { "when": {"time": 60}, "do": [{"spawn": "ambush2"}] },
+    { "when": {"objective": "escort"}, "do": [{"spawn": "ambush3"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        {
+          "radio": { "from": "Halcyon", "text": "Entering the field. Please keep the rocks and the corsairs off us." }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "escort" },
+      "do": [
+        { "radio": {"from": "Halcyon", "text": "On station. Starting deep scan."} }
+      ]
+    },
+    {
+      "when": { "objective": "survey" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "That is a shipyard. A Skarn shipyard, inside our space."} }
+      ]
+    }
+  ]
+}

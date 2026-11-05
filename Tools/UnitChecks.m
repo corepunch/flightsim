@@ -16,11 +16,9 @@
 
 static int failures;
 
-// Resources/<directory>/<name>.json as a dictionary, from the check's own bundle.
+// Data/<directory>/<name>.json on the search path (the game's folder) as a dictionary.
 static NSDictionary *DefinitionJSON(NSString *directory, NSString *name) {
-    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:directory];
-    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
-    return data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    return FSJSON(FSURL([@"Data" stringByAppendingPathComponent:directory], name, @"json"));
 }
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #c); failures++; } } while (0)
 #define NEAR(a, b, eps) (fabsf((float)(a) - (float)(b)) <= (eps))
@@ -502,6 +500,23 @@ static void CheckMissionRuntime(void) {
 // The story front end's data: every briefing builds pages from the cast and
 // rooms in Story/, in the order storyDefaults lists, and a game can add a page kind.
 static void CheckStory(void) {
+    // The search path: the game's folder over the engine's resources.
+    CHECK(FSGames().count >= 1 && [FSGames() containsObject:FSGame()]);
+    CHECK(FSURL(@"Data/Ships", @"wasp", @"json") && [FSURL(@"Data/Ships", @"wasp", @"json").path containsString:@"/Games/"]);
+    CHECK(FSURL(@"Strings", @"en", @"json") && !FSURL(@"Data/Ships", @"no-such-ship", @"json"));
+    NSDictionary *gameStrings = FSJSON(FSURL(@"Strings", @"en", @"json"))[@"strings"];
+    if (gameStrings[@"game.title"]) CHECK([L10n(@"game.title") isEqualToString:gameStrings[@"game.title"]]);   // the game's catalog wins
+    CHECK([L10n(@"menu.quit") length] > 0 && ![L10n(@"menu.quit") isEqualToString:@"menu.quit"]);               // the engine's still there
+    // Levels by name, and the campaign's order over them.
+    CHECK(LevelNames().count >= CampaignMissions().count && CampaignMissions().count > 0);
+    for (NSUInteger i = 0; i < CampaignMissions().count; i++) {
+        NSString *level = CampaignLevelName(i);
+        CHECK([LevelNamed(level)[@"name"] isEqualToString:level] && CampaignIndexOfLevel(level) == i);
+        CHECK([CampaignMission(i)[@"title"] isEqualToString:LevelNamed(level)[@"title"]] && CampaignMission(i)[@"briefing"]);
+        CHECK(!LevelNamed(level)[@"briefing"]);   // the game module never sees the campaign's half
+    }
+    CHECK(CampaignIndexOfLevel(@"no-such-level") == NSNotFound && !LevelNamed(@"no-such-level"));
+
     NSString *player = StoryPlayer();
     CHECK(player.length && StoryCharacter(player));
     NSDictionary *defaults = CampaignData()[@"storyDefaults"];
@@ -530,6 +545,23 @@ static void CheckStory(void) {
     CHECK(pages.count == 2 && [pages[0][@"text"] isEqualToString:@"Fog"] && [pages[1][@"readout"] count] > 0);
 }
 
+// A game with a base searches its own folder, then the base's, then the
+// engine's; the default game is unaffected.
+static void CheckGameChain(void) {
+    NSString *saved = FSGame();
+    CHECK([FSGames() containsObject:@"ZCheckMod"] && ![saved isEqualToString:@"ZCheckMod"]);
+    CHECK([FSGameManifest(@"ZCheckMod")[@"base"] isEqualToString:saved]);
+    FSSetGame(@"ZCheckMod");
+    CHECK([FSGameChain() isEqualToArray:(@[ @"ZCheckMod", saved ])]);
+    CHECK([FSURL(@"Levels", @"check", @"json").path containsString:@"/ZCheckMod/"]);           // its own
+    CHECK([FSURL(@"Data/Ships", @"wasp", @"json").path containsString:saved]);               // the base's
+    CHECK(FSURL(@"Strings", @"en", @"json") && FSURLsLayered(@"Strings", @"json").count >= 2); // and the engine's
+    NSArray<NSURL *> *levels = FSURLs(@"Levels", @"json");
+    CHECK([[levels valueForKey:@"lastPathComponent"] containsObject:@"check.json"] && levels.count > 1);
+    FSSetGame(saved);
+    CHECK([FSGameChain() isEqualToArray:(@[ saved ])]);
+}
+
 static void CheckLocalization(void) {
     CHECK(L10nCatalogs()[@"en"] != nil && L10nCatalogs().count >= 2);
     CHECK(L10nLocale().length > 0);
@@ -554,6 +586,7 @@ int main(void) {
         CheckDefinitions();
         CheckLocalization();
         CheckStory();
+        CheckGameChain();
         CheckMissionRuntime();
         if (failures) {
             fprintf(stderr, "%d check(s) failed\n", failures);

@@ -1,4 +1,5 @@
 #import "PlatformImage.h"
+#import "FileSystem.h"
 #import "CapitalView.h"
 #import "Assets.h"
 #import "ShipView.h"
@@ -6,8 +7,7 @@
 #pragma mark - Materials
 
 static NSURL *TextureURL(NSString *name) {
-    return [[NSBundle mainBundle] URLForResource:name withExtension:@"jpg" subdirectory:@"Textures"]
-        ?: [[NSBundle mainBundle] URLForResource:name withExtension:@"png" subdirectory:@"Textures"];
+    return FSURL(@"Textures", name, @"jpg") ?: FSURL(@"Textures", name, @"png");
 }
 
 static void Repeat(SCNMaterialProperty *p) {
@@ -129,7 +129,7 @@ static SCNMaterial *MaterialFromSpec(NSString *slot, NSDictionary *spec) {
 }
 
 static NSDictionary *StyleFile(NSString *style) {
-    NSURL *url = [NSBundle.mainBundle URLForResource:style withExtension:@"json" subdirectory:@"Styles"];
+    NSURL *url = FSURL(@"Data/Styles", style, @"json");
     NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
     NSDictionary *d = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
     return [d isKindOfClass:NSDictionary.class] ? d : nil;

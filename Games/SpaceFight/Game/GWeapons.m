@@ -158,8 +158,8 @@
 
 #pragma mark - Torpedoes
 
-// The round's look, Resources/Projectiles/torpedo.json; precached at spawn.
-NSString *const GTorpedoProjectile = @"torpedo";
+// The round's look, Data/Projectiles/<rules.json secondary.projectile>.json; precached at spawn.
+NSString *GTorpedoProjectile(void) { return GRules()[@"secondary"][@"projectile"] ?: @"torpedo"; }
 
 - (void)fireTorpedoFor:(GClient *)cl {
     GFighter *s = cl.ship;
@@ -176,7 +176,7 @@ NSString *const GTorpedoProjectile = @"torpedo";
     cl.torpedoes--;
     GTorpedo *t = [GTorpedo new];
     t.number = [self allocEntity];
-    t.model = gi.modelIndex(ProjectileModelName(GTorpedoProjectile).UTF8String);
+    t.model = gi.modelIndex(ProjectileModelName(GTorpedoProjectile()).UTF8String);
     t.position = s.position + s.forward * 6 - s.up * 1.0f;
     t.velocity = s.velocity + s.forward * 120;
     t.life = 9;

@@ -1,5 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import "Assets.h"
+#import "Story.h"
 #import "Briefing.h"
 #import "UIMotion.h"
 #import "Cvar.h"

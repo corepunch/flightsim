@@ -1,5 +1,6 @@
-# Compile the game into the mobile executable. The Mac continues to use its
-# separate game dylib and the same SceneKit assets baked by the Mac tools.
+# Compile one game (GAME, default SpaceFight) into the mobile executable: iOS
+# apps cannot load a dylib at runtime. The Mac loads each game's module from
+# PlugIns and uses the same SceneKit assets baked by the Mac tools.
 IOS_PLATFORM ?= iphonesimulator
 IOS_MIN := 16.0
 IOS_ARCH := $(if $(filter iphoneos,$(IOS_PLATFORM)),arm64,$(shell uname -m))
@@ -11,7 +12,7 @@ IOS_FLAGS := -isysroot "$(IOS_SYSROOT)" -arch $(IOS_ARCH) $(IOS_DEPLOY) -fobjc-a
 IOS_FRAMEWORKS := UIKit SceneKit SpriteKit Metal CoreGraphics QuartzCore ImageIO GameController AVFoundation
 IOS_ENGINE_SOURCES := $(filter-out %/FXRecorder.m %/Input.m %/GameView.m %/main.m,$(ENGINE_SOURCES))
 IOS_ENGINE_OBJECTS := $(addprefix $(IOS_BUILD)/engine/,$(addsuffix .o,$(IOS_ENGINE_SOURCES)))
-IOS_GAME_OBJECTS := $(addprefix $(IOS_BUILD)/game/,$(addsuffix .o,$(filter-out $(SHARED),$(GAME_SOURCES))))
+IOS_GAME_OBJECTS := $(addprefix $(IOS_BUILD)/game/,$(addsuffix .o,$(filter-out $(SHARED),$(call game_sources,$(call game_module_of,$(GAME))))))
 
 .PHONY: ios
 ios: $(IOS_BUILD)/SpaceFight
@@ -30,6 +31,6 @@ $(IOS_BUILD)/engine/%.c.o: %.c Makefile Tools/iOS.mk
 
 $(IOS_BUILD)/game/%.m.o: %.m Makefile Tools/iOS.mk
 	@mkdir -p "$(@D)"
-	@$(IOS_CC) $(IOS_FLAGS) $(GAME_FLAGS) -include Sources/Game/Prefix.h -MMD -MP -c "$<" -o "$@"
+	@$(IOS_CC) $(IOS_FLAGS) $(call game_flags,$(call game_module_of,$(GAME))) -include Games/$(call game_module_of,$(GAME))/Game/Prefix.h -MMD -MP -c "$<" -o "$@"
 
 -include $(addsuffix .d,$(basename $(IOS_ENGINE_OBJECTS) $(IOS_GAME_OBJECTS)))

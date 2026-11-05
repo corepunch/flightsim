@@ -1,0 +1,122 @@
+{
+  "name": "18-corsair-nest",
+  "seed": 18,
+  "title": "Corsair Nest",
+  "loadout": { "torpedoes": 6 },
+  "player": { "pos": [0, 200, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "nest",
+      "asset": "CorsairBase",
+      "team": "enemy",
+      "style": "corsair",
+      "name": "Asteroid Hollow",
+      "pos": [0, 0, -3800],
+      "spin": 1
+    },
+    {
+      "id": "cut1",
+      "asset": "CorsairCutter",
+      "team": "enemy",
+      "style": "corsair",
+      "name": "Cutter Grist",
+      "pos": [-600, 200, -3200],
+      "path": [[600, 300, -3200], [600, -300, -4400], [-600, -300, -4400], [-600, 200, -3200]],
+      "speed": 45,
+      "loop": true,
+      "group": "cutters"
+    },
+    {
+      "id": "cut2",
+      "asset": "CorsairCutter",
+      "team": "enemy",
+      "style": "corsair",
+      "name": "Cutter Maw",
+      "pos": [600, -300, -4400],
+      "path": [[-600, -300, -4400], [-600, 200, -3200], [600, 300, -3200], [600, -300, -4400]],
+      "speed": 45,
+      "loop": true,
+      "group": "cutters"
+    }
+  ],
+  "fields": [
+    { "type": "asteroids", "center": [0, 0, -3500], "radius": 2200, "count": 40, "seed": 18 }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "executioner",
+      "count": 2,
+      "team": "friend",
+      "pos": [80, 230, 100],
+      "spread": 60,
+      "order": "attack",
+      "name": "Lancer"
+    },
+    {
+      "id": "raiders",
+      "ship": "wasp",
+      "count": 4,
+      "team": "enemy",
+      "pos": [0, 400, -3200],
+      "spread": 200,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "raiders2",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [0, -500, -4400],
+      "spread": 150,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    {
+      "id": "shields",
+      "type": "disable",
+      "targets": ["nest"],
+      "kind": "Shield",
+      "text": "Destroy both shield generators"
+    },
+    {
+      "id": "nest",
+      "type": "destroy",
+      "targets": ["nest"],
+      "after": ["shields"],
+      "text": "Hit the reactor atop the dome"
+    },
+    {
+      "id": "cutters",
+      "type": "destroy",
+      "targets": ["cutters"],
+      "optional": true,
+      "text": "Destroy cutters Grist and Maw"
+    }
+  ],
+  "events": [
+    { "when": {"time": 0}, "do": [{"spawn": "raiders"}] },
+    { "when": {"time": 80}, "do": [{"spawn": "raiders2"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Lancer 2", "text": "Hollow ahead. Hit the shield generators on the surface."} }
+      ]
+    },
+    {
+      "when": { "objective": "shields" },
+      "do": [
+        { "radio": {"from": "Commander Varn", "text": "Shields are down. Hit the reactor on the dome!"} }
+      ]
+    },
+    {
+      "when": { "objective": "nest" },
+      "do": [
+        { "radio": {"from": "Commander Varn", "text": "Hollow is gone. The Skarn just lost their friends."} }
+      ]
+    }
+  ]
+}

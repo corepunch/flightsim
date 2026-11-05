@@ -9,11 +9,29 @@
 //   Story/rooms.json       { "rooms": { "<id>": { "image": "<art>", "size": [w, h],
 //                                                 "board": { "bottom": y, "height": h },
 //                                                 "bezel": [[x, y], …] } } }
-//   Missions/missions.json "storyDefaults": { "officer": "<id>", "room": "<id>",
+//   Campaign/campaign.json "storyDefaults": { "officer": "<id>", "room": "<id>",
 //                                             "briefingPages": ["dialogue", "situation", …] }
 //
 // Room coordinates are source-image pixels with y down. Foundation only, so
 // the unit checks build it headless. Thread-safe; the files load once.
+
+#pragma mark - Campaign
+
+// Campaign/campaign.json in the game folder: the campaign's name, story,
+// storyDefaults and, in order, its missions. A mission entry names a level
+// and carries the briefing and debrief:
+//   { "level": "<name>", "briefing": { … }, "debrief": { … } }
+NSDictionary *CampaignData(void);
+// The campaign's missions in order, each the level (Levels/<name>.json)
+// merged with its campaign entry, so briefing code reads one dictionary.
+NSArray<NSDictionary *> *CampaignMissions(void);
+NSDictionary *CampaignMission(NSUInteger index);
+// The level a campaign mission flies, and back. NSNotFound for a level the
+// campaign does not use.
+NSString *CampaignLevelName(NSUInteger index);
+NSUInteger CampaignIndexOfLevel(NSString *level);
+
+#pragma mark - Cast and rooms
 
 // The character the player flies as. Their portrait stands on the right.
 NSString *StoryPlayer(void);

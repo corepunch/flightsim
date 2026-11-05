@@ -5,7 +5,7 @@
 @property (nonatomic, strong) NetAddress *address;
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic) int players, maxPlayers;
-@property (nonatomic) int missionIndex;     // -1: no mission running
+@property (nonatomic, copy) NSString *levelName;   // nil: no level running
 @property (nonatomic) double lastSeen;
 @end
 

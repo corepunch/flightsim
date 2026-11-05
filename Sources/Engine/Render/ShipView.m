@@ -1,4 +1,5 @@
 #import "ShipView.h"
+#import "FileSystem.h"
 
 // Shield bubble: fresnel rim with a scrolling hex-ish ripple, additive.
 static NSString *const kShieldFragment =
@@ -51,7 +52,7 @@ void ApplyHullRolloff(SCNMaterial *m) {
         SCNGeometry *g = cache[key];
         if (g) return g;
 
-        NSURL *url = [[NSBundle mainBundle] URLForResource:@(def->mesh) withExtension:@"scn" subdirectory:@"Models"];   // baked by build.sh
+        NSURL *url = FSURL(@"Models", @(def->mesh), @"scn");   // baked by build.sh
         SCNScene *scene = url ? [SCNScene sceneWithURL:url options:nil error:nil] : nil;
         __block SCNGeometry *found = nil;
         [scene.rootNode enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
@@ -61,7 +62,7 @@ void ApplyHullRolloff(SCNMaterial *m) {
 
         SCNMaterial *m = [SCNMaterial material];
         m.lightingModelName = SCNLightingModelPhysicallyBased;
-        m.diffuse.contents = [[NSBundle mainBundle] URLForResource:@(def->texture) withExtension:@"png" subdirectory:@"Models"];
+        m.diffuse.contents = FSURL(@"Models", @(def->texture), @"png");
         m.diffuse.mipFilter = SCNFilterModeLinear;
         m.diffuse.maxAnisotropy = 8;
         m.metalness.contents = @0.55;

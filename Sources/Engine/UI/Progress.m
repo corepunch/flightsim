@@ -1,4 +1,5 @@
 #import "Progress.h"
+#import "Story.h"
 #import "Assets.h"
 #import "Cvar.h"
 

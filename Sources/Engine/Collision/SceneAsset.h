@@ -1,11 +1,12 @@
 #import <SceneKit/SceneKit.h>
+#import "FileSystem.h"
 
-// Loads a baked model, Resources/Models/<subdirectory>/<name>.scn (made from
+// Loads a baked model, <subdirectory>/<name>.scn on the search path (Models/… in the game folder, (made from
 // the .obj sources by build.sh / Tools/BakeModels.m), and returns its
 // top-level nodes, detached so they can go straight into another scene.
 // Empty if the file is missing or unreadable.
 static inline NSArray<SCNNode *> *SceneAssetNodes(NSString *name, NSString *subdirectory) {
-    NSURL *url = [[NSBundle mainBundle] URLForResource:name withExtension:@"scn" subdirectory:subdirectory];
+    NSURL *url = FSURL(subdirectory, name, @"scn");
     if (!url) return @[];
     NSError *error = nil;
     SCNScene *scene = [SCNScene sceneWithURL:url options:nil error:&error];

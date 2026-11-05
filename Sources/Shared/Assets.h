@@ -1,6 +1,7 @@
 // Static tables both sides read: ship definitions and capital assets. C
 // functions, not classes, so the engine and the game module can each link a
 // copy without clashing.
+#import "FileSystem.h"
 #import <Foundation/Foundation.h>
 #include "Protocol.h"
 
@@ -97,13 +98,13 @@ const ProjectileDef *ProjectileDefNamed(NSString *name);
 NSString *ProjectileModelName(NSString *name);             // "proj:<name>"
 const ProjectileDef *ProjectileDefForModel(NSString *model);
 
-#pragma mark - Campaign
+#pragma mark - Levels
 
-// Resources/Missions/missions.json, in campaign order.
-NSArray<NSDictionary *> *CampaignMissions(void);
-NSDictionary *CampaignMission(NSUInteger index);
-// The whole file: campaign name, story, storyDefaults and missions.
-NSDictionary *CampaignData(void);
+// Levels/<name>.json in the game folder: what the game module builds and the
+// briefing map draws. nil when there is no such level.
+NSDictionary *LevelNamed(NSString *name);
+// Every level in the game folder, sorted by name.
+NSArray<NSString *> *LevelNames(void);
 
 static inline simd_float3 Vec3(NSArray *a) {
     return a.count >= 3 ? simd_make_float3([a[0] floatValue], [a[1] floatValue], [a[2] floatValue]) : simd_make_float3(0, 0, 0);

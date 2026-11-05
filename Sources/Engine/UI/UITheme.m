@@ -1,10 +1,11 @@
 #import "UITheme.h"
+#import "FileSystem.h"
 
 static NSDictionary *Theme(void) {
     static NSDictionary *theme;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        NSURL *url = [NSBundle.mainBundle URLForResource:@"theme" withExtension:@"json" subdirectory:@"UI"];
+        NSURL *url = FSURL(@"UI", @"theme", @"json");
         NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
         NSError *error = nil;
         id root = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;

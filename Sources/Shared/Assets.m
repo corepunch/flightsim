@@ -41,7 +41,7 @@ static ShipGun GunFrom(NSDictionary *d, ShipGun base) {
 }
 
 static ShipDef *LoadShipDef(NSString *name) {
-    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:@"Ships"];
+    NSURL *url = FSURL(@"Data/Ships", name, @"json");
     NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
     NSError *error = nil;
     NSDictionary *d = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;
@@ -111,10 +111,10 @@ const ShipDef *ShipDefForModel(NSString *model) {
 
 #pragma mark - Definition files
 
-// Resources/<directory>/<name>.json as a dictionary, or nil.
+// Data/<directory>/<name>.json on the search path as a dictionary, or nil.
 static NSDictionary *DefinitionFile(NSString *directory, NSString *name) {
     if (!name.length) return nil;
-    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:directory];
+    NSURL *url = FSURL([@"Data" stringByAppendingPathComponent:directory], name, @"json");
     NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
     NSError *error = nil;
     NSDictionary *d = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;
@@ -124,7 +124,7 @@ static NSDictionary *DefinitionFile(NSString *directory, NSString *name) {
 
 static NSArray<NSString *> *DefinitionNames(NSString *directory) {
     NSMutableArray *found = [NSMutableArray array];
-    for (NSURL *url in [NSBundle.mainBundle URLsForResourcesWithExtension:@"json" subdirectory:directory])
+    for (NSURL *url in FSURLs([@"Data" stringByAppendingPathComponent:directory], @"json"))
         [found addObject:url.lastPathComponent.stringByDeletingPathExtension];
     return [found sortedArrayUsingSelector:@selector(compare:)];
 }
@@ -202,27 +202,28 @@ const ProjectileDef *ProjectileDefForModel(NSString *model) {
     return [model hasPrefix:@"proj:"] ? ProjectileDefNamed([model substringFromIndex:5]) : NULL;
 }
 
-#pragma mark - Campaign
+#pragma mark - Levels
 
-NSDictionary *CampaignData(void) {
-    static NSDictionary *root;
+NSDictionary *LevelNamed(NSString *name) {
+    static NSMutableDictionary<NSString *, NSDictionary *> *cache;
     static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        NSURL *url = [[NSBundle mainBundle] URLForResource:@"missions" withExtension:@"json" subdirectory:@"Missions"];
-        NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
-        NSError *err = nil;
-        NSDictionary *json = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&err] : nil;
-        if (![json isKindOfClass:NSDictionary.class]) NSLog(@"Campaign: cannot load missions.json: %@", err);
-        root = [json isKindOfClass:NSDictionary.class] ? json : @{};
-    });
-    return root;
+    dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
+    if (!name.length) return nil;
+    @synchronized (cache) {
+        NSDictionary *level = cache[name];
+        if (!level) {
+            id json = FSJSON(FSURL(@"Levels", name, @"json"));
+            if (![json isKindOfClass:NSDictionary.class]) return nil;
+            cache[name] = level = json;
+        }
+        return level;
+    }
 }
 
-NSArray<NSDictionary *> *CampaignMissions(void) { return CampaignData()[@"missions"] ?: @[]; }
-
-NSDictionary *CampaignMission(NSUInteger i) {
-    NSArray *all = CampaignMissions();
-    return i < all.count ? all[i] : nil;
+NSArray<NSString *> *LevelNames(void) {
+    NSMutableArray *names = [NSMutableArray array];
+    for (NSURL *url in FSURLs(@"Levels", @"json")) [names addObject:url.lastPathComponent.stringByDeletingPathExtension];
+    return names;
 }
 
 // Cache alongside the definitions: resources are immutable for a process.
@@ -236,7 +237,7 @@ NSString *ShipDataIdentity(void) {
         NSArray<NSString *> *names = ShipDefNames();
         if (!names.count) return; // incomplete bundle: fail closed at the client
         for (NSString *name in names) {
-            NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:@"Ships"];
+            NSURL *url = FSURL(@"Data/Ships", name, @"json");
             NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
             if (!data) return;
             NSData *label = [name dataUsingEncoding:NSUTF8StringEncoding];
@@ -251,7 +252,7 @@ NSString *ShipDataIdentity(void) {
         CC_SHA256_Final(digest, &ctx);
         NSMutableString *hex = [NSMutableString string];
         for (int i = 0; i < CC_SHA256_DIGEST_LENGTH; i++) [hex appendFormat:@"%02x", digest[i]];
-        identity = [@"spacefight 1 ships-sha256:" stringByAppendingString:hex];
+        identity = [NSString stringWithFormat:@"%@ 1 ships-sha256:%@", FSGame().lowercaseString, hex];
     });
     return identity;
 }

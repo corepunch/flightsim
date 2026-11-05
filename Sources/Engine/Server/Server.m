@@ -205,7 +205,7 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
     [slot.channel queueReliable:w.data];
 }
 
-- (void)spawnMission:(int)missionIndex {
+- (void)spawnLevel:(NSString *)name {
     _running = NO;
     for (NSUInteger i = 0; i < _slots.count; i++) {
         ServerSlot *slot = _slots[i];
@@ -218,7 +218,7 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
     _events.length = 0;
     _missionEnded = NO;
     [Cvar applyLatched];
-    _ge->spawnMission(missionIndex);
+    _ge->spawnLevel(name.UTF8String ?: "");
     _spawnCount++;
     _accumulator = 0;
     _running = YES;
@@ -259,7 +259,7 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
     NSArray *args = [text componentsSeparatedByString:@" "];
     NSString *cmd = args.firstObject;
     if ([cmd isEqualToString:@"info"]) {
-        NSString *mission = _running ? _configStrings[CS_MISSION] : @"-";
+        NSString *mission = _running ? _configStrings[CS_LEVEL] : @"-";
         [NetChannel sendOutOfBand:[NSString stringWithFormat:@"info_response %d %d %@ %@", self.clientCount, MAX_CLIENTS, mission, _name]
                         transport:t to:from];
     } else if ([cmd isEqualToString:@"connect"]) {

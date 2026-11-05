@@ -1,4 +1,5 @@
 #import "MainMenu.h"
+#import "FileSystem.h"
 #import "UIStyle.h"
 #import "UIMotion.h"
 #import "GameAudio.h"
@@ -74,7 +75,7 @@ static SKShader *MenuArtShader(void) {
         [_stage addChild:_ghost];
         [self addChild:_stage];
 
-        NSURL *url = [NSBundle.mainBundle URLForResource:@"Frontier" withExtension:@"jpg" subdirectory:@"Menu"];
+        NSURL *url = FSURL(@"Menu", @"background", @"jpg");
         CGImageSourceRef source = url ? CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL) : NULL;
         if (source) {
             CGImageRef image = CGImageSourceCreateImageAtIndex(source, 0, NULL);

@@ -1,20 +1,39 @@
 #import "GameLoader.h"
 #import "Cvar.h"
+#import "FileSystem.h"
 #import <TargetConditionals.h>
 #if TARGET_OS_OSX
 #include <dlfcn.h>
 #endif
 
+NSString *GameLoaderSelectGame(void) {
+    NSString *name = [Cvar get:@"fs_game" defaultValue:FSGame() flags:CVAR_NOSET
+                          help:@"Game to run: a folder in the app's Games/"].string;
+    if (![FSGames() containsObject:name]) {
+        NSLog(@"GameLoader: no game named %@; running %@", name, FSGame());
+        name = FSGame();
+        [Cvar setInitializing:YES];   // a correction, not a console change
+        [Cvar set:@"fs_game" value:name];
+        [Cvar setInitializing:NO];
+    }
+    FSSetGame(name);
+    return name;
+}
+
 GetGameAPIFunc GameLoaderOpen(void) {
 #if TARGET_OS_IOS
     return GetGameAPI;
 #else
-    // fs_game names the module to load. Today that is a path to a dylib; the
-    // Games/<name> folder layout will make it a game name.
-    NSString *override = [Cvar get:@"fs_game" defaultValue:@"" flags:CVAR_NOSET
-                               help:@"Game module to load (path to a dylib; default: the app's game.dylib)"].string;
-    NSString *path = override.length ? override
-                                     : [[NSBundle mainBundle].builtInPlugInsPath stringByAppendingPathComponent:@"game.dylib"];
+    // The game's own module, else its base's (FileSystem.h).
+    NSString *path = nil;
+    for (NSString *game in FSGameChain()) {
+        path = [NSBundle.mainBundle.builtInPlugInsPath stringByAppendingPathComponent:[game stringByAppendingPathExtension:@"dylib"]];
+        if ([NSFileManager.defaultManager fileExistsAtPath:path]) break;
+    }
+    if (!path) {
+        NSLog(@"GameLoader: no game to load");
+        return NULL;
+    }
     void *handle = dlopen(path.fileSystemRepresentation, RTLD_NOW | RTLD_LOCAL);
     if (!handle) {
         NSLog(@"GameLoader: cannot load %@: %s", path, dlerror());

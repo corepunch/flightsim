@@ -1,4 +1,5 @@
 #import "Briefing.h"
+#import "FileSystem.h"
 #import "MonitorSignal.h"
 #import "Assets.h"
 #import "Progress.h"
@@ -549,8 +550,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     SKTexture *texture = _art[name];
     if (!texture) {
         NSString *subdirectory = [@"Briefing" stringByAppendingPathComponent:name.stringByDeletingLastPathComponent];
-        NSURL *url = [[NSBundle mainBundle] URLForResource:name.lastPathComponent
-                                            withExtension:@"png" subdirectory:subdirectory];
+        NSURL *url = FSURL(subdirectory, name.lastPathComponent, @"png");
         CGImageSourceRef source = url ? CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL) : NULL;
         if (!source) return nil;
         CGImageRef image = CGImageSourceCreateImageAtIndex(source, 0, NULL);

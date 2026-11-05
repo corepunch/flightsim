@@ -12,17 +12,26 @@ ENGINE_DIRS := $(wildcard Sources/Engine/*/)
 # classes exist once per process.
 MISSION_SOURCES := $(wildcard Sources/Engine/Mission/*.m)
 ENGINE_SOURCES := $(SHARED) $(filter-out $(MISSION_SOURCES),$(wildcard Sources/Engine/*/*.m))
-GAME_SOURCES := $(SHARED) $(MISSION_SOURCES) $(wildcard Sources/Game/*.m)
 ENGINE_OBJECTS := $(addprefix $(NATIVE)/engine/,$(addsuffix .o,$(ENGINE_SOURCES)))
-GAME_OBJECTS := $(addprefix $(NATIVE)/game/,$(addsuffix .o,$(GAME_SOURCES)))
 ENGINE_FLAGS := -ISources/Shared $(addprefix -I,$(ENGINE_DIRS))
-GAME_FLAGS := -ISources/Shared -ISources/Engine/Mission -ISources/Game -fvisibility=hidden
 ENGINE_PCH := $(NATIVE)/engine.pch
-GAME_PCH := $(NATIVE)/game.pch
 ENGINE_FRAMEWORKS := Cocoa SceneKit SpriteKit Metal CoreGraphics QuartzCore IOKit Carbon ImageIO AVFoundation CoreMedia CoreVideo
 
+# Every folder in Games/ with a Game/ module is a game. Its module builds as
+# build/Native/<name>.dylib; everything else in the folder is its data
+# (Tools/bundle-resources.sh). GAME is the one the iOS app links in.
+GAMES := $(notdir $(patsubst %/Game/,%,$(wildcard Games/*/Game/)))
+GAME ?= SpaceFight
+# The module a game runs: its own Game/, else its base's (game.json "base").
+game_module_of = $(if $(wildcard Games/$(1)/Game/),$(1),$(shell plutil -extract base raw -o - Games/$(1)/game.json 2>/dev/null))
+game_sources = $(SHARED) $(MISSION_SOURCES) $(wildcard Games/$(1)/Game/*.m)
+game_objects = $(addprefix $(NATIVE)/games/$(1)/,$(addsuffix .o,$(call game_sources,$(1))))
+game_flags = -ISources/Shared -ISources/Engine/Mission -IGames/$(1)/Game -fvisibility=hidden
+GAME_MODULES := $(addprefix $(NATIVE)/,$(addsuffix .dylib,$(GAMES)))
+GAME_PCHS := $(addprefix $(NATIVE)/games/,$(addsuffix .pch,$(GAMES)))
+
 .PHONY: all FORCE
-all: $(ENGINE_PCH) $(GAME_PCH) $(NATIVE)/SpaceFight $(NATIVE)/game.dylib $(NATIVE)/libengine.a
+all: $(ENGINE_PCH) $(GAME_PCHS) $(NATIVE)/SpaceFight $(GAME_MODULES) $(NATIVE)/libengine.a
 
 # Reuse objects only while the selected compiler and SDK match.
 $(TOOLCHAIN): FORCE
@@ -34,12 +43,6 @@ $(TOOLCHAIN): FORCE
 $(NATIVE)/SpaceFight: $(ENGINE_OBJECTS) Sources/Shared Sources/Engine $(ENGINE_DIRS) Makefile
 	@printf '  Linking %s\n' '$(@F)'
 	@clang $(COMMON_FLAGS) $(ENGINE_OBJECTS) $(addprefix -framework ,$(ENGINE_FRAMEWORKS)) -o "$@.tmp"
-	@mv "$@.tmp" "$@"
-
-# The server loads this module at runtime. Only GetGameAPI is exported.
-$(NATIVE)/game.dylib: $(GAME_OBJECTS) Sources/Shared Sources/Engine/Mission Sources/Game Makefile
-	@printf '  Linking %s\n' '$(@F)'
-	@clang $(COMMON_FLAGS) -dynamiclib $(GAME_OBJECTS) -framework Foundation -install_name @rpath/game.dylib -o "$@.tmp"
 	@mv "$@.tmp" "$@"
 
 # The engine without its entry point, for the GUI checks (Tools/engine-library.sh):
@@ -66,22 +69,35 @@ endef
 $(ENGINE_PCH): Sources/Engine/Prefix.h Makefile $(TOOLCHAIN)
 	$(call compile,engine prefix,$(ENGINE_FLAGS) -x objective-c-header)
 
-$(GAME_PCH): Sources/Game/Prefix.h Makefile $(TOOLCHAIN)
-	$(call compile,game prefix,$(GAME_FLAGS) -x objective-c-header)
-
 $(NATIVE)/engine/%.m.o: %.m $(ENGINE_PCH) Makefile $(TOOLCHAIN)
 	$(call compile,engine,$(ENGINE_FLAGS) -include-pch $(ENGINE_PCH))
-
-$(NATIVE)/game/%.m.o: %.m $(GAME_PCH) Makefile $(TOOLCHAIN)
-	$(call compile,game,$(GAME_FLAGS) -include-pch $(GAME_PCH))
 
 $(NATIVE)/engine/%.c.o: %.c Makefile $(TOOLCHAIN)
 	$(call compile,engine,$(ENGINE_FLAGS))
 
-$(NATIVE)/game/%.c.o: %.c Makefile $(TOOLCHAIN)
-	$(call compile,game,$(GAME_FLAGS))
+-include $(addsuffix .d,$(basename $(ENGINE_OBJECTS) $(ENGINE_PCH)))
 
--include $(addsuffix .d,$(basename $(ENGINE_OBJECTS) $(GAME_OBJECTS) $(ENGINE_PCH) $(GAME_PCH)))
+# The server loads a game's module at runtime (Server/GameLoader.m). Only
+# GetGameAPI is exported.
+define game_module
+$(NATIVE)/$(1).dylib: $(call game_objects,$(1)) Sources/Shared Sources/Engine/Mission Games/$(1)/Game Makefile
+	@printf '  Linking %s\n' '$(1).dylib'
+	@clang $(COMMON_FLAGS) -dynamiclib $(call game_objects,$(1)) -framework Foundation -install_name @rpath/$(1).dylib -o "$$@.tmp"
+	@mv "$$@.tmp" "$$@"
+
+$(NATIVE)/games/$(1).pch: Games/$(1)/Game/Prefix.h Makefile $(TOOLCHAIN)
+	$$(call compile,$(1) prefix,$(call game_flags,$(1)) -x objective-c-header)
+
+$(NATIVE)/games/$(1)/%.m.o: %.m $(NATIVE)/games/$(1).pch Makefile $(TOOLCHAIN)
+	$$(call compile,$(1),$(call game_flags,$(1)) -include-pch $(NATIVE)/games/$(1).pch)
+
+$(NATIVE)/games/$(1)/%.c.o: %.c Makefile $(TOOLCHAIN)
+	$$(call compile,$(1),$(call game_flags,$(1)))
+
+-include $(addsuffix .d,$(basename $(call game_objects,$(1)) $(NATIVE)/games/$(1).pch))
+endef
+$(foreach game,$(GAMES),$(eval $(call game_module,$(game))))
+
 
 .PHONY: iphone ipad ios-devices
 iphone ipad:

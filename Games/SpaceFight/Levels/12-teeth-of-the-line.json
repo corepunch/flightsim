@@ -1,0 +1,80 @@
+{
+  "name": "12-teeth-of-the-line",
+  "seed": 12,
+  "title": "Teeth of the Line",
+  "loadout": { "torpedoes": 6 },
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "plat1",
+      "asset": "DefensePlatform",
+      "team": "enemy",
+      "name": "Platform Alpha",
+      "pos": [-900, 0, -2600],
+      "spin": 4,
+      "group": "platforms"
+    },
+    {
+      "id": "plat2",
+      "asset": "DefensePlatform",
+      "team": "enemy",
+      "name": "Platform Beta",
+      "pos": [0, 250, -3000],
+      "spin": -4,
+      "group": "platforms"
+    },
+    {
+      "id": "plat3",
+      "asset": "DefensePlatform",
+      "team": "enemy",
+      "name": "Platform Gamma",
+      "pos": [900, -150, -2600],
+      "spin": 4,
+      "group": "platforms"
+    }
+  ],
+  "fields": [
+    { "type": "asteroids", "center": [0, 0, -3800], "radius": 1500, "count": 20, "seed": 12 }
+  ],
+  "waves": [
+    {
+      "id": "patrol",
+      "ship": "wasp",
+      "count": 4,
+      "team": "enemy",
+      "pos": [0, 100, -2500],
+      "spread": 200,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "reinf",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [0, 600, -4200],
+      "spread": 150,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "platforms", "type": "destroy", "targets": ["platforms"], "text": "Hit all 3 platform cores" }
+  ],
+  "events": [
+    { "when": {"time": 0}, "do": [{"spawn": "patrol"}] },
+    { "when": {"time": 90}, "do": [{"spawn": "reinf"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Platforms ahead. Cores, Lancer, aim for the cores."} }
+      ]
+    },
+    {
+      "when": { "objective": "platforms" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "The way into Corvid is open."} }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "name": "19-iron-wall",
+  "seed": 19,
+  "title": "Iron Wall",
+  "loadout": { "torpedoes": 8 },
+  "player": { "pos": [0, 0, 200], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "bastion",
+      "asset": "Carrier",
+      "team": "friend",
+      "name": "CNS Bastion",
+      "pos": [0, -60, 1500],
+      "facing": [0, 0, -1]
+    },
+    {
+      "id": "kestrel",
+      "asset": "Frigate",
+      "team": "friend",
+      "name": "CNS Kestrel",
+      "pos": [-400, 80, 600],
+      "facing": [0, 0, -1],
+      "path": [[-300, 80, -600]],
+      "speed": 15
+    },
+    {
+      "id": "cruiser",
+      "asset": "Cruiser",
+      "team": "enemy",
+      "name": "Skarn Cruiser Iron Vow",
+      "pos": [0, 100, -3800],
+      "facing": [0, 0, 1],
+      "path": [[0, 50, -900]],
+      "speed": 16
+    }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "executioner",
+      "count": 2,
+      "team": "friend",
+      "pos": [80, 30, 300],
+      "spread": 60,
+      "order": "attack",
+      "name": "Lancer"
+    },
+    {
+      "id": "screen",
+      "ship": "wasp",
+      "count": 5,
+      "team": "enemy",
+      "pos": [0, 300, -3300],
+      "spread": 200,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "talons",
+      "ship": "talon",
+      "count": 3,
+      "team": "enemy",
+      "pos": [-1600, -200, -2000],
+      "spread": 120,
+      "order": "strike:bastion",
+      "hold": true
+    },
+    {
+      "id": "talons2",
+      "ship": "talon",
+      "count": 3,
+      "team": "enemy",
+      "pos": [1600, 300, -2200],
+      "spread": 120,
+      "order": "strike:bastion",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Keep bombers off the Bastion" },
+    {
+      "id": "shields",
+      "type": "disable",
+      "targets": ["cruiser"],
+      "kind": "Shield",
+      "text": "Hit 2 shield gens on Iron Vow"
+    },
+    {
+      "id": "kill",
+      "type": "destroy",
+      "targets": ["cruiser"],
+      "after": ["shields"],
+      "text": "Destroy heavy cruiser Iron Vow"
+    }
+  ],
+  "events": [
+    { "when": {"time": 5}, "do": [{"spawn": "screen"}] },
+    { "when": {"time": 40}, "do": [{"spawn": "talons"}] },
+    { "when": {"time": 110}, "do": [{"spawn": "talons2"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        {
+          "radio": { "from": "Commander Varn", "text": "Go for the two shield generators on top of the Iron Vow." }
+        }
+      ]
+    },
+    {
+      "when": { "objective": "shields" },
+      "do": [
+        { "radio": {"from": "CNS Kestrel", "text": "Its shields are down! All guns, fire!"} }
+      ]
+    },
+    {
+      "when": { "objective": "kill" },
+      "do": [
+        {
+          "radio": { "from": "Commander Varn", "text": "The Iron Vow is gone. Lancer flight, return to Bastion." }
+        }
+      ]
+    },
+    {
+      "when": { "any": [{"objective": "shields"}, {"destroyed": "Lancer 2"}] },
+      "do": [
+        { "destroy": "Lancer 2" },
+        {
+          "radio": { "from": "Bastion Control", "text": "Lancer Two is down. No escape beacon. Rescue is on the way." }
+        }
+      ]
+    }
+  ]
+}

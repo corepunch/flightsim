@@ -33,7 +33,7 @@ process modes and stay as flags.
 | `cvarlist`, `cmdlist` | Lists every cvar / command with its help |
 | `wait` | Defers the rest of the buffer to the next frame |
 | `sleep <seconds>` | Defers the rest of the buffer |
-| `map <n>` | Flies mission n (1-based); on a dedicated server, runs it |
+| `map <n or level>` | Flies campaign mission n (1-based) or the mission flying that level (`02-cargo-run`); on a dedicated server, runs it |
 | `briefing <n> [page]` | Opens that mission's briefing, optionally on a page |
 | `connect <host[:port]>` | Joins that server |
 | `disconnect` | Leaves the server or mission |
@@ -50,7 +50,7 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | Cvar | Default | Flags | Meaning |
 |---|---|---|---|
 | `sv_cheats` | 0 | | Allows cheat cvars to change |
-| `fs_game` | | noset | Game module to load (a dylib path for now) |
+| `fs_game` | the app's default game | noset | Game to run: a folder in `Games/` (its module is `PlugIns/<name>.dylib`) |
 | `net_port` | 27910 | noset | UDP port the local server listens on; 0 turns hosting off |
 | `net_stats` | 0 | | Logs bandwidth and prediction error every 5 s |
 | `net_loss` | 0 | | Loopback: fraction of packets dropped |

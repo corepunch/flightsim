@@ -1,0 +1,138 @@
+{
+  "name": "05-customs",
+  "seed": 5,
+  "title": "Customs",
+  "loadout": { "torpedoes": 2 },
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "c1",
+      "asset": "Container",
+      "cargo": "Civilian supplies",
+      "team": "neutral",
+      "name": "Container 1",
+      "pos": [-120, 10, -1400],
+      "group": "containers",
+      "spin": 6
+    },
+    {
+      "id": "c2",
+      "asset": "Container",
+      "cargo": "Civilian supplies",
+      "team": "neutral",
+      "name": "Container 2",
+      "pos": [60, -30, -1520],
+      "group": "containers",
+      "spin": -4
+    },
+    {
+      "id": "c3",
+      "asset": "Container",
+      "cargo": "Skarn munitions",
+      "team": "neutral",
+      "name": "Container 3",
+      "pos": [200, 40, -1650],
+      "group": "containers",
+      "spin": 5
+    },
+    {
+      "id": "c4",
+      "asset": "Container",
+      "cargo": "Civilian supplies",
+      "team": "neutral",
+      "name": "Container 4",
+      "pos": [-40, 80, -1780],
+      "group": "containers",
+      "spin": -7
+    },
+    {
+      "id": "c5",
+      "asset": "Container",
+      "cargo": "Skarn munitions",
+      "team": "neutral",
+      "name": "Container 5",
+      "pos": [-220, -60, -1700],
+      "group": "containers",
+      "spin": 3
+    },
+    {
+      "id": "c6",
+      "asset": "Container",
+      "cargo": "Civilian supplies",
+      "team": "neutral",
+      "name": "Container 6",
+      "pos": [110, 120, -1900],
+      "group": "containers",
+      "spin": 8
+    },
+    {
+      "id": "cutter",
+      "asset": "CorsairCutter",
+      "team": "enemy",
+      "style": "corsair",
+      "name": "Corsair Cutter Rask",
+      "pos": [1500, 300, -3000],
+      "facing": [-1, 0, 1],
+      "path": [[300, 100, -1800], [-600, 0, -1600]],
+      "speed": 40,
+      "loop": true,
+      "hold": true
+    }
+  ],
+  "waves": [
+    {
+      "id": "raiders",
+      "ship": "wasp",
+      "count": 3,
+      "team": "enemy",
+      "pos": [1400, 400, -2900],
+      "spread": 100,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    {
+      "id": "scan",
+      "type": "scan",
+      "targets": ["containers"],
+      "range": 60,
+      "text": "Scan 6 containers (60 m, 2 s)"
+    },
+    {
+      "id": "contraband",
+      "type": "destroy",
+      "targets": ["c3", "c5"],
+      "after": ["scan"],
+      "text": "Destroy only containers 3 & 5"
+    },
+    {
+      "id": "cutter",
+      "type": "destroy",
+      "targets": ["cutter"],
+      "after": ["scan"],
+      "text": "Destroy Corsair Cutter Rask"
+    }
+  ],
+  "events": [
+    { "when": {"objective": "scan"}, "do": [{"spawn": "cutter"}] },
+    { "when": {"objective": "scan"}, "do": [{"spawn": "raiders"}] },
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Fly close for two seconds per scan. Hold fire for now."} }
+      ]
+    },
+    {
+      "when": { "objective": "scan" },
+      "do": [
+        {
+          "radio": {
+            "from": "Okafor",
+            "text": "Containers 3 and 5 are full of Skarn munitions. Burn them. And - incoming cutter!"
+          }
+        }
+      ]
+    }
+  ]
+}
