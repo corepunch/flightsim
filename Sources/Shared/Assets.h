@@ -102,6 +102,8 @@ const ProjectileDef *ProjectileDefForModel(NSString *model);
 // Resources/Missions/missions.json, in campaign order.
 NSArray<NSDictionary *> *CampaignMissions(void);
 NSDictionary *CampaignMission(NSUInteger index);
+// The whole file: campaign name, story, storyDefaults and missions.
+NSDictionary *CampaignData(void);
 
 static inline simd_float3 Vec3(NSArray *a) {
     return a.count >= 3 ? simd_make_float3([a[0] floatValue], [a[1] floatValue], [a[2] floatValue]) : simd_make_float3(0, 0, 0);

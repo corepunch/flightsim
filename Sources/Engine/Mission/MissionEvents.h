@@ -6,8 +6,8 @@
 //     { "when": { "time": 2 },                       "do": [ { "radio": { "from": "Relay K-7", "text": "…" } } ] },
 //     { "when": { "spawned": "b2" },                 "do": [ { "radio": { … } } ] },
 //     { "when": { "objective": "shields" },          "do": [ { "spawn": "w3" }, { "set_team": { "barge": "friend" } } ] },
-//     { "when": { "any": [ { "objective": "x" }, { "destroyed": "Lancer 2" } ] },
-//                                                    "do": [ { "destroy": "Lancer 2" }, { "radio": { … } } ] }
+//     { "when": { "any": [ { "objective": "x" }, { "destroyed": "wing-2" } ] },
+//                                                    "do": [ { "destroy": "wing-2" }, { "radio": { … } } ] }
 //   ]
 //
 // An event fires once, the first frame its "when" holds ("repeat": true

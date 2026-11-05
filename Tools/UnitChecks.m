@@ -12,6 +12,7 @@
 #import "NetProtocol.h"
 #import "Localization.h"
 #import "MissionRunner.h"
+#import "Story.h"
 
 static int failures;
 
@@ -498,6 +499,37 @@ static void CheckMissionRuntime(void) {
 
 // The catalog lookups the UI relies on: English text, lists, formats, and the
 // key itself when nothing has it. (Tools/validate_strings.py checks the files.)
+// The story front end's data: every briefing builds pages from the cast and
+// rooms in Story/, in the order storyDefaults lists, and a game can add a page kind.
+static void CheckStory(void) {
+    NSString *player = StoryPlayer();
+    CHECK(player.length && StoryCharacter(player));
+    NSDictionary *defaults = CampaignData()[@"storyDefaults"];
+    CHECK(StoryCharacter(defaults[@"officer"]) && StoryRoom(defaults[@"room"]));
+    for (NSString *kind in defaults[@"briefingPages"]) CHECK([StoryBriefingPageKinds() containsObject:kind]);
+    for (NSDictionary *mission in CampaignMissions()) {
+        NSArray<NSDictionary *> *pages = StoryBriefingPages(mission);
+        NSDictionary *room = StoryRoom(StoryBriefingRoom(mission));
+        CHECK(room && [room[@"bezel"] count] >= 3 && [room[@"size"] count] == 2);
+        CHECK(StoryRoom(StoryDebriefRoom(mission)));
+        CHECK(pages.count > [mission[@"briefing"][@"dialogue"][@"lines"] count]);
+        CHECK([pages.firstObject[@"dialogue"] boolValue]);
+        NSString *officer = mission[@"briefing"][@"officer"] ?: defaults[@"officer"];
+        CHECK([pages.lastObject[@"portrait"] isEqualToString:StoryCharacter(officer)[@"portrait"]]);
+        for (NSDictionary *page in pages) CHECK([page[@"text"] length] && [page[@"channel"] length] && page[@"portrait"]);
+    }
+    // A game-registered page kind, named by a mission's own page order.
+    StoryRegisterBriefingPages(@"check_weather", ^NSArray *(NSDictionary *mission, NSDictionary *officer) {
+        return @[ @{ @"speaker": officer[@"speaker"], @"portrait": officer[@"portrait"], @"text": @"Fog", @"channel": @"WX" } ];
+    });
+    NSMutableDictionary *mission = [CampaignMission(0) mutableCopy];
+    NSMutableDictionary *brief = [mission[@"briefing"] mutableCopy];
+    brief[@"pages"] = @[ @"check_weather", @"intel" ];
+    mission[@"briefing"] = brief;
+    NSArray<NSDictionary *> *pages = StoryBriefingPages(mission);
+    CHECK(pages.count == 2 && [pages[0][@"text"] isEqualToString:@"Fog"] && [pages[1][@"readout"] count] > 0);
+}
+
 static void CheckLocalization(void) {
     CHECK(L10nCatalogs()[@"en"] != nil && L10nCatalogs().count >= 2);
     CHECK(L10nLocale().length > 0);
@@ -521,12 +553,13 @@ int main(void) {
         CheckCampaign();
         CheckDefinitions();
         CheckLocalization();
+        CheckStory();
         CheckMissionRuntime();
         if (failures) {
             fprintf(stderr, "%d check(s) failed\n", failures);
             return 1;
         }
-        printf("PASS: flight model, wire format, console, campaign, definition data, localization and mission runtime\n");
+        printf("PASS: flight model, wire format, console, campaign, definition data, localization, mission runtime and story data\n");
     }
     return 0;
 }

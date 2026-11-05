@@ -1,5 +1,10 @@
 {
   "campaign": "Kestrel Frontier",
+  "storyDefaults": {
+    "officer": "Varn",
+    "room": "Bastion",
+    "briefingPages": ["dialogue", "situation", "tactical", "objectives", "intel"]
+  },
   "story": {
     "title": "THE QUIET ENGINE",
     "logline": "A routine border patrol exposes a manufactured invasion and a gate-killing superweapon, one rescued witness at a time.",
@@ -71,6 +76,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "Welcome aboard the Bastion, Lancer. You are not a cadet any more, so I will skip the speech.",
           "Two days ago the Skarn Dominion crossed the Velan line. Since then our long-range scopes keep picking up small contacts at the edge of the system - scouts, counting our ships.",
@@ -139,6 +145,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "Mira and Tobin are carrying ration packs and medical filters from Halden. Escort them to the gate at the end of the lane.",
           "The lane is long and open, and the Skarn know the schedule. Fly escort with Lancer 2. Both freighters must reach the gate.",
@@ -205,6 +212,7 @@
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "officer": "Okafor",
         "text": [
           "Relay K-7 is how this system talks to the rest of the Concord. If it goes dark, the Bastion is alone out here.",
           "We have intercepted Skarn traffic: they plan to hit K-7 with bombers in waves, trying to wear down whatever defends it.",
@@ -271,6 +279,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "The scouts were spotting for something bigger. A Skarn corvette has been raiding our survey drones in the dust belt.",
           "Corvettes are small for warships, but that one has turrets and a fighter screen. You are carrying torpedoes for this - use them on the hull, not on fighters.",
@@ -329,6 +338,7 @@
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "officer": "Okafor",
         "text": [
           "Someone is supplying the Skarn from inside our own space. We traced it to the cargo yard at Tarn: containers left in orbit for pickup.",
           "Fly within sixty metres of each container for two seconds to read its manifest. Keep your guns cold until all six scans are in.",
@@ -395,6 +405,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "The tanker Corla is filling up at Brenn depot. It needs two and a half minutes on the hose, and it cannot move while it is docked.",
           "The depot is a big, slow, explosive target. The Skarn will want both.",
@@ -461,6 +472,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "The transport Ondine was ambushed an hour ago. Her crew got away in escape pods, and the pods' beacons are calling for help - which tells the Skarn exactly where they are.",
           "The hospital ship Mercy is on station. Fly to each pod and pick it up with your tractor - just get within thirty metres.",
@@ -530,6 +542,7 @@
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "officer": "Okafor",
         "text": [
           "Skarn traffic keeps vanishing into the Corvid field. There is something in there, and the survey ship Halcyon is going to find out what.",
           "The Halcyon is slow and blind among the rocks. Fly escort to the survey point, then cover her while she takes readings for forty seconds.",
@@ -592,6 +605,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "The Bastion has to move. Unfortunately, a Skarn minelayer has been sowing our exit corridor.",
           "Mines are proximity-fused. Shoot them from a distance and never fly through the field.",
@@ -650,6 +664,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "The frigate Kestrel is in trouble. She caught a Skarn raid on the way back from Halden and her engines are damaged.",
           "Two corvettes are working her over and she will not last long. Get there, get the corvettes off her, and keep the fighters away.",
@@ -710,6 +725,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "Tannhal station is the biggest thing we own in this system: forty thousand people living on a ring.",
           "A Skarn strike group is coming, in three waves: fighters to clear the way, then bombers, then a corvette with heavy bombers.",
@@ -774,6 +790,7 @@
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "officer": "Okafor",
         "text": [
           "Before we can do anything about the shipyard, we have to get past its defences: three turret platforms covering the approach.",
           "Each platform is armed all round. Their weak point is the reactor core in the central sphere - shoot the core and the platform dies.",
@@ -834,6 +851,7 @@
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "officer": "Okafor",
         "text": [
           "Now we look inside. The Halcyon's scan shows a shipyard frame with something big under construction.",
           "Fly past three sensor points close to the yard. Your cockpit records automatically. Then get out to the exit point.",
@@ -901,6 +919,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "Fleet Command does not think we can stop the dreadnought here. The colonies are being evacuated.",
           "The liner Aurora Star is carrying six thousand civilians to the Halden gate. She is big, slow and has no guns.",
@@ -968,6 +987,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "Expect company. Our scopes show a Skarn destroyer preparing to jump into our anchorage.",
           "A destroyer can trade broadsides with the Bastion, and its bombers will try to finish us. We need its engines dead first, so it cannot close.",
@@ -1034,6 +1054,7 @@
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "officer": "Okafor",
         "text": [
           "We know where the prisoners from the Ondine and the Tarn yard are: on a Skarn prison barge waiting for transfer.",
           "The barge has six turrets. Take out every turret - but do not destroy the barge itself, there are four hundred of our people inside.",
@@ -1098,6 +1119,7 @@
           ]
         },
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "officer": "Okafor",
         "text": [
           "Someone has been feeding the Skarn our patrol routes. We finally know how: a Skarn stealth prototype shadowing our fleet.",
           "It does not show on scanners beyond seven hundred metres. Our sensor buoys have caught it passing, so it is somewhere in this volume.",
@@ -1158,6 +1180,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "The corsairs who supplied the Skarn live in a hollowed-out asteroid deep in Corvid. With the shipyard nearby, it is their depot and their repair yard.",
           "The base is protected by two shield generators on its surface. Bring them down, and then the reactor on top of the dome is exposed.",
@@ -1224,6 +1247,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "The Skarn are tired of us. A heavy cruiser is coming straight for the Bastion, with escorts.",
           "It is shielded by two generators on the dorsal hull. While they are up, our guns cannot hurt it. Take the generators down, then the cruiser.",
@@ -1295,6 +1319,7 @@
           ]
         },
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "officer": "Varn",
         "text": [
           "The dreadnought is advancing on Bastion. Our line stands between Korr and Halden Gate. Hold the carrier and destroy the Hammer.",
           "It is nine hundred metres of armour. Four shield generators protect it. Then four engines - if it is dead in space, we can win. Then the reactor in the dorsal trench.",

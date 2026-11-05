@@ -7,9 +7,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ART = ROOT / "Resources/Briefing"
-PORTRAITS = {"Varn", "Okafor", "MiraCaptain", "Orin", "Imani", "Juno",
-             "Rhea", "Lusk", "Kesh", "Hale", "Korr", "Lancer2", "Lancer3", "Lancer4",
-             "Lancer1", "Lancer5", "Lancer6"}
+STORY = ROOT / "Resources/Story"
+CAST = json.loads((STORY / "characters.json").read_text())
+PLAYER = CAST["player"]
+PORTRAITS = {character["portrait"] for character in CAST["characters"].values()}
+ROOMS = json.loads((STORY / "rooms.json").read_text())["rooms"]
+# The page kinds the engine registers (Sources/Engine/Story/Story.m).
+PAGE_KINDS = {"dialogue", "situation", "tactical", "objectives", "intel"}
 
 
 def check_art(path, transparent=False):
@@ -39,19 +43,22 @@ def validate_mission(mission):
     epilogue = mission["debrief"]["dialogue"]
     assert len(scene["lines"]) >= 2 and epilogue, f"Mission {index}: missing story"
     assert cast == {line["portrait"] for line in scene["lines"]}, f"Mission {index}: cast mismatch"
-    assert "Lancer1" in cast, f"Mission {index}: Lancer 1 never speaks in the briefing"
-    check_art(ART / f'{scene["room"]}.png')
+    assert PLAYER in cast, f"Mission {index}: the player never speaks in the briefing"
+    assert brief.get("officer", "") in CAST["characters"], f"Mission {index}: unknown officer"
+    assert set(brief.get("pages", [])) <= PAGE_KINDS, f"Mission {index}: unknown page kind"
+    for room in {scene.get("room"), mission["debrief"].get("room")} - {None}:
+        assert room in ROOMS, f"Mission {index}: unknown room {room}"
     for conversation in (scene["lines"], epilogue):
-        listeners = {line["portrait"] for line in conversation} - {"Lancer1"}
+        listeners = {line["portrait"] for line in conversation} - {PLAYER}
         for line in conversation:
             assert line["portrait"] in PORTRAITS, (index, line)
             assert line["speaker"].strip() and line["text"].strip(), (index, line)
-            if line["portrait"] == "Lancer1":
+            if line["portrait"] == PLAYER:
                 assert line["listener"] in listeners, (index, line)
             if "expression" in line:
                 check_expression(line["portrait"], line["expression"])
             if "listenerExpression" in line:
-                listener = line["listener"] if line["portrait"] == "Lancer1" else "Lancer1"
+                listener = line["listener"] if line["portrait"] == PLAYER else PLAYER
                 check_expression(listener, line["listenerExpression"])
     assert all(mission["debrief"][key].strip() for key in ("win", "lose")), index
 
@@ -133,6 +140,15 @@ def main():
     expected = list(range(1, 21))
     assert [mission["id"] for mission in missions] == expected
     assert [index for chapter in campaign["story"]["chapters"] for index in chapter["missions"]] == expected
+    defaults = campaign["storyDefaults"]
+    assert defaults["officer"] in CAST["characters"] and defaults["room"] in ROOMS
+    assert set(defaults["briefingPages"]) <= PAGE_KINDS
+    for name, room in ROOMS.items():
+        width, height = check_art(ART / f'{room["image"]}.png')
+        assert room["size"] == [width, height], f"Room {name}: size differs from its art"
+        assert len(room["bezel"]) >= 3 and all(0 <= x <= width and 0 <= y <= height for x, y in room["bezel"]), name
+    for character in CAST["characters"].values():
+        assert character["faces"] in ("left", "right") and character["name"].strip(), character
     for portrait in PORTRAITS:
         check_art(ART / f"{portrait}.png", transparent=True)
     beats, cast = 0, set()
