@@ -44,8 +44,29 @@ static ShipInput InputAt(int step) {
                         0.6f + 0.4f * sinf(step * 0.02f), (step / 90) % 3 == 1 };
 }
 
+// Every ship definition in the bundle loads and is complete enough to fly
+// and shoot; the first one's flight parameters drive the flight model checks.
+static ShipParams CheckShipDefinitions(void) {
+    NSArray<NSString *> *names = ShipDefNames();
+    CHECK(names.count >= 1);
+    for (NSString *name in names) {
+        const ShipDef *def = ShipDefNamed(name);
+        CHECK(def != NULL);
+        if (!def) continue;
+        CHECK(def->gunCount > 0 && def->nozzleCount > 0 && def->radius > 0);
+        CHECK(def->gun.speed > 0 && def->gun.life > 0 && def->gun.interval > 0 && def->gun.energy > 0 && def->gun.recharge > 0);
+        CHECK(def->params.maxSpeed > 0 && def->params.turnRate > 0 && def->params.agility > 0 && def->params.grip > 0);
+        CHECK(def->params.boostDrain > 0 && def->params.boostRecharge > 0 && def->params.boostSpeed > 0);
+        CHECK(def->aiParams.maxSpeed > 0 && def->aiGun.speed > 0);
+        CHECK([ShipModelName(name) isEqualToString:[@"ship:" stringByAppendingString:name]] && ShipDefForModel(ShipModelName(name)) == def);
+    }
+    CHECK(ShipDefNamed(@"no-such-ship") == NULL && ShipDefForModel(@"cap:Carrier:concord") == NULL);
+    const ShipDef *first = ShipDefNamed(names.firstObject);
+    return first ? first->params : (ShipParams){ .maxSpeed = 150, .turnRate = 1 };
+}
+
 static void CheckShipMove(void) {
-    ShipParams params = { .maxSpeed = 150, .turnRate = 1 };
+    ShipParams params = CheckShipDefinitions();
     ShipMoveState a, b;
     ShipMoveReset(&a, simd_make_float3(1, 2, 3), simd_quaternion(0.3f, simd_make_float3(0, 1, 0)));
     b = a;
