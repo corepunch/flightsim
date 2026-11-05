@@ -10,6 +10,8 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
     MissionArrivals *_arrivals;
     NSMutableSet<NSString *> *_spawned, *_navsVisited, *_flags;
     double _time, _endAt;
+    float _timeLimit;
+    BOOL _limitSucceeds, _warnedMinute, _warnedTen;
     BOOL _dirty;
     NSString *_currentNav, *_sentNav;
 }
@@ -42,6 +44,8 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
     if ((self = [super init])) {
         _world = world;
         _rules = level->rules;
+        _timeLimit = level->timeLimit;
+        _limitSucceeds = level->timeLimitSucceeds;
         NSMutableArray *objectives = [NSMutableArray array];
         for (int i = 0; i < level->objectiveCount; i++) {
             const LevelObjective *d = &level->objectives[i];
@@ -92,6 +96,7 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
 
 - (BOOL)hasSpawned:(NSString *)name { return [_spawned containsObject:name]; }
 - (BOOL)expecting:(NSString *)name { return [_arrivals expecting:name]; }
+- (NSUInteger)reinforcementsFor:(NSString *)name { return [_arrivals reinforcementsFor:name]; }
 - (BOOL)navVisited:(NSString *)nav { return [_navsVisited containsObject:nav]; }
 - (BOOL)flag:(NSString *)name { return [_flags containsObject:name]; }
 - (void)setFlag:(NSString *)name { [_flags addObject:name]; }
@@ -138,8 +143,10 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
     }
     if (_dirty) [self sendObjectives];
 
-    if (_endAt == 0) [self checkRules];
-    else if (_time >= _endAt) [self finish];
+    if (_endAt == 0) {
+        [self checkRules];
+        if (_endAt == 0 && _timeLimit > 0) [self checkTimeLimit];
+    } else if (_time >= _endAt) [self finish];
 }
 
 - (void)updateObjective:(MissionObjective *)o dt:(float)dt {
@@ -184,6 +191,21 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
     }
     if (failed) [self decide:NO];
     else if (done && _rules.succeedWhenObjectivesDone) [self decide:YES];
+}
+
+// The clock runs out: the level says whether that wins or loses. Players are
+// warned a minute before and at ten seconds (not when the limit is shorter).
+- (void)checkTimeLimit {
+    double left = _timeLimit - _time;
+    if (left <= 0) { [self decide:_limitSucceeds]; return; }
+    if (left <= 60 && !_warnedMinute && _timeLimit > 60) {
+        _warnedMinute = YES;
+        [_world missionRadio:MissionText(@"mission.time_minute", nil) from:@""];
+    }
+    if (left <= 10 && !_warnedTen && _timeLimit > 10) {
+        _warnedTen = YES;
+        [_world missionRadio:MissionText(@"mission.time_ten", nil) from:@""];
+    }
 }
 
 - (void)decide:(BOOL)success {

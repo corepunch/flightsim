@@ -6,6 +6,7 @@
 @public
     NSString *_name, *_mothership;
     LevelCue _arrival, _departure;
+    int _flightSize;
     int _reinforcements;            // flights still to come after the one there now
     float _reinforcementDelay;
     double _arriveAt, _reinforceAt, _departAt;
@@ -124,6 +125,7 @@ static BOOL AnyAlive(NSArray<id<MissionUnit>> *units) {
             MissionSchedule *s = [[MissionSchedule alloc] initWithName:w->identifier arrival:w->arrival departure:w->departure];
             s->_mothership = w->mothership;
             s->_reinforcements = w->reinforcements;
+            s->_flightSize = w->count;
             s->_reinforcementDelay = w->reinforcementDelay;
             [schedules addObject:s];
         }
@@ -134,6 +136,11 @@ static BOOL AnyAlive(NSArray<id<MissionUnit>> *units) {
 
 - (void)updateIn:(id<MissionEventContext>)context {
     for (MissionSchedule *s in _schedules) [s updateIn:context];
+}
+
+- (NSUInteger)reinforcementsFor:(NSString *)name {
+    for (MissionSchedule *s in _schedules) if ([s->_name isEqualToString:name]) return s->_reinforcements * s->_flightSize;
+    return 0;
 }
 
 - (BOOL)expecting:(NSString *)name {

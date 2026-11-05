@@ -3,6 +3,8 @@
 static NSMutableDictionary<NSString *, Class> *Registry(void);
 
 @interface MissionObjective ()
++ (NSArray<NSString *> *)percentProblems:(NSDictionary *)d;
+@property (nonatomic, readonly) float percent;      // "percent", 1-100
 + (NSArray<NSString *> *)requireTargets:(NSDictionary *)d navs:(BOOL)navs targets:(BOOL)targets;
 @end
 
@@ -49,6 +51,15 @@ static NSString *Count(NSUInteger a, NSUInteger b) {
     return p;
 }
 
+// "percent" on objectives that count targets: 1-100, 100 when absent.
++ (NSArray<NSString *> *)percentProblems:(NSDictionary *)d {
+    id v = d[@"percent"];
+    if (!v) return @[];
+    if (![v isKindOfClass:NSNumber.class] || [v doubleValue] < 1 || [v doubleValue] > 100)
+        return @[@"\"percent\" must be a number from 1 to 100"];
+    return @[];
+}
+
 + (BOOL)ongoing { return NO; }
 
 + (instancetype)objectiveWith:(const LevelObjective *)objective {
@@ -67,6 +78,8 @@ static NSString *Count(NSUInteger a, NSUInteger b) {
     o->_progress = @"";
     return o;
 }
+
+- (float)percent { return fminf(100, fmaxf(1, [self number:@"percent" fallback:100])); }
 
 - (float)number:(NSString *)key fallback:(float)fallback {
     id v = _definition[key];
@@ -93,34 +106,46 @@ static NSString *Count(NSUInteger a, NSUInteger b) {
 }
 @end
 
-// Every target destroyed, reinforcements included. A target that gets away
-// (departs) fails it.
+// Every target destroyed, reinforcements included; "percent" accepts a share
+// of them. A target that gets away (departs) fails it once the share can no
+// longer be reached.
 @interface MissionObjectiveDestroy : MissionObjective @end
 @implementation MissionObjectiveDestroy
-+ (NSArray *)problemsWithDefinition:(NSDictionary *)d { return [self requireTargets:d navs:NO targets:YES]; }
++ (NSArray *)problemsWithDefinition:(NSDictionary *)d {
+    return [[self requireTargets:d navs:NO targets:YES] arrayByAddingObjectsFromArray:[self percentProblems:d]];
+}
 - (void)updateIn:(id<MissionContext>)ctx dt:(float)dt {
     NSArray<id<MissionUnit>> *units = [ctx unitsNamed:self.targets];
-    NSUInteger dead = 0;
+    NSUInteger dead = 0, gone = 0, coming = 0;
     for (id<MissionUnit> u in units) {
-        if (u.missionGone) { [ctx objective:self becomes:MissionObjectiveFailed]; return; }
-        if (!u.missionAlive) dead++;
+        if (u.missionGone) gone++;
+        else if (!u.missionAlive) dead++;
     }
-    BOOL more = NO;
-    for (NSString *t in self.targets) more = more || [ctx expecting:t];
-    if (units.count && dead == units.count && !more) [ctx objective:self becomes:MissionObjectiveComplete];
-    self.progress = units.count > 1 ? Count(dead, units.count) : @"";
+    for (NSString *t in self.targets) coming += [ctx reinforcementsFor:t];
+    NSUInteger total = units.count + coming;
+    NSUInteger needed = (NSUInteger)ceil(total * self.percent / 100 - 1e-6);
+    if (gone && total - gone < needed) { [ctx objective:self becomes:MissionObjectiveFailed]; return; }
+    if (units.count && dead >= needed) [ctx objective:self becomes:MissionObjectiveComplete];
+    self.progress = total > 1 ? Count(MIN(dead, needed), needed) : @"";
 }
 @end
 
-// No target lost for the whole mission (leaving safely is not a loss).
+// No target lost for the whole mission (leaving safely is not a loss);
+// "percent" lets the share of 100 - percent be lost.
 @interface MissionObjectiveProtect : MissionObjective @end
 @implementation MissionObjectiveProtect
-+ (NSArray *)problemsWithDefinition:(NSDictionary *)d { return [self requireTargets:d navs:NO targets:YES]; }
++ (NSArray *)problemsWithDefinition:(NSDictionary *)d {
+    return [[self requireTargets:d navs:NO targets:YES] arrayByAddingObjectsFromArray:[self percentProblems:d]];
+}
 + (BOOL)ongoing { return YES; }
 - (void)updateIn:(id<MissionContext>)ctx dt:(float)dt {
     NSArray<id<MissionUnit>> *units = [ctx unitsNamed:self.targets];
-    for (id<MissionUnit> u in units)
-        if (!u.missionAlive && !u.missionGone) { [ctx objective:self becomes:MissionObjectiveFailed]; return; }
+    NSUInteger lost = 0, coming = 0;
+    for (id<MissionUnit> u in units) if (!u.missionAlive && !u.missionGone) lost++;
+    for (NSString *t in self.targets) coming += [ctx reinforcementsFor:t];
+    NSUInteger total = units.count + coming;
+    if (lost * 100 > total * (100 - self.percent) + 1e-6) { [ctx objective:self becomes:MissionObjectiveFailed]; return; }
+    if (self.percent < 100) { self.progress = total > 1 ? Count(total - lost, total) : @""; return; }
     float worst = 1;
     for (id<MissionUnit> u in units) if (u.missionAlive) worst = fminf(worst, u.missionHullFraction);
     self.progress = units.count == 1 || worst < 1 ? [NSString stringWithFormat:@"%d%%", (int)lroundf(worst * 100)] : @"";

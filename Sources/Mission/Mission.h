@@ -90,6 +90,8 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 // More units by this name are still to come (a wave's reinforcements), so
 // the ones there now being dead does not mean they are all destroyed.
 - (BOOL)expecting:(NSString *)name;
+// How many units are still to come by that name (whole flights of reinforcements).
+- (NSUInteger)reinforcementsFor:(NSString *)name;
 - (void)objective:(MissionObjective *)o becomes:(MissionObjectiveState)state;
 // The first active objective that wants the HUD's nav marker gets it.
 - (void)pointAtNav:(NSString *)nav;
@@ -98,9 +100,14 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 // One objective of a level. The level entry:
 //   { "id": "protect", "type": "protect", "targets": ["relay"], "text": "Keep bombers off Relay K-7",
 //     "after": ["intercept"], "optional": false, … type-specific fields … }
-// "targets" name units (entity ids, groups, waves); "navs" name navs. An
+// "targets" name units (entity ids, groups, waves, or one pilot's callsign: a
+// wave's special craft can be a target of its own); "navs" name navs. An
 // objective stays hidden until every "after" objective is complete and every
 // target has spawned.
+//
+// destroy and protect take "percent" (1-100, 100 by default): destroy is
+// complete once that share of the targets is destroyed, counting reinforcements
+// still to come; protect fails once more than (100 - percent)% are lost.
 //
 // Types are classes registered by name. The engine registers every built-in
 // type; a game may register a type only it can use (and move it here when a
@@ -225,6 +232,7 @@ MissionObjectiveState MissionObjectiveStateNamed(NSString *name);
 // One frame, after the scripted events.
 - (void)updateIn:(id<MissionEventContext>)context;
 - (BOOL)expecting:(NSString *)name;
+- (NSUInteger)reinforcementsFor:(NSString *)name;
 @end
 
 // MARK: - MissionRunner
@@ -235,7 +243,9 @@ MissionObjectiveState MissionObjectiveStateNamed(NSString *name);
 // Spawning the level's units is the game's job; it tells the runner what has
 // arrived with -noteSpawned: (entity ids, groups, wave ids, and "start").
 //
-// Rules: see LevelRules in Shared.h.
+// Rules: see LevelRules in Shared.h. A level's "timeLimit" ends the mission
+// in success or failure ("onTimeLimit") when mission time reaches it; players
+// are warned by radio a minute before and at ten seconds.
 @interface MissionRunner : NSObject <MissionEventContext>
 
 // Problems with a level against the registered types, triggers and actions;

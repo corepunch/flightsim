@@ -604,6 +604,78 @@ static void CheckUnitStateTriggers(void) {
     LevelRelease(level);
 }
 
+// "percent" on destroy and protect, a single craft named by callsign, and the
+// level's time limit.
+static void CheckQuantifiersAndTimeLimit(void) {
+    LevelDef *level = LevelCreate(@{
+        @"waves": @[@{ @"id": @"flight", @"ship": @"wasp", @"count": @2, @"reinforcements": @{ @"count": @1, @"delay": @1 } }],
+        @"objectives": @[
+            @{ @"id": @"half", @"type": @"destroy", @"targets": @[@"flight"], @"percent": @50, @"text": @"Break the flight" },
+            @{ @"id": @"ace", @"type": @"destroy", @"targets": @[@"Viper"], @"text": @"Kill Viper" },
+            @{ @"id": @"convoy", @"type": @"protect", @"targets": @[@"haulers"], @"percent": @50, @"text": @"Save half the convoy" },
+        ],
+    });
+    CHECK([MissionRunner problemsWithLevel:level].count == 0);
+    FakeWorld *w = [FakeWorld new];
+    [w.players addObject:Unit(@"player", nil, 0)];
+    FakeUnit *a = Unit(@"Viper", @"flight", 0), *b = Unit(@"Cobra", @"flight", 0);
+    NSMutableArray<FakeUnit *> *haulers = [NSMutableArray array];
+    for (int i = 0; i < 4; i++) [haulers addObject:Unit([NSString stringWithFormat:@"h%d", i], @"haulers", 0)];
+    [w.units addObjectsFromArray:@[a, b]];
+    [w.units addObjectsFromArray:haulers];
+    w.runner = [[MissionRunner alloc] initWithLevel:level world:w];
+    for (NSString *n in @[@"flight", @"Viper", @"haulers"]) [w.runner noteSpawned:n];
+    Run(w, 0.5f);
+    CHECK([w.runner objectiveNamed:@"half"].state == MissionObjectiveActive);
+    // Protect: losing two of four is within half, the third is not (before the
+    // mission ends in success and settles every ongoing objective).
+    haulers[0].missionAlive = NO; haulers[1].missionAlive = NO;
+    Run(w, 0.1f);
+    CHECK([w.runner objectiveNamed:@"convoy"].state == MissionObjectiveActive);
+    haulers[2].missionAlive = NO;
+    Run(w, 0.1f);
+    CHECK([w.runner objectiveNamed:@"convoy"].state == MissionObjectiveFailed);
+    // Four ships in all, one flight still to come: two dead is half. (The failed
+    // protect ends the mission, but objectives keep updating until the debrief.)
+    a.missionAlive = NO;
+    Run(w, 0.1f);
+    CHECK([w.runner objectiveNamed:@"half"].state == MissionObjectiveActive && [w.runner objectiveNamed:@"half"].progress.length);
+    CHECK([w.runner objectiveNamed:@"ace"].state == MissionObjectiveComplete);   // a callsign alone names the target
+    b.missionAlive = NO;
+    Run(w, 0.1f);
+    CHECK([w.runner objectiveNamed:@"half"].state == MissionObjectiveComplete);
+    LevelRelease(level);
+
+    // Bad values are definition problems.
+    for (id v in @[@0, @101, @"most"]) {
+        LevelDef *bad = LevelCreate(@{ @"objectives": @[@{ @"id": @"x", @"type": @"destroy", @"targets": @[@"t"], @"percent": v, @"text": @"?" }],
+                                       @"timeLimit": v, @"onTimeLimit": @"draw" });
+        CHECK([MissionRunner problemsWithLevel:bad].count >= 2);
+        LevelRelease(bad);
+    }
+
+    // The time limit: warnings at a minute and ten seconds, then the outcome.
+    for (int succeeds = 0; succeeds < 2; succeeds++) {
+        level = LevelCreate(@{ @"timeLimit": @90, @"onTimeLimit": succeeds ? @"success" : @"failure",
+                               @"objectives": @[@{ @"id": @"hold", @"type": @"survive", @"seconds": @500, @"text": @"Hold" }] });
+        CHECK(level->timeLimit == 90 && level->timeLimitSucceeds == (succeeds == 1) && [MissionRunner problemsWithLevel:level].count == 0);
+        w = [FakeWorld new];
+        [w.players addObject:Unit(@"player", nil, 0)];
+        w.runner = [[MissionRunner alloc] initWithLevel:level world:w];
+        Run(w, 25);
+        CHECK(w.radio.count == 0 && !w.runner.ending);
+        Run(w, 10);
+        CHECK([w.radio containsObject:@"{#mission.time_minute}"] && ![w.radio containsObject:@"{#mission.time_ten}"]);
+        Run(w, 50);
+        CHECK([w.radio containsObject:@"{#mission.time_ten}"] && !w.runner.ending);
+        Run(w, 10);
+        CHECK(w.runner.ending && w.runner.success == (succeeds == 1) && w.banners.lastObject != nil);
+        Run(w, 10);
+        CHECK(w.ended == (succeeds ? 1 : 2));
+        LevelRelease(level);
+    }
+}
+
 static void CheckMissionRuntime(void) {
     [MissionObjective registerType:@"test_flag" class:FlagObjective.class];
 
@@ -664,6 +736,7 @@ static void CheckMissionRuntime(void) {
 
     CheckArrivals();
     CheckUnitStateTriggers();
+    CheckQuantifiersAndTimeLimit();
 
     // Tokens expand on the client.
     NSString *scanned = [L10nCatalogs()[@"en"][@"strings"][@"mission.scanned"] stringByReplacingOccurrencesOfString:@"%@" withString:@"Relay"];
