@@ -1,11 +1,12 @@
 #import "Loading.h"
+#import "GameAudio.h"
 #import "UIStyle.h"
 #import "LoadingLocalization.h"
 #import "PlatformImage.h"
 #import <stdatomic.h>
 
 static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMode h) {
-    return UIMonoLabel(size, c, h, SKLabelVerticalAlignmentModeBaseline);
+    return UIInterfaceLabel(size, c, h, SKLabelVerticalAlignmentModeBaseline);
 }
 
 static NSArray<NSString *> *Tips(void) {
@@ -18,8 +19,9 @@ static NSArray<NSString *> *Tips(void) {
         @"Knock out shield generators first: a shielded capital ship shrugs off torpedoes.",
         @"Z sets full throttle, X cuts it. Slow down to turn tighter in a dogfight.",
         @"C switches between the cockpit and the chase camera.",
-        @"Click to capture the mouse for flying; right-click recentres the virtual stick.",
-        @"Q and E roll. Rolling onto a target before pulling up keeps it in front of you.",
+        @"Click to capture the mouse; click the wheel to recentre the virtual stick.",
+        @"Hold the right mouse button and move sideways to roll. Q and E also roll.",
+        @"Scroll the wheel forward to increase thrust, or backward to slow down.",
         @"R restarts the mission. H or F1 shows the controls at any time.",
         @"Mines drift toward anything that comes close. Shoot them from range.",
     ];
@@ -87,6 +89,7 @@ static NSArray<NSString *> *Tips(void) {
 - (BOOL)readyToStart { return atomic_load(&_readyToStart); }
 
 - (void)setReadyToStart:(BOOL)ready {
+    if (ready && !atomic_load(&_readyToStart)) [[GameAudio shared] play:@"ui-confirm" gain:0.65f pan:0];
     atomic_store(&_startRequested, false);
     atomic_store(&_readyToStart, ready);
     _startLabel.hidden = !ready;
@@ -111,15 +114,11 @@ static NSArray<NSString *> *Tips(void) {
 
 #pragma mark - Layout
 
-- (void)layout {
-    [_root removeAllChildren];
-    [_stars removeAllObjects];
-    CGSize s = self.size;
-    _laidOut = s;
-
+- (SKNode *)backdropWithSize:(CGSize)s {
+    SKNode *backdrop = [SKNode node];
     SKSpriteNode *bg = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBackground, 1) size:s];
     bg.anchorPoint = CGPointZero;
-    [_root addChild:bg];
+    [backdrop addChild:bg];
 
     if (_hangarTexture) {
         SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_hangarTexture];
@@ -127,11 +126,20 @@ static NSArray<NSString *> *Tips(void) {
         CGFloat scale = MAX(s.width / MAX(image.width, 1), s.height / MAX(image.height, 1));
         art.size = CGSizeMake(image.width * scale, image.height * scale);
         art.position = CGPointMake(s.width * 0.5, s.height * 0.5);
-        [_root addChild:art];
+        [backdrop addChild:art];
         SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:0.55] size:s];
         shade.anchorPoint = CGPointZero;
-        [_root addChild:shade];
+        [backdrop addChild:shade];
     }
+    return backdrop;
+}
+
+- (void)layout {
+    [_root removeAllChildren];
+    [_stars removeAllObjects];
+    CGSize s = self.size;
+    _laidOut = s;
+    [_root addChild:[self backdropWithSize:s]];
 
     // A slow parallax star drift: bigger stars are "nearer" and move faster.
     srand48(4242);
@@ -165,7 +173,7 @@ static NSArray<NSString *> *Tips(void) {
     [_root addChild:_kickerLabel];
 
     _titleLabel = Text(MIN(48, s.width / 22), UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
-    _titleLabel.fontName = UIMonoBoldFont;
+    _titleLabel.fontName = UIInterfaceBoldFont;
     _titleLabel.text = _title;
     _titleLabel.position = CGPointMake(x, mid);
     [_root addChild:_titleLabel];

@@ -11,6 +11,8 @@
 - (void)setProgress:(float)progress status:(NSString *)status;
 // YES once the displayed bar has caught up with a progress of 1.
 @property (nonatomic, readonly) BOOL barFull;
+// Opaque artwork under the outgoing menu while it animates into this card.
+- (SKNode *)backdropWithSize:(CGSize)size;
 // Host enables this only when the mission and the displayed bar are ready.
 @property (nonatomic) BOOL readyToStart;
 - (void)queueClickAtFraction:(CGPoint)fraction;

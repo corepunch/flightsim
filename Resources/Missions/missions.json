@@ -333,12 +333,12 @@
       "loadout": { "torpedoes": 2 },
       "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
       "entities": [
-        { "id": "c1", "asset": "Container", "team": "neutral", "name": "Container 1", "pos": [-120, 10, -1400], "group": "containers", "spin": 6 },
-        { "id": "c2", "asset": "Container", "team": "neutral", "name": "Container 2", "pos": [60, -30, -1520], "group": "containers", "spin": -4 },
-        { "id": "c3", "asset": "Container", "team": "neutral", "name": "Container 3", "pos": [200, 40, -1650], "group": "containers", "spin": 5 },
-        { "id": "c4", "asset": "Container", "team": "neutral", "name": "Container 4", "pos": [-40, 80, -1780], "group": "containers", "spin": -7 },
-        { "id": "c5", "asset": "Container", "team": "neutral", "name": "Container 5", "pos": [-220, -60, -1700], "group": "containers", "spin": 3 },
-        { "id": "c6", "asset": "Container", "team": "neutral", "name": "Container 6", "pos": [110, 120, -1900], "group": "containers", "spin": 8 },
+        { "id": "c1", "asset": "Container", "cargo": "Civilian supplies", "team": "neutral", "name": "Container 1", "pos": [-120, 10, -1400], "group": "containers", "spin": 6 },
+        { "id": "c2", "asset": "Container", "cargo": "Civilian supplies", "team": "neutral", "name": "Container 2", "pos": [60, -30, -1520], "group": "containers", "spin": -4 },
+        { "id": "c3", "asset": "Container", "cargo": "Skarn munitions", "team": "neutral", "name": "Container 3", "pos": [200, 40, -1650], "group": "containers", "spin": 5 },
+        { "id": "c4", "asset": "Container", "cargo": "Civilian supplies", "team": "neutral", "name": "Container 4", "pos": [-40, 80, -1780], "group": "containers", "spin": -7 },
+        { "id": "c5", "asset": "Container", "cargo": "Skarn munitions", "team": "neutral", "name": "Container 5", "pos": [-220, -60, -1700], "group": "containers", "spin": 3 },
+        { "id": "c6", "asset": "Container", "cargo": "Civilian supplies", "team": "neutral", "name": "Container 6", "pos": [110, 120, -1900], "group": "containers", "spin": 8 },
         { "id": "cutter", "asset": "CorsairCutter", "team": "enemy", "style": "corsair", "name": "Corsair Cutter Rask", "pos": [1500, 300, -3000], "facing": [-1, 0, 1], "path": [[300, 100, -1800], [-600, 0, -1600]], "speed": 40, "loop": true, "after": "scan" }
       ],
       "waves": [

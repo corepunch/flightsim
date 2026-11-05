@@ -8,12 +8,6 @@
 			"isa" = "XCBuildConfiguration";
 			"name" = "Debug";
 			"buildSettings" = {
-				"SDKROOT" = "iphoneos";
-				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
-				"IPHONEOS_DEPLOYMENT_TARGET" = "16.0";
-				"TARGETED_DEVICE_FAMILY" = "1,2";
-				"SUPPORTS_MACCATALYST" = "NO";
-				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
 				"CLANG_ENABLE_OBJC_ARC" = "YES";
 				"ENABLE_USER_SCRIPT_SANDBOXING" = "NO";
 				"ALWAYS_SEARCH_USER_PATHS" = "NO";
@@ -28,6 +22,7 @@
 					"$(SRCROOT)/Sources/Game",
 					"$(SRCROOT)/Sources/Engine/App",
 					"$(SRCROOT)/Sources/Engine/Client",
+					"$(SRCROOT)/Sources/Engine/Common",
 					"$(SRCROOT)/Sources/Engine/Net",
 					"$(SRCROOT)/Sources/Engine/Render",
 					"$(SRCROOT)/Sources/Engine/Server",
@@ -42,12 +37,6 @@
 			"isa" = "XCBuildConfiguration";
 			"name" = "Release";
 			"buildSettings" = {
-				"SDKROOT" = "iphoneos";
-				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
-				"IPHONEOS_DEPLOYMENT_TARGET" = "16.0";
-				"TARGETED_DEVICE_FAMILY" = "1,2";
-				"SUPPORTS_MACCATALYST" = "NO";
-				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
 				"CLANG_ENABLE_OBJC_ARC" = "YES";
 				"ENABLE_USER_SCRIPT_SANDBOXING" = "NO";
 				"ALWAYS_SEARCH_USER_PATHS" = "NO";
@@ -62,6 +51,7 @@
 					"$(SRCROOT)/Sources/Game",
 					"$(SRCROOT)/Sources/Engine/App",
 					"$(SRCROOT)/Sources/Engine/Client",
+					"$(SRCROOT)/Sources/Engine/Common",
 					"$(SRCROOT)/Sources/Engine/Net",
 					"$(SRCROOT)/Sources/Engine/Render",
 					"$(SRCROOT)/Sources/Engine/Server",
@@ -85,11 +75,19 @@
 			"isa" = "XCBuildConfiguration";
 			"name" = "Debug";
 			"buildSettings" = {
-				"PRODUCT_NAME" = "SpaceFight";
-				"PRODUCT_BUNDLE_IDENTIFIER" = "com.igor.spacefight";
+				"PRODUCT_NAME" = "KestrelFrontier";
 				"CODE_SIGN_STYLE" = "Automatic";
-				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ios-Info.plist";
 				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SKIP_INSTALL" = "NO";
+				"INSTALL_PATH" = "$(LOCAL_APPS_DIR)";
+				"SDKROOT" = "iphoneos";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "16.0";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.igor.spacefight";
+				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ios-Info.plist";
 				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 				"OTHER_LDFLAGS" = (
 					"$(inherited)",
@@ -112,8 +110,6 @@
 					"-framework",
 					"AVFoundation",
 				);
-				"SKIP_INSTALL" = "NO";
-				"INSTALL_PATH" = "$(LOCAL_APPS_DIR)";
 				"GCC_OPTIMIZATION_LEVEL" = "0";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf";
 				"ONLY_ACTIVE_ARCH" = "YES";
@@ -123,11 +119,19 @@
 			"isa" = "XCBuildConfiguration";
 			"name" = "Release";
 			"buildSettings" = {
-				"PRODUCT_NAME" = "SpaceFight";
-				"PRODUCT_BUNDLE_IDENTIFIER" = "com.igor.spacefight";
+				"PRODUCT_NAME" = "KestrelFrontier";
 				"CODE_SIGN_STYLE" = "Automatic";
-				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ios-Info.plist";
 				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SKIP_INSTALL" = "NO";
+				"INSTALL_PATH" = "$(LOCAL_APPS_DIR)";
+				"SDKROOT" = "iphoneos";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "16.0";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.igor.spacefight";
+				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ios-Info.plist";
 				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 				"OTHER_LDFLAGS" = (
 					"$(inherited)",
@@ -150,8 +154,6 @@
 					"-framework",
 					"AVFoundation",
 				);
-				"SKIP_INSTALL" = "NO";
-				"INSTALL_PATH" = "$(LOCAL_APPS_DIR)";
 				"GCC_OPTIMIZATION_LEVEL" = "2";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
 				"ONLY_ACTIVE_ARCH" = "NO";
@@ -166,6 +168,190 @@
 			"defaultConfigurationIsVisible" = 0;
 			"defaultConfigurationName" = "Debug";
 		};
+		"5FA7D61F6B51CC24941BB269" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "KestrelFrontier";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SKIP_INSTALL" = "NO";
+				"INSTALL_PATH" = "$(LOCAL_APPS_DIR)";
+				"SDKROOT" = "macosx";
+				"SUPPORTED_PLATFORMS" = "macosx";
+				"MACOSX_DEPLOYMENT_TARGET" = "13.0";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.igor.spacefight";
+				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
+				"OTHER_LDFLAGS" = (
+					"$(inherited)",
+					"-framework",
+					"Cocoa",
+					"-framework",
+					"SceneKit",
+					"-framework",
+					"SpriteKit",
+					"-framework",
+					"Metal",
+					"-framework",
+					"CoreGraphics",
+					"-framework",
+					"QuartzCore",
+					"-framework",
+					"IOKit",
+					"-framework",
+					"Carbon",
+					"-framework",
+					"ImageIO",
+					"-framework",
+					"AVFoundation",
+					"-framework",
+					"CoreMedia",
+					"-framework",
+					"CoreVideo",
+				);
+				"GCC_OPTIMIZATION_LEVEL" = "0";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf";
+				"ONLY_ACTIVE_ARCH" = "YES";
+			};
+		};
+		"0B005757AB90F962CF77E3D7" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "KestrelFrontier";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SKIP_INSTALL" = "NO";
+				"INSTALL_PATH" = "$(LOCAL_APPS_DIR)";
+				"SDKROOT" = "macosx";
+				"SUPPORTED_PLATFORMS" = "macosx";
+				"MACOSX_DEPLOYMENT_TARGET" = "13.0";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.igor.spacefight";
+				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
+				"OTHER_LDFLAGS" = (
+					"$(inherited)",
+					"-framework",
+					"Cocoa",
+					"-framework",
+					"SceneKit",
+					"-framework",
+					"SpriteKit",
+					"-framework",
+					"Metal",
+					"-framework",
+					"CoreGraphics",
+					"-framework",
+					"QuartzCore",
+					"-framework",
+					"IOKit",
+					"-framework",
+					"Carbon",
+					"-framework",
+					"ImageIO",
+					"-framework",
+					"AVFoundation",
+					"-framework",
+					"CoreMedia",
+					"-framework",
+					"CoreVideo",
+				);
+				"GCC_OPTIMIZATION_LEVEL" = "2";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
+				"ONLY_ACTIVE_ARCH" = "NO";
+			};
+		};
+		"ED971AD232F5402B0CED3032" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"5FA7D61F6B51CC24941BB269",
+				"0B005757AB90F962CF77E3D7",
+			);
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Debug";
+		};
+		"9AAD53394871F441EC351708" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"SDKROOT" = "macosx";
+				"SUPPORTED_PLATFORMS" = "macosx";
+				"MACOSX_DEPLOYMENT_TARGET" = "13.0";
+				"PRODUCT_NAME" = "game";
+				"EXECUTABLE_PREFIX" = "";
+				"MACH_O_TYPE" = "mh_dylib";
+				"SKIP_INSTALL" = "YES";
+				"GCC_SYMBOLS_PRIVATE_EXTERN" = "YES";
+				"DYLIB_INSTALL_NAME_BASE" = "@rpath";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"OTHER_LDFLAGS" = (
+					"$(inherited)",
+					"-framework",
+					"Foundation",
+				);
+				"GCC_OPTIMIZATION_LEVEL" = "0";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf";
+				"ONLY_ACTIVE_ARCH" = "YES";
+			};
+		};
+		"79C95880FF43B8C696575DE2" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"SDKROOT" = "macosx";
+				"SUPPORTED_PLATFORMS" = "macosx";
+				"MACOSX_DEPLOYMENT_TARGET" = "13.0";
+				"PRODUCT_NAME" = "game";
+				"EXECUTABLE_PREFIX" = "";
+				"MACH_O_TYPE" = "mh_dylib";
+				"SKIP_INSTALL" = "YES";
+				"GCC_SYMBOLS_PRIVATE_EXTERN" = "YES";
+				"DYLIB_INSTALL_NAME_BASE" = "@rpath";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"OTHER_LDFLAGS" = (
+					"$(inherited)",
+					"-framework",
+					"Foundation",
+				);
+				"GCC_OPTIMIZATION_LEVEL" = "2";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
+				"ONLY_ACTIVE_ARCH" = "NO";
+			};
+		};
+		"29E4AF27E5BB1B6C635EA166" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"9AAD53394871F441EC351708",
+				"79C95880FF43B8C696575DE2",
+			);
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Debug";
+		};
+		"46D5F6B01D29435F30D4E715" = {
+			"isa" = "PBXFileReference";
+			"path" = "GameAudio.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"54A6625D3399BA37902C0C94" = {
+			"isa" = "PBXFileReference";
+			"path" = "GameAudio.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"866AD1EB6957FE6E0FCB7AB6" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "54A6625D3399BA37902C0C94";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"21190BA521571FA646AEA9CE" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "54A6625D3399BA37902C0C94";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
 		"4DB6850B8BD766CED9162F02" = {
 			"isa" = "PBXFileReference";
 			"path" = "GameView.h";
@@ -178,13 +364,20 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
+		"7B6CA22EC859815F5E523DF1" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E8EFEE7B86FAC508A1E57171";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
 		"B6C9C2BDC1D956204FDD3BE9" = {
 			"isa" = "PBXFileReference";
 			"path" = "GameViewIOS.m";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"5081A72AE6F38EFE5D182C2D" = {
+		"1B274F62EA705156334CA43E" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "B6C9C2BDC1D956204FDD3BE9";
 			"settings" = {
@@ -203,7 +396,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"5E7994C49FBC4BAEEFCCD691" = {
+		"21B0FC682C3B59BC5561C1F4" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "4448D04AD3B5B572ADE6601B";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"328D247AE9EE8EC7C7745FB9" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "4448D04AD3B5B572ADE6601B";
 			"settings" = {
@@ -222,6 +422,13 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
+		"D32BA9B6FE6986CFC5F90765" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "4914AF3372C000B3BF2D1CBA";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
 		"C74614CE128E6992FB6A06D9" = {
 			"isa" = "PBXFileReference";
 			"path" = "InputAction.h";
@@ -234,7 +441,7 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"E7810EE72621D6B4D3C6C58A" = {
+		"08CD45E734764309FC770345" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "78EFC49A0D9351DC6561B614";
 			"settings" = {
@@ -253,7 +460,7 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"4E8EF11E6BB87E27B478B680" = {
+		"9899D958E348C7E74DE15FA0" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "91A9CC2E2CA141715B398FE7";
 			"settings" = {
@@ -266,13 +473,20 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
+		"D1CA0A86324D7C64EFF5A26D" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "D1446246734B3AFDAAE748AA";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
 		"F2E4BD95C08E33E242106611" = {
 			"isa" = "PBXFileReference";
 			"path" = "mainIOS.m";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"D36EA3C495A75ED2107CF4F3" = {
+		"48F4276C4C5609F253933B13" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "F2E4BD95C08E33E242106611";
 			"settings" = {
@@ -283,6 +497,8 @@
 			"isa" = "PBXGroup";
 			"path" = "App";
 			"children" = (
+				"46D5F6B01D29435F30D4E715",
+				"54A6625D3399BA37902C0C94",
 				"4DB6850B8BD766CED9162F02",
 				"E8EFEE7B86FAC508A1E57171",
 				"B6C9C2BDC1D956204FDD3BE9",
@@ -311,7 +527,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"DCFEB0D2E048AB4E45CD9207" = {
+		"A47B25B97C64F8D1E1EE39B6" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "FA0ADB7A3655C360ED99B8DC";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"17ECBDED95F68A3CB030196B" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "FA0ADB7A3655C360ED99B8DC";
 			"settings" = {
@@ -330,7 +553,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"D871BFFB09BFF3DE4B2C5ACF" = {
+		"99917EB55A02B646FACCC91A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "636DAF786E099300451F6AF5";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"ACAFD3B172FD2B8F88AB3935" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "636DAF786E099300451F6AF5";
 			"settings" = {
@@ -348,6 +578,69 @@
 			);
 			"sourceTree" = "<group>";
 		};
+		"E53A055BACF5C0314BCADEFC" = {
+			"isa" = "PBXFileReference";
+			"path" = "Cmd.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"714E0A7A2433FFA546F7B620" = {
+			"isa" = "PBXFileReference";
+			"path" = "Cmd.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"F69DF7CE2609616646E8F91E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "714E0A7A2433FFA546F7B620";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"1155816D03F8379A3A01A4B8" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "714E0A7A2433FFA546F7B620";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"B68EBE50E2DA3CF7C21EDDE6" = {
+			"isa" = "PBXFileReference";
+			"path" = "Cvar.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"E947095C9A2A14660C2A02D6" = {
+			"isa" = "PBXFileReference";
+			"path" = "Cvar.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"473BEB1CAD54DE8921FB7B81" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E947095C9A2A14660C2A02D6";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"2C7C58FFB483893475F96A29" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E947095C9A2A14660C2A02D6";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"B7CC57B4C606FFE00800A6E2" = {
+			"isa" = "PBXGroup";
+			"path" = "Common";
+			"children" = (
+				"E53A055BACF5C0314BCADEFC",
+				"714E0A7A2433FFA546F7B620",
+				"B68EBE50E2DA3CF7C21EDDE6",
+				"E947095C9A2A14660C2A02D6",
+			);
+			"sourceTree" = "<group>";
+		};
 		"5E17814AEE2D3F82E69BBBEC" = {
 			"isa" = "PBXFileReference";
 			"path" = "LANBrowser.h";
@@ -360,7 +653,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"8D087A0B79F82A1B57AF2A2F" = {
+		"5059D9A38755FB10F52CF152" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "83EE68C6A43D3D9E6A640DAA";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"02FB92496785D072FAD8C3C0" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "83EE68C6A43D3D9E6A640DAA";
 			"settings" = {
@@ -379,7 +679,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"5FD216BC6FAA32954627DAF9" = {
+		"9C98CF9FBBB4F3E870A72407" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "6CFDA83224EBC24B2A01D9D7";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"9DD3E038506807F0BED669EB" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "6CFDA83224EBC24B2A01D9D7";
 			"settings" = {
@@ -398,7 +705,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"6F043D9017D8E5A66BEC1A39" = {
+		"85C6C6216609A72F8E53538C" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "1DF4000571D64B268F825346";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"FB71595F847246E57CF7819F" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "1DF4000571D64B268F825346";
 			"settings" = {
@@ -417,7 +731,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"2F1351636CD546DE156607A4" = {
+		"3F52A3CF217303207A67FEEC" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "AAC062E630FAC2ABFB0BF4F2";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"4766A9B34E1F6C4BE4649904" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "AAC062E630FAC2ABFB0BF4F2";
 			"settings" = {
@@ -436,7 +757,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"6DFE71D9ECA4047C316CBE39" = {
+		"BA58EC1473DF9BBA54898BA9" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "0192E71202C149913DD460B1";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"BAF55C743B3299C6DFF2F2B3" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "0192E71202C149913DD460B1";
 			"settings" = {
@@ -455,7 +783,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"F508576E54EA3737D889D580" = {
+		"0EF75916FE5418756E371AED" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "474485A4C72A1D560C04B21C";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"9BE0506ABD5DB138091CC781" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "474485A4C72A1D560C04B21C";
 			"settings" = {
@@ -499,7 +834,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"6CA56024EC7E6459DD1FEB5A" = {
+		"D1FEBB39F82A8EBCE3606821" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "AF3787446BC2F59003DE4B51";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"D54031935E92A487B16364AB" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "AF3787446BC2F59003DE4B51";
 			"settings" = {
@@ -518,7 +860,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"E6130B01E5436CF0FE934A8B" = {
+		"06F32A0C21C063AE0BC2AB44" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "7D9D66CE55ECFF849E8F5A18";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"7430F60FFBCFC798731D816D" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "7D9D66CE55ECFF849E8F5A18";
 			"settings" = {
@@ -537,7 +886,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"6B81CCABE62A764E30694187" = {
+		"70058B7242DC47204E543A49" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "2E015069601436664CDEE7EE";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"8AB6C4ED28436909A1E1C6C6" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "2E015069601436664CDEE7EE";
 			"settings" = {
@@ -556,7 +912,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"388229955C76D198A940F774" = {
+		"DBD40E9C57F0D3397567BE36" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "1C7825F9FA3C1A46FBFAF593";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"FC7A9F75C5243FEF24DCB84E" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "1C7825F9FA3C1A46FBFAF593";
 			"settings" = {
@@ -575,6 +938,39 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
+		"9AE6F2FE8FC3A8E8000780D4" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "C0905C6582FC6E4D7CE93E12";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"6F69C7B329C14533646D8E23" = {
+			"isa" = "PBXFileReference";
+			"path" = "FlightInstruments.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"809B6FD2D1275CDE4CA10F82" = {
+			"isa" = "PBXFileReference";
+			"path" = "FlightInstruments.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"B69EAD2D82DB0C7D61BB739D" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "809B6FD2D1275CDE4CA10F82";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"051600704DF44584D3C182B7" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "809B6FD2D1275CDE4CA10F82";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
 		"C9B726265A993CEE8DC0B865" = {
 			"isa" = "PBXFileReference";
 			"path" = "HUD.h";
@@ -587,9 +983,42 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"5E540DFC0B549869BE86AA8D" = {
+		"FC96CFD82D376A9CFBDE543E" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "00AE9593FE447C3B67F24D86";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"4617A90784EAE623013A513A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "00AE9593FE447C3B67F24D86";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"937011A4EF7ADB12D821D115" = {
+			"isa" = "PBXFileReference";
+			"path" = "LensFlare.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"762700A52A57454CC41E3B4C" = {
+			"isa" = "PBXFileReference";
+			"path" = "LensFlare.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"C9EC08DF6A8741972FDDC954" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "762700A52A57454CC41E3B4C";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"72F029710AEF4B0C48ADF81A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "762700A52A57454CC41E3B4C";
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
@@ -606,7 +1035,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"FC4B85DEF6918A420579F4A9" = {
+		"066527D4926461C6D61AEEF4" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E1B800B9DE031FFDBCA644D5";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"C4E744D75FB3FCECD20033C0" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "E1B800B9DE031FFDBCA644D5";
 			"settings" = {
@@ -637,7 +1073,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"82A70480BBE2DCB4A2EC7B1B" = {
+		"48460BECD34C0A4FCC6DA83B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "2F65CF19DDD6E64F52390E71";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"E911D5715F645AB48C02B35A" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "2F65CF19DDD6E64F52390E71";
 			"settings" = {
@@ -656,7 +1099,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"8D3AA37C040CB92F9C63B987" = {
+		"DABB6A7A81DE232EA26A8346" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "516D93F6B2306E75F5F40271";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"B613C39D60D45D3E3713616B" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "516D93F6B2306E75F5F40271";
 			"settings" = {
@@ -677,8 +1127,12 @@
 				"1C7825F9FA3C1A46FBFAF593",
 				"F8A47039424D439889FB7A9F",
 				"C0905C6582FC6E4D7CE93E12",
+				"6F69C7B329C14533646D8E23",
+				"809B6FD2D1275CDE4CA10F82",
 				"C9B726265A993CEE8DC0B865",
 				"00AE9593FE447C3B67F24D86",
+				"937011A4EF7ADB12D821D115",
+				"762700A52A57454CC41E3B4C",
 				"584A7C91C4D830BCD98004EC",
 				"E1B800B9DE031FFDBCA644D5",
 				"D9F18179B8599993F0EF67C2",
@@ -702,7 +1156,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"A35C4ED1DDE25E1A9486807E" = {
+		"793CD4EEC0ABC9683ACADC8B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "6D7AD44D2CBAB40BBEFA00C3";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"D0D85B5738A0076C32873336" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "6D7AD44D2CBAB40BBEFA00C3";
 			"settings" = {
@@ -721,7 +1182,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"3B87C7B26FCB8ED8F1BB1E47" = {
+		"9495FF4E9C860E878390086B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "47C411751EC74E7AE3101743";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"58BA6F4BE3823F4E58B1A727" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "47C411751EC74E7AE3101743";
 			"settings" = {
@@ -751,7 +1219,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"8874BEDCAB1C774EFB30663D" = {
+		"17F07E3D537C055C34D580C8" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F1E7F2E93458338C939D87F3";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"0DAFD5B826888156390412A8" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "F1E7F2E93458338C939D87F3";
 			"settings" = {
@@ -770,12 +1245,25 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"FE46F194330400724656C721" = {
+		"5059A849CAEF011A5ECBB926" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "D17A50858700207A61743937";
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
+		};
+		"99D7FBD3A775949FBFE449CD" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "D17A50858700207A61743937";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"FFD254A8F67061025159DC33" = {
+			"isa" = "PBXFileReference";
+			"path" = "LoadingLocalization.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"C7416FF7A83F4818FD3CEE79" = {
 			"isa" = "PBXFileReference";
@@ -789,9 +1277,42 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"514DA492261B2C450BC32EFF" = {
+		"AC71D88E0BE45410B0E6DE92" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "C730A0D6699A8EDB589CB230";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"2F34B4286E88EFF46E8BB5A8" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "C730A0D6699A8EDB589CB230";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"F9632954BE94324DE06F9844" = {
+			"isa" = "PBXFileReference";
+			"path" = "PauseMenu.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"F823012616B291C3E4500451" = {
+			"isa" = "PBXFileReference";
+			"path" = "PauseMenu.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"0FD41F083A3415049133A1F2" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F823012616B291C3E4500451";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"832F120F0E272AF745DEBFC4" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F823012616B291C3E4500451";
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
@@ -808,7 +1329,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"DA5833379FA74E539DB5001B" = {
+		"7D2BFC03890347100B33BA3D" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "364505059E18631CF1A12ED1";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"DB40B2AE82E8F54E3C69637A" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "364505059E18631CF1A12ED1";
 			"settings" = {
@@ -827,7 +1355,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"4BC4885EB1FE6EA7FDFAFAA2" = {
+		"823BCD1EB80AABB247023708" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "FED89264205E9FCA0283B4D4";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"C34C5676FE59C72E803DBA44" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "FED89264205E9FCA0283B4D4";
 			"settings" = {
@@ -846,7 +1381,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"B09AADA5C542A22CC1DDEF3D" = {
+		"120A20A330F6DD850AEE0A5E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "7C32390EA8CBB06D4BCFE81E";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"4DF56D7F0E3ED68149B736B8" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "7C32390EA8CBB06D4BCFE81E";
 			"settings" = {
@@ -867,8 +1409,11 @@
 				"F1E7F2E93458338C939D87F3",
 				"F8AA5E909FD98BA8A8CE154F",
 				"D17A50858700207A61743937",
+				"FFD254A8F67061025159DC33",
 				"C7416FF7A83F4818FD3CEE79",
 				"C730A0D6699A8EDB589CB230",
+				"F9632954BE94324DE06F9844",
+				"F823012616B291C3E4500451",
 				"DCFE285AC4AD14417D7DADBA",
 				"364505059E18631CF1A12ED1",
 				"48AAB49AA1329952AD77F29B",
@@ -885,6 +1430,7 @@
 			"children" = (
 				"77B7ED04BBB1A5E0BAC17319",
 				"81908590BFF96B57F4F05425",
+				"B7CC57B4C606FFE00800A6E2",
 				"ADDFA25450B9DE3B0C1C8AC4",
 				"1633E1957F7C4AB02AF3A827",
 				"CC736AA6B87DB36FC71DA4B5",
@@ -899,7 +1445,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"B09E2ECBC6131D6B9368E81F" = {
+		"166582EBCC518E79612F2EF6" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "91CA5E34091F3E00ABDA2413";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\"";
+			};
+		};
+		"6F981AF9C24FDE0387D2A98A" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "91CA5E34091F3E00ABDA2413";
 			"settings" = {
@@ -912,7 +1465,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"1ABBC084B3A2F6DFF58B54D6" = {
+		"14A7C3593840A75DBECDBC53" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "9B93A7B137EAF6F2CF8A560D";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\"";
+			};
+		};
+		"00773CC8470D55391B979B8A" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "9B93A7B137EAF6F2CF8A560D";
 			"settings" = {
@@ -931,7 +1491,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"00B19D3EF2E12AC131769192" = {
+		"E0E18CA15A61BA519D4F4D22" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "2B9EE21F63A70C7A03D68CF1";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\"";
+			};
+		};
+		"23A3E2407B64684591A42C81" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "2B9EE21F63A70C7A03D68CF1";
 			"settings" = {
@@ -944,7 +1511,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"48F565345654E33A624332F7" = {
+		"B0794638163672476DFD5ADB" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "3501BF6AFF60E66D76687CFE";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\"";
+			};
+		};
+		"445C023D1DC2275EA18FF238" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "3501BF6AFF60E66D76687CFE";
 			"settings" = {
@@ -957,7 +1531,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"64E150D29904F5A53565064C" = {
+		"E5C224F3D0ECFA974DB2FD33" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "697C2B4A8D05526206A00D47";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\"";
+			};
+		};
+		"D0E9677E0FE8B984E41EBC6C" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "697C2B4A8D05526206A00D47";
 			"settings" = {
@@ -970,7 +1551,14 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"70F4E94BD09C12B61C661740" = {
+		"2A59CF3E29DCE1823974B5A2" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "7D33C3D3B94813A0376410D8";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\"";
+			};
+		};
+		"D2629158CF9938DCCFE02986" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "7D33C3D3B94813A0376410D8";
 			"settings" = {
@@ -1010,9 +1598,23 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"4A99151461148AA841CB8B35" = {
+		"C5EB970F6F9D6A01AA21691D" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "40F193704F3D6B4273923770";
+		};
+		"975B61AC13A2C20C93310039" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "40F193704F3D6B4273923770";
+		};
+		"3262C3C0E2DD6DE73130369C" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "40F193704F3D6B4273923770";
+		};
+		"0B3F4FF4580F51FE60D63D12" = {
+			"isa" = "PBXFileReference";
+			"path" = "CvarFlags.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"349A02879EAA7FD6DE844BB0" = {
 			"isa" = "PBXFileReference";
@@ -1038,7 +1640,15 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.c";
 		};
-		"1D0307BAA7EC69B707A51345" = {
+		"419640121AD728914FAEB565" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "2ACB1B6BE7DACE217AF29CB6";
+		};
+		"DDC0D67AAAA5499A4BEA641A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "2ACB1B6BE7DACE217AF29CB6";
+		};
+		"D1CD86F41330DCE9376E64FD" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "2ACB1B6BE7DACE217AF29CB6";
 		};
@@ -1054,6 +1664,7 @@
 			"children" = (
 				"AF259D801AED81A86865D8B6",
 				"40F193704F3D6B4273923770",
+				"0B3F4FF4580F51FE60D63D12",
 				"349A02879EAA7FD6DE844BB0",
 				"14A3FD612336DF5C08639DD4",
 				"5DD434E910C18C4C22B80AAD",
@@ -1096,55 +1707,130 @@
 			"buildActionMask" = 2147483647;
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
-		"EBA8DCD606BD0014B899E362" = {
+		"AAACEF93EB2439F2C22BAACD" = {
 			"isa" = "PBXSourcesBuildPhase";
 			"files" = (
-				"5081A72AE6F38EFE5D182C2D",
-				"5E7994C49FBC4BAEEFCCD691",
-				"E7810EE72621D6B4D3C6C58A",
-				"4E8EF11E6BB87E27B478B680",
-				"D36EA3C495A75ED2107CF4F3",
-				"DCFEB0D2E048AB4E45CD9207",
-				"D871BFFB09BFF3DE4B2C5ACF",
-				"8D087A0B79F82A1B57AF2A2F",
-				"5FD216BC6FAA32954627DAF9",
-				"6F043D9017D8E5A66BEC1A39",
-				"2F1351636CD546DE156607A4",
-				"6DFE71D9ECA4047C316CBE39",
-				"F508576E54EA3737D889D580",
-				"6CA56024EC7E6459DD1FEB5A",
-				"E6130B01E5436CF0FE934A8B",
-				"6B81CCABE62A764E30694187",
-				"388229955C76D198A940F774",
-				"5E540DFC0B549869BE86AA8D",
-				"FC4B85DEF6918A420579F4A9",
-				"82A70480BBE2DCB4A2EC7B1B",
-				"8D3AA37C040CB92F9C63B987",
-				"A35C4ED1DDE25E1A9486807E",
-				"3B87C7B26FCB8ED8F1BB1E47",
-				"8874BEDCAB1C774EFB30663D",
-				"FE46F194330400724656C721",
-				"514DA492261B2C450BC32EFF",
-				"DA5833379FA74E539DB5001B",
-				"4BC4885EB1FE6EA7FDFAFAA2",
-				"B09AADA5C542A22CC1DDEF3D",
-				"B09E2ECBC6131D6B9368E81F",
-				"1ABBC084B3A2F6DFF58B54D6",
-				"00B19D3EF2E12AC131769192",
-				"48F565345654E33A624332F7",
-				"64E150D29904F5A53565064C",
-				"70F4E94BD09C12B61C661740",
-				"4A99151461148AA841CB8B35",
-				"1D0307BAA7EC69B707A51345",
+				"866AD1EB6957FE6E0FCB7AB6",
+				"1B274F62EA705156334CA43E",
+				"21B0FC682C3B59BC5561C1F4",
+				"08CD45E734764309FC770345",
+				"9899D958E348C7E74DE15FA0",
+				"48F4276C4C5609F253933B13",
+				"A47B25B97C64F8D1E1EE39B6",
+				"99917EB55A02B646FACCC91A",
+				"F69DF7CE2609616646E8F91E",
+				"473BEB1CAD54DE8921FB7B81",
+				"5059D9A38755FB10F52CF152",
+				"9C98CF9FBBB4F3E870A72407",
+				"85C6C6216609A72F8E53538C",
+				"3F52A3CF217303207A67FEEC",
+				"BA58EC1473DF9BBA54898BA9",
+				"0EF75916FE5418756E371AED",
+				"D1FEBB39F82A8EBCE3606821",
+				"06F32A0C21C063AE0BC2AB44",
+				"70058B7242DC47204E543A49",
+				"DBD40E9C57F0D3397567BE36",
+				"B69EAD2D82DB0C7D61BB739D",
+				"FC96CFD82D376A9CFBDE543E",
+				"C9EC08DF6A8741972FDDC954",
+				"066527D4926461C6D61AEEF4",
+				"48460BECD34C0A4FCC6DA83B",
+				"DABB6A7A81DE232EA26A8346",
+				"793CD4EEC0ABC9683ACADC8B",
+				"9495FF4E9C860E878390086B",
+				"17F07E3D537C055C34D580C8",
+				"5059A849CAEF011A5ECBB926",
+				"AC71D88E0BE45410B0E6DE92",
+				"0FD41F083A3415049133A1F2",
+				"7D2BFC03890347100B33BA3D",
+				"823BCD1EB80AABB247023708",
+				"120A20A330F6DD850AEE0A5E",
+				"166582EBCC518E79612F2EF6",
+				"14A7C3593840A75DBECDBC53",
+				"E0E18CA15A61BA519D4F4D22",
+				"B0794638163672476DFD5ADB",
+				"E5C224F3D0ECFA974DB2FD33",
+				"2A59CF3E29DCE1823974B5A2",
+				"C5EB970F6F9D6A01AA21691D",
+				"419640121AD728914FAEB565",
 			);
 			"buildActionMask" = 2147483647;
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
-		"A0C40C8BE3AD2B49AC4932AD" = {
+		"7FA2F43EDCB6FA8DC4873232" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"files" = (
+				"21190BA521571FA646AEA9CE",
+				"7B6CA22EC859815F5E523DF1",
+				"328D247AE9EE8EC7C7745FB9",
+				"D32BA9B6FE6986CFC5F90765",
+				"D1CA0A86324D7C64EFF5A26D",
+				"17ECBDED95F68A3CB030196B",
+				"ACAFD3B172FD2B8F88AB3935",
+				"1155816D03F8379A3A01A4B8",
+				"2C7C58FFB483893475F96A29",
+				"02FB92496785D072FAD8C3C0",
+				"9DD3E038506807F0BED669EB",
+				"FB71595F847246E57CF7819F",
+				"4766A9B34E1F6C4BE4649904",
+				"BAF55C743B3299C6DFF2F2B3",
+				"9BE0506ABD5DB138091CC781",
+				"D54031935E92A487B16364AB",
+				"7430F60FFBCFC798731D816D",
+				"8AB6C4ED28436909A1E1C6C6",
+				"FC7A9F75C5243FEF24DCB84E",
+				"9AE6F2FE8FC3A8E8000780D4",
+				"051600704DF44584D3C182B7",
+				"4617A90784EAE623013A513A",
+				"72F029710AEF4B0C48ADF81A",
+				"C4E744D75FB3FCECD20033C0",
+				"E911D5715F645AB48C02B35A",
+				"B613C39D60D45D3E3713616B",
+				"D0D85B5738A0076C32873336",
+				"58BA6F4BE3823F4E58B1A727",
+				"0DAFD5B826888156390412A8",
+				"99D7FBD3A775949FBFE449CD",
+				"2F34B4286E88EFF46E8BB5A8",
+				"832F120F0E272AF745DEBFC4",
+				"DB40B2AE82E8F54E3C69637A",
+				"C34C5676FE59C72E803DBA44",
+				"4DF56D7F0E3ED68149B736B8",
+				"975B61AC13A2C20C93310039",
+				"DDC0D67AAAA5499A4BEA641A",
+			);
+			"buildActionMask" = 2147483647;
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"65694E41AD3585C0AC67C53F" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"files" = (
+				"6F981AF9C24FDE0387D2A98A",
+				"00773CC8470D55391B979B8A",
+				"23A3E2407B64684591A42C81",
+				"445C023D1DC2275EA18FF238",
+				"D0E9677E0FE8B984E41EBC6C",
+				"D2629158CF9938DCCFE02986",
+				"3262C3C0E2DD6DE73130369C",
+				"D1CD86F41330DCE9376E64FD",
+			);
+			"buildActionMask" = 2147483647;
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"1A8C2C006C407097E0E8F941" = {
 			"isa" = "PBXShellScriptBuildPhase";
 			"name" = "Bundle runtime resources";
 			"shellPath" = "/bin/zsh";
-			"shellScript" = "set -e\ncd \"$SRCROOT\"\n/bin/zsh Tools/bundle-resources.sh \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\" \"$PROJECT_TEMP_DIR/SpaceFightResources\"\n";
+			"shellScript" = "set -e\ncd \"$SRCROOT\"\n/bin/zsh Tools/bundle-resources.sh \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\" \"$PROJECT_TEMP_DIR/KestrelFrontierResources\"\n";
+			"buildActionMask" = 2147483647;
+			"runOnlyForDeploymentPostprocessing" = 0;
+			"alwaysOutOfDate" = 1;
+			"files" = ();
+		};
+		"945B888536D82DE7FBCD6948" = {
+			"isa" = "PBXShellScriptBuildPhase";
+			"name" = "Bundle runtime resources";
+			"shellPath" = "/bin/zsh";
+			"shellScript" = "set -e\ncd \"$SRCROOT\"\n/bin/zsh Tools/bundle-resources.sh \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\" \"$PROJECT_TEMP_DIR/KestrelFrontierResources\"\ncp -p Resources/AppIcon.icns \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/\"\n";
 			"buildActionMask" = 2147483647;
 			"runOnlyForDeploymentPostprocessing" = 0;
 			"alwaysOutOfDate" = 1;
@@ -1152,15 +1838,29 @@
 		};
 		"A8792157CB4F27FB949C035F" = {
 			"isa" = "PBXFileReference";
-			"path" = "SpaceFight.app";
+			"path" = "KestrelFrontier.app";
 			"sourceTree" = "BUILT_PRODUCTS_DIR";
 			"explicitFileType" = "wrapper.application";
+		};
+		"B00F5AAF072ADA3258FCAEC2" = {
+			"isa" = "PBXFileReference";
+			"path" = "KestrelFrontier.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+			"explicitFileType" = "wrapper.application";
+		};
+		"A81A4044967C6D4277D1776C" = {
+			"isa" = "PBXFileReference";
+			"path" = "game.dylib";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+			"explicitFileType" = "compiled.mach-o.dylib";
 		};
 		"0A3E27B8CA818264D75C8D81" = {
 			"isa" = "PBXGroup";
 			"name" = "Products";
 			"children" = (
 				"A8792157CB4F27FB949C035F",
+				"B00F5AAF072ADA3258FCAEC2",
+				"A81A4044967C6D4277D1776C",
 			);
 			"sourceTree" = "<group>";
 		};
@@ -1176,18 +1876,80 @@
 		};
 		"34A04005BCAF206EEC990BD9" = {
 			"isa" = "PBXNativeTarget";
-			"name" = "SpaceFight-iOS";
-			"productName" = "SpaceFight";
+			"name" = "KestrelFrontier-iOS";
+			"productName" = "KestrelFrontier";
 			"productReference" = "A8792157CB4F27FB949C035F";
 			"productType" = "com.apple.product-type.application";
 			"buildConfigurationList" = "7C97AB33A1F3A2952C09C3E7";
 			"buildPhases" = (
-				"EBA8DCD606BD0014B899E362",
+				"AAACEF93EB2439F2C22BAACD",
 				"C0DB9B262E1CFDB5EF5A482C",
-				"A0C40C8BE3AD2B49AC4932AD",
+				"1A8C2C006C407097E0E8F941",
 			);
 			"buildRules" = ();
 			"dependencies" = ();
+		};
+		"0F26821D05D2582A45D17E0A" = {
+			"isa" = "PBXNativeTarget";
+			"name" = "KestrelFrontier-Game";
+			"productName" = "game";
+			"productReference" = "A81A4044967C6D4277D1776C";
+			"productType" = "com.apple.product-type.library.dynamic";
+			"buildConfigurationList" = "29E4AF27E5BB1B6C635EA166";
+			"buildPhases" = (
+				"65694E41AD3585C0AC67C53F",
+			);
+			"buildRules" = ();
+			"dependencies" = ();
+		};
+		"01FB82A5076063581B5B9957" = {
+			"isa" = "PBXContainerItemProxy";
+			"containerPortal" = "244210E48437B6556980A702";
+			"proxyType" = 1;
+			"remoteGlobalIDString" = "0F26821D05D2582A45D17E0A";
+			"remoteInfo" = "KestrelFrontier-Game";
+		};
+		"30C8D14FA074E633AB72F59A" = {
+			"isa" = "PBXTargetDependency";
+			"target" = "0F26821D05D2582A45D17E0A";
+			"targetProxy" = "01FB82A5076063581B5B9957";
+		};
+		"9B671FAF705B30A441EB7D14" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A81A4044967C6D4277D1776C";
+			"settings" = {
+				"ATTRIBUTES" = (
+					"CodeSignOnCopy",
+				);
+			};
+		};
+		"7AF59D9DEE199F046AE0D887" = {
+			"isa" = "PBXCopyFilesBuildPhase";
+			"name" = "Embed game module";
+			"dstPath" = "";
+			"dstSubfolderSpec" = 13;
+			"files" = (
+				"9B671FAF705B30A441EB7D14",
+			);
+			"buildActionMask" = 2147483647;
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"4219BEAD389C09F80A7CE748" = {
+			"isa" = "PBXNativeTarget";
+			"name" = "KestrelFrontier-macOS";
+			"productName" = "KestrelFrontier";
+			"productReference" = "B00F5AAF072ADA3258FCAEC2";
+			"productType" = "com.apple.product-type.application";
+			"buildConfigurationList" = "ED971AD232F5402B0CED3032";
+			"buildPhases" = (
+				"7FA2F43EDCB6FA8DC4873232",
+				"7AF59D9DEE199F046AE0D887",
+				"945B888536D82DE7FBCD6948",
+			);
+			"buildRules" = ();
+			"dependencies" = (
+				"30C8D14FA074E633AB72F59A",
+			);
 		};
 		"244210E48437B6556980A702" = {
 			"isa" = "PBXProject";
@@ -1204,6 +1966,8 @@
 			"projectRoot" = "";
 			"targets" = (
 				"34A04005BCAF206EEC990BD9",
+				"4219BEAD389C09F80A7CE748",
+				"0F26821D05D2582A45D17E0A",
 			);
 			"attributes" = {
 				"LastUpgradeCheck" = "1600";

@@ -39,6 +39,12 @@
     </dict>
     <key>UILaunchScreen</key>
     <dict/>
+    <key>UIAppFonts</key>
+    <array>
+        <string>Fonts/Oxanium-Regular.ttf</string>
+        <string>Fonts/Oxanium-Medium.ttf</string>
+        <string>Fonts/Oxanium-Bold.ttf</string>
+    </array>
     <key>UIRequiresFullScreen</key>
     <true/>
     <key>UISupportedInterfaceOrientations</key>

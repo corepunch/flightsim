@@ -20,9 +20,8 @@
 
 // Two in-memory queues, one per side, like Quake's loopback: packets are
 // encoded and decoded exactly as over the network, just never leave the
-// process. Thread-safe.
+// process. Thread-safe. The cvars net_loss (fraction dropped) and
+// net_latency (round trip, ms) simulate a bad network, both ways.
 @interface LoopbackTransport : NSObject <NetTransport>
 + (instancetype)side:(int)port;     // 0 client, 1 server
-// Debug: drop this fraction of packets and delay the rest (seconds), both ways.
-+ (void)simulateLoss:(float)loss latency:(double)latency;
 @end

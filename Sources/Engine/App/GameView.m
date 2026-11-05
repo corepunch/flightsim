@@ -3,7 +3,10 @@
 #import "GameView.h"
 #import "Briefing.h"
 #import "HUD.h"
+// Carbon's legacy EventType name overlaps the game protocol's event enum.
+#define EventType CarbonEventType
 #import <Carbon/Carbon.h>
+#undef EventType
 
 @implementation GameView
 
@@ -25,6 +28,7 @@
 
 - (void)captureMouse {
     if (self.input.mouseCaptured) return;
+    [self.input recenterMouse];
     self.input.mouseCaptured = YES;
     [NSCursor hide];
     CGAssociateMouseAndMouseCursorPosition(false);
@@ -34,12 +38,13 @@
     if (!self.input.mouseCaptured) return;
     self.input.mouseCaptured = NO;
     [self.input setMouseFire:NO];
+    [self.input setMouseRoll:NO];
+    [self.input recenterMouse];
     CGAssociateMouseAndMouseCursorPosition(true);
     [NSCursor unhide];
 }
 
 - (void)keyDown:(NSEvent *)event {
-    if (getenv("SF_SNAPSHOT")) return;  // debug snapshot runs ignore the keyboard
     if (event.keyCode == kVK_Escape && self.input.mouseCaptured) { [self releaseMouse]; return; }
     if (event.modifierFlags & NSEventModifierFlagCommand) { [super keyDown:event]; return; }
     [self.input keyDown:event];
@@ -89,11 +94,18 @@
 
 - (void)scrollWheel:(NSEvent *)event {
     SKScene *overlay = self.overlaySKScene;
+    if ([overlay isKindOfClass:HUD.class] && self.input.mouseCaptured) {
+        // Physical wheel forward increases thrust regardless of macOS's
+        // natural scrolling setting. Ignore inertial trackpad scrolling.
+        if (event.momentumPhase != NSEventPhaseNone) return;
+        CGFloat delta = event.scrollingDeltaY * (event.isDirectionInvertedFromDevice ? -1 : 1);
+        [self.input adjustMouseThrottleBy:delta * (event.hasPreciseScrollingDeltas ? 0.0025f : 0.05f)];
+        return;
+    }
     if (![overlay isKindOfClass:Briefing.class]) {
         [super scrollWheel:event];
         return;
     }
-    if (getenv("SF_SNAPSHOT")) return;
     CGRect bounds = self.bounds;
     CGPoint point = [self convertPoint:event.locationInWindow fromView:nil];
     if (!CGRectContainsPoint(bounds, point)) return;
@@ -104,7 +116,6 @@
 }
 
 - (void)mouseDown:(NSEvent *)event {
-    if (getenv("SF_SNAPSHOT")) return;
     SKScene *overlay = self.overlaySKScene;
     if ([overlay respondsToSelector:@selector(queueClickAtFraction:)]) {
         CGPoint p = [self convertPoint:event.locationInWindow fromView:nil];
@@ -121,7 +132,11 @@
     [self.input setMouseFire:YES];
 }
 - (void)mouseUp:(NSEvent *)event { [self.input setMouseFire:NO]; }
-- (void)rightMouseDown:(NSEvent *)event { [self.input recenterMouse]; }
+- (void)rightMouseDown:(NSEvent *)event { [self.input setMouseRoll:YES]; }
+- (void)rightMouseUp:(NSEvent *)event { [self.input setMouseRoll:NO]; }
+- (void)otherMouseDown:(NSEvent *)event {
+    if (event.buttonNumber == 2 && self.input.mouseCaptured) [self.input recenterMouse];
+}
 
 - (void)mouseMoved:(NSEvent *)event {
     [self reportHover:event];
@@ -132,6 +147,7 @@
     [self.input mouseMovedByX:event.deltaX y:event.deltaY];
 }
 - (void)rightMouseDragged:(NSEvent *)event { [self.input mouseMovedByX:event.deltaX y:event.deltaY]; }
+- (void)otherMouseDragged:(NSEvent *)event { [self.input mouseMovedByX:event.deltaX y:event.deltaY]; }
 
 @end
 

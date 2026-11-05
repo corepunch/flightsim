@@ -1,4 +1,6 @@
 #import <SpriteKit/SpriteKit.h>
+typedef struct CockpitContact CockpitContact;
+typedef struct CockpitFrame CockpitFrame;
 
 typedef struct {
     CGPoint boresight;      // where the guns converge, view points
@@ -9,11 +11,12 @@ typedef struct {
     BOOL boosting;
     int kills, deaths;
     BOOL playerDead;
-    CGPoint sun;            // sun streak center, HUD points
+    CGPoint sun;            // projected light source, HUD points
     float sunVisibility;    // 0..1
+    float deltaTime;        // seconds, for the lens exposure response
     float damageFlash;      // 0..1
     BOOL cockpit;           // gauges are on the cockpit displays instead
-    int torpedoes;
+    int torpedoes, torpedoCapacity; // remaining rounds and mission loadout
     BOOL aimVisible;        // subsystem aim marker on the selected capital
     CGPoint aim;
     __unsafe_unretained NSString *status;   // under the boresight, e.g. "SCANNING 40%"
@@ -35,12 +38,17 @@ typedef struct {
     __unsafe_unretained NSString *label;
 } HUDTarget;
 
-@interface HUD : SKScene
 #if TARGET_OS_IOS
-@property (atomic) UIEdgeInsets contentInsets;
+typedef UIEdgeInsets HUDInsets;
+#else
+typedef NSEdgeInsets HUDInsets;
 #endif
+@interface HUD : SKScene
+@property (atomic) HUDInsets contentInsets;
+@property (nonatomic) BOOL touchLayout;
 
 - (void)updateFrame:(HUDFrame)frame targets:(const HUDTarget *)targets count:(NSUInteger)count;
+- (void)updateInstruments:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count cockpit:(BOOL)cockpit;
 - (void)setInputText:(NSString *)text;
 - (void)toggleHelp;
 - (void)setHelpVisible:(BOOL)visible;

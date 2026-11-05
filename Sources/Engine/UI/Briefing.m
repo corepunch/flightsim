@@ -1,8 +1,10 @@
 #import "Briefing.h"
+#import "MonitorSignal.h"
 #import "Assets.h"
 #import "Progress.h"
 #import "UIStyle.h"
 #import "UIMotion.h"
+#import "GameAudio.h"
 #import <ImageIO/ImageIO.h>
 
 static NSValue *BoxPoint(CGPoint point) { return [NSValue value:&point withObjCType:@encode(CGPoint)]; }
@@ -13,7 +15,7 @@ static CGPoint UnboxPoint(NSValue *value) {
 }
 
 static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMode h) {
-    return UIMonoLabel(size, c, h, SKLabelVerticalAlignmentModeTop);
+    return UIInterfaceLabel(size, c, h, SKLabelVerticalAlignmentModeTop);
 }
 
 static SKLabelNode *Para(CGFloat size, SKColor *c, CGFloat width) {
@@ -38,49 +40,32 @@ static NSString *const PlayerPortrait = @"Lancer1";
 static const CGFloat MaxPortraitAspect = 1.04;
 static const CGFloat CaptionDrop = 42;
 static const CGFloat PortraitDepth = 1, CaptionDepth = 2, FooterDepth = 3;
+static const CGFloat MonitorInset = 6;
 
-static SKShader *MonitorDistortionShader(void) {
-    static SKShader *shader;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        shader = [SKShader shaderWithSource:
-            @"float blockNoise(vec2 cell, float packet) {\n"
-             "    return fract(sin(dot(cell, vec2(27.31, 53.17)) + packet * 11.53) * 437.23);\n"
-             "}\n"
-             "void main() {\n"
-             "    vec2 uv = v_tex_coord;\n"
-             "    float time = u_time * u_motion_rate;\n"
-             "    float phase = mod(time, 2.8);\n"
-             "    float packet = floor(time / 2.8) * 3.0 + floor(phase * 5.0);\n"
-             "    vec2 cell = floor(uv * a_block_grid);\n"
-             "    vec2 cluster = floor(cell * 0.5);\n"
-             "    float damage = blockNoise(cluster, packet);\n"
-             "    float tile = blockNoise(cell + 17.0, packet);\n"
-             "    vec4 signal;\n"
-             "    if (phase < 0.56 && damage >= 0.82 && tile >= 0.16) {\n"
-             // Neighbouring tiles share a motion vector, with some decoded at lower resolution.
-             "        vec2 drift = vec2(damage < 0.91 ? -1.0 : 1.0, blockNoise(cluster + 31.0, packet) - 0.5);\n"
-             "        vec2 sampleUV = uv + drift * 0.72 / a_block_grid;\n"
-             "        if (tile > 0.64) {\n"
-             "            vec2 pixels = a_block_grid * 4.0;\n"
-             "            sampleUV = (floor(sampleUV * pixels) + 0.5) / pixels;\n"
-             "        }\n"
-             "        signal = texture2D(u_texture, clamp(sampleUV, 0.0, 1.0));\n"
-             // Chroma errors are visible even in the dark parts of the monitor.
-             "        float chroma = blockNoise(cluster + 53.0, packet);\n"
-             "        vec3 tint = chroma < 0.5 ? vec3(0.31, 0.12, 0.48) : vec3(0.05, 0.40, 0.36);\n"
-             "        float opacity = mix(0.13, 0.32, tile);\n"
-             "        signal.rgb = min(signal.rgb * (0.65 + tint), vec3(signal.a));\n"
-             "        signal = vec4(tint * opacity, opacity) + signal * (1.0 - opacity);\n"
-             "    } else {\n"
-             "        signal = texture2D(u_texture, uv);\n"
-             "    }\n"
-             "    gl_FragColor = signal * v_color_mix;\n"
-             "}"];
-        shader.uniforms = @[[SKUniform uniformWithName:@"u_motion_rate" float:1 / UIMotionTimeScale()]];
-        shader.attributes = @[[SKAttribute attributeWithName:@"a_block_grid" type:SKAttributeTypeVectorFloat2]];
-    });
-    return shader;
+// Offset every edge inward, including the diagonals, so the gap stays uniform.
+static SKShapeNode *MonitorMask(const CGPoint *corners, NSUInteger count) {
+    CGPoint inset[count];
+    for (NSUInteger i = 0; i < count; i++) {
+        CGPoint previous = corners[(i + count - 1) % count], point = corners[i];
+        CGPoint next = corners[(i + 1) % count];
+        CGVector a = CGVectorMake(point.x - previous.x, point.y - previous.y);
+        CGVector b = CGVectorMake(next.x - point.x, next.y - point.y);
+        CGFloat aLength = hypot(a.dx, a.dy), bLength = hypot(b.dx, b.dy);
+        CGVector n = CGVectorMake(-a.dy / aLength, a.dx / aLength);
+        CGVector m = CGVectorMake(-b.dy / bLength, b.dx / bLength);
+        CGFloat offset = MonitorInset / (1 + n.dx * m.dx + n.dy * m.dy);
+        inset[i] = CGPointMake(point.x + (n.dx + m.dx) * offset,
+                              point.y + (n.dy + m.dy) * offset);
+    }
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPathAddLines(path, NULL, inset, count);
+    CGPathCloseSubpath(path);
+    SKShapeNode *mask = [SKShapeNode shapeNodeWithPath:path];
+    CGPathRelease(path);
+    mask.fillColor = SKColor.whiteColor;
+    mask.strokeColor = SKColor.clearColor;
+    mask.lineWidth = 0;
+    return mask;
 }
 
 // How a tactical cue arrives: the map powering up, the map wiped in fresh,
@@ -111,7 +96,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     NSUInteger _page;
     CGRect _confirmRect, _previousRect, _backRect;
     CGRect _missionRows;
-    CGFloat _missionRowHeight;
+    NSUInteger _missionColumns;
+    NSArray<NSValue *> *_missionTiles;
     NSValue *_queuedClick;
     NSMutableArray<NSValue *> *_queuedScrolls;
     CGRect _scrollRect;
@@ -120,6 +106,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat _scrollLimit, _scrollOffset;
     NSMutableDictionary<NSString *, SKTexture *> *_art;
     SKNode *_root;
+    SKShapeNode *_monitorMask;
     CGSize _laidOut;
 
     // Briefing state
@@ -156,6 +143,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     SKLabelNode *_speech;
     UIHover *_hover;
 }
+
+@synthesize contentInsets = _contentInsets;
 
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
@@ -200,7 +189,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 }
 
 - (void)rebuild {
-    if (_transition != UITransitionNone) {
+    if (_transition != UITransitionNone && !(_mode == ModeList && _transition == UITransitionSelect)) {
         _scrollOffset = 0;
         @synchronized (self) { _queuedScrolls = nil; }
     }
@@ -362,113 +351,80 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     [self rebuild];
 }
 
+- (void)setContentInsets:(BriefingInsets)insets {
+    BOOL changed = insets.left != _contentInsets.left || insets.right != _contentInsets.right || insets.top != _contentInsets.top || insets.bottom != _contentInsets.bottom;
+    _contentInsets = insets;
+    if (changed && _root) [self rebuild];
+}
+
 - (void)buildList {
     CGSize s = self.size;
-    CGFloat top = s.height - 50;
-    SKLabelNode *t = Text(30, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
-    t.fontName = UIMonoBoldFont;
-    t.text = @"KESTREL FRONTIER";
-    t.position = CGPointMake(60, top);
-    [_root addChild:t];
-    SKLabelNode *sub = Text(15, UIColorWithOpacity(UIInk, 0.6), SKLabelHorizontalAlignmentModeLeft);
-    sub.text = @"CNS BASTION  /  LANCER FLIGHT  /  MISSION SELECT";
-    sub.position = CGPointMake(60, top - 40);
+    BriefingInsets safe = self.contentInsets;
+    CGFloat left = safe.left + 24, right = s.width - safe.right - 24;
+    CGFloat top = s.height - safe.top - 24, bottom = safe.bottom + 82;
+    BOOL compact = s.height < 550;
+    SKLabelNode *title = Text(compact ? 23 : 34, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
+    title.fontName = UIInterfaceBoldFont;
+    title.text = @"MISSION SELECT";
+    title.position = CGPointMake(left + 4, top - 10);
+    [_root addChild:title];
+    SKLabelNode *sub = Text(compact ? 11 : 13, UIColorWithOpacity(UIInk, 0.65), SKLabelHorizontalAlignmentModeLeft);
+    sub.text = @"KESTREL FRONTIER  /  CNS BASTION";
+    sub.position = CGPointMake(left + 4, top - (compact ? 38 : 46));
     [_root addChild:sub];
 
-    NSArray *all = CampaignMissions();
+    NSArray *missions = CampaignMissions();
     NSUInteger unlocked = ProgressUnlockedCount();
-    CGFloat rowH = MAX(1, MIN(30, (s.height - 220) / MAX(all.count, 1)));
-    CGFloat listW = MIN(520, s.width * 0.42);
-    _missionRowHeight = rowH;
-    _missionRows = CGRectMake(50, top - 90 - all.count * rowH, listW, all.count * rowH);
-    NSMutableArray<SKLabelNode *> *rows = [NSMutableArray array];
-    SKNode *bar = nil;
-    for (NSUInteger i = 0; i < all.count; i++) {
-        BOOL open = i < unlocked, sel = i == _index;
-        CGFloat y = top - 90 - i * rowH;
-        if (sel) {
-            CGRect barRect = CGRectMake(50, y - rowH + 4, listW, rowH - 2);
-            SKShapeNode *shape = UISkewedShape(barRect, UIColorWithOpacity(UIInk, 0.8), UIColorWithOpacity(UIInk, 0.12));
-            [_root addChild:shape];
-            bar = UIMotionPivot(shape, CGPointMake(CGRectGetMinX(barRect), CGRectGetMidY(barRect)));
-        }
-        SKLabelNode *l = Text(MIN(17, rowH * 0.6), open ? (sel ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIInk, 0.75)) : UIColorWithOpacity(UIInk, 0.25), SKLabelHorizontalAlignmentModeLeft);
-        l.text = [NSString stringWithFormat:@"%02lu   %@", (unsigned long)i + 1, open ? [all[i][@"title"] uppercaseString] : @"-- CLASSIFIED --"];
-        l.position = CGPointMake(64, y - 4);
-        [_root addChild:l];
-        [rows addObject:l];
+    CGFloat gap = 12, width = MAX(1, right - left - ScrollGutter);
+    _missionColumns = MAX(1, MIN(6, (NSUInteger)((width + gap) / 160)));
+    CGFloat tileW = (width - gap * (_missionColumns - 1)) / _missionColumns;
+    CGFloat tileH = compact ? 144 : 172;
+    _missionRows = CGRectMake(left, bottom, right - left, MAX(1, top - (compact ? 62 : 76) - bottom));
+    SKNode *content = [SKNode node];
+    NSMutableArray *tiles = [NSMutableArray array];
+    for (NSUInteger i = 0; i < missions.count; i++) {
+        BOOL open = i < unlocked, selected = i == _index;
+        NSUInteger stars = ProgressBestStars(i);
+        CGFloat x = left + (i % _missionColumns) * (tileW + gap);
+        CGFloat y = CGRectGetMaxY(_missionRows) - (i / _missionColumns + 1) * (tileH + gap) + gap;
+        CGRect rect = CGRectMake(x, y, tileW, tileH);
+        [tiles addObject:[NSValue valueWithBytes:&rect objCType:@encode(CGRect)]];
+        SKColor *ink = UIColorWithOpacity(selected ? UIAmber : UIInk, open ? 1 : 0.35);
+        SKShapeNode *tile = UIReadoutPanel(rect, ink, UIColorWithOpacity(selected ? UIInk : UIPanel, selected ? 0.14 : 0.88));
+        tile.name = [NSString stringWithFormat:@"mission-%lu", (unsigned long)i + 1];
+        [content addChild:tile];
+        SKLabelNode *number = Text(compact ? 42 : 52, ink, SKLabelHorizontalAlignmentModeLeft);
+        number.fontName = UIInterfaceBoldFont;
+        number.text = [NSString stringWithFormat:@"%02lu", (unsigned long)i + 1];
+        number.position = CGPointMake(x + 16, y + tileH - 36);
+        [content addChild:number];
+        SKLabelNode *name = Para(12, ink, tileW - 30);
+        name.fontName = UIInterfaceBoldFont;
+        name.text = open ? [missions[i][@"title"] uppercaseString] : @"CLASSIFIED";
+        name.position = CGPointMake(x + 16, y + tileH - 67);
+        name.numberOfLines = 2;
+        [content addChild:name];
+        SKLabelNode *rating = Text(18, UIColorWithOpacity(stars ? UIAmber : UIInk, stars ? 1 : 0.25), SKLabelHorizontalAlignmentModeLeft);
+        rating.text = [@[@"☆ ☆ ☆", @"★ ☆ ☆", @"★ ★ ☆", @"★ ★ ★"] objectAtIndex:stars];
+        rating.position = CGPointMake(x + 16, y + 36);
+        [content addChild:rating];
+        SKLabelNode *status = Text(10, ink, SKLabelHorizontalAlignmentModeLeft);
+        status.text = !open ? @"LOCKED" : stars ? @"COMPLETED" : @"READY TO FLY";
+        status.position = CGPointMake(x + 16, y + 15);
+        [content addChild:status];
     }
-
-    // Preview of the selected mission.
-    NSDictionary *m = all[_index];
-    BOOL open = _index < unlocked;
-    CGFloat px = listW + 100, pw = s.width - px - 60;
-    CGRect panelRect = CGRectMake(px - 20, 90, pw + 20, top - 160);
-    SKShapeNode *panel = UIReadoutPanel(panelRect, UIColorWithOpacity(UIInk, 0.4), UIColorWithOpacity(UIBlack, 0.35));
-    [_root addChild:panel];
-    CGRect viewport = CGRectMake(px, CGRectGetMinY(panelRect) + 14,
-                                 MAX(0, pw - 14), MAX(0, panelRect.size.height - 34));
-    CGFloat width = MAX(1, viewport.size.width - ScrollGutter);
-    SKNode *preview = [SKNode node];
-    SKLabelNode *title = Para(24, UIColorWithOpacity(UIInk, 1), width);
-    title.fontName = UIMonoBoldFont;
-    title.text = open ? [m[@"title"] uppercaseString] : @"CLASSIFIED";
-    title.position = CGPointMake(px, CGRectGetMaxY(viewport));
-    [preview addChild:title];
-    SKLabelNode *loc = nil, *p, *objs = nil;
-    if (open) {
-        NSDictionary *b = m[@"briefing"];
-        loc = Para(15, UIColorWithOpacity(UIAmber, 0.9), width);
-        loc.text = [NSString stringWithFormat:@"%@   /   SD %@", b[@"location"], b[@"stardate"]];
-        loc.position = CGPointMake(px, CGRectGetMinY(title.frame) - 12);
-        [preview addChild:loc];
-        p = Para(16, UIColorWithOpacity(UIInk, 0.8), width);
-        p.text = [b[@"text"] firstObject];
-        p.position = CGPointMake(px, CGRectGetMinY(loc.frame) - 16);
-        [preview addChild:p];
-        objs = Para(15, UIColorWithOpacity(UIInk, 0.65), width);
-        NSMutableString *o = [NSMutableString stringWithString:@"OBJECTIVES"];
-        for (NSDictionary *d in m[@"objectives"]) [o appendFormat:@"\n  %@ %@", [d[@"optional"] boolValue] ? @"o" : @">", d[@"text"]];
-        objs.text = o;
-        objs.position = CGPointMake(px, CGRectGetMinY(p.frame) - 20);
-        [preview addChild:objs];
-    } else {
-        p = Para(16, UIColorWithOpacity(UIInk, 0.5), width);
-        p.text = @"Complete the previous missions to unlock this briefing.";
-        p.position = CGPointMake(px, CGRectGetMinY(title.frame) - 16);
-        [preview addChild:p];
+    _missionTiles = tiles;
+    [_root addChild:[self textViewport:_missionRows content:content]];
+    // Keyboard/controller navigation always brings its selected tile into view.
+    if (_transition != UITransitionNone && _index < tiles.count) {
+        CGRect selected; [tiles[_index] getValue:&selected size:sizeof selected];
+        if (CGRectGetMinY(selected) + _scrollOffset < CGRectGetMinY(_missionRows))
+            [self scrollBy:CGRectGetMinY(_missionRows) - CGRectGetMinY(selected) - _scrollOffset];
+        if (CGRectGetMaxY(selected) + _scrollOffset > CGRectGetMaxY(_missionRows))
+            [self scrollBy:CGRectGetMaxY(_missionRows) - CGRectGetMaxY(selected) - _scrollOffset];
     }
-    [_root addChild:[self textViewport:viewport content:preview]];
-    [self footer:_scrollLimit > 0 ? @"↑ / ↓  Select mission     ← / →  Scroll preview" : @"↑ / ↓  Select mission"
-          action:open ? @"BRIEFING" : nil];
-
-    CGFloat barY = top - 90 - _index * rowH;
-    if ([self intro]) {
-        UIMotionDecode(t, 0.05, 0.45);
-        UIMotionDecode(sub, 0.12, 0.5);
-        for (NSUInteger i = 0; i < rows.count; i++) {
-            UIMotionSlideIn(rows[i], CGVectorMake(-24, 0), 0.16 + i * 0.03, 0.28);
-            UIMotionDecode(rows[i], 0.16 + i * 0.03, 0.3);
-        }
-        if (bar && !UIMotionReduced()) {
-            bar.xScale = 0.001;
-            [bar runAction:UIAfter(0.28 + _index * 0.03, UIEased([SKAction scaleXTo:1 duration:0.3], UICurveOutExpo))];
-        }
-        NSTimeInterval ready = 0;
-        UIMotionDrawPanel(panel, panelRect, UIColorWithOpacity(UIInk, 0.8), NO, 0.2, &ready);
-        [self revealPreviewTitle:title location:loc text:p objectives:objs at:ready];
-    } else if (_transition == UITransitionSelect) {
-        // The highlight glides to the new row; the preview re-decodes.
-        if (bar && !UIMotionReduced() && _shownMode == ModeList) {
-            CGPoint home = bar.position;
-            bar.position = CGPointMake(home.x, home.y + (_shownBarY - barY));
-            [bar runAction:UIEased([SKAction moveTo:home duration:0.16], UICurveOut)];
-        }
-        if (_index < rows.count) UIMotionGlitchBurst(rows[_index], 0.16, 0.5, UIColorWithOpacity(UIAmber, 1));
-        UIMotionSweep(_root, CGRectInset(panelRect, 2, 2), UIColorWithOpacity(UIInk, 0.35), YES, 0, 0.4);
-        [self revealPreviewTitle:title location:loc text:p objectives:objs at:0];
-    }
-    _shownBarY = barY;
+    NSString *hint = TARGET_OS_IOS ? @"SWIPE TO BROWSE  /  TAP A MISSION" : @"ARROWS SELECT  /  SCROLL TO BROWSE";
+    [self footer:hint action:_index < unlocked ? @"BRIEFING" : nil];
     _shownIndex = _index;
 }
 
@@ -514,6 +470,23 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 - (void)buildFooter:(NSString *)text action:(NSString *)action {
     CGFloat inset = MIN(50, self.size.width * 0.05);
     BOOL console = _mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0);
+    if (_mode == ModeList) {
+        BriefingInsets safe = self.contentInsets;
+        CGFloat left = safe.left + 24, right = self.size.width - safe.right - 24, bottom = safe.bottom + 16;
+        CGFloat buttonW = MIN(150, (right - left - 12) / 2);
+        _backRect = CGRectMake(left, bottom, buttonW, 44);
+        [self footerButton:_backRect title:@"‹ MAIN MENU" accent:UIInk];
+        if (action) {
+            _confirmRect = CGRectMake(right - buttonW, bottom, buttonW, 44);
+            [self footerButton:_confirmRect title:action accent:UIAmber];
+        }
+        if (right - left > 650) {
+            SKLabelNode *hint = Text(11, UIColorWithOpacity(UIInk, 0.65), SKLabelHorizontalAlignmentModeCenter);
+            hint.text = text; hint.position = CGPointMake((left + right) / 2, bottom + 22);
+            [self footerAdd:hint];
+        }
+        return;
+    }
     if ([self compactStoryLayout]) {
         CGFloat bottom = 16, height = 44;
         _backRect = CGRectMake(inset, bottom, 84, height);
@@ -551,7 +524,9 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
 #pragma mark - Briefing
 
-- (void)showBriefing:(NSUInteger)index {
+- (void)showBriefing:(NSUInteger)index { [self showBriefing:index page:0]; }
+
+- (void)showBriefing:(NSUInteger)index page:(NSUInteger)startPage {
     _index = MIN(index, CampaignMissions().count - 1);
     NSDictionary *mission = CampaignMission(_index);
     NSDictionary *brief = mission[@"briefing"];
@@ -593,8 +568,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     [pages addObject:@{ @"speaker": speaker, @"portrait": portrait, @"readout": intel,
                         @"text": @"Check the intel and your loadout. Launch when ready.", @"channel": @"INTEL / LOADOUT" }];
     _pages = pages;
-    const char *startPage = getenv("SF_BRIEFING_PAGE");   // debug: open on page N
-    _page = startPage && atoi(startPage) >= 1 ? MIN((NSUInteger)atoi(startPage) - 1, pages.count - 1) : 0;
+    _page = MIN(startPage, pages.count - 1);
     _mode = ModeBriefing;
     _transition = UITransitionIntro;
     [self rebuild];
@@ -623,13 +597,12 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     return texture ? [SKSpriteNode spriteNodeWithTexture:texture] : nil;
 }
 
-// Return the painted monitor's position after an aspect-fill crop. The
-// coordinates describe the inside of the cyan bezel in Bastion.png.
+// Trace the cyan bezel in Bastion.png, then inset its full silhouette.
 - (CGRect)addBackdrop:(NSString *)name raiseBoard:(BOOL)raiseBoard {
     CGSize size = self.size;
     SKSpriteNode *art = [self artNamed:name];
     if (!art) return CGRectZero;
-    const CGFloat boardBottom = 0.465, boardHeight = 0.375;
+    const CGFloat boardBottom = 417.0 / 941, boardHeight = 391.0 / 941;
     CGFloat scale = MAX(size.width / art.size.width, size.height / art.size.height * (raiseBoard ? 1.15 : 1));
     CGFloat centerY = size.height / 2;
     if (raiseBoard) {
@@ -655,9 +628,18 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     shade.anchorPoint = CGPointZero;
     [_root addChild:shade];
 
-    return CGRectMake(frame.origin.x + frame.size.width * 0.25,
-                      frame.origin.y + frame.size.height * boardBottom,
-                      frame.size.width * 0.50, frame.size.height * boardHeight);
+    // Source-image pixels, counterclockwise once converted to scene coordinates.
+    const CGPoint bezel[] = {
+        {410, 524}, {1262, 524}, {1286, 502}, {1286, 157},
+        {1257, 133}, {416, 133}, {388, 157}, {386, 502},
+    };
+    CGPoint corners[8];
+    for (NSUInteger i = 0; i < 8; i++) {
+        corners[i] = CGPointMake(frame.origin.x + frame.size.width * bezel[i].x / 1672,
+                                frame.origin.y + frame.size.height * (1 - bezel[i].y / 941));
+    }
+    _monitorMask = MonitorMask(corners, 8);
+    return CGPathGetBoundingBox(_monitorMask.path);
 }
 
 - (void)addPortrait:(NSString *)name expression:(NSString *)expression facingRight:(BOOL)facingRight
@@ -744,7 +726,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat width = MAX(1, rect.size.width - 32);
     SKLabelNode *speaker = Text(13, UIColorWithOpacity(UIAmber, 1),
                                speakerOnRight ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeLeft);
-    speaker.fontName = UIMonoBoldFont;
+    speaker.fontName = UIInterfaceBoldFont;
     speaker.text = [line[@"speaker"] uppercaseString];
     if (speaker.frame.size.width > width) {
         // Keep the name when the full rank and posting won't fit.
@@ -778,7 +760,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         if (_oldCaptionText.count > 1) UIMotionDismiss(_oldCaptionText.lastObject, CGVectorMake(0, 0), 0.1);
         _oldCaptionHolder = nil;
         _oldCaptionText = nil;
-        UIMotionTypeOn(speech, 0.06, charsPerSecond);
+        UIMotionDialogueTypeOn(speech, 0.06, charsPerSecond);
     } else if ([self intro] || [self paging]) {
         // A new voice: the old bubble folds away, then a beam draws the new
         // one out from the speaker's side.
@@ -787,10 +769,13 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         holder = UIMotionDrawPanel(panel, rect, UIColorWithOpacity(UIAmber, 0.9), speakerOnRight,
                                    [self intro] ? 0.45 : closing * 0.8, &ready);
         UIMotionDecode(speaker, ready, 0.3);
-        UIMotionTypeOn(speech, ready + 0.05, charsPerSecond);
+        UIMotionDialogueTypeOn(speech, ready + 0.05, charsPerSecond);
     } else {
         holder = UIMotionPivot(panel, CGPointMake(CGRectGetMidX(rect), top));
     }
+    // Centre the scanning cell on the visible caption letters. These compact
+    // top-aligned paragraphs need a small lift relative to a standalone label.
+    UIMotionOffsetDialogueCaret(speech, fontSize * 0.12);
     _captionHolder = holder;
     _captionText = @[speaker, speech];
     _captionRect = rect;
@@ -813,8 +798,18 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     if (!paintedBoard) {
         CGFloat margin = size.width * 0.06;
         screen = CGRectMake(margin, size.height * 0.59, size.width - margin * 2, size.height * 0.34);
-        [_root addChild:UIReadoutPanel(screen, UIColorWithOpacity(UIConsoleEdge, 0.95),
-                                      UIColorWithOpacity(UIConsoleGlass, 1))];
+        SKShapeNode *panel = UIReadoutPanel(screen, UIColorWithOpacity(UIConsoleEdge, 0.95),
+                                          UIColorWithOpacity(UIConsoleGlass, 1));
+        [_root addChild:panel];
+        CGFloat left = CGRectGetMinX(screen), right = CGRectGetMaxX(screen);
+        CGFloat bottom = CGRectGetMinY(screen), top = CGRectGetMaxY(screen);
+        CGFloat cut = MIN(UIReadoutChamfer, MIN(screen.size.width, screen.size.height) * 0.25);
+        const CGPoint corners[] = {
+            {left + cut, bottom}, {right, bottom}, {right, top - cut},
+            {right - cut, top}, {left, top}, {left, bottom + cut},
+        };
+        _monitorMask = MonitorMask(corners, 6);
+        screen = CGPathGetBoundingBox(_monitorMask.path);
     }
 
     CGFloat captionWidth = screen.size.width * 0.70;
@@ -856,27 +851,47 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
 - (void)buildMonitor:(CGRect)screen mission:(NSDictionary *)mission page:(NSDictionary *)page {
     SKNode *display = _root;
-    if (!CGRectIsEmpty(screen) && !UIMotionReduced()) {
+    if (!CGRectIsEmpty(screen)) {
         CGPoint center = CGPointMake(CGRectGetMidX(screen), CGRectGetMidY(screen));
         SKCropNode *crop = [SKCropNode node];
-        SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:SKColor.whiteColor size:screen.size];
-        mask.position = center;
-        crop.maskNode = mask;
+        crop.maskNode = _monitorMask;
         [_root addChild:crop];
 
-        SKEffectNode *effect = [SKEffectNode node];
-        effect.shader = MonitorDistortionShader();
-        CGFloat blockSize = MAX(10, screen.size.height / 14);
-        vector_float2 grid = { screen.size.width / blockSize, screen.size.height / blockSize };
-        [effect setValue:[SKAttributeValue valueWithVectorFloat2:grid] forAttributeNamed:@"a_block_grid"];
-        effect.shouldEnableEffects = YES;
-        [crop addChild:effect];
-        // Give the effect a screen-sized buffer even while the content animates in.
+        display = crop;
+        if (!UIMotionReduced()) {
+            SKEffectNode *effect = [SKEffectNode node];
+            effect.name = @"monitor.signal";
+            effect.shader = UIMonitorSignalShader(NO);
+            vector_float2 pixels = { screen.size.width, screen.size.height };
+            [effect setValue:[SKAttributeValue valueWithVectorFloat2:pixels] forAttributeNamed:@"a_screen_size"];
+            effect.shouldEnableEffects = YES;
+            [crop addChild:effect];
+            display = effect;
+        }
+        // A stable screen-sized buffer, with the honeycomb behind all readouts.
         SKSpriteNode *glass = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIConsoleGlass, 0.01)
                                                           size:screen.size];
         glass.position = center;
-        [effect addChild:glass];
-        display = effect;
+        [display addChild:glass];
+        CGFloat radius = MAX(10, MIN(18, screen.size.height / 17));
+        CGFloat dy = sqrt(3) * radius;
+        CGMutablePathRef honeycomb = CGPathCreateMutable();
+        NSInteger column = 0;
+        for (CGFloat x = CGRectGetMinX(screen); x < CGRectGetMaxX(screen) + radius; x += radius * 1.5, column++) {
+            for (CGFloat y = CGRectGetMinY(screen) + (column % 2) * dy / 2; y < CGRectGetMaxY(screen) + dy; y += dy) {
+                // Three shared edges per cell; adjacent cells supply the others.
+                CGPathMoveToPoint(honeycomb, NULL, x - radius / 2, y - dy / 2);
+                CGPathAddLineToPoint(honeycomb, NULL, x + radius / 2, y - dy / 2);
+                CGPathAddLineToPoint(honeycomb, NULL, x + radius, y);
+                CGPathAddLineToPoint(honeycomb, NULL, x + radius / 2, y + dy / 2);
+            }
+        }
+        SKShapeNode *hex = [SKShapeNode shapeNodeWithPath:honeycomb];
+        CGPathRelease(honeycomb);
+        hex.name = @"monitor.honeycomb";
+        hex.strokeColor = UIColorWithOpacity(UIInk, 0.085);
+        hex.lineWidth = 0.8;
+        [display addChild:hex];
     }
 
     NSDictionary *brief = mission[@"briefing"];
@@ -886,7 +901,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat width = MAX(1, right - left);
     CGFloat titleSize = MIN(21, MAX(12, width / 29));
     SKLabelNode *title = Para(titleSize, UIColorWithOpacity(UIInk, 1), width);
-    title.fontName = UIMonoBoldFont;
+    title.fontName = UIInterfaceBoldFont;
     title.text = [NSString stringWithFormat:@"%02lu  /  %@", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]];
     title.position = CGPointMake(left, top);
     [display addChild:title];
@@ -898,7 +913,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
     CGFloat channelY = CGRectGetMinY(location.frame) - 10;
     SKLabelNode *channel = Text(12, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
-    channel.fontName = UIMonoBoldFont;
+    channel.fontName = UIInterfaceBoldFont;
     channel.text = page[@"channel"];
     channel.position = CGPointMake(left, channelY);
     [display addChild:channel];
@@ -1210,7 +1225,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
                 SKLabelNode *l = (SKLabelNode *)c;
                 if (![l.userData[@"ink"] isKindOfClass:[SKColor class]]) l.userData = [@{ @"ink": l.fontColor } mutableCopy];
                 l.fontColor = focused ? UIColorWithOpacity(UIWhite, 1) : l.userData[@"ink"];
-                l.fontName = focused ? UIMonoBoldFont : UIMonoFont;
+                l.fontName = focused ? UIInterfaceBoldFont : UIInterfaceFont;
             } else {
                 c.xScale = c.yScale = focused ? 1.3 : 1.0;
             }
@@ -1414,7 +1429,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     SKLabelNode *title = Text(MIN(36, MAX(20, s.width / 30)),
                               _success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1),
                               SKLabelHorizontalAlignmentModeCenter);
-    title.fontName = UIMonoBoldFont;
+    title.fontName = UIInterfaceBoldFont;
     title.text = _success ? @"MISSION COMPLETE" : @"MISSION FAILED";
     title.position = CGPointMake(s.width / 2, top);
     [_root addChild:title];
@@ -1481,6 +1496,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 }
 
 - (void)turnPage {
+    [[GameAudio shared] play:@"ui-panel" gain:0.65f pan:0];
     _transition = UITransitionPage;
     [self rebuild];
 }
@@ -1488,6 +1504,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 // The summary and the conversation are different layouts; beats within the
 // conversation are pages.
 - (void)turnBeat {
+    [[GameAudio shared] play:@"ui-panel" gain:0.65f pan:0];
     BOOL conversation = _debriefBeat > 0 && _shownMode == ModeDebrief && _captionHolder;
     _transition = conversation ? UITransitionPage : UITransitionIntro;
     [self rebuild];
@@ -1510,8 +1527,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         if (CGRectContainsPoint(_scrollRect, point)) [self scrollBy:input.delta];
     }
     // Leave up/down for mission selection and left/right for story pages.
-    InputAction scrollUp = _mode == ModeList ? InputActionLeft : InputActionUp;
-    InputAction scrollDown = _mode == ModeList ? InputActionRight : InputActionDown;
+    InputAction scrollUp = _mode == ModeList ? 0 : InputActionUp;
+    InputAction scrollDown = _mode == ModeList ? 0 : InputActionDown;
     if (a & scrollUp) [self scrollBy:-54];
     if (a & scrollDown) [self scrollBy:54];
     if (click) {
@@ -1529,10 +1546,13 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         } else if (CGRectContainsPoint(_previousRect, point)) a |= InputActionLeft;
         else if (CGRectContainsPoint(_backRect, point)) a |= InputActionBack;
         else if (_mode == ModeList && CGRectContainsPoint(_missionRows, point)) {
-            NSUInteger row = (NSUInteger)((CGRectGetMaxY(_missionRows) - point.y) / _missionRowHeight);
-            if (row < CampaignMissions().count) {
-                if (row == _index) a |= InputActionConfirm;
-                else [self showListSelecting:row];
+            CGPoint inContent = CGPointMake(point.x, point.y - _scrollOffset);
+            for (NSUInteger i = 0; i < _missionTiles.count; i++) {
+                CGRect rect; [_missionTiles[i] getValue:&rect size:sizeof rect];
+                if (!CGRectContainsPoint(rect, inContent)) continue;
+                if (i == _index) a |= InputActionConfirm;
+                else { [[GameAudio shared] play:@"ui-hover"]; [self showListSelecting:i]; }
+                break;
             }
         } else if (_mode != ModeList &&
                    CGRectContainsPoint((CGRect){ .size = self.size }, point)) {
@@ -1541,11 +1561,18 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         }
     }
     NSUInteger count = CampaignMissions().count;
+    if (a & InputActionBack) [[GameAudio shared] play:@"ui-back"];
+    else if (a & InputActionConfirm) {
+        BOOL locked = _mode == ModeList && _index >= ProgressUnlockedCount();
+        [[GameAudio shared] play:locked ? @"ui-alert" : @"ui-confirm"];
+    } else if (_mode == ModeList && (a & (InputActionUp | InputActionDown))) [[GameAudio shared] play:@"ui-hover"];
     switch (_mode) {
         case ModeList:
             if (a & InputActionBack) return BriefingCommandMainMenu;
-            if (a & InputActionUp) [self showListSelecting:(_index + count - 1) % count];
-            if (a & InputActionDown) [self showListSelecting:(_index + 1) % count];
+            if (a & InputActionLeft) [self showListSelecting:_index > 0 ? _index - 1 : count - 1];
+            if (a & InputActionRight) [self showListSelecting:(_index + 1) % count];
+            if (a & InputActionUp) [self showListSelecting:_index >= _missionColumns ? _index - _missionColumns : _index];
+            if (a & InputActionDown) [self showListSelecting:MIN(count - 1, _index + _missionColumns)];
             if ((a & InputActionConfirm) && _index < ProgressUnlockedCount()) [self showBriefing:_index];
             break;
         case ModeBriefing:

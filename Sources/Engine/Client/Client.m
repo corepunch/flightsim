@@ -5,6 +5,7 @@
 #include "SharedMath.h"
 #include "ShipMove.h"
 #import "Assets.h"
+#import "Cvar.h"
 
 #define MAX_SNAPSHOTS 32
 #define CMD_BACKUP 64           // user commands kept (redundant resends)
@@ -48,11 +49,14 @@ static const double kNetInterpDelay = TICK_DT * 3;
     NSUInteger _gunIndex;
     double _statsAt, _errorSum, _errorMax;
     NSUInteger _errorCount;
+    Cvar *_predict, *_netStats;
 }
 
 - (instancetype)initWithView:(ClientView *)view {
     if ((self = [super init])) {
         _view = view;
+        _predict = [Cvar get:@"cl_predict" defaultValue:@"1" flags:0 help:@"Predict the player's ship between snapshots"];
+        _netStats = [Cvar get:@"net_stats" defaultValue:@"0" flags:0 help:@"Log bandwidth and prediction error every 5 s"];
         _cs = [NSMutableArray array];
         for (int i = 0; i < MAX_CONFIGSTRINGS; i++) [_cs addObject:@""];
         _snapshots = [NSMutableArray array];
@@ -248,7 +252,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
     _clock += dt;
     if (_state < ClientConnected) return;
     double now = CACurrentMediaTime();
-    if (_state != ClientActive) {
+    if (_state != ClientActive || _inputSuspended) {
         // Keepalive: carries acks and our reliable commands.
         if (_channel.hasPendingReliable || now - _channel.lastSent > 0.25) {
             MsgWriter *w = [MsgWriter new];
@@ -301,9 +305,9 @@ static const double kNetInterpDelay = TICK_DT * 3;
 // Ramming capitals isn't predicted; the server's bounce shows up as a
 // (smoothed) correction.
 - (BOOL)predictFrom:(Snapshot *)s into:(ShipMoveState *)out {
-    // The autopilot flies on the server and ignores our commands.
-    static int disabled = -1;
-    if (disabled < 0) disabled = getenv("SF_AUTOPILOT") != NULL || getenv("SF_NOPREDICT") != NULL;
+    // The autopilot (a game cvar, visible here on a listen server) flies on
+    // the server and ignores our commands.
+    BOOL disabled = !_predict.boolValue || [Cvar valueOf:@"g_autopilot"] != 0;
     PlayerState ps = s.ps;
     if (disabled || !s || !ps.alive || !ps.entity || _sequence - ps.lastCommand >= CMD_BACKUP) return NO;
     ShipMoveState m = ps.move;
@@ -321,7 +325,8 @@ static const double kNetInterpDelay = TICK_DT * 3;
     ShipMoveState m;
     if (![self predictFrom:_snapshots.lastObject into:&m]) return;
     _fireClock += clampf(cmd->msec / 1000.0f, 0, 0.1f);
-    if (!(cmd->buttons & BUTTON_FIRE) || _fireClock - _lastShot <= 0.11) return;
+    if (!(cmd->buttons & BUTTON_FIRE) || _fireClock - _lastShot <= 0.11 ||
+        _snapshots.lastObject.ps.stats[STAT_LASER_ENERGY] < (int)(LASER_SHOT_ENERGY * 1000)) return;
     _lastShot = _fireClock;
     FighterSpec spec = FighterSpecFor(ShipClassExecutioner);
     simd_float3 gun = spec.guns[_gunIndex++ % spec.gunCount];
@@ -356,7 +361,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
         }
     }
     _predictionBase = newest;
-    if (getenv("SF_NET_STATS") && _clock - _statsAt >= 5) {   // debug: how far off prediction was
+    if (_netStats.boolValue && _clock - _statsAt >= 5) {   // how far off prediction was
         _statsAt = _clock;
         if (_errorCount) NSLog(@"Client: prediction corrections avg %.3f m, max %.3f m over %lu snapshots",
                                _errorSum / _errorCount, _errorMax, (unsigned long)_errorCount);

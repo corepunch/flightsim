@@ -39,7 +39,7 @@ static const NSTimeInterval UIMotionSlow = 0.55;
 
 // The system "reduce motion" setting: effects jump to their final state.
 BOOL UIMotionReduced(void);
-// SF_UI_SLOWMO=N (debug) plays all front-end motion N times slower.
+// The ui_timescale cvar plays all front-end motion that many times slower.
 double UIMotionTimeScale(void);
 
 SKAction *UIEased(SKAction *action, UICurve curve);
@@ -58,6 +58,11 @@ void UIMotionDecode(SKLabelNode *label, NSTimeInterval delay, NSTimeInterval dur
 // Wrapped text types on at charsPerSecond without reflowing (unrevealed
 // characters are laid out but clear). Returns when the last one lands.
 NSTimeInterval UIMotionTypeOn(SKLabelNode *label, NSTimeInterval delay, CGFloat charsPerSecond);
+// Dialogue adds a phosphor block caret and a brief carriage-return trail at
+// wrapped and explicit line breaks. Uses the same finish/skip controls.
+NSTimeInterval UIMotionDialogueTypeOn(SKLabelNode *label, NSTimeInterval delay, CGFloat charsPerSecond);
+// Adjust the block and return trail within a scene's paragraph baseline.
+void UIMotionOffsetDialogueCaret(SKLabelNode *label, CGFloat y);
 BOOL UIMotionIsTyping(SKLabelNode *label);
 void UIMotionFinishTyping(SKLabelNode *label);
 // Chromatic split and flicker. Intro resolves the label; a burst is a short

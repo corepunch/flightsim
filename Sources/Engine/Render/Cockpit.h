@@ -4,21 +4,21 @@
 
 #define COCKPIT_MAX_CONTACTS 24
 
-typedef struct {
+typedef struct CockpitContact {
     simd_float3 local;          // position in player ship space (-Z forward), metres
     simd_quatf orientation;     // relative to the player ship
-    float hull, shield;
+    float hull, shield, systems; // systems: surviving fitted subsystems; -1 when not fitted
     Team team;
     BOOL capital;               // a big ship or station (bigger scanner blip)
     BOOL shielded;              // capital with its shield generators up
     BOOL attacking;             // in an attack run on the player
     __unsafe_unretained SCNGeometry *geometry;   // for the target hologram
     float holoScale;            // metres of hologram per metre of ship
-    __unsafe_unretained NSString *name, *className;
+    __unsafe_unretained NSString *name, *className, *cargo, *component;
 } CockpitContact;
 
-typedef struct {
-    float throttle, speed, maxSpeed, boostEnergy, hull, shield;
+typedef struct CockpitFrame {
+    float throttle, speed, maxSpeed, boostEnergy, hull, shield, laserEnergy;
     float damageFlash;          // 0..1, decays after a hit
     BOOL boosting, firing, alive;
     float pitch, yaw, roll;     // stick deflection, -1..1

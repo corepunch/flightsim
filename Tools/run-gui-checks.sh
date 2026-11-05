@@ -14,13 +14,15 @@ cp Resources/Info.plist "$contents/Info.plist"
     -c 'Set CFBundleIdentifier com.igor.spacefight.portraitchecks' \
     -c 'Set CFBundleName Portrait Checks' \
     -c 'Add LSUIElement bool true' "$contents/Info.plist"
-cp -R Resources/Briefing Resources/Missions "$contents/Resources/"
+cp -R Resources/Briefing Resources/Fonts Resources/Missions "$contents/Resources/"
+ln -s "$PWD/Resources/Audio" "$contents/Resources/Audio"
 
 ui=Sources/Engine/UI
 clang -fobjc-arc -Wall -mmacosx-version-min=13.0 \
-    -ISources/Shared -ISources/Engine/App -I"$ui" \
-    Tools/GUI/PortraitChecks.m "$ui"/{Briefing,Progress,UIMotion}.m Sources/Shared/Assets.m \
-    -framework Cocoa -framework SpriteKit -framework ImageIO -framework CoreGraphics \
+    -ISources/Shared -ISources/Engine/App -ISources/Engine/Common -I"$ui" \
+    Tools/GUI/PortraitChecks.m "$ui"/{Briefing,Progress,UIMotion,MonitorSignal}.m Sources/Shared/Assets.m Sources/Engine/App/GameAudio.m \
+    Sources/Engine/Common/Cvar.m \
+    -framework Cocoa -framework SpriteKit -framework ImageIO -framework CoreGraphics -framework AVFoundation -framework QuartzCore \
     -o "$contents/MacOS/PortraitChecks"
 /usr/bin/codesign --force --sign - "$app"
 

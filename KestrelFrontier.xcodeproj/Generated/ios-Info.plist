@@ -9,7 +9,7 @@
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key>
-	<string>Space Fight</string>
+	<string>Kestrel Frontier</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -20,6 +20,12 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Kestrel Frontier can host and join multiplayer missions on your local network.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/Oxanium-Regular.ttf</string>
+		<string>Fonts/Oxanium-Medium.ttf</string>
+		<string>Fonts/Oxanium-Bold.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

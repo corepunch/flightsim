@@ -1,4 +1,5 @@
 #import "ClientView.h"
+#import "GameAudio.h"
 #import "ShipView.h"
 #import "CapitalView.h"
 #import "SpaceSky.h"
@@ -57,6 +58,9 @@ typedef struct {
     NSString *_status, *_objectiveSummary, *_lastInputText;
     uint16_t _playerEntity;
     BOOL _hadPlayer;
+    uint16_t _audioEntity;
+    int _audioTorpedoes, _audioTarget;
+    BOOL _audioHullLow;
 }
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
@@ -147,7 +151,6 @@ typedef struct {
     _cockpitModel.node.simdPosition = kCockpitEye;
     _cockpitModel.node.hidden = YES;
     [_playerView.node addChildNode:_cockpitModel.node];
-    _cockpit = getenv("SF_COCKPIT") != NULL;
 
     _fx = [[Effects alloc] initWithScene:_scene];
     for (int i = 0; i < MAX_BOLT_NODES; i++) {
@@ -339,6 +342,19 @@ typedef struct {
 
 - (void)handleEvent:(const GameEvent *)e player:(const PlayerState *)ps {
     simd_float3 me = ps->move.origin;
+    // Muzzle events contain ship-local positions, so only world-space events are spatialized.
+    simd_float3 offset = e->pos - me;
+    float distance = simd_length(offset);
+    float gain = distance < 5000 ? 1.0f / (1 + distance / 650.0f) : 0;
+    simd_float3 right = simd_act(ps->move.orientation, simd_make_float3(1, 0, 0));
+    float pan = distance > 1 ? simd_dot(offset / distance, right) * 0.8f : 0;
+    GameAudio *audio = [GameAudio shared];
+    if (e->type == EV_BOLT) {
+        BOOL own = e->entity && e->entity == ps->entity;
+        [audio play:own ? @"laser-player" : @"laser" gain:own ? 0.8f : gain * 0.22f pan:own ? 0 : pan];
+    } else if (e->type == EV_IMPACT) [audio play:@"impact" gain:gain * 0.5f pan:pan];
+    else if (e->type == EV_DAMAGE && e->entity && e->entity == ps->entity) [audio play:@"impact"];
+    else if (e->type == EV_EXPLOSION) [audio play:@"explosion" gain:gain pan:pan];
 #if TARGET_OS_IOS
     // The server confirms each shot once, even if its bolt was already drawn.
     if (e->type == EV_BOLT && e->entity && e->entity == ps->entity) [self weaponFired];
@@ -402,8 +418,11 @@ typedef struct {
 
 - (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c {
     switch (type) {
-        case SVC_RADIO: [_hud showMessage:a from:b]; break;
+        case SVC_RADIO:
+            [[GameAudio shared] play:b.length ? @"ui-panel" : @"ui-alert" gain:b.length ? 0.25f : 0.7f pan:0];
+            [_hud showMessage:a from:b]; break;
         case SVC_BANNER:
+            [[GameAudio shared] play:[b isEqualToString:@"red"] ? @"ui-alert" : @"ui-confirm"];
             [_hud showBanner:a color:[b isEqualToString:@"red"] ? [SKColor colorWithRed:1 green:0.4 blue:0.3 alpha:1] : nil];
             break;
         case SVC_OBJECTIVES: {
@@ -467,6 +486,16 @@ typedef struct {
 
     // Own ship.
     BOOL alive = ps->alive && ps->entity;
+    [[GameAudio shared] shipThrottle:ps->move.throttle boost:ps->move.boosting alive:alive];
+    if (_hadPlayer && _playerEntity == _audioEntity && alive) {
+        if (ps->stats[STAT_TORPEDOES] < _audioTorpedoes) [[GameAudio shared] play:@"torpedo"];
+        if (ps->stats[STAT_TARGET] && ps->stats[STAT_TARGET] != _audioTarget) [[GameAudio shared] play:@"ui-hover"];
+        if (ps->hull < 0.25f && !_audioHullLow) [[GameAudio shared] play:@"ui-alert"];
+    }
+    _audioEntity = ps->entity;
+    _audioTorpedoes = ps->stats[STAT_TORPEDOES];
+    _audioTarget = ps->stats[STAT_TARGET];
+    _audioHullLow = ps->hull < 0.25f;
     if (alive != !_playerView.node.hidden || !_hadPlayer) [_playerView setAlive:alive];
     _hadPlayer = YES;
     _playerView.node.simdPosition = ps->move.origin;
@@ -480,7 +509,7 @@ typedef struct {
     [_sunLight simdLookAt:ps->move.origin];
     [_sky updateDust:_dust cameraPosition:_cameraNode.simdPosition velocity:ps->move.velocity];
     _damageFlash = fmaxf(0, _damageFlash - dt * 2.5f);
-    [self updateHUD:ps controls:controls];
+    [self updateHUD:ps controls:controls dt:dt];
 }
 
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time {
@@ -524,7 +553,7 @@ typedef struct {
     _boostFx += ((ps->move.boosting ? 1.0f : 0.0f) - _boostFx) * (1.0f - expf(-4.0f * dt));
     float boostFx = _boostFx;
     simd_float3 offset = _cockpit ? kCockpitEye
-                                  : simd_make_float3(0, 3.4f, 17.0f + speed * 0.012f + boostFx * 3.0f);
+                                  : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
     simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : _camOrientation, simd_act(look, offset));
     if (_cockpit) pos = ps->move.origin + simd_act(shipQ, offset);
 
@@ -612,7 +641,7 @@ typedef struct {
     return YES;
 }
 
-- (void)updateHUD:(const PlayerState *)ps controls:(ControlState)c {
+- (void)updateHUD:(const PlayerState *)ps controls:(ControlState)c dt:(float)dt {
     simd_float3 me = ps->move.origin, fwd = QuatForward(ps->move.orientation);
     uint16_t selected = (uint16_t)ps->stats[STAT_TARGET];
     EntityView *target = [self viewFor:selected];
@@ -634,6 +663,7 @@ typedef struct {
     f.damageFlash = _damageFlash;
     f.cockpit = _cockpit;
     f.torpedoes = ps->stats[STAT_TORPEDOES];
+    f.torpedoCapacity = [CampaignMission((NSUInteger)[self cs:CS_MISSION].integerValue)[@"loadout"][@"torpedoes"] intValue];
     f.status = _status;
     int aim = ps->stats[STAT_AIM_PART] - 1;
     if (target.capital && aim >= 0 && aim < target.capital.info.info->numParts) {
@@ -642,23 +672,26 @@ typedef struct {
         f.aimVisible = [self project:p into:&f.aim];
     }
 
+    f.deltaTime = dt;
     simd_float3 camPos = _cameraNode.simdPosition;
     simd_float3 sunPoint = camPos + _sky.sunDirection * 20000.0f;
     CGPoint sp;
     if ([self project:sunPoint into:&sp]) {
-        float edge = fminf(fminf(sp.x, size.width - sp.x), fminf(sp.y, size.height - sp.y));
-        float vis = clampf(edge / 100.0f, 0, 1);
+        float vis = CGRectContainsPoint((CGRect){ .size = size }, sp) ? 1 : 0;
         if (vis > 0) {
             NSArray *hits = [_scene.rootNode hitTestWithSegmentFromPoint:SCNVector3Make(camPos.x, camPos.y, camPos.z)
                                                                  toPoint:SCNVector3Make(camPos.x + _sky.sunDirection.x * 5000,
                                                                                         camPos.y + _sky.sunDirection.y * 5000,
                                                                                         camPos.z + _sky.sunDirection.z * 5000)
-                                                                 options:@{ SCNHitTestOptionFirstFoundOnly : @YES,
+                                                                 options:@{ SCNHitTestOptionSearchMode : @(SCNHitTestSearchModeAll),
                                                                             SCNHitTestBackFaceCullingKey : @YES,
                                                                             SCNHitTestIgnoreHiddenNodesKey : @YES }];
             for (SCNHitTestResult *h in hits) {
-                if (!h.node.geometry || h.node.particleSystems || h.node == _dust) continue;
-                if (_cockpit && [h.node.parentNode isEqual:_cockpitModel.node]) continue;
+                // Ignore additive effects and transparent canopy glass, but
+                // keep searching: a hull behind them can still block the sun.
+                SCNMaterial *material = h.node.geometry.firstMaterial;
+                if (!material || h.node.particleSystems || h.node == _dust ||
+                    material.blendMode != SCNBlendModeReplace || material.transparency < 0.95) continue;
                 vis = 0;
                 break;
             }
@@ -708,15 +741,15 @@ typedef struct {
         targets[n++] = t;
     }
     [_hud updateFrame:f targets:targets count:n];
-    if (_cockpit) [self updateCockpit:ps controls:c];
+    [self updateCockpit:ps controls:c];
 
 #if TARGET_OS_IOS
     NSString *controller = _input.joystickName;
     NSString *inputText = controller ? [NSString stringWithFormat:@"CONTROLLER: %@", controller] : @"";
 #else
-    NSString *inputText = [NSString stringWithFormat:@"%@%@  |  %@  |  T target  G torpedo  H help  ESC menu",
+    NSString *inputText = [NSString stringWithFormat:@"%@%@  |  %@  |  T target  G torpedo  H help  ESC pause",
                            _input.joystickName ? [NSString stringWithFormat:@"Joystick: %@ (%@)", _input.joystickName, _input.axisDescription] : @"No joystick",
-                           _input.throttleFromJoystick ? @" [throttle: stick]" : @" [throttle: keys]",
+                           _input.throttleFromJoystick ? @" [throttle: stick]" : @" [throttle: wheel/keys]",
                            _input.mouseCaptured ? @"mouse captured (ESC releases)" : @"click to capture mouse"];
 #endif
     if (![inputText isEqualToString:_lastInputText]) {
@@ -751,6 +784,7 @@ typedef struct {
     f.nearest = FLT_MAX;
     f.torpedoes = ps->stats[STAT_TORPEDOES];
     f.objective = _objectiveSummary;
+    f.laserEnergy = ps->stats[STAT_LASER_ENERGY] / 1000.0f;
 
     simd_quatf inv = simd_inverse(ps->move.orientation);
     CockpitContact contacts[COCKPIT_MAX_CONTACTS];
@@ -758,7 +792,8 @@ typedef struct {
     NSMutableArray<EntityView *> *bodies = [NSMutableArray array];
     for (EntityView *v in _views.allValues) {
         EntityState s = v.state;
-        if (v.kind == EntityFighter) [bodies addObject:v];
+        if (s.number == ps->entity) continue;
+        if (v.kind == EntityFighter && !(s.flags & EF_DEAD)) [bodies addObject:v];
         else if (v.kind == EntityCapital && !(s.flags & EF_DEAD) && [self visible:&s player:ps]) [bodies addObject:v];
     }
     // Nearest first, so the scanner keeps what matters when it overflows.
@@ -781,6 +816,9 @@ typedef struct {
         k.orientation = simd_mul(inv, s.orientation);
         k.hull = s.hull;
         k.shield = s.shield;
+        k.systems = -1;
+        k.component = @"FUSELAGE";
+        k.cargo = fighter ? @"NONE" : (s.flags & EF_SCANNED) ? ([self stringAt:s.cargo].length ? [self stringAt:s.cargo] : @"NO MANIFEST") : @"UNKNOWN";
         if (fighter) {
             k.geometry = [ShipView geometryForClass:v.ship.shipClass];
             k.holoScale = 0.0075f;
@@ -798,6 +836,17 @@ typedef struct {
             k.name = [self stringAt:s.name];
             k.className = [self stringAt:s.className];
             k.shielded = (s.flags & EF_SHIELDED) != 0;
+            const GameModelInfo *info = v.capital.info.info;
+            if (info && info->numParts > 0) {
+                int alive = 0;
+                for (int part = 0; part < info->numParts; part++) if (!(s.deadParts & (1ULL << part))) alive++;
+                k.systems = (float)alive / info->numParts;
+                int aim = ps->stats[STAT_AIM_PART] - 1;
+                if (s.number == selected && aim >= 0 && aim < info->numParts) {
+                    NSArray *names = @[@"TURRET", @"ENGINE", @"SHIELD GENERATOR", @"REACTOR"];
+                    k.component = names[MIN(info->parts[aim].kind, 3)];
+                }
+            }
             if (s.team == TeamEnemy && ((s.flags & EF_MINE) || !prop)) f.nearest = fminf(f.nearest, dist - radius);
         }
         if (s.number == selected) {
@@ -812,7 +861,8 @@ typedef struct {
         }
         contacts[n++] = k;
     }
-    [_cockpitModel updateFrame:f contacts:contacts count:n];
+    if (_cockpit) [_cockpitModel updateFrame:f contacts:contacts count:n];
+    [_hud updateInstruments:f contacts:contacts count:n cockpit:_cockpit];
 }
 
 @end

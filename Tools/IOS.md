@@ -1,9 +1,14 @@
-# iPhone and iPad build
+# Xcode builds: iOS and macOS
 
-Open `SpaceFight.xcodeproj` and choose the shared `SpaceFight-iOS` scheme.
-Select an iPhone or iPad simulator to build and run. For a physical device,
+Open `KestrelFrontier.xcodeproj`. Choose the shared `KestrelFrontier-iOS`
+scheme for iPhone and iPad, or `KestrelFrontier-macOS` for a native Mac build.
+Both schemes support Debug, Release, and Archive. The Mac target builds and
+embeds its separate `game.dylib` module automatically.
+
+For iOS, select an iPhone or iPad simulator to build and run. For a physical device,
 choose your development team under Signing & Capabilities. Xcode compiles
-the game directly and bakes its SceneKit models in DerivedData.
+the game directly and bakes its SceneKit models in DerivedData. Xcode-built
+apps are named `KestrelFrontier.app` and display as **Kestrel Frontier**.
 
 Regenerate after adding or removing source files:
 
@@ -17,6 +22,17 @@ the shared scheme and existing signing settings. Pass `--team` or
 `--bundle-id` to set those explicitly.
 
 ## Command line
+
+Build either shared Xcode scheme without device signing:
+
+```sh
+xcodebuild -project KestrelFrontier.xcodeproj -scheme KestrelFrontier-macOS \
+    -configuration Debug -destination 'platform=macOS' build
+xcodebuild -project KestrelFrontier.xcodeproj -scheme KestrelFrontier-iOS \
+    -configuration Debug -destination 'generic/platform=iOS Simulator' build
+```
+
+The existing `build.sh` and Make targets below retain their legacy output paths.
 
 On a Mac with Xcode and an installed iOS Simulator runtime:
 
@@ -64,6 +80,12 @@ stick to roll, bumpers for throttle, right trigger for guns, left trigger for
 boost, Y for targeting, B for torpedoes, and X for the camera. Use the D-pad and
 A in menus. Disconnecting restores touch input at the current throttle.
 
-To verify the touch layout in Simulator even when it passes through a Mac
-controller, launch with `SIMCTL_CHILD_SF_TOUCH_ONLY=1`. For a quick flight
-check, also pass `SIMCTL_CHILD_SF_MISSION=1 SIMCTL_CHILD_SF_NO_UDP=1`.
+Console commands and cvars (see `CONSOLE.md`) go after the bundle id as
+launch arguments, or in the scheme's arguments in Xcode. To verify the touch
+layout in Simulator even when it passes through a Mac controller:
+
+```sh
+xcrun simctl launch booted com.igor.spacefight +set in_touchOnly 1
+```
+
+For a quick flight check, add `+set net_port 0 +map 1`.

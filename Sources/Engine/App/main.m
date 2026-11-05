@@ -9,23 +9,40 @@
 #import "UDPTransport.h"
 #import "NetProtocol.h"
 #import "Assets.h"
+#import "Cvar.h"
+#import "Cmd.h"
 #import <QuartzCore/QuartzCore.h>
 
 // Headless server: SpaceFight --dedicated [mission]. Flies the campaign from
 // that mission on, moving to the next one ten seconds after each debrief.
+// +map <n> on the command line (or from a cfg) changes the mission.
 static int RunDedicated(int mission) {
     Server *server = [[Server alloc] initWithName:[NSString stringWithFormat:@"%@ (dedicated)", NSHost.currentHost.localizedName ?: @"Server"]];
-    UDPTransport *udp = [[UDPTransport alloc] initWithPort:PORT_SERVER attempts:4];
+    int port = [Cvar get:@"net_port" defaultValue:[NSString stringWithFormat:@"%d", PORT_SERVER] flags:CVAR_NOSET
+                    help:@"UDP port the server listens on"].integer;
+    UDPTransport *udp = [[UDPTransport alloc] initWithPort:port > 0 ? port : PORT_SERVER attempts:4];
     if (!server || !udp) return 1;
     [server addTransport:udp];
     NSUInteger count = CampaignMissions().count;
-    int index = MAX(0, MIN(mission, (int)count - 1));
+    __block int index = MAX(0, MIN(mission, (int)count - 1));
+    __block double endedAt = 0;
+    [Cmd add:@"map" help:@"map <mission number>: runs that mission" handler:^(NSArray<NSString *> *a) {
+        int n = a.count > 1 ? a[1].intValue : 0;
+        if (n < 1 || (NSUInteger)n > count) { NSLog(@"usage: map <1..%lu>", (unsigned long)count); return; }
+        index = n - 1;
+        endedAt = 0;
+        NSLog(@"Dedicated: mission %d", index + 1);
+        [server spawnMission:index];
+    }];
+    [Cmd add:@"quit" help:@"Exits" handler:^(NSArray<NSString *> *a) { exit(0); }];
     NSLog(@"Dedicated: mission %d, UDP port %d", index + 1, udp.port);
     [server spawnMission:index];
-    double last = CACurrentMediaTime(), endedAt = 0;
+    [Cmd executeLateCommands];
+    double last = CACurrentMediaTime();
     for (;;) {
         @autoreleasepool {
             double now = CACurrentMediaTime();
+            [Cmd executeBuffer];
             [server frame:now - last];
             last = now;
             if (server.missionEnded && !endedAt) endedAt = now;
@@ -81,22 +98,6 @@ static int RunDedicated(int mission) {
     [self.window makeKeyAndOrderFront:nil];
     [self.window makeFirstResponder:view];
     [NSApp activateIgnoringOtherApps:YES];
-
-    // Debug: SF_SNAPSHOT=/path/prefix saves a few frames and quits.
-    const char *snap = getenv("SF_SNAPSHOT");
-    if (snap) {
-        NSString *prefix = @(snap);
-        for (int i = 1; i <= 3; i++) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((getenv("SF_SNAPGAP") ? atof(getenv("SF_SNAPGAP")) : 2.5) * i * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                NSImage *img = [view snapshot];
-                CGImageRef cg = [img CGImageForProposedRect:NULL context:nil hints:nil];
-                NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithCGImage:cg];
-                NSData *png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
-                [png writeToFile:[NSString stringWithFormat:@"%@%d.png", prefix, i] atomically:YES];
-                if (i == 3) [NSApp terminate:nil];
-            });
-        }
-    }
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app { return YES; }
@@ -105,13 +106,16 @@ static int RunDedicated(int mission) {
 
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
+        // Console: SpaceFight +set <cvar> <value> ... +map 3 / +connect host / +exec file.cfg.
+        // Sets apply now, before any module registers its cvars; the rest
+        // once the game has booted.
+        [Cmd setArguments:NSProcessInfo.processInfo.arguments];
+        [Cmd executeEarlyCommands];
         // Offline effect preview: SpaceFight --record-fx <effect> <out.mp4> [seconds]
         if (argc >= 4 && !strcmp(argv[1], "--record-fx"))
             return [FXRecorder recordEffect:@(argv[2]) toFile:@(argv[3]) seconds:argc >= 5 ? atof(argv[4]) : 3.0];
         if (argc >= 2 && !strcmp(argv[1], "--dedicated"))
-            return RunDedicated(argc >= 3 ? atoi(argv[2]) - 1 : 0);
-        // SpaceFight --connect <host[:port]>: join that server after boot.
-        if (argc >= 3 && !strcmp(argv[1], "--connect")) setenv("SF_CONNECT", argv[2], 1);
+            return RunDedicated(argc >= 3 && argv[2][0] != '+' ? atoi(argv[2]) - 1 : 0);
 
         // AppKit can abort during startup if the launcher cannot reach WindowServer.
         CFDictionaryRef session = CGSessionCopyCurrentDictionary();

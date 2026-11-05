@@ -212,7 +212,8 @@ def screen(name, w, h, at, cx, cy):
                     (cx + sx * (w / 2 + 0.0165), cy - h * 0.3 + i * h * 0.2, 0.012), bevel=0.0015, segments=1)
     quad(name, w, h, screen_mat(name), at, (cx, cy, 0.0105))
 
-screen("Radar", 0.15, 0.15, PANEL, 0, 0.112)
+# The central CMD keeps the historic Radar material key for runtime lookup.
+screen("Radar", 0.24, 0.158, PANEL, 0, 0.112)
 screen("Left", 0.19, 0.15, WING_L, -0.125, 0.104)
 screen("Right", 0.19, 0.15, WING_R, 0.125, 0.104)
 

@@ -1,4 +1,5 @@
 #import "ServerBrowser.h"
+#import "GameAudio.h"
 #import "Assets.h"
 #import "UIStyle.h"
 #import "UIMotion.h"
@@ -7,7 +8,7 @@ static SKColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static SKColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }
 
 static SKLabelNode *Text(CGFloat size, SKColor *c) {
-    return UIMonoLabel(size, c, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
+    return UIInterfaceLabel(size, c, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
 }
 
 @interface ServerBrowser () <UIMotionScene>
@@ -125,7 +126,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     NSArray *lines = @[
         _status ?: @"",
         _hostLine ?: @"",
-        s.width >= 850 ? @"Direct IP: SpaceFight --connect <host[:port]>   /   Dedicated: SpaceFight --dedicated [mission]" : @"↑ / ↓  Select   •   Return  Join   •   Esc  Back",
+        s.width >= 850 ? @"Direct IP: SpaceFight +connect <host[:port]>   /   Dedicated: SpaceFight --dedicated [mission]" : @"↑ / ↓  Select   •   Return  Join   •   Esc  Back",
     ];
     for (NSUInteger i = 0; i < lines.count; i++) {
         SKLabelNode *l = Text(i == 0 ? 14 : 12, i == 0 ? Amber(1) : Ink(0.55));
@@ -206,9 +207,11 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     else if (CGRectContainsPoint(_joinRect, click)) actions |= InputActionConfirm;
     else if (CGRectContainsPoint(_serverRows, click)) {
         NSUInteger row = _firstVisible + (NSUInteger)((CGRectGetMaxY(_serverRows) - click.y) / 36);
-        if (row < _servers.count) { _index = row; [self rebuild]; }
+        if (row < _servers.count) { _index = row; [[GameAudio shared] play:@"ui-hover"]; [self rebuild]; }
     }
-    if (actions & InputActionBack) return BrowserCommandBack;
+    if (actions & InputActionBack) { [[GameAudio shared] play:@"ui-back"]; return BrowserCommandBack; }
+    if (actions & (InputActionUp | InputActionDown)) [[GameAudio shared] play:@"ui-hover"];
+    if (actions & InputActionConfirm) [[GameAudio shared] play:_servers.count ? @"ui-confirm" : @"ui-alert"];
     if (_servers.count) {
         if (actions & InputActionUp) { _index = (_index + _servers.count - 1) % _servers.count; [self rebuild]; }
         if (actions & InputActionDown) { _index = (_index + 1) % _servers.count; [self rebuild]; }

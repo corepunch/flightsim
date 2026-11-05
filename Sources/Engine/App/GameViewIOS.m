@@ -73,6 +73,7 @@
     SKScene *overlay = self.overlaySKScene;
     if ([overlay isKindOfClass:MainMenu.class]) ((MainMenu *)overlay).contentInsets = self.safeAreaInsets;
     if ([overlay isKindOfClass:HUD.class]) ((HUD *)overlay).contentInsets = self.safeAreaInsets;
+    if ([overlay isKindOfClass:Briefing.class]) ((Briefing *)overlay).contentInsets = self.safeAreaInsets;
 }
 
 - (void)safeAreaInsetsDidChange {
