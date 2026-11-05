@@ -65,6 +65,7 @@
     },
     {
       "id": "raiders2",
+      "skill": "veteran",
       "ship": "wasp",
       "count": 3,
       "team": "enemy",

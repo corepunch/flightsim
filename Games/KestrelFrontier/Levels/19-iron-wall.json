@@ -24,6 +24,15 @@
       "speed": 15
     },
     {
+      "id": "gorran",
+      "asset": "Destroyer",
+      "team": "friend",
+      "name": "Captured Destroyer Gorran",
+      "pos": [900, 0, 500],
+      "facing": [-0.3, 0, -1],
+      "hullFraction": 0.7
+    },
+    {
       "id": "cruiser",
       "asset": "Cruiser",
       "team": "enemy",
@@ -46,6 +55,19 @@
       "name": "Lancer"
     },
     {
+      "id": "strix",
+      "ship": "wasp",
+      "count": 2,
+      "team": "enemy",
+      "name": "Strix",
+      "callsigns": ["Strix 1", "Strix 2"],
+      "pos": [600, 500, -3400],
+      "order": "attack-fighters",
+      "skill": "ace",
+      "formation": "line-abreast",
+      "arrival": { "when": { "attacked": "cruiser" }, "delay": 15 }
+    },
+    {
       "id": "screen",
       "ship": "wasp",
       "count": 5,
@@ -53,6 +75,7 @@
       "pos": [0, 300, -3300],
       "spread": 200,
       "order": "attack",
+      "skill": "veteran",
       "hold": true
     },
     {
@@ -73,7 +96,8 @@
       "pos": [1600, 300, -2200],
       "spread": 120,
       "order": "strike:bastion",
-      "hold": true
+      "formation": "vic",
+      "arrival": { "when": { "any": [ { "objective": "shields" }, { "time": 150 } ] }, "delay": 5 }
     }
   ],
   "objectives": [
@@ -96,13 +120,24 @@
   "events": [
     { "when": {"time": 5}, "do": [{"spawn": "screen"}] },
     { "when": {"time": 40}, "do": [{"spawn": "talons"}] },
-    { "when": {"time": 110}, "do": [{"spawn": "talons2"}] },
     {
       "when": { "time": 3 },
       "do": [
         {
           "radio": { "from": "Commander Varn", "text": "Go for the two shield generators on top of the Iron Vow." }
         }
+      ]
+    },
+    {
+      "when": { "spawned": "strix" },
+      "do": [
+        { "radio": {"from": "Bastion Control", "text": "Two fast movers off the cruiser's bow. It's the Strix pair from the Veil, and they're hunting Lancer flight."} }
+      ]
+    },
+    {
+      "when": { "spawned": "talons2" },
+      "do": [
+        { "radio": {"from": "Captured Destroyer Gorran", "text": "Gorran here. Bombers on the starboard side. Our guns will take any that come near us."} }
       ]
     },
     {

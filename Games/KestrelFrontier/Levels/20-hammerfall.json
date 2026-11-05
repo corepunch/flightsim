@@ -69,6 +69,19 @@
       "callsigns": ["Lancer 3", "Lancer 4", "Lancer 6"]
     },
     {
+      "id": "strix",
+      "ship": "wasp",
+      "count": 4,
+      "team": "enemy",
+      "name": "Strix",
+      "callsigns": ["Strix 1", "Strix 2", "Strix 3", "Strix 4"],
+      "pos": [0, 600, -4400],
+      "order": "escort:dread",
+      "skill": "ace",
+      "formation": "finger-four",
+      "arrival": { "when": { "attacked": "dread" }, "delay": 10 }
+    },
+    {
       "id": "screen",
       "ship": "wasp",
       "count": 6,
@@ -106,6 +119,8 @@
       "pos": [1800, -300, -2600],
       "spread": 150,
       "order": "strike:bastion",
+      "skill": "veteran",
+      "formation": "vic",
       "hold": true
     }
   ],
@@ -154,6 +169,12 @@
             "text": "I have its charging signal. Kesh and I will talk you through the run."
           }
         }
+      ]
+    },
+    {
+      "when": { "spawned": "strix" },
+      "do": [
+        { "radio": {"from": "Lancer 4", "text": "Strix flight, all four of them, off the Hammer's bow. Korr's honour guard. Keep them off Lead!"} }
       ]
     },
     {

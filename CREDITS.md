@@ -11,7 +11,7 @@ given here gladly.
 - Downloaded from OpenGameArt: https://opengameart.org/content/lowpoly-spaceships-pack
 - License: CC0 1.0
 - Used: `Executioner.obj` (player), `Spitfire.obj` (Skarn Wasp),
-  `Insurgent.obj` (Skarn Talon)
+  `Insurgent.obj` (Skarn Talon and the Concord marine lighter)
 - Support the author: https://www.patreon.com/quaternius
 
 **Colour-variant textures and exhaust placement reference** from the Godot port
@@ -19,7 +19,8 @@ of the same pack by **Malcolm Nixon**
 - https://github.com/Malcolmnixon/Quaternius-Ultimate-Spaceships-Pack
 - License: CC0 1.0
 - Used: `Executioner_Blue.png`, `Spitfire_Red.png`, `Insurgent_Red.png`; nozzle
-  positions cross-checked against its exhaust node transforms
+  positions cross-checked against its exhaust node transforms. `Insurgent_Blue.png`
+  is `Insurgent_Red.png` with its hue turned to blue and its saturation reduced
 
 ## Capital ship kitbash parts
 

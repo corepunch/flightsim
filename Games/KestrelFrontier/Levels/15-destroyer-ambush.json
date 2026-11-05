@@ -20,7 +20,7 @@
       "name": "Skarn Destroyer Gorran",
       "pos": [1800, 200, -2200],
       "facing": [-0.6, 0, 1],
-      "path": [[700, 0, 400]],
+      "path": [[1100, 100, -600]],
       "speed": 22,
       "hold": true
     }
@@ -33,8 +33,22 @@
       "team": "friend",
       "pos": [60, 30, 300],
       "spread": 60,
-      "order": "attack",
+      "order": "attack-fighters",
       "name": "Lancer"
+    },
+    {
+      "id": "marines",
+      "ship": "lighter",
+      "count": 2,
+      "team": "friend",
+      "name": "Marine Lighter",
+      "pos": [0, -40, 1100],
+      "order": "board:destroyer",
+      "mothership": "bastion",
+      "formation": "line-abreast",
+      "dockSeconds": 10,
+      "reinforcements": { "count": 1, "delay": 15 },
+      "arrival": { "when": { "disabled": "destroyer" }, "delay": 4 }
     },
     {
       "id": "talons",
@@ -48,6 +62,7 @@
     },
     {
       "id": "wasps",
+      "skill": "veteran",
       "ship": "wasp",
       "count": 4,
       "team": "enemy",
@@ -77,11 +92,26 @@
       "text": "Hit Gorran's 3 stern engines"
     },
     {
-      "id": "kill",
-      "type": "destroy",
+      "id": "capture",
+      "type": "capture",
       "targets": ["destroyer"],
       "after": ["engines"],
-      "text": "Destroy the Skarn destroyer"
+      "text": "Cover the marines boarding Gorran"
+    },
+    {
+      "id": "marines",
+      "type": "protect",
+      "targets": ["marines"],
+      "percent": 1,
+      "text": "Keep one marine lighter flying"
+    },
+    {
+      "id": "turrets",
+      "type": "disable",
+      "targets": ["destroyer"],
+      "kind": "Turret",
+      "optional": true,
+      "text": "Silence Gorran's turrets for the lighters"
     }
   ],
   "events": [
@@ -109,7 +139,26 @@
     {
       "when": { "objective": "engines" },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "It is dead in space. Finish it."} }
+        { "radio": {"from": "Commander Varn", "text": "She's dead in space. Hold your fire on the hull. Marines are launching."} }
+      ]
+    },
+    {
+      "when": { "spawned": "marines" },
+      "do": [
+        { "radio": {"from": "Marine Lighter", "text": "Lighters away. Keep those turrets busy, Lancer. We need ten seconds alongside."} }
+      ]
+    },
+    {
+      "when": { "objective": "capture" },
+      "do": [
+        { "radio": {"from": "Commander Varn", "text": "Gorran is ours. Get her log off the bridge before someone wipes it."} }
+      ]
+    },
+    {
+      "when": { "all": [ { "destroyed": "destroyer" }, { "not": { "objective": "capture" } } ] },
+      "do": [
+        { "radio": {"from": "Commander Varn", "text": "She's breaking up. Her log went with her."} },
+        { "end": "failure" }
       ]
     }
   ]

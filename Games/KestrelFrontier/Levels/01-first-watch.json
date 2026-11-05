@@ -35,6 +35,7 @@
     },
     {
       "id": "scouts",
+      "skill": "rookie",
       "ship": "wasp",
       "count": 3,
       "team": "enemy",

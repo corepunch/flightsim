@@ -11,7 +11,7 @@
       "id": "ghost",
       "asset": "Prototype",
       "team": "enemy",
-      "name": "Skarn Prototype",
+      "name": "Skarn Courier",
       "pos": [1200, 100, -3000],
       "facing": [-1, 0, 0],
       "path": [[0, 200, -4200], [-1200, 0, -3000], [0, -150, -1900], [1200, 100, -3000]],
@@ -57,7 +57,7 @@
     }
   ],
   "objectives": [
-    { "id": "ghost", "type": "destroy", "targets": ["ghost"], "text": "Destroy the stealth prototype" },
+    { "id": "ghost", "type": "destroy", "targets": ["ghost"], "text": "Destroy the stealth courier" },
     {
       "id": "buoys",
       "type": "reach",
@@ -72,14 +72,14 @@
       "when": { "time": 3 },
       "do": [
         {
-          "radio": { "from": "Okafor", "text": "Sweep the buoys. The prototype only shows up inside 700 metres." }
+          "radio": { "from": "Okafor", "text": "Sweep the buoys. The courier only shows up inside 700 metres." }
         }
       ]
     },
     {
       "when": { "time": 300 },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Three minutes, Lancer. Once the prototype has relayed our patrol routes it will jump out."} }
+        { "radio": {"from": "Okafor", "text": "Three minutes, Lancer. Then the courier jumps out to the Hammer."} }
       ]
     },
     {
@@ -91,7 +91,7 @@
     {
       "when": { "objective": "ghost" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Got it. They are blind again."} }
+        { "radio": {"from": "Okafor", "text": "Got it. Korr has lost her remote trigger."} }
       ]
     }
   ]

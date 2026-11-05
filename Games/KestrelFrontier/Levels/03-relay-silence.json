@@ -17,6 +17,7 @@
   "waves": [
     {
       "id": "b1",
+      "skill": "rookie",
       "ship": "talon",
       "count": 2,
       "team": "enemy",
@@ -27,6 +28,7 @@
     },
     {
       "id": "c1",
+      "skill": "rookie",
       "ship": "wasp",
       "count": 2,
       "team": "enemy",

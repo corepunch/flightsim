@@ -733,7 +733,8 @@
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
         "officer": "Varn",
         "text": [
-          "The Bastion has to move. Unfortunately, a Skarn minelayer has been sowing our exit corridor.",
+          "Whoever leaked the convoy schedule knows where the Bastion sits, so she moves tonight. The new anchorage goes to three offices and nobody else. If the Skarn turn up there, the list of suspects is short.",
+          "First the corridor: a Skarn minelayer has been sowing our way out.",
           "Mines are proximity-fused. Shoot them from a distance and never fly through the field.",
           "The minelayer is still working at the far end. Kill it before it lays any more, then clear every mine."
         ],
@@ -755,6 +756,11 @@
             "speaker": "Lt. Cmdr Daro Okafor",
             "portrait": "Okafor",
             "text": "Every mine location matched a leaked Concord chart. I have narrowed the leak to the Directorate."
+          },
+          {
+            "speaker": "Commander Ilse Varn",
+            "portrait": "Varn",
+            "text": "Then the Directorate is one of the three offices holding our new coordinates. Fleet Command and Tannhal Control have the others. We'll see who the Skarn listen to."
           }
         ]
       }
@@ -811,9 +817,9 @@
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
         "officer": "Varn",
         "text": [
-          "The frigate Kestrel is in trouble. She caught a Skarn raid on the way back from Halden and her engines are damaged.",
-          "Two corvettes are working her over and she will not last long. Get there, get the corvettes off her, and keep the fighters away.",
-          "Lancer 2 and 3 are with you."
+          "The frigate Kestrel is in trouble. A Directorate order sent her to clear an evacuation lane at Varga's Reach, and two Skarn corvettes were waiting at the far end. Her engines are gone.",
+          "The corvettes are working her over and she will not last long. Get there, get them off her, and keep the fighters away.",
+          "Lancer 2 and 3 are with you. Captain Sol still has the order that sent her there. Bring her home and we'll have it."
         ],
         "steps": [
           { "caption": "CNS Kestrel, already damaged and drifting.", "show": ["kestrel"], "focus": "kestrel" },
@@ -1191,7 +1197,7 @@
             {
               "speaker": "Chief Engineer Mae Orin",
               "portrait": "Orin",
-              "text": "The destroyer has our new anchorage. We only sent those coordinates to three people. Director Hale, care to explain how they got them?"
+              "text": "The destroyer has our new anchorage. Those coordinates went to three offices, and yours is one of them. Director Hale, care to explain how the Skarn got them?"
             },
             {
               "portrait": "Hale",
@@ -1204,14 +1210,14 @@
               "speaker": "Commander Ilse Varn",
               "portrait": "Varn",
               "expression": "angry",
-              "text": "You gave her a fleet and a working weapon. Clear this channel. Lancer, stop that destroyer before it closes on us."
+              "text": "You gave her a fleet and a working weapon. Clear this channel. Lancer, stop that destroyer. I want her whole: her log will tell us what else Korr was given."
             },
             {
               "speaker": "Lancer 1",
               "portrait": "Lancer1",
               "listener": "Varn",
               "listenerExpression": "angry",
-              "text": "I'll hit the engines first. If I can slow her down, you'll have room to move Bastion clear."
+              "text": "I'll take her engines and leave the hull to your marines. Hold the lighters until she's dead in space."
             }
           ]
         },
@@ -1219,8 +1225,8 @@
         "officer": "Varn",
         "text": [
           "Expect company. Our scopes show a Skarn destroyer preparing to jump into our anchorage.",
-          "A destroyer can trade broadsides with the Bastion, and its bombers will try to finish us. We need its engines dead first, so it cannot close.",
-          "Knock out the three engine pods at the stern, then kill the ship."
+          "A destroyer can trade broadsides with the Bastion, and its bombers will try to finish us. Knock out the three engine pods at the stern so she cannot close.",
+          "Once she is dead in space, two marine lighters launch from the Bastion to board her. Keep the turrets and fighters off them for the ten seconds they need alongside. Do not destroy the hull: her log is worth more to us than the kill."
         ],
         "steps": [
           { "caption": "The Bastion, holding position.", "show": ["bastion"], "focus": "bastion" },
@@ -1237,6 +1243,11 @@
             "schematic": "Engine"
           },
           {
+            "caption": "Then *marine lighters* launch from the Bastion and board her. Cover them, and leave the hull intact.",
+            "show": ["marines", "destroyer", "bastion"],
+            "route": ["bastion", "destroyer"]
+          },
+          {
             "caption": "Talon bombers will launch at the Bastion. Do not ignore them.",
             "show": ["talons", "bastion"],
             "focus": "bastion"
@@ -1244,19 +1255,21 @@
         ],
         "intel": [
           "Target: Skarn destroyer (6 turrets, 3 engine pods)",
-          "Defend: CNS Bastion",
+          "Capture: Gorran, by marine boarding once her engines are dead",
+          "Do not destroy: Gorran's hull",
+          "Defend: CNS Bastion, marine lighters",
           "Hostile: Talon bombers, Wasps",
           "Wingmen: Lancer 2, Lancer 3"
         ]
       },
       "debrief": {
-        "win": "The destroyer Gorran is gone. The Bastion took hits, but she is still the Bastion.",
-        "lose": "The Bastion is badly damaged. The fleet has lost its carrier.",
+        "win": "The destroyer Gorran flies Concord colours now. The Bastion took hits, but she is still the Bastion.",
+        "lose": "We lost the destroyer and everything in her log.",
         "dialogue": [
           {
             "speaker": "Chief Engineer Mae Orin",
             "portrait": "Orin",
-            "text": "Bastion will fly. Our antenna picked up a prisoner barge asking the destroyer for an escort. Its log lists people missing from Ondine."
+            "text": "Gorran won't move again, but her guns work and her log is ours. She was due to escort a prisoner barge for Korr. The barge manifest lists people missing from Ondine."
           }
         ]
       }
@@ -1379,13 +1392,13 @@
         "speaker": "Lt. Commander Daro Okafor, Intelligence",
         "officer": "Okafor",
         "text": [
-          "Someone has been feeding the Skarn our patrol routes. We finally know how: a Skarn stealth prototype shadowing our fleet.",
+          "Fleet Command arrested Director Hale at Tannhal this morning, and he is talking. Korr triggers the Hammer through a relay aboard a stealth courier, and Hale's office cleared that courier's route past our buoys.",
           "It does not show on scanners beyond seven hundred metres. Our sensor buoys have caught it passing, so it is somewhere in this volume.",
-          "Find it and kill it. It is fragile once you have found it, but its escorts are not, and it will jump out of the system in eight minutes."
+          "Find it and kill it. It is fragile once you have found it, but its escorts are not, and in eight minutes it jumps out to join the Hammer."
         ],
         "steps": [
           {
-            "caption": "Sensor buoys mark where the prototype was last seen.",
+            "caption": "Sensor buoys mark where the courier was last seen.",
             "show": ["b1", "b2", "b3"],
             "focus": "b2"
           },
@@ -1395,7 +1408,7 @@
             "focus": "ghost"
           },
           {
-            "caption": "Four *veteran* Wasps guard it. Kill the prototype first if you can.",
+            "caption": "Four *veteran* Wasps guard it. Kill the courier first if you can.",
             "show": ["guards"],
             "focus": "ghost",
             "seconds": 4
@@ -1409,14 +1422,14 @@
             "seconds": 5
           },
           {
-            "caption": "You have *eight minutes*. After that the prototype jumps out with our routes and the mission fails.",
+            "caption": "You have *eight minutes*. After that the courier jumps out to the Hammer and the mission fails.",
             "show": ["ghost"],
             "focus": "ghost",
             "seconds": 4
           }
         ],
         "intel": [
-          "Target: Skarn stealth prototype (radar range 700 m)",
+          "Target: Skarn stealth courier, a prototype (radar range 700 m)",
           "Hostile: 4x veteran Wasp",
           "Hostile: Strix, 2x ace Wasp (called in when the escorts are attacked)",
           "Time limit: 8 minutes",
@@ -1424,8 +1437,8 @@
         ]
       },
       "debrief": {
-        "win": "The prototype is destroyed. The Skarn have lost their eyes on our fleet.",
-        "lose": "The ghost is still out there, watching us.",
+        "win": "The courier is destroyed. Korr will have to bring the Hammer to Halden and fire from her own bridge.",
+        "lose": "The courier reached the Hammer. Korr can fire from wherever she likes.",
         "dialogue": [
           {
             "speaker": "Dr. Sera Imani",
@@ -1562,7 +1575,7 @@
         "text": [
           "The Skarn are tired of us. A heavy cruiser is coming straight for the Bastion, with escorts.",
           "It is shielded by two generators on the dorsal hull. While they are up, our guns cannot hurt it. Take the generators down, then the cruiser.",
-          "The Kestrel will support you. Everyone else who can fly is in the air."
+          "The Kestrel will support you, and Gorran is anchored on our starboard flank. She has no engines, but Orin has her guns working. Fight near her when the bombers come. Everyone else who can fly is in the air."
         ],
         "steps": [
           {
@@ -1583,15 +1596,26 @@
             "schematic": "Shield"
           },
           {
-            "caption": "Bombers will try to slip past while you are busy.",
-            "show": ["talons"],
+            "caption": "*Gorran*, captured at the anchorage, cannot move, but her six turrets are ours.",
+            "show": ["gorran", "bastion"],
+            "focus": "gorran"
+          },
+          {
+            "caption": "Bombers will try to slip past while you are busy. More launch when the shields fall.",
+            "show": ["talons", "talons2"],
             "focus": "bastion"
+          },
+          {
+            "caption": "Hit the cruiser and the *Strix* aces from the Veil will come for Lancer flight.",
+            "show": ["strix", "cruiser"],
+            "focus": "cruiser"
           }
         ],
         "intel": [
           "Target: Skarn heavy cruiser (8 turrets, 2 shield generators)",
           "Defend: CNS Bastion",
-          "Support: CNS Kestrel, Lancer 2, Lancer 3"
+          "Support: CNS Kestrel, captured destroyer Gorran (immobile), Lancer 2, Lancer 3",
+          "Hostile: Strix, 2x ace Wasp (when the cruiser is attacked)"
         ]
       },
       "debrief": {
@@ -1677,7 +1701,7 @@
         "officer": "Varn",
         "text": [
           "The dreadnought is advancing on Bastion. Our line stands between Korr and Halden Gate. Hold the carrier and destroy the Hammer.",
-          "It is nine hundred metres of armour. Four shield generators protect it. Then four engines - if it is dead in space, we can win. Then the reactor in the dorsal trench.",
+          "It is nine hundred metres of armour. Four shield generators protect it. Then its four engines: dead in space, it can never reach a firing line through Halden. Then the reactor in the dorsal trench, which kills the charge.",
           "This is everything we have. Lancer, bring it down."
         ],
         "steps": [
@@ -1714,6 +1738,7 @@
         "intel": [
           "Target: Skarn dreadnought (22 turrets, 4 shield gens, 4 engines, reactor)",
           "Hostile: 2 corvettes, many Wasps and Talons",
+          "Hostile: Strix, 4x ace Wasp guarding the Hammer (when it is attacked)",
           "Support: CNS Bastion, CNS Kestrel, Lancers 3, 4 and 6"
         ]
       },

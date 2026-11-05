@@ -6,8 +6,8 @@ A Kestrel Frontier campaign in four acts. Lancer's first watch exposes a leaked 
 | --- | --- | --- |
 | Strange Orders | 1–5 | Captain Sen's convoy has been compromised. Relay K-7 and the Vesk recorder tie the attack to a Concord seal and a depot at Tarn. |
 | The People We Save | 6–10 | An intercepted distress call leads to the Ondine. Juno's cargo log, the Halcyon survey and Rhea Sol's signed orders connect the attackers to the Directorate. |
-| The Machine at Corvid | 11–15 | Tannhal's receiver and Lancer's recon show what Hale traded to Admiral Korr. The colonies evacuate while Bastion comes under direct attack. |
-| The Quiet Engine | 16–20 | The Thal rescue brings in Kesh Ardan. Lancer cuts Korr's remote firing signal, destroys her spare coils and stops the Hammer before it can fire through Halden. |
+| The Machine at Corvid | 11–15 | Tannhal's receiver and Lancer's recon show what Hale traded to Admiral Korr. The colonies evacuate. When a destroyer finds Bastion's new anchorage, Hale's office is the leak, and Bastion's marines capture the destroyer Gorran and her log. |
+| The Quiet Engine | 16–20 | Gorran's log leads to the Thal and Kesh Ardan. Hale, arrested, gives up the stealth courier's route, and Lancer cuts Korr's remote firing signal. With the spare coils destroyed and Gorran's guns on Bastion's flank, Lancer stops the Hammer, and the Strix aces that guard it, before it can fire through Halden. |
 
 ## Cast
 

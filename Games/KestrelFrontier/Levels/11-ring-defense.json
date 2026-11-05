@@ -22,7 +22,7 @@
       "facing": [-1, 0, 0.6],
       "path": [[600, 100, -1700]],
       "speed": 35,
-      "hold": true
+      "arrival": { "when": { "any": [ { "destroyed": "w2" }, { "time": 150 } ] }, "delay": 6 }
     }
   ],
   "waves": [
@@ -64,7 +64,8 @@
       "pos": [2400, 400, -3300],
       "spread": 120,
       "order": "strike:ring",
-      "hold": true
+      "formation": "vic",
+      "arrival": { "when": { "spawned": "cv" } }
     }
   ],
   "objectives": [
@@ -77,10 +78,8 @@
     }
   ],
   "events": [
-    { "when": {"time": 120}, "do": [{"spawn": "cv"}] },
     { "when": {"time": 10}, "do": [{"spawn": "w1"}] },
     { "when": {"time": 60}, "do": [{"spawn": "w2"}] },
-    { "when": {"time": 120}, "do": [{"spawn": "w3"}] },
     {
       "when": { "time": 3 },
       "do": [

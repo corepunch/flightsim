@@ -1,0 +1,14 @@
+{
+  "displayName": "Marine Lighter",
+  "mesh": "Insurgent",
+  "texture": "Insurgent_Blue",
+  "radius": 4.5,
+  "guns": [[-2.4, -0.2, -3.0], [2.4, -0.2, -3.0]],
+  "gun": { "speed": 900, "life": 1.6, "energy": 0.035, "recharge": 0.22, "interval": 0.5, "damage": 0.04, "capitalDamage": 0.04 },
+  "nozzles": [[-0.758, 0.273, 3.2, 0.5], [0.758, 0.273, 3.2, 0.5], [-2.37, -0.17, 2.9, 0.2], [2.37, -0.17, 2.9, 0.2]],
+  "exhaustColor": [0.3, 0.6, 1.0],
+  "params": { "maxSpeed": 100, "turnRate": 0.5, "pitchRate": 1.2, "yawRate": 0.7, "rollRate": 2.0, "agility": 4.5,
+              "grip": 1.4, "boostSpeed": 0.9, "boostGrip": 2.2, "boostTurn": 0.7, "boostDrain": 0.28, "boostRecharge": 0.12 },
+  "ai": { "maxSpeed": 100, "turnRate": 0.5 },
+  "hull": 2.5, "shield": 1.5, "shieldRegen": 0.03
+}
