@@ -107,8 +107,30 @@ static int CheckHUD(void) {
     }
     return 0;
 }
+// Two sibling labels whose frames intersect are drawn over each other. Walks
+// the whole tree; returns the first offending pair in `where`. Hidden and
+// empty labels do not count.
+static BOOL OverlappingSiblingLabels(SKNode *parent, NSString **where) {
+    NSMutableArray<SKLabelNode *> *labels = [NSMutableArray array];
+    for (SKNode *child in parent.children) {
+        if (child.hidden || child.alpha <= 0) continue;
+        if ([child isKindOfClass:SKLabelNode.class] && [(SKLabelNode *)child text].length) [labels addObject:(SKLabelNode *)child];
+        if (OverlappingSiblingLabels(child, where)) return YES;
+    }
+    for (NSUInteger i = 0; i < labels.count; i++)
+        for (NSUInteger j = i + 1; j < labels.count; j++)
+            if (CGRectIntersectsRect(labels[i].frame, labels[j].frame)) {
+                *where = [NSString stringWithFormat:@"\"%@\" %@ overlaps \"%@\" %@", labels[i].text, NSStringFromRect(labels[i].frame),
+                          labels[j].text, NSStringFromRect(labels[j].frame)];
+                return YES;
+            }
+    return NO;
+}
+
 static int CheckGrid(void) {
     [NSUserDefaults.standardUserDefaults setInteger:4 forKey:@"SFMissionsUnlocked"];
+    // Entrance effects briefly draw copies of labels; the layout itself is checked.
+    [Cvar set:@"ui_reduceMotion" value:@"1"];
     ProgressRecordResult(0, @[@"+ Patrol", @"+ Escort"]);
     CHECK(ProgressBestStars(0) == 3);
     ProgressRecordResult(0, @[@"+ Patrol", @"- Escort"]);
@@ -125,6 +147,9 @@ static int CheckGrid(void) {
             CHECK(a.size.width >= 140 && a.size.height >= 140);
             for (NSUInteger j=i+1; j<tiles.count; j++) CHECK(!CGRectIntersectsRect(a, tiles[j].rectValue));
         }
+        NSString *where = nil;
+        if (OverlappingSiblingLabels(grid, &where)) fprintf(stderr, "%s: %s\n", NSStringFromSize(grid.size).UTF8String, where.UTF8String);
+        CHECK(where == nil);
         Save(grid, [NSString stringWithFormat:@"missions-%.0fx%.0f.png", grid.size.width,grid.size.height]);
         CGPoint origin = CGPointMake(CGRectGetMidX(viewport)/grid.size.width, CGRectGetMidY(viewport)/grid.size.height);
         [grid queueScrollBy:10000 atFraction:origin]; [grid handle:0];
@@ -137,6 +162,7 @@ static int CheckGrid(void) {
         [grid handle:InputActionConfirm];
         CHECK([[grid valueForKey:@"mode"] integerValue] == 0); // Locked stays on the grid.
     }
+    [Cvar set:@"ui_reduceMotion" value:@""];
     return 0;
 }
 static int CheckPause(void) {
