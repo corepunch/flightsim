@@ -24,7 +24,7 @@ clang -fobjc-arc -Wall -mmacosx-version-min=13.0 \
     -o "$contents/MacOS/FlightUIChecks"
 codesign --force --sign - "$app"
 /usr/bin/open -n -g -W --stdout "$qa/stdout.log" --stderr "$qa/stderr.log" "$app" --args "$qa"
-if ! rg '^PASS: flight instruments' "$qa/stdout.log"; then
+if ! /usr/bin/grep -q '^PASS: flight instruments' "$qa/stdout.log"; then
     cat "$qa/stderr.log" >&2
     print -u2 "Flight UI checks failed: $qa"
     exit 1
