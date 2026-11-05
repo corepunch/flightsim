@@ -521,11 +521,39 @@ typedef enum {
 } LevelFormation;
 
 // A flight of AI fighters.
+//
+// "order" is a verb, with a target after a colon where it takes one. A target
+// names a unit (entity id, group, wave id or callsign) unless it is a nav.
+//   attack                 hostile fighters nearest first, then capitals (the default);
+//                          disabled fighters are spared
+//   attack-fighters        only hostile fighters; with none left it loiters
+//   attack-capitals        only hostile capitals (props and rocks never)
+//   strike:<unit>          the named units first, even disabled ones; then as attack
+//   escort:<unit>          fights within 1.6 km of the unit, forms up on it when it is quiet
+//   disable:<unit>         shoots the named units only until they are disabled (a fighter's
+//                          systems down, a capital's engines dead), then stops and loiters
+//                          about them; a ship fires what it carries, so ion guns are the
+//                          way to do it without destroying the target
+//   evade                  never fires; breaks away from the nearest hostile within 1.5 km,
+//                          otherwise loiters about where it arrived
+//   ignore                 never fires and reacts to nothing; loiters about where it arrived
+//   patrol:<nav>[,<nav>…]  flies the navs in a loop, engaging hostiles that come within
+//                          1.2 km, then resumes
+//   board:<unit>           never fires; flies to the nearest of the named units and waits near
+//                          it until it is disabled. A boarder that then holds within 60 m of a
+//                          fighter, or within a capital's radius + 40 m, for "dockSeconds"
+//                          captures it: the target changes to the boarder's team, stays
+//                          disabled, and the mission sees it captured. If a boarder that is
+//                          docking is destroyed the timer starts over for the others.
+// An unknown verb, a missing or misplaced target, or a target that names no
+// unit (or nav, for patrol) is a level problem.
+//
 //   { "id", "ship", "team", "name", "callsigns": [], "count", "pos", "spread",
 //     "order": "attack" | "escort:<id>" | …, "hold",
 //     "arrival": LevelCue,                        // implies hold
 //     "departure": LevelCue,                      // survivors leave: back aboard the mothership, else jump out
 //     "mothership": "<entity id>",                // launches from it (no arrival while it is dead)
+//     "dockSeconds": 10,                          // how long a boarder holds alongside its target to capture it
 //     "reinforcements": { "count": 2, "delay": 10 },   // the flight comes back this often after it is wiped out
 //     "skill": "rookie" | "regular" | "veteran" | "ace",
 //     "formation": "vic" | "finger-four" | "line-abreast" | "line-astern" | "echelon-left" | "echelon-right" | "diamond" }
@@ -540,6 +568,7 @@ typedef struct {
     LevelCue arrival, departure;
     int reinforcements;                 // further flights after the first, 0 by default
     float reinforcementDelay;           // seconds after the flight is wiped out
+    float dockSeconds;                  // boarding: seconds alongside the target to capture it, 10 by default
     LevelSkill skill;
     LevelFormation formation;
     bool hold;                          // arrives when an event or its arrival spawns it

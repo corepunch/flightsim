@@ -377,6 +377,139 @@ static void IonPlayer(void) {
     [c disconnect]; [server frame:0]; [server stop];
     puts("PASS disabled player ship: commands ignored, no fire, coasts and tumbles, flag on the wire");
 }
+// AI flight-group orders against an enemy fighter 600 m ahead and an enemy
+// capital 2 km ahead, driving pilots straight through thinkPilot.
+static GPilot *OrderPilot(NSString *order, NSString *target, simd_float3 pos) {
+    GPilot *p = [GPilot new];
+    p.ship = [GFighter fighterWithShip:@"wasp" ai:YES]; p.ship.team = TeamFriend;
+    [p.ship resetAt:pos facing:LookRotation(simd_make_float3(0, 0, -1), simd_make_float3(0, 1, 0))];
+    p.home = pos; p.order = order; p.orderTarget = target;
+    p.skill = PilotSkillFor(LevelSkillAce, TeamFriend);
+    return p;
+}
+static int FriendlyBolts(void) {
+    int n = 0;
+    for (int i = 0; i < MAX_BOLTS; i++) if (level->_bolts[i].active && level->_bolts[i].team == TeamFriend) n++;
+    return n;
+}
+static void Fly(GPilot *p, int steps) {
+    for (int i = 0; i < steps; i++) { level->_time += TICK_DT; [level thinkPilot:p dt:TICK_DT]; }
+}
+static void OrdersRun(void) {
+    Server *server = [[Server alloc] initWithName:@"orders"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-orders"];
+    GFighter *drone = nil;
+    for (GFighter *f in [level fighters]) drone = f;
+    GCapital *cruiser = [level capitalNamed:@"cruiser"];
+    CHECK(drone && cruiser && drone.team == TeamEnemy && cruiser.team == TeamEnemy);
+    simd_float3 start = simd_make_float3(0, 0, -300);
+
+    // Who each order picks.
+    CHECK([level pickTargetFor:OrderPilot(@"attack", nil, start)] == drone);
+    CHECK([level pickTargetFor:OrderPilot(@"attack-fighters", nil, start)] == drone);
+    CHECK([level pickTargetFor:OrderPilot(@"attack-capitals", nil, start)] == cruiser);
+    CHECK([level pickTargetFor:OrderPilot(@"disable", @"cruiser", start)] == cruiser);
+    CHECK([level pickTargetFor:OrderPilot(@"evade", nil, start)] == nil && [level pickTargetFor:OrderPilot(@"ignore", nil, start)] == nil);
+    GPilot *capitals = OrderPilot(@"attack-capitals", nil, start), *fighters = OrderPilot(@"attack-fighters", nil, start);
+    CHECK([level pilot:capitals mayAttack:cruiser] && ![level pilot:capitals mayAttack:drone]);
+    CHECK([level pilot:fighters mayAttack:drone] && ![level pilot:fighters mayAttack:cruiser]);
+    // Patrols only see what is within 1.2 km of them.
+    CHECK([level pickTargetFor:OrderPilot(@"patrol", @"n1", simd_make_float3(0, 0, 400))] == drone);
+    CHECK([level pickTargetFor:OrderPilot(@"patrol", @"n1", simd_make_float3(2500, 0, 500))] == nil);
+
+    // An attacker shoots; evaders and the ignoring never do, and evaders back away.
+    GPilot *attacker = OrderPilot(@"attack", nil, start);
+    Fly(attacker, 90);
+    int shots = FriendlyBolts();
+    CHECK(shots > 0 && attacker.target == drone);
+    GPilot *evader = OrderPilot(@"evade", nil, start);
+    Fly(evader, 120);
+    CHECK(FriendlyBolts() == shots);
+    CHECK(simd_distance(evader.ship.position, drone.position) > 900 && evader.target == nil);
+    GPilot *ignorer = OrderPilot(@"ignore", nil, start);
+    Fly(ignorer, 240);
+    CHECK(FriendlyBolts() == shots && simd_distance(ignorer.ship.position, start) < 800);
+    GPilot *capitalHunter = OrderPilot(@"attack-capitals", nil, start);
+    Fly(capitalHunter, 30);
+    CHECK(capitalHunter.target == cruiser);
+
+    // A patrol flies its navs in a loop and leaves everyone alone far from them.
+    GPilot *patrol = OrderPilot(@"patrol", @"n1,n2", simd_make_float3(2500, 0, 500));
+    Fly(patrol, 1);
+    CHECK(patrol.patrolIndex == 0);
+    for (int i = 0; i < 1800 && patrol.patrolIndex == 0; i++) Fly(patrol, 1);
+    CHECK(patrol.patrolIndex == 1 && patrol.target == nil && FriendlyBolts() == shots);
+    for (int i = 0; i < 3000 && patrol.patrolIndex == 1; i++) Fly(patrol, 1);
+    CHECK(patrol.patrolIndex == 0);
+
+    // "disable" stops once the target is: it is not shot at (nor chosen) after.
+    GPilot *disabler = OrderPilot(@"disable", @"drone", start);
+    CHECK([level pickTargetFor:disabler] == drone && [level pilot:disabler mayAttack:drone]);
+    [drone disable];
+    CHECK([level pickTargetFor:disabler] == nil && ![level pilot:disabler mayAttack:drone]);
+    int before = FriendlyBolts();
+    Fly(disabler, 120);
+    CHECK(FriendlyBolts() == before && disabler.target == nil);
+    GPilot *striker = OrderPilot(@"strike", @"drone", start);
+    CHECK([level pickTargetFor:striker] == drone && [level pilot:striker mayAttack:drone]);
+    CHECK([level pickTargetFor:OrderPilot(@"attack-fighters", nil, start)] == nil);     // the disabled are spared
+    [server stop];
+    puts("PASS orders: attack-fighters/-capitals pick their kind, evade and ignore never fire, patrol loops its navs, disable stops at disabled");
+}
+// Boarders (a "board" wave) wait while the target is whole, then dock with it
+// once disabled and capture it after dockSeconds; losing a docking boarder
+// restarts the count for the other.
+static NSArray<GPilot *> *Boarders(void) {
+    NSMutableArray *b = [NSMutableArray array];
+    for (GPilot *p in level->_pilots) if ([p.order isEqualToString:@"board"]) [b addObject:p];
+    return b;
+}
+static GFighter *BoardTarget(void) {
+    for (GPilot *p in level->_pilots) if ([p.wave isEqualToString:@"drone"]) return p.ship;
+    return nil;
+}
+static MissionObjective *TakeObjective(void) { return [level->_runner objectiveNamed:@"take"]; }
+static void BoardRun(void) {
+    routes = [NSMutableDictionary dictionary];
+    Server *server = [[Server alloc] initWithName:@"board"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-board"];
+    GFighter *drone = BoardTarget();
+    CHECK(drone && Boarders().count == 2 && Boarders()[0].dockSeconds == 6);
+    // Whole: the boarders keep close but never dock, fire or capture.
+    Steps(server, @[], (ControlState){0}, 450);
+    CHECK(!drone.captured && !drone.disabled && drone.team == TeamEnemy && drone.hull == 3 && FriendlyBolts() == 0);
+    for (GPilot *p in Boarders()) CHECK(p.dockSince == 0 && simd_distance(p.ship.position, drone.position) < 700);
+    // Disabled: they close in; not captured before the count is up, captured after.
+    [drone disable];
+    double disabledAt = level->_time;
+    Steps(server, @[], (ControlState){0}, 60);
+    CHECK(!drone.captured);
+    for (int i = 0; i < 900 && !drone.captured; i++) Steps(server, @[], (ControlState){0}, 1);
+    CHECK(drone.captured && drone.disabled && drone.alive && drone.team == TeamFriend);
+    CHECK(level->_time - disabledAt > 6);
+    for (GPilot *p in Boarders()) CHECK(simd_distance(p.ship.position, drone.position) < 70 || p.dockSince == 0);
+    CHECK([(id<MissionUnit>)drone missionCaptured]);
+    Steps(server, @[], (ControlState){0}, 30);
+    CHECK(TakeObjective().state == MissionObjectiveComplete);
+    [server stop];
+
+    // Again, but one boarder dies mid-dock: the other starts over.
+    [server addTransport:[Link port:2]]; [server spawnLevel:@"check-board"];
+    drone = BoardTarget();
+    [drone disable];
+    NSArray<GPilot *> *boarders = Boarders();
+    for (int i = 0; i < 900 && !(boarders[0].dockSince > 0 && boarders[1].dockSince > 0); i++) Steps(server, @[], (ControlState){0}, 1);
+    CHECK(boarders[0].dockSince > 0 && boarders[1].dockSince > 0 && !drone.captured);
+    double lostAt = level->_time;
+    [level damageShip:boarders[0].ship amount:10 by:nil shake:0];
+    CHECK(!boarders[0].ship.alive);
+    Steps(server, @[], (ControlState){0}, 2);
+    CHECK(boarders[1].dockSince >= lostAt && boarders[0].dockSince == 0);
+    for (int i = 0; i < 900 && !drone.captured; i++) Steps(server, @[], (ControlState){0}, 1);
+    CHECK(drone.captured && level->_time - lostAt >= 6);
+    [server stop];
+    puts("PASS boarding: boarders wait for a whole target, capture a disabled one after dockSeconds, restart when one is lost, objective completes");
+}
 static void UDPSmoke(void) {
     assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
@@ -408,6 +541,8 @@ int main(int argc, const char **argv) { @autoreleasepool {
     AimAssistCheck();
     IonRun();
     IonPlayer();
+    OrdersRun();
+    BoardRun();
     UDPSmoke();
     puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;

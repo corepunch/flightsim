@@ -27,6 +27,7 @@
 @property (nonatomic, readonly) BOOL missionAttacked;       // hostile damage since it arrived (hull, shield or part)
 @property (nonatomic, readonly) BOOL missionScanned;        // identified by a scan (missionMarkScanned:)
 @property (nonatomic, readonly) BOOL missionDisabled;       // helpless but alive: a capital with every engine dead, a fighter ion-disabled
+@property (nonatomic, readonly) BOOL missionCaptured;       // taken over by boarders: it fights for their side now
 // Destroyable parts of a kind ("Turret", "Engine", "Shield", "Core", …).
 - (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly;
 @end
@@ -109,6 +110,10 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 // complete once that share of the targets is destroyed, counting reinforcements
 // still to come; protect fails once more than (100 - percent)% are lost.
 //
+// Built-in types: reach, destroy, protect, escort, survive, scan, collect, disable
+// (every part of a "kind" destroyed) and capture (every target captured by boarders;
+// fails once any target is destroyed first).
+//
 // Types are classes registered by name. The engine registers every built-in
 // type; a game may register a type only it can use (and move it here when a
 // second game needs it).
@@ -168,6 +173,8 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 //   scanned: name | [names]  every unit by each name that has arrived has been scanned
 //   disabled: name | [names] every unit by each name that has arrived is disabled (MissionUnit
 //                            missionDisabled: a capital's engines are all dead, a fighter's systems are down)
+//   captured: name | [names] every unit by each name that has arrived has been captured by
+//                            boarders (a wave's "board" order; MissionUnit missionCaptured)
 //   nav: id                  a player has been within 400 m of the nav
 //   flag: name               set by the set_flag action
 //   all: [ … ], any: [ … ], not: { … }

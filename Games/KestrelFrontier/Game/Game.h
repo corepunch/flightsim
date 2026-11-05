@@ -83,6 +83,7 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic) BOOL alive;
 @property (nonatomic) BOOL attacked;              // taken hostile damage
 @property (nonatomic) BOOL departed;              // left the level alive (jumped out or docked); not alive
+@property (nonatomic) BOOL captured;              // taken over by boarders (-[GWorld captureUnit:by:])
 @property (nonatomic) double lastShot;
 @property (nonatomic) double deathTime;
 @property (nonatomic, weak) GClient *client;      // nil for AI ships
@@ -137,6 +138,7 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic) float stealthRange;
 @property (nonatomic) BOOL isMine, isProp, isAsteroid, isBuoy;
 @property (nonatomic) BOOL collected, departed;
+@property (nonatomic) BOOL captured;             // taken over by boarders (-[GWorld captureUnit:by:])
 @property (nonatomic, readonly) NSArray<GSubsystem *> *subsystems;
 @property (nonatomic, readonly) uint64_t deadParts;
 
@@ -192,6 +194,10 @@ typedef NS_ENUM(NSInteger, PilotLeaving) { PilotStaying, PilotDocking, PilotJump
 @property (nonatomic) PilotSkill skill;
 @property (nonatomic, copy) NSString *order, *orderTarget, *wave, *callsign;
 @property (nonatomic, copy) NSString *mothership;   // entity it launched from and docks with; nil: none
+@property (nonatomic) simd_float3 home;             // where it arrived: evade and ignore loiter about it
+@property (nonatomic) NSInteger patrolIndex;        // the nav of a patrol it flies to next
+@property (nonatomic) double dockSince;             // boarding: when it came within docking range of its target; 0: not docking
+@property (nonatomic) float dockSeconds;            // boarding: how long it must hold there
 @property (nonatomic) PilotLeaving leaving;
 @property (nonatomic) double leavingSince;
 @property (nonatomic, weak) id target;
@@ -287,12 +293,14 @@ extern GWorld *level;
 - (GCapital *)capitalNamed:(NSString *)identifier;        // alive or not; nil when none
 - (simd_float3)launchPointOf:(GCapital *)mothership;      // where its fighters leave and come aboard
 - (void)fighterLeaves:(GFighter *)s jump:(BOOL)jump;      // gone from the level alive
+- (void)captureUnit:(id)target by:(GFighter *)boarder;    // the target changes to the boarder's team and the players are told
 @end
 
 @interface GWorld (AI)
 - (void)thinkPilot:(GPilot *)p dt:(float)dt;
 - (id)pickTargetFor:(GPilot *)p;                    // nil: nothing it may attack (disabled fighters are spared)
-- (BOOL)pilot:(GPilot *)p mayAttack:(id)target;       // NO for a disabled fighter, unless the pilot is ordered to destroy it
+- (BOOL)pilot:(GPilot *)p mayAttack:(id)target;       // NO for what the order forbids and for a disabled fighter, unless the pilot is ordered to destroy it
+- (void)boarderLost:(GPilot *)p;                    // a docking boarder died: the others' timers start over
 - (void)fireTurrets:(GCapital *)c;
 - (void)checkMine:(GCapital *)m;
 @end

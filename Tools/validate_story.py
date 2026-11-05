@@ -11,6 +11,9 @@ import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Wave orders: verb -> what follows the colon (nothing, a unit, or navs).
+ORDERS = {'attack': None, 'attack-fighters': None, 'attack-capitals': None, 'evade': None, 'ignore': None,
+          'strike': 'unit', 'escort': 'unit', 'disable': 'unit', 'board': 'unit', 'patrol': 'navs'}
 CHAIN = CAST = PLAYER = PORTRAITS = ROOMS = None   # per game, set by load_game
 
 
@@ -149,6 +152,21 @@ def validate_mission(mission):
             callsigns = [name] if count == 1 else [f"{name} {seat + 2}" for seat in range(count)]
         if wave["team"] == "friend":
             friendly_pilots.extend(callsigns or [])
+    callsigns = set(friendly_pilots)
+    for wave in mission.get("waves", []):
+        callsigns.update(wave.get("callsigns", []))
+        if wave.get("name"):
+            callsigns.add(wave["name"])
+            callsigns.update(f'{wave["name"]} {seat + 2}' for seat in range(wave.get("count", 1)))
+    for wave in mission.get("waves", []):
+        verb, _, target = wave.get("order", "attack").partition(":")
+        assert verb in ORDERS, (index, wave)
+        kind = ORDERS[verb]
+        assert (kind is None) == (not target), (index, wave)
+        if kind == "unit":
+            assert target in units | callsigns, (index, wave)
+        elif kind == "navs":
+            assert set(target.split(",")) <= navs, (index, wave)
     for objective in objectives:
         assert set(objective.get("after", [])) <= objective_ids - {objective["id"]}, (index, objective)
         assert set(objective.get("targets", [])) <= units, (index, objective)
@@ -172,7 +190,7 @@ def validate_mission(mission):
                 assert value in objective_ids, (index, when)
             elif key == "nav":
                 assert value in navs, (index, when)
-            elif key in ("spawned", "destroyed", "attacked", "scanned", "disabled"):
+            elif key in ("spawned", "destroyed", "attacked", "scanned", "disabled", "captured"):
                 assert set([value] if isinstance(value, str) else value) <= named, (index, when)
 
     for item in arrivals:

@@ -265,6 +265,23 @@ static NSString *Count(NSUInteger a, NSUInteger b) {
 }
 @end
 
+// Every target captured by boarders (a wave's "board" order). A target
+// destroyed before it is captured fails it.
+@interface MissionObjectiveCapture : MissionObjective @end
+@implementation MissionObjectiveCapture
++ (NSArray *)problemsWithDefinition:(NSDictionary *)d { return [self requireTargets:d navs:NO targets:YES]; }
+- (void)updateIn:(id<MissionContext>)ctx dt:(float)dt {
+    NSArray<id<MissionUnit>> *units = [ctx unitsNamed:self.targets];
+    NSUInteger done = 0;
+    for (id<MissionUnit> u in units) {
+        if (u.missionCaptured) done++;
+        else if (!u.missionAlive) { [ctx objective:self becomes:MissionObjectiveFailed]; return; }
+    }
+    if (units.count && done == units.count) [ctx objective:self becomes:MissionObjectiveComplete];
+    self.progress = Count(done, units.count);
+}
+@end
+
 static NSMutableDictionary<NSString *, Class> *Registry(void) {
     static NSMutableDictionary *registry;
     static dispatch_once_t once;
@@ -274,6 +291,7 @@ static NSMutableDictionary<NSString *, Class> *Registry(void) {
             @"protect": MissionObjectiveProtect.class, @"escort": MissionObjectiveEscort.class,
             @"survive": MissionObjectiveSurvive.class, @"scan": MissionObjectiveScan.class,
             @"collect": MissionObjectiveCollect.class, @"disable": MissionObjectiveDisable.class,
+            @"capture": MissionObjectiveCapture.class,
         } mutableCopy];
     });
     return registry;

@@ -201,6 +201,9 @@ static NSMutableDictionary<NSString *, MissionTrigger> *Triggers(void) {
         triggers[@"disabled"] = ^BOOL(id v, id<MissionEventContext> c) {
             return AllUnits(v, c, ^BOOL(id<MissionUnit> u) { return u.missionDisabled; });
         };
+        triggers[@"captured"] = ^BOOL(id v, id<MissionEventContext> c) {
+            return AllUnits(v, c, ^BOOL(id<MissionUnit> u) { return u.missionCaptured; });
+        };
         triggers[@"nav"] = ^BOOL(id v, id<MissionEventContext> c) {
             for (NSString *n in Names(v)) if (![c navVisited:n]) return NO;
             return YES;
