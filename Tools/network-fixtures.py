@@ -16,7 +16,7 @@ if len(sys.argv) == 2:
         d = json.loads(p.read_text())
         d['params']['maxSpeed'] = 170 + 73 * i
         d['params']['turnRate'] = 0.7 + 0.6 * i
-        d['gun'].update(speed=700 + 433*i, life=1.2 + 0.7*i, interval=0.12 + 0.09*i)
+        d['gun'].update(speed=700 + 433*i, life=1.2 + 0.7*i, interval=0.12 + 0.09*i, energy=0.001, recharge=1)
         p.write_text(json.dumps(d))
         missions.append(dict(id=i+1, player=dict(ship=ship, pos=[0, 0, 0], facing=[0, 0, -1]),
                              loadout=dict(torpedoes=3), objectives=[dict(id='hold', type='survive', text='Hold position', seconds=10000)]))

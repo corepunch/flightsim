@@ -17,7 +17,7 @@ Production resources are never edited. Artifacts remain under build/.
 | Connect, gamestate, begin, snapshots, reconnect, explicit disconnect | Deterministic in-memory datagrams |
 | Full movement parameter agreement | Exact server player-state parameters versus selected JSON |
 | Pending-input prediction | Compare prediction before delivery with subsequent server state (2 mm tolerance), lossless cases |
-| Primary weapons | Predicted shots and authoritative bolt events, lifespan and relative projectile speed |
+| Primary weapons | Predicted shots and authoritative bolt events, lifespan, relative projectile speed and cadence bounds |
 | Latency and packet loss | 100 ms each way, every 11th datagram dropped, plus 45 ticks of total blackout |
 | History recovery | Blackout exceeds 32-frame history; assert resumed snapshots and eventual convergence |
 | Protocol versions | Previous and future versions, absent and nonnumeric versions rejected without allocating slots |
