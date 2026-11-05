@@ -3,7 +3,6 @@
 #import "UIStyle.h"
 #import "Localization.h"
 #import "PlatformImage.h"
-#import <stdatomic.h>
 
 static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMode h) {
     return UIInterfaceLabel(size, c, h, SKLabelVerticalAlignmentModeBaseline);
@@ -23,7 +22,8 @@ static NSArray<NSString *> *Tips(void) {
     SKNode *_spinner;
     SKLabelNode *_startLabel;
     SKTexture *_hangarTexture;
-    _Atomic bool _readyToStart, _startRequested;
+    BOOL _readyToStart, _startRequested;
+    BOOL _armed;    // a press began while the card was ready to start
     NSMutableArray<SKSpriteNode *> *_stars;
     CGFloat _barWidth;
     float _target, _shown;
@@ -73,21 +73,34 @@ static NSArray<NSString *> *Tips(void) {
 }
 
 - (BOOL)barFull { return _shown > 0.995f; }
-- (BOOL)readyToStart { return atomic_load(&_readyToStart); }
+- (BOOL)readyToStart { return _readyToStart; }
 
 - (void)setReadyToStart:(BOOL)ready {
-    if (ready && !atomic_load(&_readyToStart)) [[GameAudio shared] play:@"ui-confirm" gain:0.65f pan:0];
-    atomic_store(&_startRequested, false);
-    atomic_store(&_readyToStart, ready);
+    if (ready && !_readyToStart) [[GameAudio shared] play:@"ui-confirm" gain:0.65f pan:0];
+    _startRequested = NO;
+    _armed = NO;
+    _readyToStart = ready;
     _startLabel.hidden = !ready;
 }
 
-- (void)queueClickAtFraction:(CGPoint)fraction {
-    if (fraction.x < 0 || fraction.x > 1 || fraction.y < 0 || fraction.y > 1) return;
-    if (atomic_load(&_readyToStart)) atomic_store(&_startRequested, true);
+static BOOL Inside(CGPoint fraction) {
+    return fraction.x >= 0 && fraction.x <= 1 && fraction.y >= 0 && fraction.y <= 1;
 }
 
-- (BOOL)consumeStartRequest { return atomic_exchange(&_startRequested, false); }
+// Only a press that begins once the card is ready starts the mission: a touch
+// held through loading must not.
+- (void)pointerDown:(CGPoint)at { _armed = _readyToStart && Inside(at); }
+
+- (void)pointerClick:(CGPoint)at {
+    if (_armed && _readyToStart && Inside(at)) _startRequested = YES;
+    _armed = NO;
+}
+
+- (BOOL)consumeStartRequest {
+    BOOL requested = _startRequested;
+    _startRequested = NO;
+    return requested;
+}
 - (BOOL)fading { return _fadeRequested; }
 - (BOOL)faded { return _fadeRequested && _fadeStart >= 0 && _now - _fadeStart >= _fadeLength; }
 

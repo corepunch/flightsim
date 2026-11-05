@@ -11,7 +11,7 @@ cp Resources/Info.plist "$contents/Info.plist"
 for directory in Audio Menu Strings UI; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
 clang -fobjc-arc -Wall -mmacosx-version-min=13.0 \
     -ISources/Shared -ISources/Engine/App -ISources/Engine/UI -ISources/Engine/Common \
-    Tools/GUI/AudioChecks.m Sources/Engine/App/GameAudio.m Sources/Engine/UI/{MainMenu,UIMotion,UITheme}.m Sources/Engine/Common/{Cvar,Localization}.m \
+    Tools/GUI/AudioChecks.m Sources/Engine/App/GameAudio.m Sources/Engine/UI/{MainMenu,UIMotion,UITheme,UILayout}.m Sources/Engine/Common/{Cvar,Localization}.m \
     -framework Cocoa -framework SpriteKit -framework AVFoundation -framework QuartzCore -framework ImageIO \
     -o "$contents/MacOS/AudioChecks"
 codesign --force --sign - "$qa/AudioChecks.app"

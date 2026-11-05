@@ -2,6 +2,7 @@
 #import "Input.h"
 #import "GameView.h"
 #import "HUD.h"
+#import "PauseMenu.h"
 #import "Cvar.h"
 #import <math.h>
 
@@ -20,6 +21,7 @@
 @property BOOL precise, inverted;
 @property NSEventPhase inertia;
 @property NSInteger button;
+@property NSPoint location;
 @end
 @implementation CheckEvent
 - (CGFloat)scrollingDeltaY { return _wheelDelta; }
@@ -29,6 +31,7 @@
 - (BOOL)isDirectionInvertedFromDevice { return _inverted; }
 - (NSEventPhase)momentumPhase { return _inertia; }
 - (NSInteger)buttonNumber { return _button; }
+- (NSPoint)locationInWindow { return _location; }
 @end
 
 int main(void) {
@@ -123,7 +126,29 @@ int main(void) {
         c = [input poll:0];
         CHECK(!c.fire && c.roll == 0 && c.yaw == 0 && c.pitch == 0);
         input.mouseCaptured = NO;
-        puts("PASS: mouse flight routing, roll transitions, fire, recenter, wheel direction, bounds and release.");
+
+        // Front-end screens: the view only queues pointer events (ScreenInput.h).
+        [input.pointer drain];
+        [view mouseDown:event];                       // the HUD takes no pointer events
+        CHECK(input.pointer.drain.length == 0);
+        view.overlaySKScene = [[PauseMenu alloc] initWithSize:CGSizeMake(1280, 720)];
+        CheckEvent *at = [CheckEvent new];
+        at.location = NSMakePoint(320, 360);
+        [view mouseMoved:at];
+        at.location = NSMakePoint(640, 180);
+        [view mouseMoved:at];                          // successive hovers collapse
+        [view mouseDown:at];
+        at.wheelDelta = 3;
+        [view scrollWheel:at];
+        NSData *queued = input.pointer.drain;
+        const PointerEvent *e = queued.bytes;
+        CHECK(queued.length == 4 * sizeof(PointerEvent));
+        CGFloat y = view.isFlipped ? 0.75 : 0.25;
+        CHECK(e[0].kind == PointerEventHover && NEAR(e[0].at.x, 0.5) && NEAR(e[0].at.y, y));
+        CHECK(e[1].kind == PointerEventDown && e[2].kind == PointerEventClick && NEAR(e[2].at.x, 0.5));
+        CHECK(e[3].kind == PointerEventScroll && NEAR(e[3].delta, -36));
+        CHECK(input.pointer.drain.length == 0);
+        puts("PASS: mouse flight routing, roll transitions, fire, recenter, wheel direction, bounds, release and screen pointer events.");
     }
     return EXIT_SUCCESS;
 }

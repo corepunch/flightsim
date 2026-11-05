@@ -1,9 +1,10 @@
 #import <SpriteKit/SpriteKit.h>
+#import "ScreenInput.h"
 
 // Opaque full-screen overlay shown while a mission (or the game itself) is
 // built on a background queue: title card, progress bar, status line and a
 // rotating tip. Game drives it from the render loop with -tick:.
-@interface Loading : SKScene
+@interface Loading : SKScene <ScreenInput>
 
 // kicker: small line above the title ("MISSION 03"), detail: line under it.
 - (void)showTitle:(NSString *)title kicker:(NSString *)kicker detail:(NSString *)detail;
@@ -15,7 +16,6 @@
 - (SKNode *)backdropWithSize:(CGSize)size;
 // Host enables this only when the mission and the displayed bar are ready.
 @property (nonatomic) BOOL readyToStart;
-- (void)queueClickAtFraction:(CGPoint)fraction;
 - (BOOL)consumeStartRequest;
 // Fades the whole card out over `seconds`, starting at the next tick.
 - (void)fadeOut:(double)seconds;

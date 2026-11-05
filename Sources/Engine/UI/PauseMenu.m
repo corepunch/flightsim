@@ -1,15 +1,26 @@
 #import "PauseMenu.h"
-#import "UIStyle.h"
+#import "UILayout.h"
 #import "GameAudio.h"
-#import "Localization.h"
+
+static PauseCommand CommandFor(NSString *itemId) {
+    static NSDictionary<NSString *, NSNumber *> *commands;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        commands = @{ @"resume": @(PauseCommandResume), @"camera": @(PauseCommandCamera), @"sound": @(PauseCommandSound),
+                      @"restart": @(PauseCommandRestart), @"missions": @(PauseCommandMissions) };
+    });
+    return (PauseCommand)commands[itemId].integerValue;
+}
 
 @implementation PauseMenu {
     BOOL _remote, _cockpit;
     NSInteger _selected;
-    CGRect _buttons[5];
-    NSValue *_click;
+    UILayoutResult *_layout;
+    BOOL _hasClick;
+    CGPoint _click;
     CGSize _layoutSize;
 }
+
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
         self.scaleMode = SKSceneScaleModeResizeFill;
@@ -17,62 +28,65 @@
     }
     return self;
 }
+
 - (void)showRemote:(BOOL)remote cockpit:(BOOL)cockpit {
     _remote = remote; _cockpit = cockpit; _selected = 0;
-    @synchronized(self) { _click = nil; }
+    _hasClick = NO;
     [self rebuild];
 }
+
+- (NSArray<NSString *> *)items { return _layout.lists[@"items"] ?: @[]; }
+
 - (void)rebuild {
     [self removeAllChildren];
     _layoutSize = self.size;
-    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.72) size:self.size];
-    shade.position = CGPointMake(self.size.width / 2, self.size.height / 2);
-    [self addChild:shade];
-    CGFloat width = MIN(400, self.size.width - 48), height = MIN(360, self.size.height - 24);
-    CGFloat x = (self.size.width - width) / 2, y = (self.size.height - height) / 2;
-    [self addChild:UIReadoutPanel(CGRectMake(x, y, width, height), UIColorWithOpacity(UIInk, 0.8), UIColorWithOpacity(UIPanel, 0.98))];
-    SKLabelNode *title = UIInterfaceLabel(24, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeCenter, SKLabelVerticalAlignmentModeCenter);
-    title.text = L10n(_remote ? @"pause.title_online" : @"pause.title");
-    title.fontName = UIInterfaceBoldFont;
-    title.position = CGPointMake(self.size.width / 2, y + height - 28);
-    [self addChild:title];
-    SKLabelNode *hint = UIInterfaceLabel(10, UIColorWithOpacity(UIInk, 0.65), SKLabelHorizontalAlignmentModeCenter, SKLabelVerticalAlignmentModeCenter);
-    hint.text = L10n(_remote ? @"pause.hint_online" : @"pause.hint");
-    hint.position = CGPointMake(self.size.width / 2, y + height - 51);
-    [self addChild:hint];
-    NSArray *titles = @[L10n(@"pause.resume"), L10n(_cockpit ? @"pause.camera_cockpit" : @"pause.camera_chase"), [[GameAudio shared] mixTitle],
-                        L10n(_remote ? @"pause.restart_host_only" : @"pause.restart"), L10n(@"pause.missions")];
-    CGFloat rowHeight = MIN(44, (height - 82) / 5 - 6);
-    for (NSInteger i = 0; i < 5; i++) {
-        _buttons[i] = CGRectMake(x + 22, y + height - 70 - (i + 1) * (rowHeight + 6), width - 44, rowHeight);
-        SKShapeNode *button = UIActionButton(_buttons[i], titles[i], i == _selected ? UIAmber : UIInk);
-        button.alpha = _remote && i == 3 ? 0.35 : 1;
-        [self addChild:button];
+    NSMutableSet *flags = [NSMutableSet set];
+    if (_remote) [flags addObject:@"online"];
+    if (_cockpit) [flags addObject:@"cockpit"];
+    NSArray *previous = [self items];
+    NSString *selected = _selected < (NSInteger)previous.count ? [@"items." stringByAppendingString:previous[_selected]] : nil;
+    UILayout *layout = [UILayout named:@"pause"];
+    _layout = [layout buildIn:CGRectMake(0, 0, self.size.width, self.size.height) sceneSize:self.size flags:flags
+                    variables:@{ @"sound": [[GameAudio shared] mixTitle] } selected:selected];
+    if (!selected && self.items.count) {
+        // First build: highlight the first button.
+        _layout = [layout buildIn:CGRectMake(0, 0, self.size.width, self.size.height) sceneSize:self.size flags:flags
+                        variables:@{ @"sound": [[GameAudio shared] mixTitle] }
+                         selected:[@"items." stringByAppendingString:self.items[0]]];
     }
+    if (_layout.node) [self addChild:_layout.node];
 }
-- (void)queueClickAtFraction:(CGPoint)point { @synchronized(self) { _click = [NSValue valueWithBytes:&point objCType:@encode(CGPoint)]; } }
+
+- (BOOL)disabled:(NSInteger)i {
+    NSArray *items = [self items];
+    return i < 0 || i >= (NSInteger)items.count || [_layout.disabled containsObject:[@"items." stringByAppendingString:items[i]]];
+}
+
+- (void)pointerClick:(CGPoint)at {
+    _click = CGPointMake(at.x * self.size.width, at.y * self.size.height);
+    _hasClick = YES;
+}
+
 - (PauseCommand)handle:(InputAction)actions {
     if (!CGSizeEqualToSize(_layoutSize, self.size)) [self rebuild];
+    NSInteger count = (NSInteger)self.items.count;
     if (actions & InputActionBack) return PauseCommandResume;
-    if (actions & InputActionUp) { _selected = (_selected + 4) % 5; [self rebuild]; }
-    if (actions & InputActionDown) { _selected = (_selected + 1) % 5; [self rebuild]; }
-    NSValue *click;
-    @synchronized(self) { click = _click; _click = nil; }
-    if (click) {
-        CGPoint p; [click getValue:&p size:sizeof p];
-        p = CGPointMake(p.x * self.size.width, p.y * self.size.height);
-        for (NSInteger i = 0; i < 5; i++) if (CGRectContainsPoint(_buttons[i], p)) { _selected = i; actions |= InputActionConfirm; }
+    if (count && (actions & InputActionUp)) { _selected = (_selected + count - 1) % count; [self rebuild]; }
+    if (count && (actions & InputActionDown)) { _selected = (_selected + 1) % count; [self rebuild]; }
+    if (_hasClick) {
+        _hasClick = NO;
+        for (NSInteger i = 0; i < count; i++)
+            if (CGRectContainsPoint([_layout frame:[@"items." stringByAppendingString:self.items[i]]], _click)) {
+                _selected = i;
+                actions |= InputActionConfirm;
+            }
     }
-    if (!(actions & InputActionConfirm) || (_remote && _selected == 3)) return PauseCommandNone;
-    if (_selected == 1) { _cockpit = !_cockpit; [self rebuild]; }
-    if (_selected == 2) { [[GameAudio shared] cycleMix]; [self rebuild]; }
+    if (!(actions & InputActionConfirm) || _selected >= count || [self disabled:_selected]) return PauseCommandNone;
+    PauseCommand command = CommandFor(self.items[_selected]);
+    if (command == PauseCommandCamera) { _cockpit = !_cockpit; [self rebuild]; }
+    if (command == PauseCommandSound) { [[GameAudio shared] cycleMix]; [self rebuild]; }
     [[GameAudio shared] play:@"ui-confirm"];
-    return (PauseCommand)(_selected + 1);
+    return command;
 }
-#if TARGET_OS_IOS
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    CGPoint p = [touches.anyObject locationInNode:self];
-    if (self.size.width && self.size.height) [self queueClickAtFraction:CGPointMake(p.x / self.size.width, p.y / self.size.height)];
-}
-#endif
+
 @end

@@ -634,10 +634,8 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
 }
 
 - (void)queuePointAtFraction:(CGPoint)point {
-    @synchronized (self) {
-        _pending = point;
-        _hasPending = YES;
-    }
+    _pending = point;
+    _hasPending = YES;
 }
 
 - (void)reset {
@@ -678,11 +676,9 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
 }
 
 - (void)updateInScene:(SKScene *)scene {
-    @synchronized (self) {
-        if (!_hasPending) return;
-        _fraction = _pending;
-        _hasPending = NO;
-    }
+    if (!_hasPending) return;
+    _fraction = _pending;
+    _hasPending = NO;
     CGPoint point = [self pointIn:scene];
     NSInteger hit = -1;
     for (NSUInteger i = 0; i < _rects.count; i++)

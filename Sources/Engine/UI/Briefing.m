@@ -192,7 +192,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 - (void)rebuild {
     if (_transition != UITransitionNone && !(_mode == ModeList && _transition == UITransitionSelect)) {
         _scrollOffset = 0;
-        @synchronized (self) { _queuedScrolls = nil; }
+        _queuedScrolls = nil;
     }
     _scrollRect = CGRectZero;
     _scrollContent = nil;
@@ -1485,21 +1485,16 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 #pragma mark - Input & animation
 
-- (void)hoverAtFraction:(CGPoint)point { [_hover queuePointAtFraction:point]; }
+- (void)pointerHover:(CGPoint)point { [_hover queuePointAtFraction:point]; }
 
-- (void)queueClickAtFraction:(CGPoint)point {
-    @synchronized (self) {
-        _queuedClick = BoxPoint(point);
-    }
-}
+- (void)pointerClick:(CGPoint)point { _queuedClick = BoxPoint(point); }
 
-- (void)queueScrollBy:(CGFloat)delta atFraction:(CGPoint)point {
+// Kept until -handle:, which knows the current scroll areas.
+- (void)pointerScroll:(CGFloat)delta at:(CGPoint)point {
     if (delta == 0) return;
     ScrollInput input = {point, delta};
-    @synchronized (self) {
-        if (!_queuedScrolls) _queuedScrolls = [NSMutableArray array];
-        [_queuedScrolls addObject:[NSValue value:&input withObjCType:@encode(ScrollInput)]];
-    }
+    if (!_queuedScrolls) _queuedScrolls = [NSMutableArray array];
+    [_queuedScrolls addObject:[NSValue value:&input withObjCType:@encode(ScrollInput)]];
 }
 
 - (void)turnPage {
@@ -1521,12 +1516,10 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     [_hover updateInScene:self];
     NSValue *click;
     NSArray<NSValue *> *scrolls;
-    @synchronized (self) {
-        click = _queuedClick;
-        _queuedClick = nil;
-        scrolls = _queuedScrolls;
-        _queuedScrolls = nil;
-    }
+    click = _queuedClick;
+    _queuedClick = nil;
+    scrolls = _queuedScrolls;
+    _queuedScrolls = nil;
     for (NSValue *value in scrolls) {
         ScrollInput input;
         [value getValue:&input size:sizeof(input)];
@@ -1621,7 +1614,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 #pragma mark - Scene motion
 
 - (void)motionEnter {
-    @synchronized (self) { _queuedClick = nil; }
+    _queuedClick = nil;
     _transition = UITransitionIntro;
     _presented = NO;
     [self rebuild];

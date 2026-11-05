@@ -3,6 +3,7 @@
 #import "UIMotion.h"
 #import "GameAudio.h"
 #import "Localization.h"
+#import "UILayout.h"
 #import <ImageIO/ImageIO.h>
 
 
@@ -21,9 +22,9 @@ static SKShader *MenuArtShader(void) {
     return shader;
 }
 
-typedef NS_ENUM(NSInteger, MenuItem) {
-    MenuItemCampaign, MenuItemMissions, MenuItemMultiplayer, MenuItemControls, MenuItemAudio, MenuItemQuit, MenuItemCount
-};
+// Rows come from Resources/UI/menus/main.json; ids the code acts on:
+// campaign, missions, lan, controls, sound, quit.
+#define MenuItemCount 8
 
 @interface MainMenu () <UIMotionScene>
 @end
@@ -35,6 +36,8 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     SKTexture *_art;
     NSString *_campaignLabel, *_missionLabel;
     CGRect _rows[MenuItemCount], _controlsBack;
+    UILayout *_layout;
+    NSArray<NSDictionary *> *_items;
     CGSize _laidOut;
     MainMenuInsets _usedInsets;
     NSUInteger _selected;
@@ -89,19 +92,29 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 - (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
     _campaignLabel = L10n(completed ? @"menu.campaign_replay" : (started ? @"menu.campaign_continue" : @"menu.campaign_start"));
     _missionLabel = title.length ? L10nFormat(@"menu.mission_line", (unsigned long)index + 1, title.uppercaseString) : @"";
-    _selected = MenuItemCampaign;
+    _selected = 0;
     _controls = NO;
-    @synchronized (self) { _hasPendingPoint = NO; }
+    _hasPendingPoint = NO;
     _transition = _presented ? UITransitionIntro : UITransitionNone;
     [self rebuild];
 }
 
-- (NSUInteger)itemCount {
-#if TARGET_OS_IOS
-    return MenuItemQuit;
-#else
-    return MenuItemCount;
-#endif
+- (void)loadLayout {
+    _layout = [UILayout named:@"main"] ?: _layout;
+    _items = _layout.items ?: @[];
+}
+
+- (NSUInteger)itemCount { return MIN(_items.count, (NSUInteger)MenuItemCount); }
+
+- (NSString *)itemId:(NSUInteger)i { return i < [self itemCount] ? _items[i][@"id"] : nil; }
+
+// A row's text: a catalog key, or $campaign / $mission / $sound.
+- (NSString *)itemText:(id)value {
+    if (![value isKindOfClass:NSString.class]) return nil;
+    if ([value isEqualToString:@"$campaign"]) return _campaignLabel;
+    if ([value isEqualToString:@"$mission"]) return _missionLabel.length ? _missionLabel : nil;
+    if ([value isEqualToString:@"$sound"]) return [[GameAudio shared] mixTitle];
+    return L10n(value);
 }
 
 - (SKLabelNode *)label:(NSString *)text size:(CGFloat)size color:(UIRGB)color opacity:(CGFloat)opacity
@@ -217,6 +230,8 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         _stage.alpha = 1;
         _stage.xScale = _stage.yScale = 1;
     }
+    [self loadLayout];
+    if (_selected >= [self itemCount]) _selected = 0;
     [_root removeAllChildren];
     [_hover reset];
     _backButton = nil;
@@ -275,25 +290,28 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         return;
     }
 
-    CGFloat width = portrait ? availableWidth : MIN(compact ? 316 : 390, availableWidth);
+    NSSet *flags = compact ? [NSSet setWithObject:@"compact"] : [NSSet set];
+    CGFloat width = portrait ? availableWidth : MIN([_layout metric:@"width" flags:flags fallback:390], availableWidth);
     BOOL oneLine = compact && !portrait && availableWidth >= 330;
-    CGFloat rowHeight = compact ? 46 : MIN(62, (top - bottom) * 0.105);
-    CGFloat gap = compact ? 5 : 8;
-    NSUInteger count = [self itemCount];
-    // Leave room for the wordmark when the audio setting adds a sixth desktop row.
-    CGFloat minimumHeader = compact ? 78 : 150;
-    rowHeight = MIN(rowHeight, MAX(30, (top - bottom - minimumHeader - gap * (count - 1)) / count));
+    CGFloat rowHeight = MIN([_layout metric:@"rowHeight" flags:flags fallback:62],
+                            (top - bottom) * [_layout metric:@"rowHeightFraction" flags:flags fallback:1]);
+    CGFloat gap = [_layout metric:@"gap" flags:flags fallback:8];
+    NSUInteger count = MAX([self itemCount], (NSUInteger)1);
+    // Leave room for the wordmark however many rows the layout has.
+    CGFloat minimumHeader = [_layout metric:@"minimumHeader" flags:flags fallback:150];
+    rowHeight = MIN(rowHeight, MAX([_layout metric:@"minimumRowHeight" flags:flags fallback:30],
+                                   (top - bottom - minimumHeader - gap * (count - 1)) / count));
     CGFloat stack = count * (rowHeight + gap) - gap;
     CGFloat titleSize = portrait ? MIN(52, availableWidth * 0.13) : (compact ? 34 : MIN(82, availableWidth * 0.10));
     CGFloat titleLines = oneLine ? 1 : 1.86;
-    CGFloat headerPadding = compact ? 33 : 62;
+    CGFloat headerPadding = [_layout metric:@"headerPadding" flags:flags fallback:62];
     titleSize = MIN(titleSize, MAX(18, (top - bottom - stack - headerPadding) / titleLines));
     CGFloat header = titleSize * titleLines + headerPadding;
     CGFloat blockHeight = stack + header;
     CGFloat stackBottom = portrait ? bottom + 8 : MAX(bottom, bottom + (top - bottom - blockHeight) * 0.5);
     CGFloat stackTop = stackBottom + stack;
 
-    [_header addObject:[self label:L10n(@"menu.unit") size:compact ? 10 : 13 color:UIAmber
+    [_header addObject:[self label:L10n(@"menu.unit") size:[_layout metric:@"unitSize" flags:flags fallback:13] color:UIAmber
                            opacity:0.96 x:left + 2 y:stackTop + header - 6]];
     CGFloat titleY = stackTop + header - (compact ? 19 : 29);
     NSArray<NSString *> *words = L10nList(@"menu.wordmark");
@@ -312,18 +330,16 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         [_header addObject:secondLine];
     }
 
-    NSArray<NSString *> *labels = @[_campaignLabel, L10n(@"menu.missions"), L10n(@"menu.lan"), L10n(@"menu.controls"),
-                                   [[GameAudio shared] mixTitle], L10n(@"menu.quit")];
-    for (NSUInteger i = 0; i < count; i++) {
+    for (NSUInteger i = 0; i < [self itemCount]; i++) {
         CGFloat y = stackTop - (i + 1) * rowHeight - i * gap;
         _rows[i] = CGRectMake(left, y, width, rowHeight);
-        _rowNodes[i] = [self drawButton:labels[i] detail:i == MenuItemCampaign ? _missionLabel : nil rect:_rows[i]
+        _rowNodes[i] = [self drawButton:[self itemText:_items[i][@"text"]] ?: @"" detail:[self itemText:_items[i][@"detail"]] rect:_rows[i]
                                selected:i == _selected compact:compact labels:_rowLabels[i]];
     }
     if (!compact) {
-        [_footerLabels addObject:[self label:L10n(TARGET_OS_IOS ? @"menu.footer_touch" : @"menu.footer") size:11 color:UIInk opacity:0.6
+        [_footerLabels addObject:[self label:L10n(TARGET_OS_IOS ? @"menu.footer_touch" : @"menu.footer") size:[_layout metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
                                            x:left y:bottom]];
-        SKLabelNode *caption = [self label:L10n(@"menu.caption") size:11 color:UIInk opacity:0.6
+        SKLabelNode *caption = [self label:L10n(@"menu.caption") size:[_layout metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
                                         x:self.size.width - _usedInsets.right - margin y:bottom];
         caption.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
         [_footerLabels addObject:caption];
@@ -472,7 +488,7 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 }
 
 - (void)motionEnter {
-    @synchronized (self) { _hasPendingPoint = NO; }
+    _hasPendingPoint = NO;
     _boot = YES;
     _transition = UITransitionIntro;
     [self rebuild];
@@ -508,13 +524,11 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 
 
 
-- (void)hoverAtFraction:(CGPoint)point { [_hover queuePointAtFraction:point]; }
+- (void)pointerHover:(CGPoint)point { [_hover queuePointAtFraction:point]; }
 
-- (void)queueClickAtFraction:(CGPoint)point {
-    @synchronized (self) {
-        _pendingPoint = point;
-        _hasPendingPoint = YES;
-    }
+- (void)pointerClick:(CGPoint)point {
+    _pendingPoint = point;
+    _hasPendingPoint = YES;
 }
 
 - (void)refreshLayout {
@@ -532,10 +546,8 @@ typedef NS_ENUM(NSInteger, MenuItem) {
     [self refreshLayout];
     [_hover updateInScene:self];
     CGPoint click = CGPointMake(-1, -1);
-    @synchronized (self) {
-        if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
-        _hasPendingPoint = NO;
-    }
+    if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
+    _hasPendingPoint = NO;
     if (_controls) {
         if ((actions & (InputActionBack | InputActionConfirm)) || CGRectContainsPoint(_controlsBack, click)) {
             [[GameAudio shared] play:@"ui-back"];
@@ -558,23 +570,20 @@ typedef NS_ENUM(NSInteger, MenuItem) {
         }
     }
     if (!(actions & InputActionConfirm)) return MainMenuCommandNone;
-    if (_selected != MenuItemAudio) [[GameAudio shared] play:@"ui-confirm"];
-    switch ((MenuItem)_selected) {
-        case MenuItemCampaign: return MainMenuCommandCampaign;
-        case MenuItemMissions: return MainMenuCommandMissions;
-        case MenuItemMultiplayer: return MainMenuCommandMultiplayer;
-        case MenuItemControls:
-            _controls = YES;
-            _transition = UITransitionPage;
-            [self rebuild];
-            break;
-        case MenuItemQuit: return MainMenuCommandQuit;
-        case MenuItemAudio:
-            [[GameAudio shared] cycleMix];
-            [[GameAudio shared] play:@"ui-confirm"];
-            [self reselect];
-            break;
-        case MenuItemCount: break;
+    NSString *item = [self itemId:_selected];
+    if (![item isEqualToString:@"sound"]) [[GameAudio shared] play:@"ui-confirm"];
+    if ([item isEqualToString:@"campaign"]) return MainMenuCommandCampaign;
+    if ([item isEqualToString:@"missions"]) return MainMenuCommandMissions;
+    if ([item isEqualToString:@"lan"]) return MainMenuCommandMultiplayer;
+    if ([item isEqualToString:@"quit"]) return MainMenuCommandQuit;
+    if ([item isEqualToString:@"controls"]) {
+        _controls = YES;
+        _transition = UITransitionPage;
+        [self rebuild];
+    } else if ([item isEqualToString:@"sound"]) {
+        [[GameAudio shared] cycleMix];
+        [[GameAudio shared] play:@"ui-confirm"];
+        [self reselect];
     }
     return MainMenuCommandNone;
 }
@@ -582,12 +591,6 @@ typedef NS_ENUM(NSInteger, MenuItem) {
 #if TARGET_OS_IOS
 - (void)update:(NSTimeInterval)time {
     [self refreshLayout];
-}
-
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    CGPoint point = [touches.anyObject locationInNode:self];
-    if (self.size.width > 0 && self.size.height > 0)
-        [self queueClickAtFraction:CGPointMake(point.x / self.size.width, point.y / self.size.height)];
 }
 #endif
 

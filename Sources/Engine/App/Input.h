@@ -5,6 +5,7 @@
 #import <AppKit/AppKit.h>
 #endif
 #import "InputAction.h"
+#import "ScreenInput.h"
 
 typedef struct {
     float pitch;     // +1 nose up
@@ -46,6 +47,7 @@ extern NSNotificationName const InputControllerDidChangeNotification;
 #endif
 
 - (ControlState)poll:(float)dt;
+// Menu actions (keys, buttons) since the last call, as a set.
 - (InputAction)consumeActions;
 
 #if TARGET_OS_IOS
@@ -55,6 +57,9 @@ extern NSNotificationName const InputControllerDidChangeNotification;
 @property (atomic, readonly, copy) NSString *axisDescription;
 @property (atomic, readonly) BOOL throttleFromJoystick;
 #endif
+// Pointer events for front-end screens: the platform view pushes, the
+// frame drains (see ScreenInput.h).
+@property (nonatomic, readonly) PointerQueue *pointer;
 @property (atomic, readonly) CGPoint mouseStick;          // -1..1, for the HUD
 @property (atomic, readonly, copy) NSString *joystickName; // nil if none
 

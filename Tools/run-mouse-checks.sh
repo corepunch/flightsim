@@ -15,7 +15,7 @@ for directory in Strings UI; do ln -s "$PWD/Resources/$directory" "$contents/Res
 objects=(build/Native/engine/**/*.o)
 objects=(${objects:#*/main.m.o})
 clang -fobjc-arc -Wall -mmacosx-version-min=13.0 \
-    -ISources/Shared -ISources/Engine/App -ISources/Engine/Render -ISources/Engine/Common \
+    -ISources/Shared -ISources/Engine/App -ISources/Engine/Render -ISources/Engine/Common -ISources/Engine/UI \
     Tools/GUI/MouseFlightChecks.m "${objects[@]}" \
     -framework Cocoa -framework SceneKit -framework SpriteKit -framework Metal \
     -framework CoreGraphics -framework QuartzCore -framework IOKit -framework Carbon \

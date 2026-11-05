@@ -27,7 +27,7 @@ static void Advance(Briefing *scene) {
 }
 
 static BriefingCommand ClickScene(Briefing *scene) {
-    [scene queueClickAtFraction:CGPointMake(0.5, 0.5)];
+    [scene pointerClick:CGPointMake(0.5, 0.5)];
     return [scene handle:0];
 }
 
@@ -44,10 +44,10 @@ static int CheckScrolling(void) {
     CHECK(!CGRectIsEmpty(viewport));
     CGPoint inside = CGPointMake(CGRectGetMidX(viewport) / scene.size.width,
                                  CGRectGetMidY(viewport) / scene.size.height);
-    [scene queueScrollBy:20 atFraction:CGPointMake(0.005, inside.y)];
+    [scene pointerScroll:20 at:CGPointMake(0.005, inside.y)];
     [scene handle:0];
     CHECK(ScrollOffset(scene) == 0);
-    [scene queueScrollBy:10000 atFraction:inside];
+    [scene pointerScroll:10000 at:inside];
     [scene handle:0];
     CHECK(ScrollOffset(scene) > 0);
     SKNode *content = [scene valueForKey:@"_scrollContent"];
@@ -56,7 +56,7 @@ static int CheckScrolling(void) {
     NSArray<NSValue *> *tiles = [scene valueForKey:@"_missionTiles"];
     CHECK(tiles.count == CampaignMissions().count);
     for (NSValue *value in tiles) CHECK(value.rectValue.size.width >= 140 && value.rectValue.size.height >= 140);
-    [scene queueScrollBy:-10000 atFraction:inside];
+    [scene pointerScroll:-10000 at:inside];
     [scene handle:0];
     CHECK(ScrollOffset(scene) == 0);
     [scene handle:InputActionRight];
@@ -153,7 +153,7 @@ int main(void) {
             CGRect previousButton = [[scene valueForKey:@"_previousRect"] rectValue];
             if (CGRectIsEmpty(previousButton)) [scene handle:InputActionLeft];
             else {
-                [scene queueClickAtFraction:CGPointMake(CGRectGetMidX(previousButton) / scene.size.width,
+                [scene pointerClick:CGPointMake(CGRectGetMidX(previousButton) / scene.size.width,
                                                        CGRectGetMidY(previousButton) / scene.size.height)];
                 CHECK([scene handle:0] == BriefingCommandNone);
             }
