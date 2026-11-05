@@ -109,6 +109,39 @@ static int CheckCaret(NSString *output) {
     return EXIT_SUCCESS;
 }
 
+// Marked keywords: the asterisks are gone, the keyword is in the highlight
+// colour from the first frame it is revealed, and typing counts visible characters.
+static int CheckHighlight(void) {
+    CGSize size = CGSizeMake(640, 360);
+    SizeTarget(size);
+    SKScene *scene = [SKScene sceneWithSize:size];
+    SKView *renderer = view;
+    [view presentScene:scene];
+    SKLabelNode *speech = UIMonoLabel(22, SKColor.whiteColor, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
+    speech.fontName = UIBodyFont;
+    speech.numberOfLines = 0;
+    speech.preferredMaxLayoutWidth = 500;
+    NSArray<NSValue *> *marks;
+    speech.text = StoryPlainText(@"Destroy the *Corvette Vesk* now.", &marks);
+    CHECK([speech.text isEqualToString:@"Destroy the Corvette Vesk now."] && marks.count == 1);
+    UIMotionHighlight(speech, marks, UIColorWithOpacity(UIYellow, 1));
+    speech.position = CGPointMake(50, 300);
+    [scene addChild:speech];
+    double duration = UIMotionDialogueTypeOn(speech, 0, 40);
+    NSString *plain = speech.text;
+    Render(renderer, 0);
+    for (int i = 1; i < (duration + 0.3) * 60; i++) Render(renderer, i / 60.0);
+    CHECK(!UIMotionIsTyping(speech) && RevealedCount(speech) == plain.length);
+    NSAttributedString *text = speech.attributedText;
+    NSRange keyword = marks[0].rangeValue;
+    CHECK([text.string isEqualToString:plain]);
+    CHECK(![[text.string substringWithRange:keyword] containsString:@"*"]);
+    NSColor *inside = [text attribute:NSForegroundColorAttributeName atIndex:keyword.location effectiveRange:NULL];
+    NSColor *outside = [text attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL];
+    CHECK(![inside isEqual:outside]);
+    return EXIT_SUCCESS;
+}
+
 static int CheckCampaignCaptions(void) {
     for (NSValue *value in @[[NSValue valueWithSize:NSMakeSize(1600, 900)],
                              [NSValue valueWithSize:NSMakeSize(640, 660)],
@@ -131,6 +164,66 @@ static int CheckCampaignCaptions(void) {
     return EXIT_SUCCESS;
 }
 
+// Map steps with a camera or labels: each plays out for a second and a half
+// and is saved, to look at how the camera framed the page.
+static int CheckTimeline(NSString *output) {
+    CGSize size = CGSizeMake(1600, 900);
+    SizeTarget(size);
+    Briefing *scene = [[Briefing alloc] initWithSize:size];
+    SKView *renderer = view;
+    [view presentScene:scene];
+    for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
+        BOOL any = NO;
+        for (BriefingStep *step in CampaignMissionAt(mission).briefing.steps) any |= step.camera || step.labels.count;
+        if (!any) continue;
+        [scene showBriefing:mission];
+        [(id<UIMotionScene>)scene motionEnter];
+        NSArray<BriefingPage *> *pages = [scene valueForKey:@"_pages"];
+        for (NSUInteger page = 0; page < pages.count; page++) {
+            BriefingStep *step = pages[page].step;
+            if (step.camera || step.labels.count) {
+                for (int i = 0; i < 90; i++) @autoreleasepool { Render(renderer, i / 60.0); }
+                Save([output stringByAppendingPathComponent:[NSString stringWithFormat:@"timeline-%lu-%lu.png",
+                                                             (unsigned long)mission + 1, (unsigned long)page + 1]]);
+            }
+            UIMotionFinishTyping(scene.speech);
+            if (page + 1 < pages.count) [scene handle:InputActionRight];
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
+// Autoplay: a timed step moves on after its caption has typed and its
+// seconds are up; any input stops it for the rest of the briefing.
+static int CheckAutoplay(void) {
+    CGSize size = CGSizeMake(1600, 900);
+    for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
+        NSArray<BriefingPage *> *pages = StoryBriefingPages(CampaignMissionAt(mission));
+        for (NSUInteger page = 0; page + 1 < pages.count; page++) {
+            if (!pages[page].step.timed) continue;
+            float seconds = pages[page].step.seconds;
+            for (int touched = 0; touched < 2; touched++) {
+                SizeTarget(size);
+                Briefing *scene = [[Briefing alloc] initWithSize:size];
+                [scene showBriefing:mission page:page];
+                [(id<UIMotionScene>)scene motionEnter];
+                [view presentScene:scene];
+                Render(view, 0);
+                [scene tick:0];
+                UIMotionFinishTyping(scene.speech);
+                [scene tick:1];                                  // starts the clock
+                if (touched) [scene handle:InputActionUp];
+                [scene tick:1 + seconds - 0.1];
+                CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == page);
+                [scene tick:1 + seconds + 0.1];
+                CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == (touched ? page : page + 1));
+            }
+            return EXIT_SUCCESS;
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, const char **argv) {
     @autoreleasepool {
         [NSApplication sharedApplication];
@@ -147,6 +240,8 @@ int main(int argc, const char **argv) {
         CHECK(!UIMotionReduced());
         if (CheckCampaignCaptions() != EXIT_SUCCESS) return EXIT_FAILURE;
         if (CheckCaret(output) != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (CheckHighlight() != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (CheckAutoplay() != EXIT_SUCCESS) return EXIT_FAILURE;
         for (NSValue *value in @[[NSValue valueWithSize:NSMakeSize(1600, 900)], [NSValue valueWithSize:NSMakeSize(852, 393)]]) {
             CGSize size = value.sizeValue;
             SizeTarget(size);
@@ -175,6 +270,7 @@ int main(int argc, const char **argv) {
             CHECK(![speech childNodeWithName:@"motion.caret"]);
             CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == 1);
         }
+        if (CheckTimeline(output) != EXIT_SUCCESS) return EXIT_FAILURE;
         puts("PASS: dialogue caret, line returns, Unicode, skip controls and rendered briefing at desktop and phone sizes.");
     }
     return EXIT_SUCCESS;

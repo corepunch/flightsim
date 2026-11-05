@@ -798,6 +798,22 @@ static void CheckStory(void) {
         CHECK([pages.lastObject.portrait isEqualToString:StoryCharacterNamed(officer).portrait]);
         for (BriefingPage *page in pages) CHECK(page.text.length && page.channel.length && page.portrait);
     }
+    // A step's camera and labels: ids or [x, z] points; malformed labels are dropped.
+    BriefingStep *step = [BriefingStep stepWithJSON:@{
+        @"caption": @"c", @"camera": @{ @"center": @"corvette", @"span": @2500 },
+        @"labels": @[ @{ @"text": @"Kill zone", @"at": @[@1200, @-3400] }, @{ @"text": @"Lost", @"at": @[@1] }, @{ @"at": @"x" } ] }];
+    CHECK([step.camera.center.identifier isEqualToString:@"corvette"] && step.camera.span == 2500);
+    CHECK(step.labels.count == 1 && !step.labels[0].at.identifier && step.labels[0].at.position.y == -3400);
+    CHECK(![BriefingStep stepWithJSON:@{ @"caption": @"c" }].camera);
+    CHECK(![BriefingStep stepWithJSON:@{ @"caption": @"c" }].timed);
+    BriefingStep *timed = [BriefingStep stepWithJSON:@{ @"caption": @"c", @"seconds": @3.5 }];
+    CHECK(timed.timed && timed.seconds == 3.5f);
+    // Keyword marks: removed from the text, ranges count visible characters.
+    NSArray<NSValue *> *marks;
+    CHECK([StoryPlainText(@"Kill *Corvette Vesk* now, *fast*.", &marks) isEqualToString:@"Kill Corvette Vesk now, fast."]);
+    CHECK(marks.count == 2 && NSEqualRanges(marks[0].rangeValue, NSMakeRange(5, 13)) && NSEqualRanges(marks[1].rangeValue, NSMakeRange(24, 4)));
+    CHECK([StoryPlainText(@"a ** b *unclosed", &marks) isEqualToString:@"a * b *unclosed"] && marks.count == 0);
+    CHECK([StoryPlainText(@"plain", NULL) isEqualToString:@"plain"]);
     // A game-registered page kind, named by a mission's own page order.
     StoryRegisterBriefingPages(@"check_weather", ^NSArray *(CampaignMission *mission, StoryLine *officer) {
         return @[ [BriefingPage pageBy:officer text:@"Fog" channel:@"WX" step:nil readout:nil] ];

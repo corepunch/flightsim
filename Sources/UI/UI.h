@@ -520,6 +520,9 @@ NSTimeInterval UIMotionTypeOn(SKLabelNode *label, NSTimeInterval delay, CGFloat 
 NSTimeInterval UIMotionDialogueTypeOn(SKLabelNode *label, NSTimeInterval delay, CGFloat charsPerSecond);
 // Adjust the block and return trail within a scene's paragraph baseline.
 void UIMotionOffsetDialogueCaret(SKLabelNode *label, CGFloat y);
+// Draws ranges (NSValue of NSRange) of the label's text in color, and keeps
+// them while the text types on. Call after setting text, before typing.
+void UIMotionHighlight(SKLabelNode *label, NSArray<NSValue *> *ranges, SKColor *color);
 BOOL UIMotionIsTyping(SKLabelNode *label);
 void UIMotionFinishTyping(SKLabelNode *label);
 // Chromatic split and flicker. Intro resolves the label; a burst is a short

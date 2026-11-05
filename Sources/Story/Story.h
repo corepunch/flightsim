@@ -39,13 +39,45 @@
 + (instancetype)lineBy:(NSString *)speaker portrait:(NSString *)portrait text:(NSString *)text;
 @end
 
+// A place on the tactical map: a contact's id, or a point in the level's x/z
+// plane (metres; -Z is up on the map).
+//   "corvette"  or  [1200, -3400]
+@interface BriefingPlace : NSObject
+@property (nonatomic, readonly) NSString *identifier;                    // nil for a point
+@property (nonatomic, readonly) simd_float2 position;                    // x, z; meaningful for a point
++ (instancetype)placeWithJSON:(id)json;                                  // nil when malformed
+@end
+
+// Where the map looks. A missing part keeps the map's fit-everything default.
+//   { "center": "<id>" | [x, z], "span": metres }
+@interface BriefingCamera : NSObject
+@property (nonatomic, readonly) BriefingPlace *center;                   // nil: the middle of the action
+@property (nonatomic, readonly) float span;                              // metres across the map's shorter side; 0: fit
+@end
+
+// Free text pinned to the map.
+//   { "text": "…", "at": "<id>" | [x, z] }
+@interface BriefingLabel : NSObject
+@property (nonatomic, readonly) NSString *text;
+@property (nonatomic, readonly) BriefingPlace *at;
+@end
+
 // A cue on the tactical map, or a target schematic.
 //   { "caption": "…", "show": ["corvette", "escorts"], "route": ["start", "n1"],
-//     "focus": "corvette", "schematic": "Engine" }
+//     "focus": "corvette", "schematic": "Engine",
+//     "camera": { "center": "corvette", "span": 2500 },
+//     "labels": [ { "text": "Kill zone", "at": [1200, -3400] } ],
+//     "seconds": 4 }
 @interface BriefingStep : NSObject
 @property (nonatomic, readonly) NSString *caption, *focus;
 @property (nonatomic, readonly) NSString *schematic;                     // a subsystem kind, or nil for the map
 @property (nonatomic, readonly) NSArray<NSString *> *show, *route;
+@property (nonatomic, readonly) BriefingCamera *camera;                  // nil: the default fit
+@property (nonatomic, readonly) NSArray<BriefingLabel *> *labels;        // text is plain or L10nExpand markup
+// Autoplay: seconds to hold after the caption has been typed before the
+// briefing moves on by itself. Without it the step waits for the player.
+@property (nonatomic, readonly) BOOL timed;
+@property (nonatomic, readonly) float seconds;
 + (instancetype)stepWithJSON:(NSDictionary *)json;
 // The map lit on one thing and focused on it.
 + (instancetype)stepFocusing:(NSString *)identifier;
@@ -140,6 +172,11 @@ StoryRoom *StoryRoomNamed(NSString *identifier);             // nil if there is 
 + (instancetype)pageBy:(StoryLine *)officer text:(NSString *)text channel:(NSString *)channel
                   step:(BriefingStep *)step readout:(NSArray<NSString *> *)readout;
 @end
+
+// Briefing text marks keywords with asterisks: "Destroy the *corvette Vesk*."
+// Returns the text without the marks and the character ranges (NSValue of
+// NSRange, UTF-16) that were marked. A lone asterisk, or "**", reads as one.
+NSString *StoryPlainText(NSString *marked, NSArray<NSValue *> **highlights);
 
 // `officer` is the character giving the briefing: speaker and portrait, no text.
 typedef NSArray<BriefingPage *> *(^BriefingPageKind)(CampaignMission *mission, StoryLine *officer);

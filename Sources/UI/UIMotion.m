@@ -11,6 +11,8 @@ typedef NSFont UIMotionFont;
 
 static NSString * const TypeKey = @"motion.type";
 static NSString * const TypeTextKey = @"motion.text";
+static NSString * const HighlightRangesKey = @"motion.highlights";
+static NSString * const HighlightColorKey = @"motion.highlightColor";
 static NSString * const CaretName = @"motion.caret";
 
 @interface UITypeStop : NSObject
@@ -198,6 +200,11 @@ static NSAttributedString *Revealed(SKLabelNode *label, NSString *text, NSUInteg
         NSForegroundColorAttributeName: [SKColor clearColor],
     }];
     [out addAttribute:NSForegroundColorAttributeName value:color range:NSMakeRange(0, MIN(count, text.length))];
+    SKColor *highlight = label.userData[HighlightColorKey];
+    for (NSValue *value in label.userData[HighlightRangesKey]) {
+        NSRange range = NSIntersectionRange(value.rangeValue, NSMakeRange(0, MIN(count, text.length)));
+        if (range.length) [out addAttribute:NSForegroundColorAttributeName value:highlight range:range];
+    }
     return out;
 }
 
@@ -221,6 +228,15 @@ NSTimeInterval UIMotionTypeOn(SKLabelNode *label, NSTimeInterval delay, CGFloat 
         type, [SKAction runBlock:^{ label.attributedText = Revealed(label, text, length); }],
     ]]) withKey:TypeKey];
     return delay + duration;
+}
+
+void UIMotionHighlight(SKLabelNode *label, NSArray<NSValue *> *ranges, SKColor *color) {
+    if (!ranges.count) return;
+    if (!label.userData) label.userData = [NSMutableDictionary dictionary];
+    label.userData[HighlightRangesKey] = ranges;
+    label.userData[HighlightColorKey] = color;
+    NSString *text = label.text;
+    label.attributedText = Revealed(label, text, text.length);
 }
 
 BOOL UIMotionIsTyping(SKLabelNode *label) {

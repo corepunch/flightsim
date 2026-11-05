@@ -68,6 +68,45 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
 
 @end
 
+@implementation BriefingPlace
+
++ (instancetype)placeWithJSON:(id)json {
+    BriefingPlace *place = [self new];
+    if ([json isKindOfClass:NSString.class] && [json length]) {
+        place->_identifier = json;
+        return place;
+    }
+    if (![json isKindOfClass:NSArray.class] || [json count] != 2) return nil;
+    for (id v in json) if (![v isKindOfClass:NSNumber.class]) return nil;
+    place->_position = simd_make_float2([json[0] floatValue], [json[1] floatValue]);
+    return place;
+}
+
+@end
+
+@implementation BriefingCamera
+
++ (instancetype)cameraWithJSON:(NSDictionary *)json {
+    if (!json) return nil;
+    BriefingCamera *camera = [self new];
+    camera->_center = [BriefingPlace placeWithJSON:json[@"center"]];
+    camera->_span = MAX(0, JSONFloat(json, @"span", 0));
+    return camera;
+}
+
+@end
+
+@implementation BriefingLabel
+
++ (instancetype)labelWithJSON:(NSDictionary *)json {
+    BriefingLabel *label = [self new];
+    label->_text = JSONString(json, @"text");
+    label->_at = [BriefingPlace placeWithJSON:json[@"at"]];
+    return label->_text.length && label->_at ? label : nil;
+}
+
+@end
+
 @implementation BriefingStep
 
 + (instancetype)stepWithJSON:(NSDictionary *)json {
@@ -77,6 +116,11 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
     step->_schematic = JSONString(json, @"schematic");
     step->_show = JSONStrings(json, @"show");
     step->_route = JSONStrings(json, @"route");
+    step->_camera = [BriefingCamera cameraWithJSON:JSONObject(json, @"camera")];
+    step->_labels = ObjectsOf(json, @"labels", ^id(NSDictionary *label) { return [BriefingLabel labelWithJSON:label]; });
+    NSNumber *seconds = JSONNumber(json, @"seconds");
+    step->_timed = seconds != nil;
+    step->_seconds = MAX(0, seconds.floatValue);
     return step;
 }
 
@@ -86,6 +130,7 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
     step->_focus = identifier;
     step->_show = identifier ? @[identifier] : @[];
     step->_route = @[];
+    step->_labels = @[];
     return step;
 }
 
@@ -295,6 +340,35 @@ BOOL StoryPortraitFacesRight(NSString *portrait) {
 StoryRoom *StoryRoomNamed(NSString *identifier) { return identifier ? Rooms()[identifier] : nil; }
 
 #pragma mark - Briefing pages
+
+NSString *StoryPlainText(NSString *marked, NSArray<NSValue *> **highlights) {
+    NSMutableString *plain = [NSMutableString stringWithCapacity:marked.length];
+    NSMutableArray<NSValue *> *ranges = [NSMutableArray array];
+    NSUInteger i = 0, n = marked.length;
+    while (i < n) {
+        unichar c = [marked characterAtIndex:i];
+        if (c != '*') {
+            [plain appendFormat:@"%C", c];
+            i++;
+            continue;
+        }
+        NSRange close = [marked rangeOfString:@"*" options:0 range:NSMakeRange(i + 1, n - i - 1)];
+        if (close.location == NSNotFound) {
+            [plain appendString:@"*"];
+            i++;
+        } else if (close.location == i + 1) {
+            [plain appendString:@"*"];
+            i += 2;
+        } else {
+            NSString *word = [marked substringWithRange:NSMakeRange(i + 1, close.location - i - 1)];
+            [ranges addObject:[NSValue valueWithRange:NSMakeRange(plain.length, word.length)]];
+            [plain appendString:word];
+            i = close.location + 1;
+        }
+    }
+    if (highlights) *highlights = ranges;
+    return plain;
+}
 
 @implementation BriefingPage
 

@@ -63,6 +63,35 @@ def check_expression(portrait, expression):
     )
 
 
+def check_place(index, place, map_ids):
+    """A map place is a contact id or an [x, z] point in metres."""
+    if isinstance(place, str):
+        assert place in map_ids, (index, place)
+    else:
+        assert isinstance(place, list) and len(place) == 2, (index, place)
+        assert all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in place), (index, place)
+
+
+def check_camera_and_labels(index, step, map_ids):
+    """Optional "camera": {center, span}, "labels": [{text, at}] and "seconds" on a tactical step."""
+    if "seconds" in step:
+        seconds = step["seconds"]
+        assert isinstance(seconds, (int, float)) and not isinstance(seconds, bool) and 0 <= seconds <= 60, (index, step)
+    camera = step.get("camera")
+    if camera is not None:
+        assert isinstance(camera, dict) and camera and set(camera) <= {"center", "span"}, (index, camera)
+        if "center" in camera:
+            check_place(index, camera["center"], map_ids)
+        if "span" in camera:
+            span = camera["span"]
+            assert isinstance(span, (int, float)) and not isinstance(span, bool) and span >= 200, (index, camera)
+        assert "schematic" not in step, (index, "a schematic has no map camera")
+    for label in step.get("labels", []):
+        assert set(label) == {"text", "at"} and label["text"].strip(), (index, label)
+        check_place(index, label["at"], map_ids)
+        assert "schematic" not in step, (index, "a schematic has no map labels")
+
+
 def validate_mission(mission):
     index = mission["level"]
     brief = mission["briefing"]
@@ -102,6 +131,7 @@ def validate_mission(mission):
         if "focus" in step:
             refs.add(step["focus"])
         assert step["caption"].strip() and refs <= map_ids, (index, step, refs - map_ids)
+        check_camera_and_labels(index, step, map_ids)
         if "schematic" in step:
             asset = entities[step["focus"]]["asset"]
             check_art(art(f'Schematics/{asset}-{step["schematic"]}.png'), transparent=True)
