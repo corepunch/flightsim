@@ -103,14 +103,15 @@
 
 - (instancetype)initWithAsset:(NSString *)asset style:(NSString *)style team:(Team)team {
     if ((self = [super init])) {
-        NSDictionary *info = AssetInfo(asset) ?: @{ @"hp": @10, @"class": asset, @"style": @"concord" };
+        const CapitalDef *def = CapitalDefNamed(asset);
+        if (!def) GPrint(@"No capital definition \"%@\"; using defaults", asset);
         _asset = [asset copy];
         _team = team;
-        _className = info[@"class"];
-        _maxHull = _hull = [info[@"hp"] floatValue];
-        _invulnerable = [info[@"invulnerable"] boolValue];
-        _isProp = [info[@"prop"] boolValue];
-        _isMine = [info[@"mine"] boolValue];
+        _className = def ? @(def->className) : asset;
+        _maxHull = _hull = def ? def->hp : 10;
+        _invulnerable = def && def->invulnerable;
+        _isProp = def && def->prop;
+        _isMine = def && def->mine;
         _isAsteroid = [_className isEqualToString:@"Asteroid"];
         _isBuoy = [asset isEqualToString:@"NavBuoy"];
         _alive = YES;

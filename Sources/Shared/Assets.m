@@ -94,15 +94,12 @@ const ShipDef *ShipDefNamed(NSString *name) {
     }
 }
 
+static NSArray<NSString *> *DefinitionNames(NSString *directory);
+
 NSArray<NSString *> *ShipDefNames(void) {
     static NSArray *names;
     static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        NSMutableArray *found = [NSMutableArray array];
-        for (NSURL *url in [NSBundle.mainBundle URLsForResourcesWithExtension:@"json" subdirectory:@"Ships"])
-            [found addObject:url.lastPathComponent.stringByDeletingPathExtension];
-        names = [found sortedArrayUsingSelector:@selector(compare:)];
-    });
+    dispatch_once(&once, ^{ names = DefinitionNames(@"Ships"); });
     return names;
 }
 
@@ -112,49 +109,97 @@ const ShipDef *ShipDefForModel(NSString *model) {
     return [model hasPrefix:@"ship:"] ? ShipDefNamed([model substringFromIndex:5]) : NULL;
 }
 
-#pragma mark - Capital assets
+#pragma mark - Definition files
 
-NSString *CapitalModelName(NSString *asset, NSString *style) {
-    return [NSString stringWithFormat:@"cap:%@:%@", asset, style ?: AssetInfo(asset)[@"style"] ?: @"concord"];
+// Resources/<directory>/<name>.json as a dictionary, or nil.
+static NSDictionary *DefinitionFile(NSString *directory, NSString *name) {
+    if (!name.length) return nil;
+    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:directory];
+    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
+    NSError *error = nil;
+    NSDictionary *d = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;
+    if (url && ![d isKindOfClass:NSDictionary.class]) NSLog(@"%@: cannot read %@.json: %@", directory, name, error.localizedDescription);
+    return [d isKindOfClass:NSDictionary.class] ? d : nil;
 }
 
-NSDictionary *AssetInfo(NSString *asset) {
-    static NSDictionary *t;
+static NSArray<NSString *> *DefinitionNames(NSString *directory) {
+    NSMutableArray *found = [NSMutableArray array];
+    for (NSURL *url in [NSBundle.mainBundle URLsForResourcesWithExtension:@"json" subdirectory:directory])
+        [found addObject:url.lastPathComponent.stringByDeletingPathExtension];
+    return [found sortedArrayUsingSelector:@selector(compare:)];
+}
+
+// One cache per definition kind; a pointer, once handed out, lives for the process.
+static void *CachedDefinition(NSMutableDictionary<NSString *, NSValue *> *cache, NSString *name, void *(^load)(void)) {
+    if (!name.length) return NULL;
+    @synchronized (cache) {
+        NSValue *v = cache[name];
+        if (!v) {
+            v = [NSValue valueWithPointer:load()];
+            cache[name] = v;
+        }
+        return v.pointerValue;
+    }
+}
+
+#pragma mark - Capital definitions
+
+static NSMutableDictionary<NSString *, NSValue *> *gCapitalDefs;
+
+const CapitalDef *CapitalDefNamed(NSString *asset) {
     static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        t = @{
-            @"Carrier":        @{ @"hp": @120, @"class": @"Fleet Carrier", @"style": @"concord" },
-            @"Frigate":        @{ @"hp": @30, @"class": @"Frigate", @"style": @"concord" },
-            @"CommRelay":      @{ @"hp": @30, @"class": @"Comm Relay", @"style": @"concord" },
-            @"RingStation":    @{ @"hp": @90, @"class": @"Orbital Station", @"style": @"concord" },
-            @"ResearchVessel": @{ @"hp": @22, @"class": @"Survey Ship", @"style": @"concord" },
-            @"JumpGate":       @{ @"hp": @1, @"class": @"Jump Gate", @"style": @"concord", @"invulnerable": @YES },
-            @"NavBuoy":        @{ @"hp": @1, @"class": @"Nav Buoy", @"style": @"concord", @"prop": @YES },
-            @"Freighter":      @{ @"hp": @25, @"class": @"Freighter", @"style": @"civil" },
-            @"Tanker":         @{ @"hp": @22, @"class": @"Tanker", @"style": @"civil" },
-            @"Liner":          @{ @"hp": @35, @"class": @"Liner", @"style": @"civil" },
-            @"HospitalShip":   @{ @"hp": @28, @"class": @"Hospital Ship", @"style": @"medical" },
-            @"FuelDepot":      @{ @"hp": @40, @"class": @"Fuel Depot", @"style": @"civil" },
-            @"Container":      @{ @"hp": @1.2, @"class": @"Cargo Container", @"style": @"civil", @"prop": @YES },
-            @"EscapePod":      @{ @"hp": @0.6, @"class": @"Escape Pod", @"style": @"civil", @"prop": @YES },
-            @"Corvette":       @{ @"hp": @9, @"class": @"Corvette", @"style": @"skarn" },
-            @"Destroyer":      @{ @"hp": @28, @"class": @"Destroyer", @"style": @"skarn" },
-            @"Cruiser":        @{ @"hp": @45, @"class": @"Heavy Cruiser", @"style": @"skarn" },
-            @"Dreadnought":    @{ @"hp": @80, @"class": @"Dreadnought", @"style": @"skarn" },
-            @"Minelayer":      @{ @"hp": @7, @"class": @"Minelayer", @"style": @"skarn" },
-            @"DefensePlatform":@{ @"hp": @14, @"class": @"Defence Platform", @"style": @"skarn" },
-            @"Shipyard":       @{ @"hp": @50, @"class": @"Shipyard", @"style": @"skarn" },
-            @"PrisonBarge":    @{ @"hp": @40, @"class": @"Prison Barge", @"style": @"skarn" },
-            @"Prototype":      @{ @"hp": @3, @"class": @"Stealth Prototype", @"style": @"stealth" },
-            @"Mine":           @{ @"hp": @0.15, @"class": @"Mine", @"style": @"skarn", @"prop": @YES, @"mine": @YES },
-            @"CorsairBase":    @{ @"hp": @50, @"class": @"Corsair Base", @"style": @"corsair" },
-            @"CorsairCutter":  @{ @"hp": @5, @"class": @"Corsair Cutter", @"style": @"corsair" },
-            @"AsteroidA":      @{ @"hp": @1, @"class": @"Asteroid", @"style": @"rock", @"invulnerable": @YES },
-            @"AsteroidB":      @{ @"hp": @1, @"class": @"Asteroid", @"style": @"rock", @"invulnerable": @YES },
-            @"AsteroidC":      @{ @"hp": @1, @"class": @"Asteroid", @"style": @"rock", @"invulnerable": @YES },
-        };
+    dispatch_once(&once, ^{ gCapitalDefs = [NSMutableDictionary dictionary]; });
+    return CachedDefinition(gCapitalDefs, asset, ^void *{
+        NSDictionary *d = DefinitionFile(@"Capitals", asset);
+        if (!d) return NULL;
+        CapitalDef *c = calloc(1, sizeof *c);
+        CopyName(c->name, asset);
+        CopyName(c->className, d[@"className"] ?: asset);
+        CopyName(c->style, d[@"style"] ?: @"default");
+        c->hp = Number(d, @"hp", 10);
+        c->invulnerable = [d[@"invulnerable"] boolValue];
+        c->prop = [d[@"prop"] boolValue];
+        c->mine = [d[@"mine"] boolValue];
+        return c;
     });
-    return t[asset];
+}
+
+NSArray<NSString *> *CapitalDefNames(void) {
+    static NSArray *names;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ names = DefinitionNames(@"Capitals"); });
+    return names;
+}
+
+NSString *CapitalModelName(NSString *asset, NSString *style) {
+    const CapitalDef *def = CapitalDefNamed(asset);
+    return [NSString stringWithFormat:@"cap:%@:%@", asset, style ?: (def ? @(def->style) : @"default")];
+}
+
+#pragma mark - Projectile definitions
+
+static NSMutableDictionary<NSString *, NSValue *> *gProjectileDefs;
+
+const ProjectileDef *ProjectileDefNamed(NSString *name) {
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ gProjectileDefs = [NSMutableDictionary dictionary]; });
+    return CachedDefinition(gProjectileDefs, name, ^void *{
+        NSDictionary *d = DefinitionFile(@"Projectiles", name);
+        if (!d) return NULL;
+        ProjectileDef *p = calloc(1, sizeof *p);
+        CopyName(p->name, name);
+        CopyName(p->glow, d[@"glow"] ?: @"flare_01");
+        NSArray *tint = d[@"tint"];
+        p->tint = tint.count >= 3 ? Vec3(tint) : simd_make_float3(2, 2, 2);
+        p->size = Number(d, @"size", 5);
+        return p;
+    });
+}
+
+NSString *ProjectileModelName(NSString *name) { return [@"proj:" stringByAppendingString:name]; }
+
+const ProjectileDef *ProjectileDefForModel(NSString *model) {
+    return [model hasPrefix:@"proj:"] ? ProjectileDefNamed([model substringFromIndex:5]) : NULL;
 }
 
 #pragma mark - Campaign

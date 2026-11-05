@@ -1,0 +1,28 @@
+{
+  "Hull": {
+    "textures": "stealth",
+    "tint": [
+      0.85,
+      0.85,
+      0.85
+    ],
+    "normal": 1.0
+  },
+  "HullDark": {
+    "textures": "stealth",
+    "tint": [
+      0.55,
+      0.55,
+      0.55
+    ],
+    "normal": 1.0
+  },
+  "Glow": {
+    "emissive": [
+      1.0,
+      0.25,
+      0.12
+    ],
+    "intensity": 3.0
+  }
+}

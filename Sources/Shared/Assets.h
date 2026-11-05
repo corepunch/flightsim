@@ -59,11 +59,43 @@ NSArray<NSString *> *ShipDefNames(void);                // every definition in t
 NSString *ShipModelName(NSString *name);               // "ship:<name>"
 const ShipDef *ShipDefForModel(NSString *model);       // "ship:<name>" -> definition, else NULL
 
-#pragma mark - Capital assets
+#pragma mark - Capital definitions
 
-// hp, class (display name), style (default hull style), invulnerable, prop, mine.
-NSDictionary *AssetInfo(NSString *asset);
-NSString *CapitalModelName(NSString *asset, NSString *style);      // "cap:Carrier:concord"
+// A capital ship, station, prop or rock, from Resources/Capitals/<Asset>.json:
+//   { "className": "Fleet Carrier", "hp": 120, "style": "concord",
+//     "invulnerable": false, "prop": false, "mine": false }
+// The mesh is Resources/Models/Capital/<Asset>.scn; `style` names the hull
+// material set in Resources/Styles/<style>.json. The model configstring is
+// "cap:<Asset>:<style>".
+typedef struct {
+    char name[SHIP_NAME_LENGTH];
+    char className[SHIP_NAME_LENGTH];
+    char style[SHIP_NAME_LENGTH];
+    float hp;
+    bool invulnerable;          // never takes damage
+    bool prop;                  // small thing that dies in one blast
+    bool mine;                  // prop that goes off near a ship
+} CapitalDef;
+
+const CapitalDef *CapitalDefNamed(NSString *asset);     // NULL if there is no such definition
+NSArray<NSString *> *CapitalDefNames(void);
+NSString *CapitalModelName(NSString *asset, NSString *style);      // "cap:Carrier:concord"; nil style = the definition's
+
+#pragma mark - Projectile definitions
+
+// A guided round's look, from Resources/Projectiles/<name>.json:
+//   { "glow": "flare_01", "tint": [3.0, 1.6, 0.6], "size": 7 }
+// The model configstring is "proj:<name>".
+typedef struct {
+    char name[SHIP_NAME_LENGTH];
+    char glow[SHIP_NAME_LENGTH];    // Resources/Particles/<glow>.png, drawn additively, facing the camera
+    simd_float3 tint;               // HDR tint of the glow
+    float size;                     // metres
+} ProjectileDef;
+
+const ProjectileDef *ProjectileDefNamed(NSString *name);
+NSString *ProjectileModelName(NSString *name);             // "proj:<name>"
+const ProjectileDef *ProjectileDefForModel(NSString *model);
 
 #pragma mark - Campaign
 

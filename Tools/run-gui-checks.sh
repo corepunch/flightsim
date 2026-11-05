@@ -14,7 +14,7 @@ cp Resources/Info.plist "$contents/Info.plist"
     -c 'Set CFBundleIdentifier com.igor.spacefight.portraitchecks' \
     -c 'Set CFBundleName Portrait Checks' \
     -c 'Add LSUIElement bool true' "$contents/Info.plist"
-cp -R Resources/Briefing Resources/Fonts Resources/Missions Resources/Ships "$contents/Resources/"
+cp -R Resources/Briefing Resources/Fonts Resources/Missions Resources/Ships Resources/Capitals "$contents/Resources/"
 ln -s "$PWD/Resources/Audio" "$contents/Resources/Audio"
 
 ui=Sources/Engine/UI

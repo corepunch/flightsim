@@ -119,6 +119,7 @@ static EntityState FighterState(GFighter *s, GPilot *p) {
         e.number = t.number;
         e.kind = EntityProjectile;
         e.team = t.team;
+        e.model = (uint16_t)t.model;
         e.origin = t.position;
         e.velocity = t.velocity;
         e.orientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));

@@ -12,6 +12,13 @@
 #import "NetProtocol.h"
 
 static int failures;
+
+// Resources/<directory>/<name>.json as a dictionary, from the check's own bundle.
+static NSDictionary *DefinitionJSON(NSString *directory, NSString *name) {
+    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:directory];
+    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
+    return data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+}
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #c); failures++; } } while (0)
 #define NEAR(a, b, eps) (fabsf((float)(a) - (float)(b)) <= (eps))
 
@@ -272,11 +279,44 @@ static void CheckCampaign(void) {
         CHECK([m[@"title"] isKindOfClass:NSString.class] && [m[@"objectives"] count] > 0);
         for (NSDictionary *e in m[@"entities"]) {
             [assets addObject:e[@"asset"]];
-            CHECK(AssetInfo(e[@"asset"]) != nil);   // every capital the campaign places has a definition
+            CHECK(CapitalDefNamed(e[@"asset"]) != NULL);   // every capital the campaign places has a definition
         }
     }
     CHECK(assets.count > 10);
     CHECK([CapitalModelName(@"Carrier", nil) isEqualToString:@"cap:Carrier:concord"]);
+    CHECK([CapitalModelName(@"Carrier", @"skarn") isEqualToString:@"cap:Carrier:skarn"]);
+}
+
+// Every capital definition is complete and names a hull style that exists;
+// the default style covers every material slot the models use; the
+// projectile the game fires is defined.
+static void CheckDefinitions(void) {
+    NSArray<NSString *> *capitals = CapitalDefNames();
+    CHECK(capitals.count >= 20);
+    NSMutableSet *styles = [NSMutableSet set];
+    for (NSString *name in capitals) {
+        const CapitalDef *def = CapitalDefNamed(name);
+        CHECK(def != NULL);
+        if (!def) continue;
+        CHECK(strlen(def->className) > 0 && def->hp > 0 && strlen(def->style) > 0);
+        CHECK(!(def->mine && !def->prop));   // a mine is a prop that goes off
+        [styles addObject:@(def->style)];
+    }
+    CHECK(CapitalDefNamed(@"no-such-capital") == NULL);
+    NSDictionary *defaults = DefinitionJSON(@"Styles", @"default");
+    for (NSString *slot in @[@"Hull", @"HullDark", @"Glow", @"Lights", @"ShieldGen", @"Windows", @"Trim", @"Rock"])
+        CHECK([defaults[slot] isKindOfClass:NSDictionary.class]);
+    for (NSString *style in styles) {
+        NSDictionary *d = DefinitionJSON(@"Styles", style);
+        CHECK(d != nil);
+        for (NSString *slot in d) {
+            NSDictionary *spec = d[slot];
+            CHECK([spec isKindOfClass:NSDictionary.class] && (spec[@"textures"] || spec[@"emissive"] || spec[@"color"]));
+        }
+    }
+    const ProjectileDef *torpedo = ProjectileDefNamed(@"torpedo");
+    CHECK(torpedo && torpedo->size > 0 && strlen(torpedo->glow) > 0);
+    CHECK(ProjectileDefForModel(ProjectileModelName(@"torpedo")) == torpedo && ProjectileDefForModel(@"ship:wasp") == NULL);
 }
 
 int main(void) {
@@ -287,11 +327,12 @@ int main(void) {
         CheckEventsAndCommands();
         CheckConsole();
         CheckCampaign();
+        CheckDefinitions();
         if (failures) {
             fprintf(stderr, "%d check(s) failed\n", failures);
             return 1;
         }
-        printf("PASS: flight model, wire format, console and campaign data\n");
+        printf("PASS: flight model, wire format, console, campaign and definition data\n");
     }
     return 0;
 }

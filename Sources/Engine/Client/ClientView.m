@@ -291,9 +291,13 @@ typedef struct {
     v.kind = s->kind;
     NSString *model = [self modelAt:s->model];
     if (s->kind == EntityProjectile) {
+        // A camera-facing glow sized and tinted by the projectile definition.
+        const ProjectileDef *p = ProjectileDefForModel(model);
+        if (!p) NSLog(@"Client: no projectile definition for model \"%@\"", model);
         SCNNode *n = [SCNNode node];
-        SCNPlane *glow = [SCNPlane planeWithWidth:7 height:7];
-        glow.firstMaterial = [Effects additiveTextureMaterial:@"flare_01" tint:simd_make_float3(3.0f, 1.6f, 0.6f)];
+        float size = p ? p->size : 5;
+        SCNPlane *glow = [SCNPlane planeWithWidth:size height:size];
+        glow.firstMaterial = [Effects additiveTextureMaterial:p ? @(p->glow) : @"flare_01" tint:p ? p->tint : simd_make_float3(2, 2, 2)];
         SCNNode *g = [SCNNode nodeWithGeometry:glow];
         g.constraints = @[[SCNBillboardConstraint billboardConstraint]];
         g.castsShadow = NO;

@@ -1,0 +1,6 @@
+{
+  "className": "Asteroid",
+  "hp": 1,
+  "style": "rock",
+  "invulnerable": true
+}

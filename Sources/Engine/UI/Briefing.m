@@ -1135,10 +1135,10 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
             icon = n;
         } else {
             // Capital icon scaled to the real hull, pointing along its facing.
-            NSDictionary *info = AssetInfo(t[@"asset"]);
-            BOOL prop = [info[@"prop"] boolValue];
+            const CapitalDef *info = CapitalDefNamed(t[@"asset"]);
+            BOOL prop = info && info->prop;
             CGFloat maxLength = MIN(60, _mapRect.size.height * 0.15);
-            CGFloat len = prop ? 6 : MIN(maxLength, MAX(12, [info[@"hp"] floatValue] * 0.9 + 10));
+            CGFloat len = prop ? 6 : MIN(maxLength, MAX(12, (info ? info->hp : 10) * 0.9 + 10));
             SKShapeNode *n = prop ? [SKShapeNode shapeNodeWithRect:CGRectMake(-3, -3, 6, 6)]
                                   : [SKShapeNode shapeNodeWithRect:CGRectMake(-len * 0.18, -len / 2, len * 0.36, len) cornerRadius:3];
             n.strokeColor = c;

@@ -106,6 +106,7 @@ static NSString *FighterClassName(Team t) {
     _pendingCasualty = mission[@"casualty"];
 
     gi.modelIndex(ShipModelName(mission[@"player"][@"ship"] ?: kDefaultPlayerShip).UTF8String);
+    gi.modelIndex(ProjectileModelName(GTorpedoProjectile).UTF8String);
     for (NSDictionary *e in mission[@"entities"]) {
         if (e[@"at"] || e[@"after"] || e[@"nav"]) {
             [_pendingEntities addObject:e];
