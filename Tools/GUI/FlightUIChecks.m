@@ -50,7 +50,7 @@ static int CheckSensors(void) {
 static int CheckHUD(void) {
     CockpitContact contact = {.local={100,50,-1210}, .relation=RelationHostile, .hull=.72, .shield=.4, .systems=.75,
         .name=@"Corsair Cutter Rask", .className=@"Corsair cutter", .cargo=@"Skarn munitions", .component=@"SHIELD GENERATOR",
-        .geometry=[ShipView geometryForDefinition:ShipDefNamed(@"executioner")], .holoScale=.0075,
+        .hologram=[ShipView geometryForDefinition:ShipDefNamed(@"executioner")], .holoScale=.0075,
         .orientation=simd_quaternion(0.7f, simd_make_float3(0,1,0))};
     CockpitFrame instrument = {.alive=YES, .target=0, .weaponEnergy=.85, .weaponShotEnergy=.035, .shield=.6, .closingSpeed=42, .time=2};
     for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(1194,834)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(852,393)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {

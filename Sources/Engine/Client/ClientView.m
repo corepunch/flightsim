@@ -1,18 +1,9 @@
 #import "ClientView.h"
 #import "GameAudio.h"
-#import "ShipView.h"
-#import "CapitalView.h"
-#import "SpaceSky.h"
-#import "Effects.h"
-#import "Cockpit.h"
 #import "Assets.h"
 #include "SharedMath.h"
 
-#define MAX_BOLT_NODES 480
 #define MAX_HUD 64
-
-static const NSUInteger kSkyFaceSize = TARGET_OS_IOS ? 1024 : 1536;
-static const simd_float3 kCockpitEye = {0, 1.0f, -2.2f};
 
 typedef struct {
     simd_float3 position, velocity;
@@ -22,13 +13,13 @@ typedef struct {
     BOOL awaitingId;        // predicted: the server's id comes with its EV_BOLT
 } ClientBolt;
 
-// The view of one entity: a fighter, capital (or prop, rock, buoy) or projectile.
+// What the client keeps about one entity in view: a fighter, capital (or
+// prop, rock, buoy) or projectile. The renderer keeps its own nodes.
 @interface EntityView : NSObject
 @property (nonatomic) uint16_t number, model;
 @property (nonatomic) uint8_t kind;
-@property (nonatomic, strong) SCNNode *node;
-@property (nonatomic, strong) ShipView *ship;
-@property (nonatomic, strong) CapitalView *capital;
+@property (nonatomic) RefModel refModel;
+@property (nonatomic) const ShipDef *definition;   // fighters
 @property (nonatomic) EntityState state;
 @property (nonatomic) BOOL seen;
 @end
@@ -36,17 +27,9 @@ typedef struct {
 @end
 
 @implementation ClientView {
-    __weak SCNView *_view;
     Input *_input;
-    SpaceSky *_sky, *_nextSky;
-    SCNNode *_sunLight, *_engineLight, *_dust, *_nextDust, *_world;
-    Cockpit *_cockpitModel;
-    Effects *_fx;
-    // The player's ship: a node that follows the player state, carrying the
-    // engine light and the cockpit, and under it a view of whatever ship
-    // definition the player state names.
-    SCNNode *_playerNode;
-    ShipView *_playerView;
+    // Model configstring index -> renderer handle, filled while precaching.
+    RefModel _refModels[MAX_MODELS];
     const ShipDef *_playerDef;
     uint16_t _playerModel;
     uint8_t _playerTeam;
@@ -58,9 +41,13 @@ typedef struct {
 #endif
 
     NSMutableDictionary<NSNumber *, EntityView *> *_views;
-    ClientBolt _bolts[MAX_BOLT_NODES];
-    SCNNode *_boltNodes[MAX_BOLT_NODES];
-    uint32_t _boltSerial[MAX_BOLT_NODES], _nextBoltSerial;
+    ClientBolt _bolts[REF_MAX_BOLTS];
+    uint32_t _boltSerial[REF_MAX_BOLTS], _nextBoltSerial;
+
+    // The camera as last set, for projection and the HUD's edge arrows.
+    simd_float3 _camPos;
+    simd_quatf _camQ;
+    float _fov;
 
     simd_quatf _camOrientation;
     float _shake, _damageFlash, _lookYaw, _lookPitch, _boostFx;
@@ -73,12 +60,15 @@ typedef struct {
     BOOL _audioHullLow;
 }
 
-- (instancetype)initWithView:(SCNView *)view input:(Input *)input {
+- (instancetype)initWithRefresh:(id<Refresh>)refresh input:(Input *)input {
     if ((self = [super init])) {
-        _view = view;
+        _refresh = refresh;
         _input = input;
-        _hud = [[HUD alloc] initWithSize:view.bounds.size];
+        _hud = [[HUD alloc] initWithSize:refresh.viewSize];
         _views = [NSMutableDictionary dictionary];
+        _fov = 70;
+        _camOrientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
+        _camQ = _camOrientation;
 #if TARGET_OS_IOS
         if (UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
             _weaponFeedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
@@ -98,6 +88,14 @@ typedef struct {
 - (NSString *)stringAt:(uint16_t)i { return i ? [self cs:CS_STRINGS + i] : nil; }
 - (NSString *)modelAt:(uint16_t)i { return i ? [self cs:CS_MODELS + i] : @""; }
 
+// The renderer's handle for a model configstring; registered on first use
+// if the precache didn't see it.
+- (RefModel)refModel:(uint16_t)i {
+    if (!i || i >= MAX_MODELS) return 0;
+    if (!_refModels[i]) _refModels[i] = [_refresh registerModel:[self modelAt:i]];
+    return _refModels[i];
+}
+
 - (void)refreshRelations {
     NSString *cs = [self cs:CS_TEAMS];
     if ([cs isEqualToString:_relationsCS]) return;
@@ -114,153 +112,27 @@ typedef struct {
 
 - (float)gunSpeed { return _playerDef ? _playerDef->gun.speed : 900; }
 
-#pragma mark - Scene
+#pragma mark - Level
 
-- (void)buildScene {
-    _scene = [SCNScene scene];
-    [self applySky:[[SpaceSky alloc] initWithDevice:_view.device faceSize:kSkyFaceSize seed:1337] dust:nil];
-
-    SCNLight *sun = [SCNLight light];
-    sun.type = SCNLightTypeDirectional;
-    sun.color = [SKColor colorWithRed:1.0 green:0.94 blue:0.86 alpha:1];
-    sun.intensity = 2600;
-    sun.castsShadow = YES;
-    sun.shadowMapSize = CGSizeMake(2048, 2048);
-    sun.shadowSampleCount = 8;
-    sun.shadowRadius = 2;
-    sun.orthographicScale = 40;
-    sun.zNear = 1;
-    sun.zFar = 600;
-    sun.shadowColor = [SKColor colorWithWhite:0 alpha:0.85];
-    _sunLight = [SCNNode node];
-    _sunLight.light = sun;
-    [_scene.rootNode addChildNode:_sunLight];
-
-    SCNCamera *cam = [SCNCamera camera];
-    cam.fieldOfView = 70;
-    cam.zNear = 0.3;
-    cam.zFar = 40000;
-    cam.wantsHDR = YES;
-    cam.wantsExposureAdaptation = NO;
-    cam.exposureOffset = 0.0;
-    // Screen-space bloom does the glow work: emitters write HDR values > 1.
-    cam.bloomIntensity = 1.35;
-    cam.bloomThreshold = 0.9;
-    cam.bloomBlurRadius = 18;
-    cam.bloomIterationCount = 2;
-    cam.bloomIterationSpread = 1.0;
-    cam.vignettingIntensity = 0.7;
-    cam.vignettingPower = 0.9;
-    cam.colorFringeStrength = 0.5;
-    cam.colorFringeIntensity = 0.6;
-    cam.saturation = 1.08;
-    cam.contrast = 0.05;
-    _cameraNode = [SCNNode node];
-    _cameraNode.camera = cam;
-    [_scene.rootNode addChildNode:_cameraNode];
-
-    _playerNode = [SCNNode node];
-    _playerNode.name = @"Player";
-    [_scene.rootNode addChildNode:_playerNode];
-
-    SCNLight *glow = [SCNLight light];
-    glow.type = SCNLightTypeOmni;
-    glow.color = [SKColor colorWithRed:0.35 green:0.6 blue:1.0 alpha:1];
-    glow.attenuationStartDistance = 0;
-    glow.attenuationEndDistance = 18;
-    glow.intensity = 0;
-    _engineLight = [SCNNode node];
-    _engineLight.light = glow;
-    _engineLight.position = SCNVector3Make(0, 0.5, 6.0);
-    [_playerNode addChildNode:_engineLight];
-
-    _cockpitModel = [[Cockpit alloc] initWithDevice:_view.device];
-    _cockpitModel.node.simdPosition = kCockpitEye;
-    _cockpitModel.node.hidden = YES;
-    [_playerNode addChildNode:_cockpitModel.node];
-
-    _fx = [[Effects alloc] initWithScene:_scene];
-    for (int i = 0; i < MAX_BOLT_NODES; i++) {
-        SCNNode *n = [_fx makeBoltNode];
-        n.hidden = YES;
-        [_scene.rootNode addChildNode:n];
-        _boltNodes[i] = n;
-    }
-    _playerNode.hidden = YES;
-    _camOrientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
-}
-
-// Render thread: the player state names our ship's model; (re)build the view
-// of it when that changes. The mission precache already uploaded its geometry.
-- (void)ensurePlayerShip:(uint16_t)model {
-    if (model == _playerModel && (_playerView || !model)) return;
-    _playerModel = model;
-    [_playerView.node removeFromParentNode];
-    _playerView = nil;
-    _playerDef = ShipDefForModel([self modelAt:model]);
-    if (!_playerDef) return;
-    _playerView = [ShipView shipWithDefinition:_playerDef smoke:YES];
-    [_playerNode addChildNode:_playerView.node];
-    [_cockpitModel setSelfGeometry:[ShipView geometryForDefinition:_playerDef]];
-    _hadPlayer = NO;   // a new hull: reset the alive/hidden bookkeeping
-}
-
-- (NSArray *)warmupObjects {
-    NSMutableArray *objects = [NSMutableArray arrayWithObject:_scene];
-    [objects addObjectsFromArray:[_fx warmupNodes]];
-    return objects;
-}
-
-- (void)applySky:(SpaceSky *)sky dust:(SCNNode *)dust {
-    _sky = sky;
-    _scene.background.contents = _sky.cubeTexture;
-    _scene.lightingEnvironment.contents = _sky.cubeTexture;
-    _scene.lightingEnvironment.intensity = 1.6;
-    [_dust removeFromParentNode];
-    _dust = dust ?: [sky makeDustNode];
-    [_scene.rootNode addChildNode:_dust];
-}
-
-- (NSArray *)loadMissionAssets:(float *)progress {
-    [SCNTransaction begin];
-    [SCNTransaction setDisableActions:YES];
+- (void)loadMissionAssets:(void (^)(float))progress {
+    memset(_refModels, 0, sizeof _refModels);
     uint32_t seed = (uint32_t)[self cs:CS_SKY].longLongValue;
-    _nextSky = [[SpaceSky alloc] initWithDevice:_view.device faceSize:kSkyFaceSize seed:seed ?: 1337];
-    _nextDust = [_nextSky makeDustNode];
-    *progress = 0.3f;
-
-    // Every model the mission can show: one throwaway instance of each, so
-    // ships that jump in later are already on the GPU.
-    NSMutableArray *objects = [NSMutableArray arrayWithObject:_nextDust];
-    NSMutableArray *models = [NSMutableArray array];
-    for (int i = 1; i < MAX_MODELS; i++) {
-        NSString *m = [self cs:CS_MODELS + i];
-        if (m.length) [models addObject:m];
+    [_refresh beginRegistration:seed];
+    if (progress) progress(0.5f);
+    // Every model the mission can show, so ships that jump in later are
+    // already on the GPU.
+    NSMutableArray<NSNumber *> *indices = [NSMutableArray array];
+    for (int i = 1; i < MAX_MODELS; i++)
+        if ([self cs:CS_MODELS + i].length) [indices addObject:@(i)];
+    for (NSUInteger k = 0; k < indices.count; k++) {
+        int i = indices[k].intValue;
+        _refModels[i] = [_refresh registerModel:[self cs:CS_MODELS + i]];
+        if (progress) progress(0.5f + 0.5f * (float)(k + 1) / (float)indices.count);
     }
-    for (NSUInteger i = 0; i < models.count; i++) {
-        NSString *m = models[i];
-        if ([m hasPrefix:@"cap:"]) {
-            NSArray *f = [m componentsSeparatedByString:@":"];
-            if (f.count >= 3) [objects addObject:[CapitalView prototypeForAsset:f[1] style:f[2]]];
-        } else {
-            ShipView *s = [ShipView viewWithModel:m];
-            if (s) [objects addObject:s.node];
-        }
-        *progress = 0.3f + 0.3f * (float)(i + 1) / (float)models.count;
-    }
-    [SCNTransaction commit];
-    [SCNTransaction flush];
-    return objects;
 }
 
 - (void)attachMission {
-    if (_nextSky) [self applySky:_nextSky dust:_nextDust];
-    _nextSky = nil;
-    _nextDust = nil;
-    [_world removeFromParentNode];
-    _world = [SCNNode node];
-    _world.name = @"World";
-    [_scene.rootNode addChildNode:_world];
+    [_refresh endRegistration];
     [_hud clearMessages];
     [_hud setHelpVisible:NO];
     [_hud setObjectives:@[] states:@[]];
@@ -273,13 +145,19 @@ typedef struct {
 
 - (void)clearMission {
     [_views removeAllObjects];
-    [_world removeFromParentNode];
-    _world = nil;
-    for (int i = 0; i < MAX_BOLT_NODES; i++) { _bolts[i].active = NO; _boltNodes[i].hidden = YES; }
-    _playerNode.hidden = YES;
-    _cockpitModel.node.hidden = YES;
+    for (int i = 0; i < REF_MAX_BOLTS; i++) _bolts[i].active = NO;
+    [_refresh clearWorld];
     _playerEntity = 0;
-    [self ensurePlayerShip:0];
+    _playerModel = 0;
+    _playerDef = NULL;
+}
+
+// The player state names our ship's model.
+- (void)ensurePlayerShip:(uint16_t)model {
+    if (model == _playerModel) return;
+    _playerModel = model;
+    _playerDef = ShipDefForModel([self modelAt:model]);
+    _hadPlayer = NO;   // a new hull: reset the alive bookkeeping
 }
 
 #pragma mark - Entities
@@ -289,68 +167,27 @@ typedef struct {
     v.number = s->number;
     v.model = s->model;
     v.kind = s->kind;
-    NSString *model = [self modelAt:s->model];
-    if (s->kind == EntityProjectile) {
-        // A camera-facing glow sized and tinted by the projectile definition.
-        const ProjectileDef *p = ProjectileDefForModel(model);
-        if (!p) NSLog(@"Client: no projectile definition for model \"%@\"", model);
-        SCNNode *n = [SCNNode node];
-        float size = p ? p->size : 5;
-        SCNPlane *glow = [SCNPlane planeWithWidth:size height:size];
-        glow.firstMaterial = [Effects additiveTextureMaterial:p ? @(p->glow) : @"flare_01" tint:p ? p->tint : simd_make_float3(2, 2, 2)];
-        SCNNode *g = [SCNNode nodeWithGeometry:glow];
-        g.constraints = @[[SCNBillboardConstraint billboardConstraint]];
-        g.castsShadow = NO;
-        [n addChildNode:g];
-        v.node = n;
-    } else if (s->kind == EntityFighter) {
-        v.ship = [ShipView viewWithModel:model];
-        if (!v.ship) NSLog(@"Client: no ship definition for model \"%@\"", model);
-        v.node = v.ship.node ?: [SCNNode node];
-    } else {
-        v.capital = [CapitalView viewWithModel:model];
-        v.node = v.capital.node ?: [SCNNode node];
-    }
-    [_world addChildNode:v.node];
+    v.refModel = [self refModel:s->model];
+    if (s->kind == EntityFighter) v.definition = ShipDefForModel([self modelAt:s->model]);
     return v;
 }
 
-- (void)drawEntity:(EntityView *)v state:(const EntityState *)s dt:(float)dt {
+- (void)drawEntity:(EntityView *)v state:(const EntityState *)s {
     v.state = *s;
-    v.node.simdPosition = s->origin;
-    if (s->kind != EntityProjectile) v.node.simdOrientation = s->orientation;
-    if (v.ship) {
-        [v.ship updateThrottle:s->throttle boost:(s->flags & EF_BOOST) != 0 hull:s->hull alive:YES dt:dt];
-    } else if (v.capital) {
-        float k = s->scale > 0 ? s->scale : 1;
-        v.node.simdScale = simd_make_float3(k, k, k);
-        v.capital.deadParts = s->deadParts;
-    }
+    RefEntity e = {
+        .key = s->number, .kind = s->kind, .model = v.refModel, .origin = s->origin, .orientation = s->orientation,
+        .scale = s->scale, .hiddenParts = s->deadParts, .throttle = s->throttle, .hull = s->hull,
+        .boost = (s->flags & EF_BOOST) != 0,
+    };
+    [_refresh addEntity:&e];
 }
 
 - (EntityView *)viewFor:(uint16_t)number { return number ? _views[@(number)] : nil; }
 
-- (SCNNode *)nodeFor:(uint16_t)number {
-    if (number && number == _playerEntity) return _playerNode;
-    return [self viewFor:number].node;
-}
-
 - (float)radiusOf:(EntityView *)v {
-    if (v.ship) return v.ship.radius;
-    if (v.capital) return v.capital.info.radius * (v.state.scale > 0 ? v.state.scale : 1);
+    if (v.kind == EntityFighter) return v.definition ? v.definition->radius : 2;
+    if (v.kind == EntityCapital) return [_refresh radiusOfModel:v.refModel] * (v.state.scale > 0 ? v.state.scale : 1);
     return 2;
-}
-
-- (SCNMaterial *)hullMaterialForModel:(uint16_t)model {
-    NSString *m = [self modelAt:model];
-    if ([m hasPrefix:@"ship:"]) return [ShipView geometryForDefinition:ShipDefForModel(m)].firstMaterial;
-    if ([m hasPrefix:@"cap:"]) {
-        NSArray *f = [m componentsSeparatedByString:@":"];
-        if (f.count < 3) return nil;
-        SCNNode *proto = [CapitalView prototypeForAsset:f[1] style:f[2]];
-        return [proto childNodeWithName:@"Body" recursively:NO].geometry.firstMaterial ?: proto.childNodes.firstObject.geometry.firstMaterial;
-    }
-    return nil;
 }
 
 #pragma mark - Events
@@ -366,14 +203,10 @@ typedef struct {
 - (BOOL)friendly:(uint8_t)team { return [self relationTo:team] == RelationFriendly; }
 
 - (int)spawnBolt:(simd_float3)pos velocity:(simd_float3)vel life:(float)life friendly:(BOOL)friendly id:(uint16_t)boltId {
-    for (int i = 0; i < MAX_BOLT_NODES; i++) {
+    for (int i = 0; i < REF_MAX_BOLTS; i++) {
         if (_bolts[i].active) continue;
         _bolts[i] = (ClientBolt){ pos, vel, life > 0 ? life : 1.6f, boltId, YES, NO };
-        SCNNode *n = _boltNodes[i];
-        [_fx styleBolt:n player:friendly];
-        n.simdPosition = pos;
-        n.simdOrientation = simd_quaternion(simd_make_float3(0, 1, 0), simd_normalize(vel));
-        n.hidden = NO;
+        [_refresh showBolt:i at:pos velocity:vel friendly:friendly];
         return i;
     }
     return -1;
@@ -385,7 +218,7 @@ typedef struct {
         _bolts[i].awaitingId = YES;
         _boltSerial[i] = ++_nextBoltSerial;
     }
-    [_fx muzzleFlashOn:_playerNode local:gunLocal player:YES];
+    [_refresh muzzleFlashOn:_playerEntity local:gunLocal friendly:YES];
 }
 
 - (void)handleEvent:(const GameEvent *)e player:(const PlayerState *)ps {
@@ -413,7 +246,7 @@ typedef struct {
         if (e->type == EV_BOLT) {
             // Our own shot: give its id to the oldest predicted bolt still waiting.
             int best = -1;
-            for (int i = 0; i < MAX_BOLT_NODES; i++)
+            for (int i = 0; i < REF_MAX_BOLTS; i++)
                 if (_bolts[i].active && _bolts[i].awaitingId && (best < 0 || _boltSerial[i] < _boltSerial[best])) best = i;
             if (best >= 0) {
                 _bolts[best].awaitingId = NO;
@@ -428,19 +261,16 @@ typedef struct {
             break;
         case EV_IMPACT:
             if (e->id)
-                for (int i = 0; i < MAX_BOLT_NODES; i++)
-                    if (_bolts[i].active && _bolts[i].id == e->id) { _bolts[i].active = NO; _boltNodes[i].hidden = YES; break; }
-            [_fx impactAt:e->pos player:[self friendly:e->team] shielded:(e->flags & EVF_SHIELDED) != 0];
+                for (int i = 0; i < REF_MAX_BOLTS; i++)
+                    if (_bolts[i].active && _bolts[i].id == e->id) { _bolts[i].active = NO; [_refresh hideBolt:i]; break; }
+            [_refresh impactAt:e->pos friendly:[self friendly:e->team] shielded:(e->flags & EVF_SHIELDED) != 0];
             break;
-        case EV_MUZZLE: {
-            SCNNode *n = [self nodeFor:e->entity];
-            if (n) [_fx muzzleFlashOn:n local:e->pos player:[self friendly:e->team]];
+        case EV_MUZZLE:
+            [_refresh muzzleFlashOn:e->entity local:e->pos friendly:[self friendly:e->team]];
             break;
-        }
         case EV_DAMAGE:
             if (e->flags & EVF_SHIELDED) {
-                if (e->entity == _playerEntity) [_playerView flashShield];
-                else [[self viewFor:e->entity].ship flashShield];
+                [_refresh flashShieldOn:e->entity];
             }
             if (e->entity && e->entity == ps->entity) {
                 _damageFlash = 1;
@@ -452,16 +282,12 @@ typedef struct {
             }
             break;
         case EV_EXPLOSION:
-            [_fx explosionAt:e->pos velocity:e->vel hullMaterial:[self hullMaterialForModel:e->model] scale:e->scale > 0 ? e->scale : 1];
+            [_refresh explosionAt:e->pos velocity:e->vel model:[self refModel:e->model] scale:e->scale];
             if (e->radius > 0) _shake = fmaxf(_shake, clampf(1.0f - simd_distance(e->pos, me) / e->radius, 0, 1));
             break;
-        case EV_JUMP: {
-            SCNNode *s = [_fx streakWithColor:[SKColor colorWithRed:0.6 green:0.8 blue:1 alpha:1] width:400 * fmaxf(e->scale, 0.3f) height:6];
-            s.simdPosition = e->pos;
-            [_scene.rootNode addChildNode:s];
-            [s runAction:[SCNAction sequence:@[[SCNAction fadeOutWithDuration:0.8], [SCNAction removeFromParentNode]]]];
+        case EV_JUMP:
+            [_refresh jumpFlashAt:e->pos scale:e->scale];
             break;
-        }
     }
 }
 
@@ -490,27 +316,27 @@ typedef struct {
 #pragma mark - Frame
 
 - (void)menuFrame:(double)time {
-    _playerNode.hidden = YES;
-    _cockpitModel.node.hidden = YES;
-    _cameraNode.simdPosition = simd_make_float3(0, 0, 0);
-    _cameraNode.simdOrientation = simd_quaternion((float)time * 0.02f, simd_make_float3(0, 1, 0));
+    [_refresh setPlayer:NULL alive:NO interior:NO];
+    _camPos = simd_make_float3(0, 0, 0);
+    _camQ = simd_quaternion((float)time * 0.02f, simd_make_float3(0, 1, 0));
+    [_refresh setCamera:(RefCamera){ .origin = _camPos, .orientation = _camQ }];
 }
 
 - (void)updateBolts:(float)dt {
-    for (int i = 0; i < MAX_BOLT_NODES; i++) {
+    for (int i = 0; i < REF_MAX_BOLTS; i++) {
         ClientBolt *b = &_bolts[i];
         if (!b->active) continue;
         b->position += b->velocity * dt;
         b->life -= dt;
-        if (b->life <= 0) { b->active = NO; _boltNodes[i].hidden = YES; }
-        else _boltNodes[i].simdPosition = b->position;
+        if (b->life <= 0) { b->active = NO; [_refresh hideBolt:i]; }
+        else [_refresh moveBolt:i to:b->position];
     }
 }
 
 - (void)drawEntities:(const EntityState *)entities count:(NSUInteger)count player:(const PlayerState *)ps
             controls:(ControlState)controls time:(double)time dt:(float)dt {
     _time = time;
-    [CapitalView updateSharedMaterials:time];
+    [_refresh beginFrame:time];
     _playerEntity = ps->entity;
     _playerTeam = ps->team;
     [self refreshRelations];
@@ -521,20 +347,14 @@ typedef struct {
         const EntityState *s = &entities[i];
         if (s->number == ps->entity) continue;      // drawn from the player state
         EntityView *v = _views[@(s->number)];
-        if (v && (v.model != s->model || v.kind != s->kind)) {
-            [v.node removeFromParentNode];
-            v = nil;
-        }
+        if (v && (v.model != s->model || v.kind != s->kind)) v = nil;
         if (!v) _views[@(s->number)] = v = [self makeView:s];
         v.seen = YES;
-        [self drawEntity:v state:s dt:dt];
+        [self drawEntity:v state:s];
     }
-    for (NSNumber *k in _views.allKeys) {
-        EntityView *v = _views[k];
-        if (v.seen) continue;
-        [v.node removeFromParentNode];
-        [_views removeObjectForKey:k];
-    }
+    for (NSNumber *k in _views.allKeys)
+        if (!_views[k].seen) [_views removeObjectForKey:k];
+    [_refresh endFrame];
 
     // Own ship.
     BOOL alive = ps->alive && ps->entity;
@@ -548,27 +368,18 @@ typedef struct {
     _audioSecondary = ps->stats[STAT_SECONDARY];
     _audioTarget = ps->stats[STAT_TARGET];
     _audioHullLow = ps->hull < 0.25f;
-    if (alive != !_playerNode.hidden || !_hadPlayer) {
-        [_playerView setAlive:alive];
-        _playerNode.hidden = !alive;
-    }
+    RefEntity me = {
+        .key = ps->entity, .kind = EntityFighter, .model = [self refModel:ps->model],
+        .origin = ps->move.origin, .orientation = ps->move.orientation, .scale = 1,
+        .throttle = ps->move.throttle, .hull = ps->hull, .boost = ps->move.boosting,
+    };
+    [_refresh setPlayer:&me alive:alive interior:_cockpit];
     _hadPlayer = YES;
-    _playerNode.simdPosition = ps->move.origin;
-    _playerNode.simdOrientation = ps->move.orientation;
-    if (alive) [_playerView updateThrottle:ps->move.throttle boost:ps->move.boosting hull:ps->hull alive:YES dt:dt];
-    _engineLight.light.intensity = alive && _playerView ? 60 + 900 * _playerView.exhaust.level : 0;
 
     [self updateBolts:dt];
     [self updateCamera:dt player:ps controls:controls];
-    _sunLight.simdPosition = ps->move.origin + _sky.sunDirection * 250.0f;
-    [_sunLight simdLookAt:ps->move.origin];
-    [_sky updateDust:_dust cameraPosition:_cameraNode.simdPosition velocity:ps->move.velocity];
     _damageFlash = fmaxf(0, _damageFlash - dt * 2.5f);
     [self updateHUD:ps controls:controls dt:dt];
-}
-
-- (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time {
-    [_cockpitModel renderDisplaysWithQueue:queue time:time];
 }
 
 #pragma mark - Camera
@@ -607,7 +418,7 @@ typedef struct {
     // Ease boost effects in and out so toggling boost never pops the camera.
     _boostFx += ((ps->move.boosting ? 1.0f : 0.0f) - _boostFx) * (1.0f - expf(-4.0f * dt));
     float boostFx = _boostFx;
-    simd_float3 offset = _cockpit ? kCockpitEye
+    simd_float3 offset = _cockpit ? RefCockpitEye
                                   : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
     simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : _camOrientation, simd_act(look, offset));
     if (_cockpit) pos = ps->move.origin + simd_act(shipQ, offset);
@@ -627,35 +438,23 @@ typedef struct {
                                           sinf(t * 19.7f + 4.2f) * 0.6f + sinf(t * 33.1f + 3.3f) * 0.4f);
     pos += simd_act(q, wobble) * sh;
 
-    _cameraNode.simdPosition = pos;
-    _cameraNode.simdOrientation = q;
-    _playerView.model.hidden = _cockpit;
-    _cockpitModel.node.hidden = !_cockpit;
-
-    SCNCamera *cam = _cameraNode.camera;
-    cam.zNear = _cockpit ? 0.08 : 0.3;
     float fov = 68.0f + speed * 0.03f + boostFx * 8.0f;
-    cam.fieldOfView += (fov - cam.fieldOfView) * (1.0f - expf(-3.0f * dt));
-    cam.motionBlurIntensity = boostFx * 0.25f;
+    _fov += (fov - _fov) * (1.0f - expf(-3.0f * dt));
+    _camPos = pos;
+    _camQ = q;
+    [_refresh setCamera:(RefCamera){
+        .origin = pos, .orientation = q, .fov = _fov, .zNear = _cockpit ? 0.08f : 0.3f,
+        .motionBlur = boostFx * 0.25f, .focus = ps->move.origin, .velocity = ps->move.velocity,
+    }];
 }
 
 #pragma mark - HUD
 
-- (BOOL)project:(simd_float3)world into:(CGPoint *)out {
-    simd_float3 camFwd = simd_act(_cameraNode.simdOrientation, simd_make_float3(0, 0, -1));
-    if (simd_dot(world - _cameraNode.simdPosition, camFwd) <= 0.1f) return NO;
-    SCNVector3 p = [_view projectPoint:SCNVector3Make(world.x, world.y, world.z)];
-#if TARGET_OS_IOS
-    // The iOS view counts down from the top. The SpriteKit HUD counts up.
-    p.y = CGRectGetHeight(_view.bounds) - p.y;
-#endif
-    *out = CGPointMake(p.x, p.y);
-    return YES;
-}
+- (BOOL)project:(simd_float3)world into:(CGPoint *)out { return [_refresh projectPoint:world to:out]; }
 
 - (void)fillTarget:(HUDTarget *)t at:(simd_float3)pos velocity:(simd_float3)vel radius:(float)radius size:(CGSize)size
             player:(const PlayerState *)ps {
-    simd_float3 camPos = _cameraNode.simdPosition, me = ps->move.origin;
+    simd_float3 camPos = _camPos, me = ps->move.origin;
     CGPoint mid = CGPointMake(size.width / 2, size.height / 2);
     t->distance = simd_distance(pos, me);
     CGPoint p;
@@ -674,7 +473,7 @@ typedef struct {
         t->hasLead = t->distance < 1500 && [self project:pos + relV * tHit into:&lp];
         t->lead = lp;
     } else {
-        simd_float3 local = simd_act(simd_inverse(_cameraNode.simdOrientation), pos - camPos);
+        simd_float3 local = simd_act(simd_inverse(_camQ), pos - camPos);
         float ang = atan2f(local.y, local.x);
         float rx = size.width * 0.5f - 40, ry = size.height * 0.5f - 40;
         float cx = cosf(ang), cy = sinf(ang);
@@ -703,7 +502,7 @@ typedef struct {
     EntityView *target = [self viewFor:selected];
 
     HUDFrame f = {0};
-    CGSize size = _view.bounds.size;
+    CGSize size = _refresh.viewSize;
     f.boresightVisible = [self project:me + fwd * 400.0f into:&f.boresight];
     f.mouseStick = _input.mouseStick;
     f.mouseCaptured = _input.mouseCaptured;
@@ -723,36 +522,21 @@ typedef struct {
     f.secondaryName = [self cs:CS_SECONDARY_NAME];
     f.status = _status;
     int aim = ps->stats[STAT_AIM_PART] - 1;
-    if (target.capital && aim >= 0 && aim < target.capital.info.info->numParts) {
+    const GameModelInfo *targetInfo = target.kind == EntityCapital ? [_refresh infoForModel:target.refModel] : NULL;
+    if (targetInfo && aim >= 0 && aim < targetInfo->numParts) {
         EntityState ts = target.state;
-        simd_float3 p = simd_act(ts.orientation, target.capital.info.info->parts[aim].center) + ts.origin;
+        simd_float3 p = simd_act(ts.orientation, targetInfo->parts[aim].center) + ts.origin;
         f.aimVisible = [self project:p into:&f.aim];
     }
 
     f.deltaTime = dt;
-    simd_float3 camPos = _cameraNode.simdPosition;
-    simd_float3 sunPoint = camPos + _sky.sunDirection * 20000.0f;
+    simd_float3 camPos = _camPos;
+    simd_float3 sunDir = _refresh.sunDirection;
+    simd_float3 sunPoint = camPos + sunDir * 20000.0f;
     CGPoint sp;
     if ([self project:sunPoint into:&sp]) {
         float vis = CGRectContainsPoint((CGRect){ .size = size }, sp) ? 1 : 0;
-        if (vis > 0) {
-            NSArray *hits = [_scene.rootNode hitTestWithSegmentFromPoint:SCNVector3Make(camPos.x, camPos.y, camPos.z)
-                                                                 toPoint:SCNVector3Make(camPos.x + _sky.sunDirection.x * 5000,
-                                                                                        camPos.y + _sky.sunDirection.y * 5000,
-                                                                                        camPos.z + _sky.sunDirection.z * 5000)
-                                                                 options:@{ SCNHitTestOptionSearchMode : @(SCNHitTestSearchModeAll),
-                                                                            SCNHitTestBackFaceCullingKey : @YES,
-                                                                            SCNHitTestIgnoreHiddenNodesKey : @YES }];
-            for (SCNHitTestResult *h in hits) {
-                // Ignore additive effects and transparent canopy glass, but
-                // keep searching: a hull behind them can still block the sun.
-                SCNMaterial *material = h.node.geometry.firstMaterial;
-                if (!material || h.node.particleSystems || h.node == _dust ||
-                    material.blendMode != SCNBlendModeReplace || material.transparency < 0.95) continue;
-                vis = 0;
-                break;
-            }
-        }
+        if (vis > 0 && [_refresh traceOpaqueFrom:camPos to:camPos + sunDir * 5000.0f]) vis = 0;
         f.sun = sp;
         f.sunVisibility = vis;
     }
@@ -769,7 +553,7 @@ typedef struct {
         t.selected = s.number == selected;
         t.health = s.hull;
         t.label = [self stringAt:s.name];
-        [self fillTarget:&t at:s.origin velocity:s.velocity radius:v.ship.radius size:size player:ps];
+        [self fillTarget:&t at:s.origin velocity:s.velocity radius:[self radiusOf:v] size:size player:ps];
         targets[n++] = t;
     }
     for (EntityView *v in views) {
@@ -884,8 +668,8 @@ typedef struct {
         k.component = @"FUSELAGE";
         k.cargo = fighter ? @"NONE" : (s.flags & EF_SCANNED) ? ([self stringAt:s.cargo].length ? [self stringAt:s.cargo] : @"NO MANIFEST") : @"UNKNOWN";
         if (fighter) {
-            const ShipDef *def = v.ship.definition;
-            k.geometry = [ShipView geometryForDefinition:def];
+            const ShipDef *def = v.definition;
+            k.hologram = [_refresh hologramForModel:v.refModel];
             k.holoScale = def ? def->hologramScale : 0.0075f;
             k.name = [self stringAt:s.name] ?: (def ? @(def->displayName) : @"FIGHTER");
             k.className = [self stringAt:s.className] ?: (def ? @(def->displayName) : @"");
@@ -896,12 +680,12 @@ typedef struct {
         } else {
             BOOL prop = (s.flags & EF_PROP) != 0;
             k.capital = !prop;
-            k.geometry = v.capital.body.geometry;
+            k.hologram = [_refresh hologramForModel:v.refModel];
             k.holoScale = 0.04f / fmaxf(radius, 1);
             k.name = [self stringAt:s.name];
             k.className = [self stringAt:s.className];
             k.shielded = (s.flags & EF_SHIELDED) != 0;
-            const GameModelInfo *info = v.capital.info.info;
+            const GameModelInfo *info = [_refresh infoForModel:v.refModel];
             if (info && info->numParts > 0) {
                 int alive = 0;
                 for (int part = 0; part < info->numParts; part++) if (!(s.deadParts & (1ULL << part))) alive++;
@@ -927,7 +711,7 @@ typedef struct {
         }
         contacts[n++] = k;
     }
-    if (_cockpit) [_cockpitModel updateFrame:f contacts:contacts count:n];
+    if (_cockpit) [_refresh updateCockpit:f contacts:contacts count:n];
     [_hud updateInstruments:f contacts:contacts count:n cockpit:_cockpit];
 }
 

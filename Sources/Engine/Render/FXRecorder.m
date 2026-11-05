@@ -2,28 +2,21 @@
 #import <SceneKit/SceneKit.h>
 #import <AVFoundation/AVFoundation.h>
 #import <Metal/Metal.h>
-#import "Effects.h"
-#import "ShipView.h"
+#import "SceneKitRefresh.h"
+#import "Assets.h"
 
 static const int kFPS = 60;
 static const CGSize kSize = { 1280, 720 };
 
 @implementation FXRecorder
 
-static SCNNode *MakeCamera(void) {
-    // Same look as the game camera (see -[Game buildScene]).
-    SCNCamera *cam = [SCNCamera camera];
-    cam.fieldOfView = 60;
-    cam.zNear = 0.3;
-    cam.zFar = 5000;
-    cam.wantsHDR = YES;
-    cam.wantsExposureAdaptation = NO;
-    cam.bloomIntensity = 1.35;
-    cam.bloomThreshold = 0.9;
-    cam.bloomBlurRadius = 18;
-    SCNNode *n = [SCNNode node];
-    n.camera = cam;
-    return n;
+// A camera at `eye` looking at `target`, +Y up.
+static RefCamera LookAt(simd_float3 eye, simd_float3 target) {
+    simd_float3 back = simd_normalize(eye - target);
+    simd_float3 right = simd_normalize(simd_cross(simd_make_float3(0, 1, 0), back));
+    simd_float3 up = simd_cross(back, right);
+    simd_float3x3 m = simd_matrix(right, up, back);
+    return (RefCamera){ .origin = eye, .orientation = simd_quaternion(m), .focus = target };
 }
 
 static BOOL AppendImage(AVAssetWriterInputPixelBufferAdaptor *adaptor, CGImageRef image, int frame) {
@@ -75,105 +68,81 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
         return rc;
     }
 
+    // The effects go through the same renderer interface the client uses,
+    // in a studio scene: black, a key and a fill light, no sky.
     id<MTLDevice> device = MTLCreateSystemDefaultDevice();
     SCNRenderer *renderer = [SCNRenderer rendererWithDevice:device options:nil];
-    SCNScene *scene = [SCNScene scene];
-    scene.background.contents = [NSColor blackColor];
-    renderer.scene = scene;
+    SceneKitRefresh *refresh = [[SceneKitRefresh alloc] initWithRenderer:renderer size:kSize];
+    [refresh buildStudio];
+    renderer.scene = refresh.scene;
+    renderer.pointOfView = refresh.cameraNode;
+    __block RefCamera camera = LookAt(simd_make_float3(0, 6, 45), simd_make_float3(0, 0, 0));
 
-    SCNNode *camera = MakeCamera();
-    camera.simdPosition = simd_make_float3(0, 6, 45);
-    [camera simdLookAt:simd_make_float3(0, 0, 0)];
-    [scene.rootNode addChildNode:camera];
-    renderer.pointOfView = camera;
-
-    // Neutral key + fill so hulls and debris read on black.
-    SCNNode *key = [SCNNode node];
-    key.light = [SCNLight light];
-    key.light.type = SCNLightTypeDirectional;
-    key.light.intensity = 1500;
-    key.eulerAngles = SCNVector3Make(-0.8, 0.6, 0);
-    [scene.rootNode addChildNode:key];
-    SCNNode *fill = [SCNNode node];
-    fill.light = [SCNLight light];
-    fill.light.type = SCNLightTypeAmbient;
-    fill.light.intensity = 250;
-    [scene.rootNode addChildNode:fill];
-
-    Effects *fx = [[Effects alloc] initWithScene:scene];
-    [renderer prepareObjects:[fx warmupNodes] withCompletionHandler:nil];
-
-    // Per-effect setup and per-frame driver.
-    ShipView *ship = nil;
-    SCNNode *bolt = nil;
-    void (^tick)(double t, int frame) = nil;
     // Any ship will do for a preview: the first definition in the bundle.
-    const ShipDef *anyShip = ShipDefNamed(ShipDefNames().firstObject);
+    RefModel ship = [refresh registerModel:[@"ship:" stringByAppendingString:ShipDefNames().firstObject ?: @""]];
+    [refresh upload:nil];
+    [refresh endRegistration];
+
+    // Per-effect driver: fires effects and fills the frame's entities.
+    void (^tick)(double t, int frame) = nil;
+    const uint16_t kShip = 1;
     if ([effect isEqualToString:@"explosion"]) {
-        ship = [ShipView shipWithDefinition:anyShip smoke:NO];
-        [scene.rootNode addChildNode:ship.node];
-        ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.6f, simd_make_float3(0, 1, 0));
-        __block BOOL done = NO;
+        simd_quatf q = simd_quaternion((float)M_PI * 0.6f, simd_make_float3(0, 1, 0));
         tick = ^(double t, int frame) {
-            [ship.exhaust updateThrottle:0.6f boost:NO dt:1.0f / kFPS];
-            if (!done && t >= 0.4) {
-                done = YES;
-                [ship setAlive:NO];
-                [fx explosionAt:ship.node.simdPosition velocity:simd_make_float3(20, 0, 0) hullMaterial:ship.model.geometry.firstMaterial];
+            if (t < 0.4) {
+                RefEntity e = { .key = kShip, .kind = EntityFighter, .model = ship, .orientation = q, .throttle = 0.6f, .hull = 1 };
+                [refresh addEntity:&e];
+            } else if (frame == (int)(0.4 * kFPS)) {
+                [refresh explosionAt:simd_make_float3(0, 0, 0) velocity:simd_make_float3(20, 0, 0) model:ship scale:1];
             }
         };
     } else if ([effect isEqualToString:@"impact"]) {
         tick = ^(double t, int frame) {
             if (frame % 30 == 10) {
                 simd_float3 p = simd_make_float3((frame / 30 % 3 - 1) * 10.0f, 0, 0);
-                [fx impactAt:p player:YES shielded:(frame / 30) % 2];
+                [refresh impactAt:p friendly:YES shielded:(frame / 30) % 2];
             }
         };
     } else if ([effect isEqualToString:@"shield"]) {
-        ship = [ShipView shipWithDefinition:anyShip smoke:NO];
-        [scene.rootNode addChildNode:ship.node];
-        ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.75f, simd_make_float3(0, 1, 0));
-        camera.simdPosition = simd_make_float3(0, 5, 22);
-        [camera simdLookAt:simd_make_float3(0, 0, 0)];
+        simd_quatf q = simd_quaternion((float)M_PI * 0.75f, simd_make_float3(0, 1, 0));
+        camera = LookAt(simd_make_float3(0, 5, 22), simd_make_float3(0, 0, 0));
         tick = ^(double t, int frame) {
-            [ship updateThrottle:0.4f boost:NO hull:1 alive:YES dt:1.0f / kFPS];
+            RefEntity e = { .key = kShip, .kind = EntityFighter, .model = ship, .orientation = q, .throttle = 0.4f, .hull = 1 };
+            [refresh addEntity:&e];
             if (frame % 40 == 10) {
-                [ship flashShield];
-                [fx impactAt:simd_make_float3(0, 1.5f, 3.0f) player:NO shielded:YES];
+                [refresh flashShieldOn:kShip];
+                [refresh impactAt:simd_make_float3(0, 1.5f, 3.0f) friendly:NO shielded:YES];
             }
         };
     } else if ([effect isEqualToString:@"bolt"]) {
-        bolt = [fx makeBoltNode];
-        [scene.rootNode addChildNode:bolt];
-        SCNNode *bolt2 = [fx makeBoltNode];
-        [scene.rootNode addChildNode:bolt2];
-        [fx styleBolt:bolt player:YES];
-        [fx styleBolt:bolt2 player:NO];
-        simd_quatf q = simd_quaternion(simd_make_float3(0, 1, 0), simd_normalize(simd_make_float3(1, 0, -0.3f)));
-        bolt.simdOrientation = bolt2.simdOrientation = q;
+        simd_float3 dir = simd_normalize(simd_make_float3(1, 0, -0.3f));
         tick = ^(double t, int frame) {
             float x = fmodf((float)t * 60.0f, 120.0f) - 60.0f;  // slowed down to be visible
-            bolt.simdPosition = simd_make_float3(x, 3, -x * 0.3f);
-            bolt2.simdPosition = simd_make_float3(-x, -3, x * 0.3f);
+            simd_float3 a = simd_make_float3(x, 3, -x * 0.3f), b = simd_make_float3(-x, -3, x * 0.3f);
+            if (frame == 0) {
+                [refresh showBolt:0 at:a velocity:dir friendly:YES];
+                [refresh showBolt:1 at:b velocity:dir friendly:NO];
+            }
+            [refresh moveBolt:0 to:a];
+            [refresh moveBolt:1 to:b];
         };
     } else if ([effect isEqualToString:@"exhaust"]) {
-        ship = [ShipView shipWithDefinition:anyShip smoke:YES];
-        [scene.rootNode addChildNode:ship.node];
         // Side-on, nose pointing left, so the flames trail to the right.
-        ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.5f, simd_make_float3(0, 1, 0));
-        camera.simdPosition = simd_make_float3(4, 5, 20);
-        [camera simdLookAt:simd_make_float3(5, 0, 0)];
+        simd_quatf q = simd_quaternion((float)M_PI * 0.5f, simd_make_float3(0, 1, 0));
+        camera = LookAt(simd_make_float3(4, 5, 20), simd_make_float3(5, 0, 0));
         tick = ^(double t, int frame) {
             // Idle -> full throttle -> boost -> idle, to show the range.
             double u = t / seconds;
             float thr = u < 0.15 ? 0.0f : u < 0.55 ? (float)((u - 0.15) / 0.4) : u < 0.85 ? 1.0f : 0.1f;
             BOOL boost = u >= 0.7 && u < 0.85;
-            [ship.exhaust updateThrottle:thr boost:boost dt:1.0f / kFPS];
+            RefEntity e = { .key = kShip, .kind = EntityFighter, .model = ship, .orientation = q, .throttle = thr, .boost = boost, .hull = 1 };
+            [refresh addEntity:&e];
         };
     } else {
         fprintf(stderr, "unknown effect '%s' (explosion, impact, shield, bolt, exhaust, all)\n", effect.UTF8String);
         return 2;
     }
+    [refresh setCamera:camera];
 
     [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
     NSError *error = nil;
@@ -197,7 +166,9 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
     for (int i = 0; i < frames; i++) {
         @autoreleasepool {
             double t = (double)i / kFPS;
+            [refresh beginFrame:t];
             tick(t, i);
+            [refresh endFrame];
             NSImage *img = [renderer snapshotAtTime:t withSize:kSize antialiasingMode:SCNAntialiasingModeMultisampling4X];
             CGImageRef cg = [img CGImageForProposedRect:NULL context:nil hints:nil];
             if (!cg || !AppendImage(adaptor, cg, i)) { fprintf(stderr, "frame %d failed\n", i); break; }

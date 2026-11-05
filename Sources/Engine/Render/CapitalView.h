@@ -9,6 +9,7 @@
 @interface CapitalView : NSObject
 
 + (instancetype)viewWithModel:(NSString *)model;       // "cap:<asset>:<style>"
+- (instancetype)initWithAsset:(NSString *)asset style:(NSString *)style;
 + (SCNNode *)prototypeForAsset:(NSString *)asset style:(NSString *)style;
 + (void)updateSharedMaterials:(double)time;             // running lights blink, shields pulse
 

@@ -106,9 +106,9 @@ static NSString *Short(NSString *text, NSUInteger length) {
     _mode.text = f.lock ? @"FIRING SOLUTION" : c.attacking ? @"INCOMING ATTACK" : c.capital ? (c.shielded ? @"SHIELDED" : @"VULNERABLE") : @"TRACKING";
     _mode.fontColor = UIColorWithOpacity(c.attacking ? UIRed : f.lock ? UIFriendly : UIAmber, 1);
     if (_preview) {
-        if (_source != c.geometry) {
-            _source = c.geometry;
-            _mesh.geometry = [c.geometry copy]; _mesh.geometry.materials = @[_material];
+        if (_source != c.hologram) {
+            _source = c.hologram;
+            _mesh.geometry = [(SCNGeometry *)c.hologram copy]; _mesh.geometry.materials = @[_material];
             SCNVector3 lo, hi;
             if ([_mesh getBoundingBoxMin:&lo max:&hi]) {
                 float radius = fmaxf(0.001, simd_length(SCNVector3ToFloat3(hi) - SCNVector3ToFloat3(lo)) / 2);
