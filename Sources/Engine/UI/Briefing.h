@@ -18,6 +18,8 @@ typedef NSEdgeInsets BriefingInsets;
 #endif
 @interface Briefing : SKScene <ScreenInput>
 @property (nonatomic) BriefingInsets contentInsets;
+// Native iOS defaults to touch navigation even on large iPad viewports.
+@property (nonatomic) BOOL touchNavigationEnabled;
 
 @property (nonatomic, readonly) NSUInteger selectedIndex;
 
@@ -32,3 +34,4 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)tick:(double)time;
 
 @end
+

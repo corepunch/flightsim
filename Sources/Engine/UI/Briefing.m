@@ -150,6 +150,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
+        _touchNavigationEnabled = TARGET_OS_IOS;
         self.scaleMode = SKSceneScaleModeResizeFill;
         self.backgroundColor = [SKColor clearColor];
         self.speed = 1 / UIMotionTimeScale();
@@ -476,7 +477,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 }
 
 - (void)buildFooter:(NSString *)text action:(NSString *)action {
-    CGFloat inset = MIN(50, self.size.width * 0.05);
+    BriefingInsets safe = self.contentInsets;
+    CGFloat inset = MAX(MIN(50, self.size.width * 0.05), MAX(safe.left, safe.right) + 12);
     BOOL console = _mode == ModeBriefing || (_mode == ModeDebrief && _debriefBeat > 0);
     if (_mode == ModeList) {
         BriefingInsets safe = self.contentInsets;
@@ -495,8 +497,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         }
         return;
     }
-    if ([self compactStoryLayout]) {
-        CGFloat bottom = 16, height = 44;
+    if (self.touchNavigationEnabled || [self compactStoryLayout]) {
+        CGFloat bottom = safe.bottom + 16, height = 44;
         _backRect = CGRectMake(inset, bottom, 84, height);
         [self footerButton:_backRect title:L10n(@"story.missions") accent:UIAmber];
         BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
@@ -510,7 +512,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         [self footerButton:_confirmRect title:label accent:UIAmber];
         return;
     }
-    CGRect rail = CGRectMake(inset - 10, 14, self.size.width - 2 * inset + 20, 52);
+    CGRect rail = CGRectMake(inset - 10, safe.bottom + 14, self.size.width - 2 * inset + 20, 52);
     [self footerAdd:UIControlRail(rail, console)];
     CGFloat hintLeft = inset + 8;
     if (_mode == ModeList) {
@@ -522,11 +524,11 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
                              MAX(1, self.size.width - inset - hintLeft - (action ? 200 : 0)));
     hint.text = text;
     hint.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
-    hint.position = CGPointMake(hintLeft, 40);
+    hint.position = CGPointMake(hintLeft, safe.bottom + 42);
     [self footerAdd:hint];
     if (!action) return;
 
-    _confirmRect = CGRectMake(self.size.width - inset - 180, 20, 180, 40);
+    _confirmRect = CGRectMake(self.size.width - inset - 180, safe.bottom + 20, 180, 44);
     [self footerButton:_confirmRect title:action accent:console ? UIAmber : UIInk];
 }
 
@@ -620,6 +622,14 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
 - (void)addPortrait:(NSString *)name expression:(NSString *)expression facingRight:(BOOL)facingRight
               active:(BOOL)active inRect:(CGRect)area {
+    // Keep faces inside the usable landscape width, while the illustration
+    // can still extend behind the bottom caption and footer.
+    BriefingInsets safe = self.contentInsets;
+    CGFloat side = MAX(safe.left, safe.right);
+    CGRect portraitBounds = CGRectMake(side, 0, MAX(1, self.size.width - 2 * side),
+                                       MAX(1, self.size.height - safe.top));
+    area = CGRectIntersection(area, portraitBounds);
+    if (CGRectIsNull(area) || CGRectIsEmpty(area)) return;
     SKTexture *texture = expression ? [self artTextureNamed:[NSString stringWithFormat:@"Expressions/%@-%@", name, expression]] : nil;
     if (!texture) texture = [self artTextureNamed:name];
     if (!texture) return;
@@ -766,7 +776,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat textSize = MIN(24, MAX(14, size.width / 60));
     BOOL narrow = size.width < size.height * 1.24;
     BOOL compact = [self compactStoryLayout];
-    CGFloat floor = compact ? 64 : 70;
+    CGFloat floor = self.contentInsets.bottom + (compact ? 64 : 70);
 
     CGRect screen = [self addBackdrop:StoryBriefingRoom(mission) raiseBoard:compact && !narrow];
     BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
@@ -1377,7 +1387,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     NSDictionary *mission = CampaignMission(_index);
     NSArray<NSDictionary *> *conversation = _success ? mission[@"debrief"][@"dialogue"] : nil;
     CGSize s = self.size;
-    CGFloat inset = MIN(50, s.width * 0.05);
+    BriefingInsets safe = self.contentInsets;
+    CGFloat inset = MAX(MIN(50, s.width * 0.05), MAX(safe.left, safe.right) + 12);
     CGFloat width = MAX(1, s.width - 2 * inset);
     CGFloat fontSize = MIN(23, MAX(15, s.width / 58));
     BOOL more = _success && _index + 1 < CampaignMissions().count;
@@ -1388,12 +1399,12 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         [self addBackdrop:StoryDebriefRoom(mission) raiseBoard:NO];
         CGFloat captionHeight = MAX(72, [self captionTextHeightForLines:conversation width:width fontSize:fontSize] + 40);
         BOOL compact = [self compactStoryLayout];
-        CGFloat floor = compact ? (s.height - captionHeight) / 2 : 72;
+        CGFloat floor = compact ? (s.height - captionHeight) / 2 : safe.bottom + 72;
         CGFloat bottom = compact ? 0 : floor + captionHeight - 8;
         CGFloat height = compact ? floor + 6 : s.height - bottom - 26;
         CGRect leftArea = CGRectMake(inset, bottom, width / 2, MAX(1, height));
         BOOL playerSpeaking = [self addPortraitsForLine:line speakerArea:leftArea playerArea:CGRectOffset(leftArea, width / 2, 0)];
-        CGFloat captionBottom = MAX(compact ? 64 : 70, floor - CaptionDrop);
+        CGFloat captionBottom = MAX(safe.bottom + (compact ? 64 : 70), floor - CaptionDrop);
         [self addCaption:line inRect:CGRectMake(inset, captionBottom, width, captionHeight)
                  fontSize:fontSize speakerOnRight:playerSpeaking];
         [self footer:L10n(@"debrief.conversation_hint")
@@ -1401,7 +1412,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         return;
     }
 
-    CGFloat top = s.height - MIN(95, s.height * 0.15);
+    CGFloat top = s.height - safe.top - MIN(95, s.height * 0.15);
     SKLabelNode *title = Text(MIN(36, MAX(20, s.width / 30)),
                               _success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1),
                               SKLabelHorizontalAlignmentModeCenter);
@@ -1416,7 +1427,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     [_root addChild:name];
     SKNode *report = [SKNode node];
     CGFloat reportTop = CGRectGetMinY(name.frame) - 24;
-    CGFloat reportBottom = 80; // Leave the footer clear.
+    CGFloat reportBottom = safe.bottom + 84; // Leave the footer clear.
     SKLabelNode *summary = Para(fontSize, UIColorWithOpacity(UIInk, 0.9), MAX(1, width - ScrollGutter));
     summary.text = mission[@"debrief"][_success ? @"win" : @"lose"];
     summary.position = CGPointMake(inset, reportTop);
@@ -1629,3 +1640,4 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 }
 
 @end
+
