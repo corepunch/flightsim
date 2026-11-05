@@ -19,27 +19,27 @@ static int CheckCampaignSafeAreas(void) {
                                  sizes[v].height - insets[v].top - insets[v].bottom);
         for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
             [scene showListSelecting:mission];
-            CHECK(SafeButton(scene, @"_backRect", safe));
-            CHECK(SafeButton(scene, @"_confirmRect", safe));
+            CHECK(SafeButton(scene, @"backRect", safe));
+            CHECK(SafeButton(scene, @"confirmRect", safe));
             [scene showBriefing:mission];
             NSArray *pages = [scene valueForKey:@"_pages"];
             for (NSUInteger page = 0; page < pages.count; page++) {
-                CHECK(!CGRectIsEmpty([[scene valueForKey:@"_backRect"] rectValue]));
-                CHECK(SafeButton(scene, @"_backRect", safe));
-                if (page > 0) CHECK(!CGRectIsEmpty([[scene valueForKey:@"_previousRect"] rectValue]));
-                CHECK(SafeButton(scene, @"_previousRect", safe));
-                CHECK(SafeButton(scene, @"_confirmRect", safe));
-                CHECK(CGRectContainsRect(safe, [[scene valueForKey:@"_captionRect"] rectValue]));
+                CHECK(!CGRectIsEmpty(scene.backRect));
+                CHECK(SafeButton(scene, @"backRect", safe));
+                if (page > 0) CHECK(!CGRectIsEmpty(scene.previousRect));
+                CHECK(SafeButton(scene, @"previousRect", safe));
+                CHECK(SafeButton(scene, @"confirmRect", safe));
+                CHECK(CGRectContainsRect(safe, scene.captionRect));
                 if (page + 1 < pages.count) Advance(scene);
             }
-            UIMotionFinishTyping([scene valueForKey:@"_speech"]);
-            CGRect launch = [[scene valueForKey:@"_confirmRect"] rectValue];
+            UIMotionFinishTyping(scene.speech);
+            CGRect launch = scene.confirmRect;
             [scene pointerClick:CGPointMake(CGRectGetMidX(launch) / scene.size.width,
                                            CGRectGetMidY(launch) / scene.size.height)];
             CHECK([scene handle:0] == BriefingCommandLaunch);
             for (NSUInteger success = 0; success < 2; success++) {
                 [scene showDebrief:mission success:success results:@[@"+ Objective completed"]];
-                CHECK(SafeButton(scene, @"_confirmRect", safe));
+                CHECK(SafeButton(scene, @"confirmRect", safe));
                 if (!success) {
                     CHECK([scene handle:InputActionConfirm] == BriefingCommandLaunch);
                     continue;
@@ -47,10 +47,10 @@ static int CheckCampaignSafeAreas(void) {
                 NSArray *lines = CampaignMission(mission)[@"debrief"][@"dialogue"];
                 for (NSUInteger beat = 0; beat < lines.count; beat++) {
                     Advance(scene);
-                    CHECK(SafeButton(scene, @"_confirmRect", safe));
-                    CHECK(CGRectContainsRect(safe, [[scene valueForKey:@"_captionRect"] rectValue]));
+                    CHECK(SafeButton(scene, @"confirmRect", safe));
+                    CHECK(CGRectContainsRect(safe, scene.captionRect));
                 }
-                UIMotionFinishTyping([scene valueForKey:@"_speech"]);
+                UIMotionFinishTyping(scene.speech);
                 CHECK([scene handle:InputActionConfirm] == BriefingCommandNone);
                 CHECK(scene.selectedIndex == MIN(mission + 1, CampaignMissions().count - 1));
             }

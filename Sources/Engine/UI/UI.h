@@ -6,6 +6,38 @@
 #import "Input.h"
 #import "Net.h"
 
+// MARK: - Geometry
+
+// CGPoint doubles as the 2D vector, so screens do arithmetic on points and
+// rects as values instead of on their components.
+static inline CGPoint PointAdd(CGPoint a, CGPoint b) { return CGPointMake(a.x + b.x, a.y + b.y); }
+static inline CGPoint PointSub(CGPoint a, CGPoint b) { return CGPointMake(a.x - b.x, a.y - b.y); }
+static inline CGPoint PointScale(CGPoint p, CGFloat s) { return CGPointMake(p.x * s, p.y * s); }
+static inline CGFloat PointDot(CGPoint a, CGPoint b) { return a.x * b.x + a.y * b.y; }
+static inline CGFloat PointLength(CGPoint p) { return hypot(p.x, p.y); }
+static inline CGFloat PointDistance(CGPoint a, CGPoint b) { return PointLength(PointSub(b, a)); }
+static inline CGPoint PointLerp(CGPoint a, CGPoint b, CGFloat t) { return PointAdd(a, PointScale(PointSub(b, a), t)); }
+// Unit normal to the left of the direction a → b.
+static inline CGPoint PointLeftNormal(CGPoint a, CGPoint b) {
+    CGPoint d = PointSub(b, a);
+    return PointScale(CGPointMake(-d.y, d.x), 1 / PointLength(d));
+}
+// Component-wise product: a fraction of a size, or a point in a scaled frame.
+static inline CGPoint PointFromSize(CGSize s) { return CGPointMake(s.width, s.height); }
+static inline CGPoint PointMultiply(CGPoint p, CGSize s) { return CGPointMake(p.x * s.width, p.y * s.height); }
+
+static inline CGPoint RectCenter(CGRect r) { return CGPointMake(CGRectGetMidX(r), CGRectGetMidY(r)); }
+static inline CGPoint RectTopCenter(CGRect r) { return CGPointMake(CGRectGetMidX(r), CGRectGetMaxY(r)); }
+static inline CGRect RectFromEdges(CGFloat left, CGFloat bottom, CGFloat right, CGFloat top) {
+    return CGRectMake(left, bottom, right - left, top - bottom);
+}
+static inline CGRect RectWithSize(CGSize s) { return (CGRect){ .size = s }; }
+
+static inline NSValue *BoxPoint(CGPoint p) { return [NSValue valueWithBytes:&p objCType:@encode(CGPoint)]; }
+static inline CGPoint UnboxPoint(NSValue *v) { CGPoint p = CGPointZero; [v getValue:&p size:sizeof p]; return p; }
+static inline NSValue *BoxRect(CGRect r) { return [NSValue valueWithBytes:&r objCType:@encode(CGRect)]; }
+static inline CGRect UnboxRect(NSValue *v) { CGRect r = CGRectZero; [v getValue:&r size:sizeof r]; return r; }
+
 // MARK: - Briefing
 
 typedef NS_ENUM(NSInteger, BriefingCommand) {
@@ -38,6 +70,17 @@ typedef NSEdgeInsets BriefingInsets;
 // (positive delta reveals text farther down; the point is the wheel or drag origin).
 - (BriefingCommand)handle:(InputAction)actions;
 - (void)tick:(double)time;
+
+// Layout as last built, for Tools/GUI checks.
+@property (nonatomic, readonly) SKLabelNode *speech;            // the caption's line, if one is up
+@property (nonatomic, readonly) CGRect captionRect;
+@property (nonatomic, readonly) BOOL captionOnRight;             // the speaker sits on the right
+@property (nonatomic, readonly) CGRect confirmRect, previousRect, backRect;
+@property (nonatomic, readonly) CGRect scrollRect;              // empty unless text overflows
+@property (nonatomic, readonly) CGFloat scrollOffset;
+@property (nonatomic, readonly) SKNode *scrollContent;
+@property (nonatomic, readonly) NSArray<NSValue *> *missionTiles;   // boxed CGRects
+@property (nonatomic, readonly) NSUInteger missionColumns;
 
 @end
 

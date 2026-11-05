@@ -2,10 +2,6 @@
 #import "Shared.h"
 #import "Common.h"
 
-// NSValue's CGRect boxing differs between AppKit and UIKit.
-static NSValue *BoxRect(CGRect r) { return [NSValue valueWithBytes:&r objCType:@encode(CGRect)]; }
-static CGRect UnboxRect(NSValue *v) { CGRect r; [v getValue:&r size:sizeof r]; return r; }
-
 @interface UILayoutResult ()
 @property (nonatomic, readwrite) SKNode *node;
 @property (nonatomic) NSMutableDictionary<NSString *, NSValue *> *frameMap;

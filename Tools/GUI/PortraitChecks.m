@@ -22,7 +22,7 @@ static BOOL PortraitsAlign(SKNode *left, SKNode *right) {
 }
 
 static void Advance(Briefing *scene) {
-    UIMotionFinishTyping([scene valueForKey:@"_speech"]);
+    UIMotionFinishTyping(scene.speech);
     [scene handle:InputActionConfirm];
 }
 
@@ -32,7 +32,7 @@ static BriefingCommand ClickScene(Briefing *scene) {
 }
 
 static CGFloat ScrollOffset(Briefing *scene) {
-    return [[scene valueForKey:@"_scrollOffset"] doubleValue];
+    return scene.scrollOffset;
 }
 
 static int CheckScrolling(void) {
@@ -40,7 +40,7 @@ static int CheckScrolling(void) {
     [scene showListSelecting:0];
     scene.size = CGSizeMake(932, 430);
     [scene tick:0]; // Settle the layout without its entrance animations.
-    CGRect viewport = [[scene valueForKey:@"_scrollRect"] rectValue];
+    CGRect viewport = scene.scrollRect;
     CHECK(!CGRectIsEmpty(viewport));
     CGPoint inside = CGPointMake(CGRectGetMidX(viewport) / scene.size.width,
                                  CGRectGetMidY(viewport) / scene.size.height);
@@ -50,10 +50,10 @@ static int CheckScrolling(void) {
     [scene pointerScroll:10000 at:inside];
     [scene handle:0];
     CHECK(ScrollOffset(scene) > 0);
-    SKNode *content = [scene valueForKey:@"_scrollContent"];
+    SKNode *content = scene.scrollContent;
     CHECK([content.parent isKindOfClass:SKCropNode.class]);
     CHECK([content childNodeWithName:@"mission-20"]);
-    NSArray<NSValue *> *tiles = [scene valueForKey:@"_missionTiles"];
+    NSArray<NSValue *> *tiles = scene.missionTiles;
     CHECK(tiles.count == CampaignMissions().count);
     for (NSValue *value in tiles) CHECK(value.rectValue.size.width >= 140 && value.rectValue.size.height >= 140);
     [scene pointerScroll:-10000 at:inside];
@@ -61,12 +61,12 @@ static int CheckScrolling(void) {
     CHECK(ScrollOffset(scene) == 0);
     [scene handle:InputActionRight];
     CHECK(scene.selectedIndex == 1);
-    NSUInteger columns = [[scene valueForKey:@"_missionColumns"] unsignedIntegerValue];
+    NSUInteger columns = scene.missionColumns;
     [scene handle:InputActionDown];
     CHECK(scene.selectedIndex == 1 + columns);
     scene.size = CGSizeMake(1600, 1100);
     [scene showListSelecting:0];
-    CHECK(![scene valueForKey:@"_scrollThumb"]);
+    CHECK(CGRectIsEmpty(scene.scrollRect));
 
     // Briefing readouts and post-flight results can also exceed a short viewport.
     scene.size = CGSizeMake(852, 393);
@@ -79,7 +79,7 @@ static int CheckScrolling(void) {
     pages[pages.count - 1] = intel;
     [scene setValue:pages forKey:@"_pages"];
     for (NSUInteger i = 0; i + 1 < pages.count; i++) Advance(scene);
-    CHECK(!CGRectIsEmpty([[scene valueForKey:@"_scrollRect"] rectValue]));
+    CHECK(!CGRectIsEmpty(scene.scrollRect));
     [scene handle:InputActionDown];
     CHECK(ScrollOffset(scene) > 0);
     [scene handle:InputActionLeft];
@@ -88,7 +88,7 @@ static int CheckScrolling(void) {
     NSMutableArray *results = [NSMutableArray array];
     for (int i = 0; i < 18; i++) [results addObject:@"+ Objective completed"];
     [scene showDebrief:0 success:NO results:results];
-    CHECK(!CGRectIsEmpty([[scene valueForKey:@"_scrollRect"] rectValue]));
+    CHECK(!CGRectIsEmpty(scene.scrollRect));
     [scene handle:InputActionDown];
     CHECK(ScrollOffset(scene) > 0);
     return EXIT_SUCCESS;
@@ -132,13 +132,13 @@ int main(void) {
                     SKNode *listener = Portrait(scene, other);
                     CHECK(listener && listener.position.x < scene.size.width / 2 && ![listener actionForKey:@"portraitDeparture"]);
                     CHECK(PortraitsAlign(listener, player));
-                    CHECK([[scene valueForKey:@"_captionRight"] boolValue] == playerSpeaking);
+                    CHECK(scene.captionOnRight == playerSpeaking);
                     CHECK(Portrait(scene, @"Lancer1") == player && ![player actionForKey:@"portraitDeparture"]);
                     CHECK(player.alpha == playerAlpha && layer.parent == portraitParent);
                     for (NSString *name in previous)
                         CHECK(previous[name] == Portrait(scene, name));
                 }
-                UIMotionFinishTyping([scene valueForKey:@"_speech"]);
+                UIMotionFinishTyping(scene.speech);
                 CHECK(ClickScene(scene) == BriefingCommandNone);
                 CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == pages.count - 1);
                 CHECK([scene handle:InputActionConfirm] == BriefingCommandLaunch);
@@ -148,12 +148,12 @@ int main(void) {
             [(id<UIMotionScene>)scene motionEnter];
             SKNode *varn = Portrait(scene, @"Varn");
             CHECK(varn && !Portrait(scene, @"Okafor"));
-            UIMotionFinishTyping([scene valueForKey:@"_speech"]);
+            UIMotionFinishTyping(scene.speech);
             CHECK(ClickScene(scene) == BriefingCommandNone);
             CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == 1);
             SKNode *okafor = Portrait(scene, @"Okafor");
             CHECK(okafor && [varn actionForKey:@"portraitDeparture"]);
-            CGRect previousButton = [[scene valueForKey:@"_previousRect"] rectValue];
+            CGRect previousButton = scene.previousRect;
             if (CGRectIsEmpty(previousButton)) [scene handle:InputActionLeft];
             else {
                 [scene pointerClick:CGPointMake(CGRectGetMidX(previousButton) / scene.size.width,
@@ -178,14 +178,14 @@ int main(void) {
             SKSpriteNode *player = (SKSpriteNode *)Portrait(scene, @"Lancer1");
             SKSpriteNode *listener = (SKSpriteNode *)Portrait(scene, @"Varn");
             CHECK(player && player.position.x > scene.size.width / 2);
-            CHECK(listener && ![[scene valueForKey:@"_captionRight"] boolValue]);
+            CHECK(listener && !scene.captionOnRight);
             CHECK(PortraitsAlign(listener, player));
             CHECK(player.texture && player.texture == art[@"Expressions/Lancer1-grieving"]);
             CHECK(listener.texture && listener.texture == art[@"Expressions/Varn-sympathetic"]);
             Advance(scene);
             CHECK(Portrait(scene, @"Lancer1") == player && ![player actionForKey:@"portraitDeparture"]);
             CHECK(Portrait(scene, @"Varn") == listener && ![listener actionForKey:@"portraitDeparture"]);
-            CHECK([[scene valueForKey:@"_captionRight"] boolValue]);
+            CHECK(scene.captionOnRight);
         }
         printf("PASS: portrait transitions across %lu missions at desktop, narrow and iPhone sizes.\n", (unsigned long)count);
     }

@@ -119,8 +119,8 @@ static int CheckCampaignCaptions(void) {
             [(id<UIMotionScene>)scene motionEnter];
             NSUInteger pages = [[scene valueForKey:@"_pages"] count];
             for (NSUInteger page = 0; page < pages; page++) {
-                SKLabelNode *speech = [scene valueForKey:@"_speech"];
-                CGRect panel = [[scene valueForKey:@"_captionRect"] rectValue];
+                SKLabelNode *speech = scene.speech;
+                CGRect panel = scene.captionRect;
                 CHECK([speech.fontName isEqualToString:UIBodyFont]);
                 CHECK(CGRectContainsRect(CGRectInset(panel, -1, -1), speech.frame));
                 UIMotionFinishTyping(speech);
@@ -162,13 +162,13 @@ int main(int argc, const char **argv) {
                         [NSString stringWithFormat:@"briefing-%.0f-%d.png", size.width, i]]);
                 }
             }
-            SKLabelNode *speech = [scene valueForKey:@"_speech"];
+            SKLabelNode *speech = scene.speech;
             UIMotionFinishTyping(speech);
             CHECK(!UIMotionIsTyping(speech));
             CHECK(![speech childNodeWithName:@"motion.caret"]);
             [scene handle:InputActionRight];
             CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == 1);
-            speech = [scene valueForKey:@"_speech"];
+            speech = scene.speech;
             CHECK(UIMotionIsTyping(speech));
             [scene handle:InputActionRight]; // Skip while the new bubble is opening.
             CHECK(!UIMotionIsTyping(speech));
