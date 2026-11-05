@@ -214,13 +214,12 @@ typedef struct {
 
     // Mission
     BOOL _running, _over;
-    NSDictionary *_mission;
+    const LevelDef *_level;                 // the level being flown; cached for the process
     double _missionTime;
     MissionRunner *_runner;                 // objectives, events and rules (engine runtime)
-    NSMutableDictionary<NSString *, NSDictionary *> *_held;   // "hold" entities and waves, by id, until spawned
-    NSMutableDictionary<NSString *, NSValue *> *_navs;
-    NSMutableDictionary<NSString *, NSString *> *_navNames;
-    NSMutableArray<NSString *> *_navOrder;
+    // "hold" entities and waves, by id, until an event spawns them: pointers into _level.
+    NSMutableDictionary<NSString *, NSValue *> *_heldEntities, *_heldWaves;
+    NSMutableArray<NSString *> *_navOrder;  // navs sent to clients, in CS_NAVS order
     NSString *_currentNav;
     NSMutableArray *_explosionQueue;    // [time, GCapital, last] break-up sequences
     int _startTorpedoes;
@@ -254,7 +253,13 @@ extern GWorld *level;
 @end
 
 NSString *GTorpedoProjectile(void);             // projectile definition the torpedo is drawn with
-NSDictionary *GRules(void);                     // Data/rules.json
+// Data/rules.json, read once.
+typedef struct {
+    NSString *defaultShip;
+    NSString *secondaryProjectile, *secondaryName, *secondaryShort;
+    NSString *fighterClass[TeamCount];      // what the cockpit calls a fighter of each side
+} GameRules;
+const GameRules *GRules(void);
 
 @interface GWorld (Weapons)
 - (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life

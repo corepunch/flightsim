@@ -196,25 +196,80 @@ typedef struct {
 @implementation MapItem
 @end
 
+// What the map draws for one thing in the level.
+typedef NS_ENUM(NSInteger, ContactKind) { ContactPlayer, ContactCapital, ContactNav, ContactWave, ContactMines, ContactRocks };
+
+typedef struct {
+    ContactKind kind;
+    NSString *identifier, *label, *team, *group, *asset;
+    simd_float3 pos, size;          // size: a minefield's extent
+    float radius;                   // an asteroid field's
+} MapContact;
+
+// Everything in the level with a place on the map, in drawing order.
+static void EachContact(const LevelDef *level, void (^body)(MapContact contact)) {
+    body((MapContact){ .kind = ContactPlayer, .identifier = @"start", .pos = level->playerPos,
+                       .label = L10n(@"briefing.map_player"), .team = @"friend" });
+    for (int i = 0; i < level->entityCount; i++) {
+        const LevelEntity *e = &level->entities[i];
+        body((MapContact){ .kind = ContactCapital, .identifier = e->identifier, .pos = e->pos, .team = e->team,
+                           .label = e->name ?: e->asset, .asset = e->asset, .group = e->group });
+    }
+    for (int i = 0; i < level->navCount; i++) {
+        const LevelNav *n = &level->navs[i];
+        body((MapContact){ .kind = ContactNav, .identifier = n->identifier, .pos = n->pos, .label = n->name });
+    }
+    for (int i = 0; i < level->waveCount; i++) {
+        const LevelWave *w = &level->waves[i];
+        const ShipDef *ship = ShipDefNamed(w->ship);
+        NSString *label = w->name ?: L10nFormat(@"briefing.map_wave", @(w->count), ship ? @(ship->displayName) : w->ship);
+        body((MapContact){ .kind = ContactWave, .identifier = w->identifier, .pos = w->pos, .team = w->team, .label = label });
+    }
+    for (int i = 0; i < level->fieldCount; i++) {
+        const LevelField *f = &level->fields[i];
+        if (f->kind == LevelFieldMines)
+            body((MapContact){ .kind = ContactMines, .identifier = f->group, .pos = f->center, .size = f->size, .team = @"enemy",
+                               .label = L10n(@"briefing.map_minefield") });
+        else if (f->kind == LevelFieldAsteroids)
+            body((MapContact){ .kind = ContactRocks, .identifier = @"_rocks", .pos = f->center, .radius = f->radius });
+    }
+}
+
+static SKColor *TeamColor(NSString *team) {
+    if ([team isEqualToString:@"enemy"]) return UIColorWithOpacity(UIRed, 1);
+    if ([team isEqualToString:@"neutral"]) return UIColorWithOpacity(UIYellow, 1);
+    return UIColorWithOpacity(UIBlue, 1);
+}
+
+static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPathAddLines(path, NULL, points, count);
+    CGPathCloseSubpath(path);
+    SKShapeNode *shape = [SKShapeNode shapeNodeWithPath:path];
+    CGPathRelease(path);
+    return shape;
+}
+
 // The mission seen from above: contacts on the x/z plane, a dashed route and
 // a lock on the focus. Each briefing step lights some of it.
 @interface TacticalMap : SKCropNode
-- (instancetype)initWithMission:(NSDictionary *)mission rect:(CGRect)rect;
+- (instancetype)initWithLevel:(const LevelDef *)level rect:(CGRect)rect;
 // Applies a step's show/focus/route, animated from what was shown before;
-// returns what this cue shows.
-- (MapEmphasis)applyCue:(NSDictionary *)step style:(CueStyle)style after:(MapEmphasis)shown;
+// returns what this cue shows. A nil step dims nothing in particular.
+- (MapEmphasis)applyCue:(BriefingStep *)step style:(CueStyle)style after:(MapEmphasis)shown;
 - (void)pulse:(double)time;
 @end
 
 @implementation TacticalMap {
     CGRect _rect;
+    CGFloat _scale;                 // map points per metre
     NSMutableDictionary<NSString *, MapItem *> *_items;
     SKNode *_layer, *_routeLayer, *_focusLock;
     SKShapeNode *_focusRing, *_routeLine;
     NSArray<NSValue *> *_routePoints;
 }
 
-- (instancetype)initWithMission:(NSDictionary *)m rect:(CGRect)rect {
+- (instancetype)initWithLevel:(const LevelDef *)level rect:(CGRect)rect {
     if (!(self = [super init])) return nil;
     _rect = rect;
     _items = [NSMutableDictionary dictionary];
@@ -224,44 +279,32 @@ typedef struct {
     _layer = [SKNode node];
     [self addChild:_layer];
 
-    // Gather everything with a position, then fit the x/z plane into the map.
-    NSMutableArray<NSDictionary *> *things = [NSMutableArray array];
-    [things addObject:@{ @"id": @"start", @"pos": m[@"player"][@"pos"], @"kind": @"player", @"label": L10n(@"briefing.map_player") }];
-    for (NSDictionary *e in m[@"entities"]) {
-        NSString *team = e[@"team"];
-        [things addObject:@{ @"id": e[@"id"], @"pos": e[@"pos"], @"kind": @"capital", @"team": team, @"label": e[@"name"] ?: e[@"asset"],
-                             @"asset": e[@"asset"], @"group": e[@"group"] ?: @"" }];
-    }
-    for (NSDictionary *n in m[@"navs"]) [things addObject:@{ @"id": n[@"id"], @"pos": n[@"pos"], @"kind": @"nav", @"label": n[@"name"] }];
-    for (NSDictionary *w in m[@"waves"]) {
-        const ShipDef *ship = ShipDefNamed(w[@"ship"]);
-        NSString *label = w[@"name"] ?: L10nFormat(@"briefing.map_wave", w[@"count"], ship ? @(ship->displayName) : w[@"ship"]);
-        [things addObject:@{ @"id": w[@"id"], @"pos": w[@"pos"], @"kind": @"wave", @"team": w[@"team"], @"label": label }];
-    }
-    for (NSDictionary *f in m[@"fields"]) {
-        if ([f[@"type"] isEqualToString:@"mines"])
-            [things addObject:@{ @"id": f[@"group"], @"pos": f[@"center"], @"kind": @"field", @"team": @"enemy", @"label": L10n(@"briefing.map_minefield"), @"size": f[@"size"] }];
-        if ([f[@"type"] isEqualToString:@"asteroids"])
-            [things addObject:@{ @"id": @"_rocks", @"pos": f[@"center"], @"kind": @"rocks", @"radius": f[@"radius"], @"label": @"" }];
-    }
-    simd_float3 lo = simd_make_float3(FLT_MAX), hi = simd_make_float3(-FLT_MAX);
-    for (NSDictionary *t in things) {
-        if ([t[@"kind"] isEqualToString:@"rocks"]) continue;
-        lo = simd_min(lo, Vec3(t[@"pos"]));
-        hi = simd_max(hi, Vec3(t[@"pos"]));
-    }
+    // Fit the x/z plane of everything placed (fields of rocks aside) into the map.
+    __block simd_float3 lo = simd_make_float3(FLT_MAX), hi = simd_make_float3(-FLT_MAX);
+    EachContact(level, ^(MapContact c) {
+        if (c.kind == ContactRocks) return;
+        lo = simd_min(lo, c.pos);
+        hi = simd_max(hi, c.pos);
+    });
     simd_float3 extent = hi - lo, centre = (lo + hi) / 2;
     float span = fmaxf(fmaxf(extent.x, extent.z), 800.0f) * 1.25f;
-    CGFloat scale = MIN(rect.size.width, rect.size.height) / span;
+    CGFloat scale = _scale = MIN(rect.size.width, rect.size.height) / span;
     CGPoint mid = RectCenter(rect);
     CGPoint (^project)(simd_float3) = ^CGPoint(simd_float3 p) {
         // Forward (-Z) is up on the map.
         simd_float3 d = (p - centre) * scale;
         return PointAdd(mid, CGPointMake(d.x, -d.z));
     };
-    CGPoint playerPoint = project(Vec3(m[@"player"][@"pos"]));
+    [self addGridWithSpan:span];
+    CGPoint playerPoint = project(level->playerPos);
+    EachContact(level, ^(MapContact c) { [self addContact:c at:project(c.pos) player:playerPoint]; });
+    [self addFocusLock];
+    return self;
+}
 
-    // Grid and scale bar.
+- (void)addGridWithSpan:(float)span {
+    CGRect rect = _rect;
+    CGPoint mid = RectCenter(rect);
     for (int i = 1; i < 8; i++) {
         CGPoint grid = PointAdd(rect.origin, PointMultiply(CGPointMake(i / 8.0, i / 8.0), rect.size));
         SKSpriteNode *v = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.07) size:CGSizeMake(1, rect.size.height)];
@@ -274,7 +317,7 @@ typedef struct {
         [_layer addChild:h];
     }
     float bar = span > 6000 ? 2000 : 1000;
-    SKSpriteNode *sb = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.7) size:CGSizeMake(bar * scale, 2)];
+    SKSpriteNode *sb = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.7) size:CGSizeMake(bar * _scale, 2)];
     sb.anchorPoint = CGPointMake(0, 0.5);
     sb.position = PointAdd(rect.origin, CGPointMake(16, 18));
     sb.name = @"scale";
@@ -284,117 +327,121 @@ typedef struct {
     sl.position = PointAdd(rect.origin, CGPointMake(16, 36));
     sl.name = @"scale-label";
     [_layer addChild:sl];
+}
 
-    for (NSDictionary *t in things) {
-        NSString *kind = t[@"kind"];
-        CGPoint p = project(Vec3(t[@"pos"]));
-        SKNode *icon;
-        SKColor *c = [t[@"team"] isEqualToString:@"enemy"] ? UIColorWithOpacity(UIRed, 1) : ([t[@"team"] isEqualToString:@"neutral"] ? UIColorWithOpacity(UIYellow, 1) : UIColorWithOpacity(UIBlue, 1));
-        if ([kind isEqualToString:@"rocks"]) {
-            CGFloat r = [t[@"radius"] floatValue] * scale;
-            SKShapeNode *field = [SKShapeNode shapeNodeWithCircleOfRadius:r];
-            field.strokeColor = UIColorWithOpacity(UIField, 0.25);
-            field.fillColor = UIColorWithOpacity(UIField, 0.06);
-            field.position = p;
-            field.name = @"rocks";
-            [_layer addChild:field];
-            continue;
-        } else if ([kind isEqualToString:@"player"]) {
-            CGMutablePathRef a = CGPathCreateMutable();
-            CGPathMoveToPoint(a, NULL, 0, 10); CGPathAddLineToPoint(a, NULL, 7, -7); CGPathAddLineToPoint(a, NULL, -7, -7);
-            CGPathCloseSubpath(a);
-            SKShapeNode *n = [SKShapeNode shapeNodeWithPath:a];
-            CGPathRelease(a);
+- (SKNode *)iconFor:(MapContact)c {
+    SKColor *ink = TeamColor(c.team);
+    switch (c.kind) {
+        case ContactPlayer: {
+            const CGPoint arrow[] = { {0, 10}, {7, -7}, {-7, -7} };
+            SKShapeNode *n = ClosedShape(arrow, 3);
             n.fillColor = UIColorWithOpacity(UIInk, 0.9);
             n.strokeColor = UIColorWithOpacity(UIInk, 1);
-            icon = n;
-        } else if ([kind isEqualToString:@"nav"]) {
-            CGMutablePathRef a = CGPathCreateMutable();
-            CGPathMoveToPoint(a, NULL, 0, 8); CGPathAddLineToPoint(a, NULL, 8, 0); CGPathAddLineToPoint(a, NULL, 0, -8); CGPathAddLineToPoint(a, NULL, -8, 0);
-            CGPathCloseSubpath(a);
-            SKShapeNode *n = [SKShapeNode shapeNodeWithPath:a];
-            CGPathRelease(a);
+            return n;
+        }
+        case ContactNav: {
+            const CGPoint diamond[] = { {0, 8}, {8, 0}, {0, -8}, {-8, 0} };
+            SKShapeNode *n = ClosedShape(diamond, 4);
             n.strokeColor = UIColorWithOpacity(UIInk, 1);
             n.lineWidth = 2;
-            icon = n;
-        } else if ([kind isEqualToString:@"wave"]) {
+            return n;
+        }
+        case ContactWave: {
             SKNode *g = [SKNode node];
+            const CGPoint dart[] = { {0, 5}, {4, -4}, {-4, -4} };
             for (int k = 0; k < 3; k++) {
-                CGMutablePathRef a = CGPathCreateMutable();
-                CGPathMoveToPoint(a, NULL, 0, 5); CGPathAddLineToPoint(a, NULL, 4, -4); CGPathAddLineToPoint(a, NULL, -4, -4);
-                CGPathCloseSubpath(a);
-                SKShapeNode *n = [SKShapeNode shapeNodeWithPath:a];
-                CGPathRelease(a);
-                n.fillColor = c;
+                SKShapeNode *n = ClosedShape(dart, 3);
+                n.fillColor = ink;
                 n.strokeColor = [SKColor clearColor];
                 n.position = CGPointMake((k - 1) * 9, k == 1 ? 5 : 0);
                 [g addChild:n];
             }
-            icon = g;
-        } else if ([kind isEqualToString:@"field"]) {
-            NSArray *sz = t[@"size"];
-            SKShapeNode *n = [SKShapeNode shapeNodeWithRect:CGRectMake(-[sz[0] floatValue] * scale / 2, -[sz[2] floatValue] * scale / 2,
-                                                                       [sz[0] floatValue] * scale, [sz[2] floatValue] * scale)];
+            return g;
+        }
+        case ContactMines: {
+            CGSize size = CGSizeMake(c.size.x * _scale, c.size.z * _scale);
+            SKShapeNode *n = [SKShapeNode shapeNodeWithRect:CGRectMake(-size.width / 2, -size.height / 2, size.width, size.height)];
             n.strokeColor = UIColorWithOpacity(UIRed, 0.6);
             n.fillColor = UIColorWithOpacity(UIRed, 0.08);
-            icon = n;
-        } else {
-            // Capital icon scaled to the real hull, pointing along its facing.
-            const CapitalDef *info = CapitalDefNamed(t[@"asset"]);
+            return n;
+        }
+        case ContactRocks: {
+            SKShapeNode *n = [SKShapeNode shapeNodeWithCircleOfRadius:c.radius * _scale];
+            n.strokeColor = UIColorWithOpacity(UIField, 0.25);
+            n.fillColor = UIColorWithOpacity(UIField, 0.06);
+            return n;
+        }
+        case ContactCapital: {
+            // Scaled to the real hull, pointing along its facing.
+            const CapitalDef *info = CapitalDefNamed(c.asset);
             BOOL prop = info && info->prop;
-            CGFloat maxLength = MIN(60, rect.size.height * 0.15);
+            CGFloat maxLength = MIN(60, _rect.size.height * 0.15);
             CGFloat len = prop ? 6 : MIN(maxLength, MAX(12, (info ? info->hp : 10) * 0.9 + 10));
             SKShapeNode *n = prop ? [SKShapeNode shapeNodeWithRect:CGRectMake(-3, -3, 6, 6)]
                                   : [SKShapeNode shapeNodeWithRect:CGRectMake(-len * 0.18, -len / 2, len * 0.36, len) cornerRadius:3];
-            n.strokeColor = c;
-            n.fillColor = [c colorWithAlphaComponent:0.35];
+            n.strokeColor = ink;
+            n.fillColor = [ink colorWithAlphaComponent:0.35];
             n.lineWidth = 1.5;
-            icon = n;
-        }
-        icon.position = p;
-        SKNode *holder = [SKNode node];
-        [holder addChild:icon];
-        if ([t[@"label"] length] && ![kind isEqualToString:@"field"] && !([kind isEqualToString:@"capital"] && [t[@"group"] length])) {
-            // Put a nearby wingman's callsign opposite the player's callsign.
-            BOOL wingman = [kind isEqualToString:@"wave"] && [t[@"team"] isEqualToString:@"friend"] &&
-                           PointDistance(p, playerPoint) < 24;
-            SKLabelNode *l = Text(11, UIColorWithOpacity(UIInk, 0.85),
-                                  wingman ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeLeft);
-            l.text = [t[@"label"] uppercaseString];
-            l.position = PointAdd(p, CGPointMake(wingman ? -15 : 12, 6));
-            [holder addChild:l];
-        } else if ([kind isEqualToString:@"field"]) {
-            SKLabelNode *l = Text(11, UIColorWithOpacity(UIRed, 0.9), SKLabelHorizontalAlignmentModeCenter);
-            l.text = t[@"label"];
-            l.position = PointAdd(p, CGPointMake(0, -6));
-            [holder addChild:l];
-        }
-        [_layer addChild:holder];
-        MapItem *item = [MapItem new];
-        item.identifier = t[@"id"];
-        item.group = [t[@"group"] length] ? t[@"group"] : nil;
-        item.point = p;
-        item.node = holder;
-        _items[t[@"id"]] = item;
-        // Groups (e.g. containers, pods) answer to the group name too.
-        if ([t[@"group"] length]) {
-            MapItem *g = _items[t[@"group"]];
-            if (!g) {
-                g = [MapItem new];
-                g.identifier = t[@"group"];
-                g.container = YES;
-                g.point = p;
-                g.node = [SKNode node];
-                [_layer addChild:g.node];
-                _items[t[@"group"]] = g;
-            }
-            [holder removeFromParent];
-            [g.node addChild:holder];
+            return n;
         }
     }
+    return [SKNode node];
+}
+
+- (void)addContact:(MapContact)c at:(CGPoint)p player:(CGPoint)playerPoint {
+    SKNode *icon = [self iconFor:c];
+    icon.position = p;
+    if (c.kind == ContactRocks) {
+        // Scenery: drawn, never lit or named.
+        icon.name = @"rocks";
+        [_layer addChild:icon];
+        return;
+    }
+    SKNode *holder = [SKNode node];
+    [holder addChild:icon];
+    BOOL grouped = c.group.length > 0;
+    if (c.kind == ContactMines) {
+        SKLabelNode *l = Text(11, UIColorWithOpacity(UIRed, 0.9), SKLabelHorizontalAlignmentModeCenter);
+        l.text = c.label;
+        l.position = PointAdd(p, CGPointMake(0, -6));
+        [holder addChild:l];
+    } else if (c.label.length && !(c.kind == ContactCapital && grouped)) {
+        // Put a nearby wingman's callsign opposite the player's callsign.
+        BOOL wingman = c.kind == ContactWave && [c.team isEqualToString:@"friend"] && PointDistance(p, playerPoint) < 24;
+        SKLabelNode *l = Text(11, UIColorWithOpacity(UIInk, 0.85),
+                              wingman ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeLeft);
+        l.text = c.label.uppercaseString;
+        l.position = PointAdd(p, CGPointMake(wingman ? -15 : 12, 6));
+        [holder addChild:l];
+    }
+    [_layer addChild:holder];
+    if (!c.identifier) return;
+    MapItem *item = [MapItem new];
+    item.identifier = c.identifier;
+    item.group = grouped ? c.group : nil;
+    item.point = p;
+    item.node = holder;
+    _items[c.identifier] = item;
+    if (!grouped) return;
+    // Groups (e.g. containers, pods) answer to the group name too.
+    MapItem *g = _items[c.group];
+    if (!g) {
+        g = [MapItem new];
+        g.identifier = c.group;
+        g.container = YES;
+        g.point = p;
+        g.node = [SKNode node];
+        [_layer addChild:g.node];
+        _items[c.group] = g;
+    }
+    [holder removeFromParent];
+    [g.node addChild:holder];
+}
+
+// The focus marker: a pulsing ring inside slowly turning lock brackets.
+- (void)addFocusLock {
     _routeLayer = [SKNode node];
     [_layer addChild:_routeLayer];
-    // The focus marker: a pulsing ring inside slowly turning lock brackets.
     _focusLock = [SKNode node];
     [_layer addChild:_focusLock];
     _focusRing = [SKShapeNode shapeNodeWithCircleOfRadius:18];
@@ -415,11 +462,10 @@ typedef struct {
     brackets.lineWidth = 1.5;
     [_focusLock addChild:brackets];
     if (!UIMotionReduced()) [brackets runAction:[SKAction repeatActionForever:[SKAction rotateByAngle:-M_PI_2 duration:4]]];
-    return self;
 }
 
-- (MapEmphasis)applyCue:(NSDictionary *)st style:(CueStyle)style after:(MapEmphasis)shown {
-    NSSet *show = [NSSet setWithArray:st[@"show"] ?: @[]];
+- (MapEmphasis)applyCue:(BriefingStep *)st style:(CueStyle)style after:(MapEmphasis)shown {
+    NSSet *show = [NSSet setWithArray:st.show ?: @[]];
     // Lit: named in the step, or a member of a group named in the step.
     for (MapItem *it in _items.allValues) {
         if (it.container) continue;
@@ -428,7 +474,7 @@ typedef struct {
     }
     // The step's focus is the one thing at full contrast: bright bold label,
     // slightly larger icon. Everything else lit stays at its normal weight.
-    NSString *focusID = st[@"focus"] ?: @"";
+    NSString *focusID = st.focus ?: @"";
     for (MapItem *it in _items.allValues) {
         if (it.container) continue;
         BOOL focused = [it.identifier isEqualToString:focusID] || (it.group && [it.group isEqualToString:focusID]);
@@ -444,7 +490,7 @@ typedef struct {
         }
     }
     [_routeLayer removeAllChildren];
-    NSArray *route = st[@"route"];
+    NSArray *route = st.route;
     if (route.count > 1) {
         CGMutablePathRef path = CGPathCreateMutable();
         BOOL first = YES;
@@ -468,13 +514,13 @@ typedef struct {
         _routePoints = points;
         _routeLine = line;
     }
-    MapItem *focus = _items[st[@"focus"] ?: @""];
+    MapItem *focus = _items[focusID];
     _focusLock.hidden = !focus;
     if (focus) _focusLock.position = focus.point;
 
     NSMutableDictionary<NSString *, NSNumber *> *alphas = [NSMutableDictionary dictionary];
     for (MapItem *it in _items.allValues) if (!it.container) alphas[it.identifier] = @(it.node.alpha);
-    MapEmphasis now = { .focus = st[@"focus"] ?: @"", .route = st[@"route"] ?: @[], .alpha = alphas };
+    MapEmphasis now = { .focus = focusID, .route = route ?: @[], .alpha = alphas };
     [self animateFrom:shown to:now style:style];
     return now;
 }
@@ -606,8 +652,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     BOOL _success;
     NSArray<NSString *> *_results;
     NSUInteger _debriefBeat;
-    NSDictionary *_dialogueScene;
-    NSArray<NSDictionary *> *_pages;
+    CampaignMission *_mission;
+    NSArray<BriefingPage *> *_pages;
     NSUInteger _page;
     FooterButtons _buttons;
     MissionGrid _grid;
@@ -666,6 +712,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 - (CGFloat)scrollOffset { return _scrollOffset; }
 - (SKNode *)scrollContent { return _viewport.content; }
 - (NSArray<NSValue *> *)missionTiles { return _grid.tiles; }
+- (CGRect)missionRows { return _grid.rows; }
 - (NSUInteger)missionColumns { return _grid.columns; }
 
 - (BOOL)hasNextBriefingPage { return _page + 1 < _pages.count; }
@@ -827,7 +874,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     sub.position = CGPointMake(left + 4, top - (compact ? 38 : 46));
     [_root addChild:sub];
 
-    NSArray *missions = CampaignMissions();
+    NSArray<CampaignMission *> *missions = CampaignMissions();
     NSUInteger unlocked = ProgressUnlockedCount();
     CGFloat gap = 12, width = MAX(1, right - left - ScrollGutter);
     _grid.columns = MAX(1, MIN(6, (NSUInteger)((width + gap) / 160)));
@@ -866,7 +913,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         [content addChild:rating];
         SKLabelNode *name = Para(12, ink, tileW - 2 * inset);
         name.fontName = UIInterfaceBoldFont;
-        name.text = open ? [missions[i][@"title"] uppercaseString] : L10n(@"missions.classified");
+        name.text = open ? missions[i].title.uppercaseString : L10n(@"missions.classified");
         name.numberOfLines = 2;
         CGFloat nameTop = CGRectGetMinY(number.frame) - spacing;
         if (nameTop - name.frame.size.height < CGRectGetMaxY(rating.frame) + spacing) name.numberOfLines = 1;   // compact tiles
@@ -982,9 +1029,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)startPage {
     _index = MIN(index, CampaignMissions().count - 1);
-    NSDictionary *mission = CampaignMission(_index);
-    _dialogueScene = mission[@"briefing"][@"dialogue"];
-    NSArray<NSDictionary *> *pages = StoryBriefingPages(mission);
+    _mission = CampaignMissionAt(_index);
+    NSArray<BriefingPage *> *pages = StoryBriefingPages(_mission);
     _pages = pages;
     _page = MIN(startPage, pages.count - 1);
     _mode = ModeBriefing;
@@ -1018,18 +1064,15 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 // wall monitor traced by the room's bezel polygon (source pixels, y down).
 - (CGRect)addBackdrop:(NSString *)roomName raiseBoard:(BOOL)raiseBoard {
     CGSize size = self.size;
-    NSDictionary *room = StoryRoom(roomName);
-    SKSpriteNode *art = room ? [self artNamed:room[@"image"] ?: roomName] : nil;
+    StoryRoom *room = StoryRoomNamed(roomName);
+    SKSpriteNode *art = room ? [self artNamed:room.image] : nil;
     if (!art) return CGRectZero;
-    NSArray<NSNumber *> *source = room[@"size"];
-    CGFloat sourceWidth = source.count == 2 ? source[0].doubleValue : art.size.width;
-    CGFloat sourceHeight = source.count == 2 ? source[1].doubleValue : art.size.height;
-    NSDictionary *board = room[@"board"];
-    const CGFloat boardBottom = [board[@"bottom"] doubleValue] / sourceHeight;
-    const CGFloat boardHeight = [board[@"height"] doubleValue] / sourceHeight;
+    // Room coordinates are source pixels, y down.
+    CGSize source = room.size.x > 0 ? CGSizeMake(room.size.x, room.size.y) : art.size;
+    const CGFloat boardBottom = room.boardBottom / source.height, boardHeight = room.boardHeight / source.height;
     CGFloat scale = MAX(size.width / art.size.width, size.height / art.size.height * (raiseBoard ? 1.15 : 1));
     CGFloat centerY = size.height / 2;
-    if (raiseBoard && board) {
+    if (raiseBoard && room.hasBoard) {
         CGFloat artHeight = art.size.height * scale;
         // Give the caption more room while keeping the top of the monitor visible.
         CGFloat boardTop = artHeight * (boardBottom + boardHeight);
@@ -1053,14 +1096,15 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     [_root addChild:shade];
 
     // Counterclockwise once converted to scene coordinates.
-    NSArray<NSArray<NSNumber *> *> *bezel = room[@"bezel"];
-    if (bezel.count < 3) return CGRectZero;
-    CGPoint corners[bezel.count];
-    for (NSUInteger i = 0; i < bezel.count; i++) {
-        CGPoint fraction = CGPointMake(bezel[i][0].doubleValue / sourceWidth, 1 - bezel[i][1].doubleValue / sourceHeight);
+    NSUInteger count = room.bezelCount;
+    if (count < 3) return CGRectZero;
+    CGPoint corners[count];
+    for (NSUInteger i = 0; i < count; i++) {
+        simd_float2 bezel = [room bezelPoint:i];
+        CGPoint fraction = CGPointMake(bezel.x / source.width, 1 - bezel.y / source.height);
         corners[i] = PointAdd(frame.origin, PointMultiply(fraction, frame.size));
     }
-    _monitorMask = MonitorMask(corners, bezel.count);
+    _monitorMask = MonitorMask(corners, count);
     return CGPathGetBoundingBox(_monitorMask.path);
 }
 
@@ -1117,12 +1161,12 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     }
 }
 
-- (BOOL)addPortraitsForLine:(NSDictionary *)line speakerArea:(CGRect)speakerArea playerArea:(CGRect)playerArea {
+- (BOOL)addPortraitsForLine:(StoryLine *)line speakerArea:(CGRect)speakerArea playerArea:(CGRect)playerArea {
     NSString *player = StoryPlayer();
-    BOOL playerSpeaking = [line[@"portrait"] isEqualToString:player];
-    NSString *other = playerSpeaking ? line[@"listener"] : line[@"portrait"];
-    NSString *expression = line[@"expression"];
-    NSString *listenerExpression = line[@"listenerExpression"];
+    BOOL playerSpeaking = [line.portrait isEqualToString:player];
+    NSString *other = playerSpeaking ? line.listener : line.portrait;
+    NSString *expression = line.expression;
+    NSString *listenerExpression = line.listenerExpression;
     if (other) {
         [self addPortrait:other expression:playerSpeaking ? listenerExpression : expression
               facingRight:YES active:!playerSpeaking inRect:speakerArea];
@@ -1132,18 +1176,18 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     return playerSpeaking;
 }
 
-- (CGFloat)captionTextHeightForLines:(NSArray<NSDictionary *> *)lines width:(CGFloat)width fontSize:(CGFloat)fontSize {
+- (CGFloat)captionTextHeightForLines:(NSArray<StoryLine *> *)lines width:(CGFloat)width fontSize:(CGFloat)fontSize {
     SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), MAX(1, width - 32));
     speech.fontName = UIBodyFont;
     CGFloat height = 0;
-    for (NSDictionary *line in lines) {
-        speech.text = line[@"text"];
+    for (StoryLine *line in lines) {
+        speech.text = line.text;
         height = MAX(height, speech.frame.size.height);
     }
     return height;
 }
 
-- (void)addCaption:(NSDictionary *)line inRect:(CGRect)rect fontSize:(CGFloat)fontSize
+- (void)addCaption:(StoryLine *)line inRect:(CGRect)rect fontSize:(CGFloat)fontSize
       speakerOnRight:(BOOL)speakerOnRight {
     SKNode *layer = [SKNode node];
     layer.zPosition = CaptionDepth;
@@ -1156,7 +1200,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     SKLabelNode *speaker = Text(13, UIColorWithOpacity(UIAmber, 1),
                                speakerOnRight ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeLeft);
     speaker.fontName = UIInterfaceBoldFont;
-    speaker.text = [line[@"speaker"] uppercaseString];
+    speaker.text = line.speaker.uppercaseString;
     if (speaker.frame.size.width > width) {
         // Keep the name when the full rank and posting won't fit.
         speaker.text = [speaker.text componentsSeparatedByString:@","].firstObject;
@@ -1167,13 +1211,13 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
     SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), width);
     speech.fontName = UIBodyFont;
-    speech.text = line[@"text"];
+    speech.text = line.text;
     speech.position = CGPointMake(left, top - 32);
     [layer addChild:speech];
 
     // The bubble hangs from its top edge, which stays put between lines.
     Caption caption = { .name = speaker, .speech = speech, .rect = rect, .right = speakerOnRight,
-                        .speaker = line[@"speaker"] };
+                        .speaker = line.speaker };
     const CGFloat charsPerSecond = 80;
     if ([self paging] && CaptionContinues(_oldCaption, caption)) {
         // Same voice, next line: the bubble resizes in place and the new line types in.
@@ -1207,14 +1251,14 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 - (void)buildBriefing {
     CGSize size = self.size;
-    NSDictionary *mission = CampaignMission(_index);
-    NSDictionary *page = _pages[_page];
+    CampaignMission *mission = _mission;
+    BriefingPage *page = _pages[_page];
     CGFloat textSize = MIN(24, MAX(14, size.width / 60));
     BOOL narrow = size.width < size.height * 1.24;
     BOOL compact = [self compactStoryLayout];
     CGFloat floor = self.contentInsets.bottom + (compact ? 64 : 70);
 
-    CGRect screen = [self addBackdrop:StoryBriefingRoom(mission) raiseBoard:compact && !narrow];
+    CGRect screen = [self addBackdrop:mission.briefingRoom raiseBoard:compact && !narrow];
     BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
     if (!paintedBoard) {
         CGFloat margin = size.width * 0.06;
@@ -1269,7 +1313,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
            action:L10n([self hasNextBriefingPage] ? @"briefing.skip" : @"briefing.launch")];
 }
 
-- (void)buildMonitor:(CGRect)screen mission:(NSDictionary *)mission page:(NSDictionary *)page {
+- (void)buildMonitor:(CGRect)screen mission:(CampaignMission *)mission page:(BriefingPage *)page {
     SKNode *display = _root;
     if (!CGRectIsEmpty(screen)) {
         CGPoint center = RectCenter(screen);
@@ -1314,7 +1358,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         [display addChild:hex];
     }
 
-    NSDictionary *brief = mission[@"briefing"];
+    MissionBriefing *brief = mission.briefing;
     CGFloat pad = MIN(22, screen.size.width * 0.04);
     CGFloat left = CGRectGetMinX(screen) + pad, right = CGRectGetMaxX(screen) - pad;
     CGFloat top = CGRectGetMaxY(screen) - 5;
@@ -1322,19 +1366,19 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     CGFloat titleSize = MIN(21, MAX(12, width / 29));
     SKLabelNode *title = Para(titleSize, UIColorWithOpacity(UIInk, 1), width);
     title.fontName = UIInterfaceBoldFont;
-    title.text = L10nFormat(@"briefing.title", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]);
+    title.text = L10nFormat(@"briefing.title", (unsigned long)_index + 1, mission.title.uppercaseString);
     title.position = CGPointMake(left, top);
     [display addChild:title];
 
     SKLabelNode *location = Para(MIN(13, MAX(9, width / 45)), UIColorWithOpacity(UIInk, 0.75), width);
-    location.text = L10nFormat(@"briefing.location", brief[@"location"], brief[@"stardate"]);
+    location.text = L10nFormat(@"briefing.location", brief.location, brief.stardate);
     location.position = CGPointMake(left, CGRectGetMinY(title.frame) - 4);
     [display addChild:location];
 
     CGFloat channelY = CGRectGetMinY(location.frame) - 10;
     SKLabelNode *channel = Text(12, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
     channel.fontName = UIInterfaceBoldFont;
-    channel.text = page[@"channel"];
+    channel.text = page.channel;
     channel.position = CGPointMake(left, channelY);
     [display addChild:channel];
     SKLabelNode *counter = Text(12, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeRight);
@@ -1360,51 +1404,47 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         UIMotionDecode(counter, 0.4, 0.35);
         if (!map && content) UIMotionWipe(content, contentRect, UIColorWithOpacity(UIInk, 0.7), 0.45, 0.45);
     } else if ([self paging]) {
-        if (![page[@"channel"] isEqual:_shown.channel]) UIMotionDecode(channel, 0, 0.3);
+        if (![page.channel isEqual:_shown.channel]) UIMotionDecode(channel, 0, 0.3);
         UIMotionDecode(counter, 0, 0.2);
         if (fresh && content) UIMotionWipe(content, contentRect, UIColorWithOpacity(UIInk, 0.7), 0.04, 0.38);
     }
     if (map) {
-        NSDictionary *step = page[@"tactical"];
-        NSString *dialogueFocus = _dialogueScene[@"focus"];
-        if (!step && [page[@"dialogue"] boolValue] && dialogueFocus) step = @{ @"show": @[dialogueFocus], @"focus": dialogueFocus };
+        // Dialogue lines keep the map on what the scene is about.
+        NSString *sceneFocus = brief.dialogue.focus;
+        BriefingStep *step = page.step ?: (page.dialogue && sceneFocus ? [BriefingStep stepFocusing:sceneFocus] : nil);
         CueStyle style = [self intro] ? CueStyleIntro : (![self paging] ? CueStyleStill : (fresh ? CueStyleFresh : CueStyleTween));
         _shown.map = [_map applyCue:step style:style after:_shown.map];
     }
     _shown.content = kind;
-    _shown.channel = page[@"channel"];
+    _shown.channel = page.channel;
 }
 
 // The tactical map, a ship schematic or a readout list. kind names what was
 // drawn so the next page can tell whether the content changed.
-- (SKNode *)buildMonitorContent:(NSDictionary *)mission page:(NSDictionary *)page left:(CGFloat)left
+- (SKNode *)buildMonitorContent:(CampaignMission *)mission page:(BriefingPage *)page left:(CGFloat)left
                           right:(CGFloat)right top:(CGFloat)contentTop bottom:(CGFloat)bottom
                            kind:(NSString **)kind {
     CGFloat width = MAX(1, right - left);
-    NSDictionary *step = page[@"tactical"];
-    NSString *schematicKind = step[@"schematic"];
-    if (schematicKind && contentTop > bottom + 20) {
-        for (NSDictionary *entity in mission[@"entities"]) {
-            if (![entity[@"id"] isEqualToString:step[@"focus"]]) continue;
-            NSString *key = [NSString stringWithFormat:@"Schematics/%@-%@", entity[@"asset"], schematicKind];
-            SKSpriteNode *schematic = [self artNamed:key];
-            if (!schematic) break;
-            SKNode *group = [SKNode node];
-            CGFloat height = contentTop - bottom - 14;
-            [schematic setScale:MIN(width / schematic.size.width, height / schematic.size.height)];
-            schematic.position = CGPointMake((left + right) / 2, bottom + 14 + height / 2);
-            [group addChild:schematic];
-            SKLabelNode *legend = Text(10, UIColorWithOpacity(UIRed, 1), SKLabelHorizontalAlignmentModeLeft);
-            NSString *subsystemKey = [@"briefing.subsystem." stringByAppendingString:schematicKind.lowercaseString];
-            NSString *subsystem = L10n(subsystemKey);
-            legend.text = L10nFormat(@"briefing.target", [subsystem isEqualToString:subsystemKey] ? schematicKind.uppercaseString : subsystem);
-            legend.position = CGPointMake(left, bottom + 12);
-            [group addChild:legend];
-            *kind = key;
-            return group;
-        }
+    const LevelEntity *target = LevelEntityNamed(mission.level, page.step.focus);
+    NSString *subsystemKind = page.step.schematic;
+    NSString *key = target && subsystemKind ? [NSString stringWithFormat:@"Schematics/%@-%@", target->asset, subsystemKind] : nil;
+    SKSpriteNode *schematic = key && contentTop > bottom + 20 ? [self artNamed:key] : nil;
+    if (schematic) {
+        SKNode *group = [SKNode node];
+        CGFloat height = contentTop - bottom - 14;
+        [schematic setScale:MIN(width / schematic.size.width, height / schematic.size.height)];
+        schematic.position = CGPointMake((left + right) / 2, bottom + 14 + height / 2);
+        [group addChild:schematic];
+        SKLabelNode *legend = Text(10, UIColorWithOpacity(UIRed, 1), SKLabelHorizontalAlignmentModeLeft);
+        NSString *subsystemKey = [@"briefing.subsystem." stringByAppendingString:subsystemKind.lowercaseString];
+        NSString *subsystem = L10n(subsystemKey);
+        legend.text = L10nFormat(@"briefing.target", [subsystem isEqualToString:subsystemKey] ? subsystemKind.uppercaseString : subsystem);
+        legend.position = CGPointMake(left, bottom + 12);
+        [group addChild:legend];
+        *kind = key;
+        return group;
     }
-    NSArray<NSString *> *readout = page[@"readout"];
+    NSArray<NSString *> *readout = page.readout;
     if (readout.count) {
         NSString *lines = [@"›  " stringByAppendingString:[readout componentsJoinedByString:@"\n›  "]];
         CGFloat fontSize = MIN(20, MAX(12, width / 32));
@@ -1420,7 +1460,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     }
 
     *kind = [NSString stringWithFormat:@"map:%lu", (unsigned long)_index];
-    _map = [[TacticalMap alloc] initWithMission:mission rect:RectFromEdges(left, bottom, right, MAX(bottom + 1, contentTop))];
+    _map = [[TacticalMap alloc] initWithLevel:mission.level rect:RectFromEdges(left, bottom, right, MAX(bottom + 1, contentTop))];
     return _map;
 }
 
@@ -1438,8 +1478,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 }
 
 - (void)buildDebrief {
-    NSDictionary *mission = CampaignMission(_index);
-    NSArray<NSDictionary *> *conversation = _success ? mission[@"debrief"][@"dialogue"] : nil;
+    CampaignMission *mission = CampaignMissionAt(_index);
+    NSArray<StoryLine *> *conversation = _success ? mission.debrief.dialogue : nil;
     CGSize s = self.size;
     BriefingInsets safe = self.contentInsets;
     CGFloat inset = MAX(MIN(50, s.width * 0.05), MAX(safe.left, safe.right) + 12);
@@ -1449,8 +1489,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     NSString *next = L10n(more ? @"debrief.next_mission" : @"debrief.missions");
 
     if (_debriefBeat > 0 && _debriefBeat <= conversation.count) {
-        NSDictionary *line = conversation[_debriefBeat - 1];
-        [self addBackdrop:StoryDebriefRoom(mission) raiseBoard:NO];
+        StoryLine *line = conversation[_debriefBeat - 1];
+        [self addBackdrop:mission.debriefRoom raiseBoard:NO];
         CGFloat captionHeight = MAX(72, [self captionTextHeightForLines:conversation width:width fontSize:fontSize] + 40);
         BOOL compact = [self compactStoryLayout];
         CGFloat floor = compact ? (s.height - captionHeight) / 2 : safe.bottom + 72;
@@ -1476,14 +1516,14 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     [_root addChild:title];
     SKLabelNode *name = Para(16, UIColorWithOpacity(UIAmber, 0.9), width);
     name.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeCenter;
-    name.text = L10nFormat(@"menu.mission_line", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]);
+    name.text = L10nFormat(@"menu.mission_line", (unsigned long)_index + 1, mission.title.uppercaseString);
     name.position = CGPointMake(s.width / 2, CGRectGetMinY(title.frame) - 10);
     [_root addChild:name];
     SKNode *report = [SKNode node];
     CGFloat reportTop = CGRectGetMinY(name.frame) - 24;
     CGFloat reportBottom = safe.bottom + 84; // Leave the footer clear.
     SKLabelNode *summary = Para(fontSize, UIColorWithOpacity(UIInk, 0.9), MAX(1, width - ScrollGutter));
-    summary.text = mission[@"debrief"][_success ? @"win" : @"lose"];
+    summary.text = _success ? mission.debrief.win : mission.debrief.lose;
     summary.position = CGPointMake(inset, reportTop);
     [report addChild:summary];
     SKLabelNode *results = Para(16, UIColorWithOpacity(UIInk, 0.75), MAX(1, width - ScrollGutter));
@@ -1625,7 +1665,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
                     if (a & InputActionConfirm) return BriefingCommandLaunch;
                     break;
                 }
-                NSArray *conversation = CampaignMission(_index)[@"debrief"][@"dialogue"];
+                NSArray *conversation = CampaignMissionAt(_index).debrief.dialogue;
                 if (UIMotionIsTyping(_caption.speech)) UIMotionFinishTyping(_caption.speech);
                 else if (_debriefBeat < conversation.count) {
                     _debriefBeat++;

@@ -1,9 +1,17 @@
 // The level in this game's world: spawning entities, waves and fields from
-// the level JSON, and the adapter the engine's mission runtime
+// the level (LevelDef), and the adapter the engine's mission runtime
 // (Sources/Engine/Mission) runs objectives, events and rules through.
 #import "Game.h"
 
 static NSValue *Vec3Value(simd_float3 v) { return [NSValue valueWithBytes:&v objCType:"[4f]"]; }
+
+// An empty level, for a name that has none.
+static const LevelDef *EmptyLevel(NSString *name) {
+    static LevelDef *empty;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ empty = LevelCreate(@{}); });
+    return empty;
+}
 
 static Team TeamNamed(NSString *s) {
     if ([s isEqualToString:@"enemy"]) return TeamEnemy;
@@ -14,23 +22,29 @@ static Team TeamNamed(NSString *s) {
 static NSString *const kRed = @"red";
 // Data/rules.json: the content this module names, so a game built on it
 // (game.json "base") can rename its sides, ships and secondary weapon.
-NSDictionary *GRules(void) {
-    static NSDictionary *rules;
+//   { "defaultShip": "<ship>",
+//     "secondary": { "projectile": "<projectile>", "name": "TORPEDO", "short": "TORP" },
+//     "fighterClass": { "friend": "…", "enemy": "…", "neutral": "…" } }
+const GameRules *GRules(void) {
+    static GameRules rules;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        id json = FSJSON(FSURL(@"Data", @"rules", @"json"));
-        rules = [json isKindOfClass:NSDictionary.class] ? json : @{};
+        NSDictionary *json = FSJSON(FSURL(@"Data", @"rules", @"json"));
+        NSDictionary *secondary = JSONObject(json, @"secondary"), *fighters = JSONObject(json, @"fighterClass");
+        rules = (GameRules){
+            .defaultShip = JSONString(json, @"defaultShip") ?: ShipDefNames().firstObject ?: @"",
+            .secondaryProjectile = JSONString(secondary, @"projectile") ?: @"torpedo",
+            .secondaryName = JSONString(secondary, @"name") ?: @"SECONDARY",
+            .secondaryShort = JSONString(secondary, @"short") ?: @"SEC",
+        };
+        NSString *sides[TeamCount];
+        sides[TeamFriend] = @"friend"; sides[TeamEnemy] = @"enemy"; sides[TeamNeutral] = @"neutral";
+        for (int t = 0; t < TeamCount; t++) rules.fighterClass[t] = JSONString(fighters, sides[t]) ?: @"Fighter";
     });
-    return rules;
+    return &rules;
 }
 
-static NSString *DefaultPlayerShip(void) { return GRules()[@"defaultShip"] ?: ShipDefNames().firstObject ?: @""; }
-
-// What the cockpit calls a fighter of each side.
-static NSString *FighterClassName(Team t) {
-    NSString *side = t == TeamFriend ? @"friend" : (t == TeamEnemy ? @"enemy" : @"neutral");
-    return GRules()[@"fighterClass"][side] ?: @"Fighter";
-}
+static NSString *DefaultPlayerShip(void) { return GRules()->defaultShip; }
 
 static NSString *PartKindName(SubsystemKind kind) {
     switch (kind) {
@@ -109,84 +123,76 @@ static NSString *PartKindName(SubsystemKind kind) {
 // anyone has spawned.
 - (simd_float3)referencePosition {
     GFighter *p = [self leadPlayer];
-    return p ? p.position : Vec3(_mission[@"player"][@"pos"]);
+    return p ? p.position : _level->playerPos;
 }
 
 - (simd_float3)referenceForward {
     GFighter *p = [self leadPlayer];
-    if (p) return p.forward;
-    NSArray *f = _mission[@"player"][@"facing"];
-    return f ? simd_normalize(Vec3(f)) : simd_make_float3(0, 0, -1);
+    return p ? p.forward : _level->playerFacing;
 }
 
 - (void)spawnLevel:(NSString *)name {
     CFTimeInterval t0 = CFAbsoluteTimeGetCurrent();
     [self clearWorld];
-    _mission = LevelNamed(name) ?: @{ @"name": name ?: @"" };
-    NSDictionary *mission = _mission;
-    NSArray *problems = [MissionRunner problemsWithLevel:mission];
-    for (NSString *p in problems) GPrint(@"Mission %@: %@", mission[@"name"], p);
-    gi.configString(CS_LEVEL, [mission[@"name"] ?: name UTF8String]);
-    uint32_t seed = 1337 + (uint32_t)[mission[@"seed"] intValue] * 7919;
+    _level = LevelNamed(name) ?: EmptyLevel(name);
+    const LevelDef *level = _level;
+    NSString *levelName = level->name.length ? level->name : name ?: @"";
+    for (NSString *p in [MissionRunner problemsWithLevel:level]) GPrint(@"Mission %@: %@", levelName, p);
+    gi.configString(CS_LEVEL, levelName.UTF8String);
+    uint32_t seed = 1337 + (uint32_t)level->seed * 7919;
     gi.configString(CS_SKY, [NSString stringWithFormat:@"%u", seed].UTF8String);
     gi.configString(CS_GAME, ShipDataIdentity().UTF8String);
     gi.configString(CS_TEAMS, GTeamRelations().UTF8String);
-    NSDictionary *secondary = GRules()[@"secondary"];
-    gi.configString(CS_SECONDARY_NAME, [secondary[@"name"] ?: @"SECONDARY" UTF8String]);
-    gi.configString(CS_SECONDARY_SHORT, [secondary[@"short"] ?: @"SEC" UTF8String]);
+    gi.configString(CS_SECONDARY_NAME, GRules()->secondaryName.UTF8String);
+    gi.configString(CS_SECONDARY_SHORT, GRules()->secondaryShort.UTF8String);
     for (int i = 0; i < MAX_NAVS; i++) gi.configString(CS_NAVS + i, "");
-    for (int t = 0; t < TeamCount; t++) _fighterClassNames[t] = gi.stringIndex(FighterClassName((Team)t).UTF8String);
+    for (int t = 0; t < TeamCount; t++) _fighterClassNames[t] = gi.stringIndex(GRules()->fighterClass[t].UTF8String);
 
     _missionTime = 0;
-    _startTorpedoes = [mission[@"loadout"][@"torpedoes"] intValue];
-    _navs = [NSMutableDictionary dictionary];
-    _navNames = [NSMutableDictionary dictionary];
+    _startTorpedoes = MAX(0, level->torpedoes);
     _navOrder = [NSMutableArray array];
-    for (NSDictionary *n in mission[@"navs"]) {
-        simd_float3 p = Vec3(n[@"pos"]);
-        _navs[n[@"id"]] = Vec3Value(p);
-        _navNames[n[@"id"]] = n[@"name"];
-        if (_navOrder.count < MAX_NAVS) {
-            gi.configString(CS_NAVS + (int)_navOrder.count,
-                            [NSString stringWithFormat:@"%@|%g|%g|%g", n[@"name"] ?: @"", p.x, p.y, p.z].UTF8String);
-            [_navOrder addObject:n[@"id"]];
-        }
+    for (int i = 0; i < level->navCount && _navOrder.count < MAX_NAVS; i++) {
+        const LevelNav *n = &level->navs[i];
+        gi.configString(CS_NAVS + (int)_navOrder.count,
+                        [NSString stringWithFormat:@"%@|%g|%g|%g", n->name ?: @"", n->pos.x, n->pos.y, n->pos.z].UTF8String);
+        [_navOrder addObject:n->identifier];
     }
-    _runner = [[MissionRunner alloc] initWithLevel:mission world:self];
-    _held = [NSMutableDictionary dictionary];
+    _runner = [[MissionRunner alloc] initWithLevel:level world:self];
+    _heldEntities = [NSMutableDictionary dictionary];
+    _heldWaves = [NSMutableDictionary dictionary];
 
-    gi.modelIndex(ShipModelName(mission[@"player"][@"ship"] ?: DefaultPlayerShip()).UTF8String);
+    gi.modelIndex(ShipModelName(level->playerShip ?: DefaultPlayerShip()).UTF8String);
     gi.modelIndex(ProjectileModelName(GTorpedoProjectile()).UTF8String);
     // Units marked "hold" arrive when an event spawns them; precache them now.
-    for (NSDictionary *e in mission[@"entities"]) {
-        if ([e[@"hold"] boolValue]) {
-            if (e[@"id"]) _held[e[@"id"]] = e;
-            gi.modelIndex(CapitalModelName(e[@"asset"], e[@"style"]).UTF8String);
+    for (int i = 0; i < level->entityCount; i++) {
+        const LevelEntity *e = &level->entities[i];
+        if (e->hold) {
+            if (e->identifier) _heldEntities[e->identifier] = [NSValue valueWithPointer:e];
+            gi.modelIndex(CapitalModelName(e->asset, e->style).UTF8String);
         } else {
             [self spawnEntity:e jump:NO];
         }
     }
-    for (NSDictionary *f in mission[@"fields"]) [self buildField:f];
-    for (NSDictionary *w in mission[@"waves"]) {
-        if ([w[@"hold"] boolValue]) {
-            _held[w[@"id"]] = w;
-            if (ShipDefNamed(w[@"ship"])) gi.modelIndex(ShipModelName(w[@"ship"]).UTF8String);
+    for (int i = 0; i < level->fieldCount; i++) [self buildField:&level->fields[i]];
+    for (int i = 0; i < level->waveCount; i++) {
+        const LevelWave *w = &level->waves[i];
+        if (w->hold) {
+            _heldWaves[w->identifier] = [NSValue valueWithPointer:w];
+            if (ShipDefNamed(w->ship)) gi.modelIndex(ShipModelName(w->ship).UTF8String);
         } else {
             [self spawnWave:w jump:NO];
         }
     }
     _running = YES;
     [self buildEntityStates];
-    GPrint(@"Mission %@ spawned in %.2f s", mission[@"name"], CFAbsoluteTimeGetCurrent() - t0);
+    GPrint(@"Mission %@ spawned in %.2f s", levelName, CFAbsoluteTimeGetCurrent() - t0);
 }
 
 - (void)spawnPlayer:(GClient *)cl {
-    NSDictionary *pl = _mission[@"player"];
-    simd_float3 facing = pl[@"facing"] ? Vec3(pl[@"facing"]) : simd_make_float3(0, 0, -1);
-    simd_quatf q = LookRotation(facing, simd_make_float3(0, 1, 0));
+    simd_quatf q = LookRotation(_level->playerFacing, simd_make_float3(0, 1, 0));
     // Wingmen form up to the right of the start point.
-    simd_float3 pos = Vec3(pl[@"pos"]) + QuatRight(q) * 30.0f * cl.index;
-    GFighter *s = [GFighter fighterWithShip:pl[@"ship"] ?: DefaultPlayerShip() ai:NO] ?: [GFighter fighterWithShip:DefaultPlayerShip() ai:NO];
+    simd_float3 pos = _level->playerPos + QuatRight(q) * 30.0f * cl.index;
+    GFighter *s = [GFighter fighterWithShip:_level->playerShip ?: DefaultPlayerShip() ai:NO] ?: [GFighter fighterWithShip:DefaultPlayerShip() ai:NO];
     s.number = [self allocEntity];
     s.team = TeamFriend;
     s.client = cl;
@@ -218,28 +224,26 @@ static NSString *PartKindName(SubsystemKind kind) {
     [_runner resendObjectives];
 }
 
-- (GCapital *)spawnEntity:(NSDictionary *)e jump:(BOOL)jump {
-    Team team = TeamNamed(e[@"team"]);
-    GCapital *c = [GCapital capitalWithAsset:e[@"asset"] style:e[@"style"] team:team];
+- (GCapital *)spawnEntity:(const LevelEntity *)e jump:(BOOL)jump {
+    GCapital *c = [GCapital capitalWithAsset:e->asset style:e->style team:TeamNamed(e->team)];
     c.number = [self allocEntity];
-    c.identifier = e[@"id"];
-    c.name = e[@"name"] ?: c.className;
-    c.cargo = e[@"cargo"];
-    c.group = e[@"group"];
-    c.position = Vec3(e[@"pos"]);
-    simd_float3 facing = e[@"facing"] ? Vec3(e[@"facing"]) : simd_make_float3(0, 0, -1);
-    c.orientation = LookRotation(facing, simd_make_float3(0, 1, 0));
+    c.identifier = e->identifier;
+    c.name = e->name ?: c.className;
+    c.cargo = e->cargo;
+    c.group = e->group;
+    c.position = e->pos;
+    c.orientation = LookRotation(e->facing, simd_make_float3(0, 1, 0));
     NSMutableArray *path = [NSMutableArray array];
-    for (NSArray *p in e[@"path"]) [path addObject:Vec3Value(Vec3(p))];
+    for (int i = 0; i < e->pathCount; i++) [path addObject:Vec3Value(e->path[i])];
     c.path = path;
-    c.speed = [e[@"speed"] floatValue];
-    c.loop = [e[@"loop"] boolValue];
-    c.spin = [e[@"spin"] floatValue];
-    c.stealthRange = [e[@"stealth"] floatValue];
-    if (e[@"invulnerable"]) c.invulnerable = [e[@"invulnerable"] boolValue];
-    c.noHullDamage = [e[@"noHullDamage"] boolValue];
-    if (e[@"hull"]) c.maxHull = c.hull = [e[@"hull"] floatValue];
-    if (e[@"hullFraction"]) c.hull = c.maxHull * [e[@"hullFraction"] floatValue];
+    c.speed = e->speed;
+    c.loop = e->loop;
+    c.spin = e->spin;
+    c.stealthRange = e->stealth;
+    if (e->invulnerable >= 0) c.invulnerable = e->invulnerable;
+    c.noHullDamage = e->noHullDamage;
+    if (e->hull > 0) c.maxHull = c.hull = e->hull;
+    if (e->hullFraction != 1) c.hull = c.maxHull * e->hullFraction;
     [_capitals addObject:c];
     [_runner noteSpawned:c.identifier];
     [_runner noteSpawned:c.group];
@@ -247,23 +251,18 @@ static NSString *PartKindName(SubsystemKind kind) {
     return c;
 }
 
-- (void)spawnWave:(NSDictionary *)w jump:(BOOL)jump {
-    int count = [w[@"count"] intValue] ?: 1;
-    Team team = TeamNamed(w[@"team"]);
-    simd_float3 centre = Vec3(w[@"pos"]);
-    float spread = w[@"spread"] ? [w[@"spread"] floatValue] : 80;
-    NSString *order = w[@"order"] ?: @"attack";
-    NSArray<NSString *> *callsigns = w[@"callsigns"];
-    NSRange colon = [order rangeOfString:@":"];
+- (void)spawnWave:(const LevelWave *)w jump:(BOOL)jump {
+    int count = w->count;
+    Team team = TeamNamed(w->team);
     simd_float3 ref = [self referencePosition];
     for (int i = 0; i < count; i++) {
         GPilot *p = [GPilot new];
-        GFighter *s = [GFighter fighterWithShip:w[@"ship"] ai:YES];
+        GFighter *s = [GFighter fighterWithShip:w->ship ai:YES];
         if (!s) break;
         s.number = [self allocEntity];
         s.team = team;
         s->params.maxSpeed += s.definition->aiSpeedSpread * (i % 3);   // a little variety within a wave
-        simd_float3 pos = centre + randomUnit() * spread * (i == 0 ? 0.2f : 1.0f);
+        simd_float3 pos = w->pos + randomUnit() * w->spread * (i == 0 ? 0.2f : 1.0f);
         simd_float3 toward = simd_length(ref - pos) > 1 ? simd_normalize(ref - pos) : simd_make_float3(0, 0, -1);
         if (team == TeamFriend) toward = [self referenceForward];
         [s resetAt:pos facing:LookRotation(toward + randomUnit() * 0.2f, simd_make_float3(0, 1, 0))];
@@ -271,63 +270,65 @@ static NSString *PartKindName(SubsystemKind kind) {
         p.ship = s;
         p.mode = AIModeAttack;
         p.aimError = team == TeamFriend ? 0.5f : 0.6f + frand() * 0.8f;
-        p.order = colon.location == NSNotFound ? order : [order substringToIndex:colon.location];
-        p.orderTarget = colon.location == NSNotFound ? nil : [order substringFromIndex:colon.location + 1];
-        p.wave = w[@"id"];
-        if (i < callsigns.count) p.callsign = callsigns[i];
-        else if (w[@"name"]) p.callsign = count > 1 ? [NSString stringWithFormat:@"%@ %d", w[@"name"], i + 2] : w[@"name"];
+        p.order = w->order;
+        p.orderTarget = w->orderTarget;
+        p.wave = w->identifier;
+        if (i < w->callsigns.count) p.callsign = w->callsigns[i];
+        else if (w->name) p.callsign = count > 1 ? [NSString stringWithFormat:@"%@ %d", w->name, i + 2] : w->name;
         if (p.callsign) s.nameIndex = gi.stringIndex(p.callsign.UTF8String);
         [_pilots addObject:p];
         if (jump) [self jumpFlashAt:pos scale:0.4f];
     }
-    [_runner noteSpawned:w[@"id"]];
+    [_runner noteSpawned:w->identifier];
 }
 
-- (void)buildField:(NSDictionary *)f {
-    NSString *type = f[@"type"];
-    srand48([f[@"seed"] intValue] * 101 + 7);
-    if ([type isEqualToString:@"asteroids"]) {
-        simd_float3 centre = Vec3(f[@"center"]);
-        float r = [f[@"radius"] floatValue];
-        BOOL small = [f[@"small"] boolValue];
-        for (int i = 0, n = [f[@"count"] intValue]; i < n; i++) {
-            NSString *asset = small ? @"AsteroidC" : @[@"AsteroidA", @"AsteroidB", @"AsteroidC"][(int)(drand48() * 3)];
+- (void)buildField:(const LevelField *)f {
+    srand48(f->seed * 101 + 7);
+    switch (f->kind) {
+    case LevelFieldAsteroids:
+        for (int i = 0; i < f->count; i++) {
+            NSString *asset = f->small ? @"AsteroidC" : @[@"AsteroidA", @"AsteroidB", @"AsteroidC"][(int)(drand48() * 3)];
             GCapital *c = [GCapital capitalWithAsset:asset style:@"rock" team:TeamNeutral];
             c.number = [self allocEntity];
             c.identifier = [NSString stringWithFormat:@"rock%d", i];
             c.name = @"Asteroid";
             simd_float3 p;
             do { p = simd_make_float3(drand48() * 2 - 1, (drand48() * 2 - 1) * 0.45, drand48() * 2 - 1); } while (simd_length(p) > 1);
-            c.position = centre + p * r;
+            c.position = f->center + p * f->radius;
             c.orientation = simd_quaternion((float)(drand48() * 6.28), simd_normalize(simd_make_float3(drand48() - 0.5, drand48() - 0.5, drand48() - 0.5) + 0.01f));
             [c setUniformScale:0.6f + (float)drand48() * 1.6f];
             c.spin = (float)(drand48() * 2 - 1) * 6;
             [_capitals addObject:c];
         }
-    } else if ([type isEqualToString:@"mines"]) {
-        simd_float3 centre = Vec3(f[@"center"]), size = Vec3(f[@"size"]);
-        for (int i = 0, n = [f[@"count"] intValue]; i < n; i++) {
+        break;
+    case LevelFieldMines:
+        for (int i = 0; i < f->count; i++) {
             GCapital *c = [GCapital capitalWithAsset:@"Mine" style:nil team:TeamEnemy];
             c.number = [self allocEntity];
             c.identifier = [NSString stringWithFormat:@"mine%d", i];
             c.name = @"Mine";
-            c.group = f[@"group"];
-            c.position = centre + simd_make_float3(drand48() - 0.5, drand48() - 0.5, drand48() - 0.5) * size;
+            c.group = f->group;
+            c.position = f->center + simd_make_float3(drand48() - 0.5, drand48() - 0.5, drand48() - 0.5) * f->size;
             c.spin = 20;
             [_capitals addObject:c];
         }
-        [_runner noteSpawned:f[@"group"]];
-    } else if ([type isEqualToString:@"buoys"]) {
-        for (NSString *nav in f[@"navs"]) {
+        [_runner noteSpawned:f->group];
+        break;
+    case LevelFieldBuoys:
+        for (NSString *nav in f->navs) {
             GCapital *c = [GCapital capitalWithAsset:@"NavBuoy" style:nil team:TeamNeutral];
             c.number = [self allocEntity];
             c.identifier = [@"buoy_" stringByAppendingString:nav];
-            c.name = _navNames[nav];
+            const LevelNav *n = LevelNavNamed(_level, nav);
+            c.name = n ? n->name : nav;
             c.invulnerable = YES;
             c.position = [self navPosition:nav] + simd_make_float3(0, -25, 0);
             c.spin = 10;
             [_capitals addObject:c];
         }
+        break;
+    case LevelFieldUnknown:
+        break;
     }
 }
 
@@ -347,9 +348,8 @@ static NSString *PartKindName(SubsystemKind kind) {
 }
 
 - (simd_float3)navPosition:(NSString *)nav {
-    simd_float3 p = 0;
-    [_navs[nav] getValue:&p size:sizeof p];
-    return p;
+    const LevelNav *n = LevelNavNamed(_level, nav);
+    return n ? n->pos : 0;
 }
 
 #pragma mark - Update
@@ -373,21 +373,25 @@ static NSString *PartKindName(SubsystemKind kind) {
 
 - (NSArray<id<MissionUnit>> *)missionUnitsNamed:(NSString *)name { return [self unitsFor:name]; }
 - (NSArray<id<MissionUnit>> *)missionPlayers { return [self playerShips]; }
-- (NSArray<NSString *> *)missionNavs { return _navs.allKeys; }
+- (NSArray<NSString *> *)missionNavs {
+    NSMutableArray *navs = [NSMutableArray array];
+    for (int i = 0; i < _level->navCount; i++) if (_level->navs[i].identifier) [navs addObject:_level->navs[i].identifier];
+    return navs;
+}
 
 - (BOOL)missionNav:(NSString *)nav position:(simd_float3 *)position {
-    NSValue *v = nav ? _navs[nav] : nil;
-    if (!v) return NO;
-    [v getValue:position size:sizeof *position];
-    return YES;
+    const LevelNav *n = LevelNavNamed(_level, nav);
+    if (n) *position = n->pos;
+    return n != NULL;
 }
 
 - (void)missionSpawn:(NSString *)name {
-    NSDictionary *def = _held[name];
-    if (!def) { GPrint(@"Mission: nothing held as \"%@\" to spawn", name); return; }
-    [_held removeObjectForKey:name];
-    if (def[@"ship"]) [self spawnWave:def jump:YES];
-    else [self spawnEntity:def jump:YES];
+    NSValue *wave = _heldWaves[name], *entity = _heldEntities[name];
+    if (!wave && !entity) { GPrint(@"Mission: nothing held as \"%@\" to spawn", name); return; }
+    [_heldWaves removeObjectForKey:name];
+    [_heldEntities removeObjectForKey:name];
+    if (wave) [self spawnWave:wave.pointerValue jump:YES];
+    else [self spawnEntity:entity.pointerValue jump:YES];
 }
 
 - (void)missionSetTeam:(NSString *)team ofUnits:(NSArray<id<MissionUnit>> *)units {
@@ -445,11 +449,11 @@ static NSString *PartKindName(SubsystemKind kind) {
 - (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
     int kills = 0;
     for (GClient *c in _clients) kills += c.kills;
-    GPrint(@"Mission %@ ended: %@ after %.0f s, kills %d", _mission[@"name"], success ? @"SUCCESS" : @"FAILED", _runner.time, kills);
+    GPrint(@"Mission %@ ended: %@ after %.0f s, kills %d", _level->name, success ? @"SUCCESS" : @"FAILED", _runner.time, kills);
     _over = YES;
     GCommand(nil, SVC_LEVEL_END, success ? @"1" : @"0", [results componentsJoinedByString:@"\n"], nil);
 }
 
-- (void)missionLog:(NSString *)line { GPrint(@"Mission %@: %@", _mission[@"name"], line); }
+- (void)missionLog:(NSString *)line { GPrint(@"Mission %@: %@", _level->name, line); }
 
 @end

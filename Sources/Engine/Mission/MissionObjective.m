@@ -51,23 +51,22 @@ static NSString *Count(NSUInteger a, NSUInteger b) {
 
 + (BOOL)ongoing { return NO; }
 
-+ (instancetype)objectiveWithDefinition:(NSDictionary *)definition {
-    Class cls = [self classForType:definition[@"type"]];
++ (instancetype)objectiveWith:(const LevelObjective *)objective {
+    Class cls = [self classForType:objective->type];
     if (!cls) return nil;
     MissionObjective *o = [cls new];
-    o->_definition = [definition copy];
+    o->_definition = [objective->definition copy];
+    o->_identifier = objective->identifier;
+    o->_type = objective->type;
+    o->_text = objective->text ?: @"";
+    o->_targets = objective->targets;
+    o->_navs = objective->navs;
+    o->_after = objective->after;
+    o->_optional = objective->optional;
     o->_state = MissionObjectiveHidden;
     o->_progress = @"";
     return o;
 }
-
-- (NSString *)identifier { return _definition[@"id"]; }
-- (NSString *)type { return _definition[@"type"]; }
-- (NSString *)text { return _definition[@"text"] ?: @""; }
-- (NSArray<NSString *> *)targets { return Strings(_definition[@"targets"]); }
-- (NSArray<NSString *> *)navs { return Strings(_definition[@"navs"]); }
-- (NSArray<NSString *> *)after { return Strings(_definition[@"after"]); }
-- (BOOL)optional { return [_definition[@"optional"] boolValue]; }
 
 - (float)number:(NSString *)key fallback:(float)fallback {
     id v = _definition[key];

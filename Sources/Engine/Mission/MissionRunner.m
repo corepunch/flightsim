@@ -4,8 +4,7 @@ static const float kNavVisitRange = 400;            // metres: a nav counts as v
 static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds between the banner and the debrief
 
 @implementation MissionRunner {
-    NSDictionary *_level;
-    NSDictionary *_rules;
+    LevelRules _rules;
     NSArray<MissionObjective *> *_objectives;
     MissionEvents *_events;
     NSMutableSet<NSString *> *_spawned, *_navsVisited, *_flags;
@@ -16,48 +15,46 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
 
 @synthesize world = _world;
 
-+ (NSArray<NSString *> *)problemsWithLevel:(NSDictionary *)level {
-    NSMutableArray *problems = [NSMutableArray array];
++ (NSArray<NSString *> *)problemsWithLevel:(const LevelDef *)level {
+    if (!level) return @[@"no level"];
+    NSMutableArray *problems = [level->problems mutableCopy];
     NSMutableSet *ids = [NSMutableSet set];
-    for (NSDictionary *o in level[@"objectives"]) {
-        NSString *where = [NSString stringWithFormat:@"objective %@", o[@"id"] ?: @"?"];
-        Class cls = [MissionObjective classForType:o[@"type"]];
-        if (!cls) { [problems addObject:[NSString stringWithFormat:@"%@: unknown type \"%@\"", where, o[@"type"]]]; continue; }
-        for (NSString *p in [cls problemsWithDefinition:o]) [problems addObject:[NSString stringWithFormat:@"%@: %@", where, p]];
-        if (o[@"id"] && [ids containsObject:o[@"id"]]) [problems addObject:[where stringByAppendingString:@": duplicate id"]];
-        if (o[@"id"]) [ids addObject:o[@"id"]];
+    for (int i = 0; i < level->objectiveCount; i++) {
+        const LevelObjective *o = &level->objectives[i];
+        NSString *where = [NSString stringWithFormat:@"objective %@", o->identifier ?: @"?"];
+        Class cls = [MissionObjective classForType:o->type];
+        if (!cls) { [problems addObject:[NSString stringWithFormat:@"%@: unknown type \"%@\"", where, o->type]]; continue; }
+        for (NSString *p in [cls problemsWithDefinition:o->definition]) [problems addObject:[NSString stringWithFormat:@"%@: %@", where, p]];
+        if (o->identifier && [ids containsObject:o->identifier]) [problems addObject:[where stringByAppendingString:@": duplicate id"]];
+        if (o->identifier) [ids addObject:o->identifier];
     }
-    for (NSDictionary *o in level[@"objectives"])
-        for (NSString *a in o[@"after"]) if (![ids containsObject:a])
-            [problems addObject:[NSString stringWithFormat:@"objective %@: \"after\" names unknown objective \"%@\"", o[@"id"], a]];
-    [problems addObjectsFromArray:[MissionEvents problemsWithEvents:level[@"events"]]];
+    for (int i = 0; i < level->objectiveCount; i++)
+        for (NSString *a in level->objectives[i].after) if (![ids containsObject:a])
+            [problems addObject:[NSString stringWithFormat:@"objective %@: \"after\" names unknown objective \"%@\"",
+                                 level->objectives[i].identifier, a]];
+    [problems addObjectsFromArray:[MissionEvents problemsWithEvents:level->events]];
     return problems;
 }
 
-- (instancetype)initWithLevel:(NSDictionary *)level world:(id<MissionWorld>)world {
+- (instancetype)initWithLevel:(const LevelDef *)level world:(id<MissionWorld>)world {
     if ((self = [super init])) {
-        _level = level;
         _world = world;
-        _rules = [level[@"rules"] isKindOfClass:NSDictionary.class] ? level[@"rules"] : @{};
+        _rules = level->rules;
         NSMutableArray *objectives = [NSMutableArray array];
-        for (NSDictionary *d in level[@"objectives"]) {
-            MissionObjective *o = [MissionObjective objectiveWithDefinition:d];
+        for (int i = 0; i < level->objectiveCount; i++) {
+            const LevelObjective *d = &level->objectives[i];
+            MissionObjective *o = [MissionObjective objectiveWith:d];
             if (o) [objectives addObject:o];
-            else [world missionLog:[NSString stringWithFormat:@"Mission: unknown objective type \"%@\" (%@)", d[@"type"], d[@"id"]]];
+            else [world missionLog:[NSString stringWithFormat:@"Mission: unknown objective type \"%@\" (%@)", d->type, d->identifier]];
         }
         _objectives = objectives;
-        _events = [[MissionEvents alloc] initWithEvents:level[@"events"]];
+        _events = [[MissionEvents alloc] initWithEvents:level->events];
         _spawned = [NSMutableSet setWithObject:@"start"];
         _navsVisited = [NSMutableSet set];
         _flags = [NSMutableSet set];
         _dirty = YES;
     }
     return self;
-}
-
-- (BOOL)rule:(NSString *)name {
-    id v = _rules[name];
-    return v ? [v boolValue] : YES;
 }
 
 #pragma mark - MissionEventContext
@@ -169,7 +166,7 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
 
 - (void)checkRules {
     BOOL failed = NO, done = YES;
-    if ([self rule:@"failWhenPlayersDown"]) {
+    if (_rules.failWhenPlayersDown) {
         NSArray<id<MissionUnit>> *players = [_world missionPlayers];
         BOOL anyAlive = NO;
         for (id<MissionUnit> p in players) if (p.missionAlive) anyAlive = YES;
@@ -177,11 +174,11 @@ static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds betwee
     }
     for (MissionObjective *o in _objectives) {
         if (o.optional) continue;
-        if (o.state == MissionObjectiveFailed && [self rule:@"failOnObjectiveFailed"]) failed = YES;
+        if (o.state == MissionObjectiveFailed && _rules.failOnObjectiveFailed) failed = YES;
         if (![o.class ongoing] && o.state != MissionObjectiveComplete) done = NO;
     }
     if (failed) [self decide:NO];
-    else if (done && [self rule:@"succeedWhenObjectivesDone"]) [self decide:YES];
+    else if (done && _rules.succeedWhenObjectivesDone) [self decide:YES];
 }
 
 - (void)decide:(BOOL)success {

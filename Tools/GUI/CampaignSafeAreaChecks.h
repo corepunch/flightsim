@@ -44,7 +44,7 @@ static int CheckCampaignSafeAreas(void) {
                     CHECK([scene handle:InputActionConfirm] == BriefingCommandLaunch);
                     continue;
                 }
-                NSArray *lines = CampaignMission(mission)[@"debrief"][@"dialogue"];
+                NSArray *lines = CampaignMissionAt(mission).debrief.dialogue;
                 for (NSUInteger beat = 0; beat < lines.count; beat++) {
                     Advance(scene);
                     CHECK(SafeButton(scene, @"confirmRect", safe));

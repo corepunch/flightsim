@@ -114,7 +114,8 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     for (NSUInteger i = _firstVisible; i < _firstVisible + visible; i++) {
         LANServer *srv = _servers[i];
         BOOL sel = i == _index;
-        NSString *mission = srv.levelName ? LevelNamed(srv.levelName)[@"title"] : nil;
+        const LevelDef *level = LevelNamed(srv.levelName);
+        NSString *mission = level ? level->title : nil;
         SKLabelNode *l = Text(M(@"rowSize", 16), sel ? Amber(1) : Ink(0.85));
         l.text = L10nFormat(@"browser.row", sel ? @">" : @" ", srv.name, srv.players, srv.maxPlayers,
                             mission ? L10nFormat(@"browser.flying", mission) : L10n(@"browser.in_menus"), srv.address);

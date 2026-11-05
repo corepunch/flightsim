@@ -2,6 +2,7 @@
 
 #import <Foundation/Foundation.h>
 #import <simd/simd.h>
+#import "Shared.h"
 
 // MARK: - MissionWorld
 
@@ -108,9 +109,9 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 // success and are marked complete when the mission succeeds.
 + (BOOL)ongoing;
 
-+ (instancetype)objectiveWithDefinition:(NSDictionary *)definition;
++ (instancetype)objectiveWith:(const LevelObjective *)objective;
 
-@property (nonatomic, readonly) NSDictionary *definition;
+@property (nonatomic, readonly) NSDictionary *definition;   // the level entry, for type-specific fields
 @property (nonatomic, readonly) NSString *identifier, *type, *text;
 @property (nonatomic, readonly) NSArray<NSString *> *targets, *navs, *after;
 @property (nonatomic, readonly) BOOL optional;
@@ -197,21 +198,18 @@ MissionObjectiveState MissionObjectiveStateNamed(NSString *name);
 
 // Runs one level's objectives, events and rules against a MissionWorld.
 //
-// The level keys it reads: "objectives", "events", "rules", "navs". Spawning
+// It reads the level's objectives, events and rules (LevelDef). Spawning
 // the level's units is the game's job; it tells the runner what has arrived
 // with -noteSpawned: (entity ids, groups, wave ids, and "start").
 //
-// Rules (all default to true):
-//   "rules": { "succeedWhenObjectivesDone": true,   // every required objective complete (ongoing ones excepted)
-//              "failOnObjectiveFailed": true,       // a required objective failed
-//              "failWhenPlayersDown": true }        // every player's ship is down
+// Rules: see LevelRules in Shared.h.
 @interface MissionRunner : NSObject <MissionEventContext>
 
 // Problems with a level against the registered types, triggers and actions;
 // empty when the runtime can run it.
-+ (NSArray<NSString *> *)problemsWithLevel:(NSDictionary *)level;
++ (NSArray<NSString *> *)problemsWithLevel:(const LevelDef *)level;
 
-- (instancetype)initWithLevel:(NSDictionary *)level world:(id<MissionWorld>)world;
+- (instancetype)initWithLevel:(const LevelDef *)level world:(id<MissionWorld>)world;
 
 - (void)noteSpawned:(NSString *)name;
 // Sends the objective list again (a player joined).

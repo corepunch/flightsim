@@ -71,12 +71,11 @@ static int CheckScrolling(void) {
     // Briefing readouts and post-flight results can also exceed a short viewport.
     scene.size = CGSizeMake(852, 393);
     [scene showBriefing:0];
-    NSMutableArray *pages = [[scene valueForKey:@"_pages"] mutableCopy];
-    NSMutableDictionary *intel = [pages.lastObject mutableCopy];
+    NSMutableArray<BriefingPage *> *pages = [[scene valueForKey:@"_pages"] mutableCopy];
+    BriefingPage *intel = pages.lastObject;
     NSMutableArray *lines = [NSMutableArray array];
     for (int i = 0; i < 18; i++) [lines addObject:@"Incoming patrol report"];
-    intel[@"readout"] = lines;
-    pages[pages.count - 1] = intel;
+    pages[pages.count - 1] = [BriefingPage pageBy:intel text:intel.text channel:intel.channel step:nil readout:lines];
     [scene setValue:pages forKey:@"_pages"];
     for (NSUInteger i = 0; i + 1 < pages.count; i++) Advance(scene);
     CHECK(!CGRectIsEmpty(scene.scrollRect));
@@ -111,12 +110,12 @@ int main(void) {
             for (NSUInteger mission = 0; mission < count; mission++) {
                 [scene showBriefing:mission];
                 [(id<UIMotionScene>)scene motionEnter];
-                NSArray *pages = [scene valueForKey:@"_pages"];
+                NSArray<BriefingPage *> *pages = [scene valueForKey:@"_pages"];
                 CHECK(pages.count > 0);
                 SKNode *player = Portrait(scene, @"Lancer1");
                 CHECK(player && player.position.x > scene.size.width / 2);
-                NSString *firstPortrait = pages.firstObject[@"portrait"];
-                if ([firstPortrait isEqualToString:@"Lancer1"]) firstPortrait = pages.firstObject[@"listener"];
+                NSString *firstPortrait = pages.firstObject.portrait;
+                if ([firstPortrait isEqualToString:@"Lancer1"]) firstPortrait = pages.firstObject.listener;
                 CHECK(PortraitsAlign(Portrait(scene, firstPortrait), player));
                 for (NSUInteger i = 1; i < pages.count; i++) {
                     SKNode *layer = [scene valueForKey:@"_portraitLayer"];
@@ -127,8 +126,8 @@ int main(void) {
                         if (![node actionForKey:@"portraitDeparture"]) previous[node.name] = node;
                     Advance(scene);
                     CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == i);
-                    BOOL playerSpeaking = [pages[i][@"portrait"] isEqualToString:@"Lancer1"];
-                    NSString *other = playerSpeaking ? pages[i][@"listener"] : pages[i][@"portrait"];
+                    BOOL playerSpeaking = [pages[i].portrait isEqualToString:@"Lancer1"];
+                    NSString *other = playerSpeaking ? pages[i].listener : pages[i].portrait;
                     SKNode *listener = Portrait(scene, other);
                     CHECK(listener && listener.position.x < scene.size.width / 2 && ![listener actionForKey:@"portraitDeparture"]);
                     CHECK(PortraitsAlign(listener, player));

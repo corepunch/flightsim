@@ -272,11 +272,12 @@ static void CheckCampaign(void) {
     NSArray *missions = CampaignMissions();
     CHECK(missions.count == 20);
     NSMutableSet *assets = [NSMutableSet set];
-    for (NSDictionary *m in missions) {
-        CHECK([m[@"title"] isKindOfClass:NSString.class] && [m[@"objectives"] count] > 0);
-        for (NSDictionary *e in m[@"entities"]) {
-            [assets addObject:e[@"asset"]];
-            CHECK(CapitalDefNamed(e[@"asset"]) != NULL);   // every capital the campaign places has a definition
+    for (CampaignMission *m in missions) {
+        const LevelDef *level = m.level;
+        CHECK(m.title.length && level->objectiveCount > 0 && level->problems.count == 0);
+        for (int i = 0; i < level->entityCount; i++) {
+            [assets addObject:level->entities[i].asset];
+            CHECK(CapitalDefNamed(level->entities[i].asset) != NULL);   // every capital the campaign places has a definition
         }
     }
     CHECK(assets.count > 10);
@@ -408,7 +409,7 @@ static void Run(FakeWorld *w, float seconds) {
 }
 @end
 
-static NSDictionary *TestLevel(void) {
+static NSDictionary *TestLevelJSON(void) {
     return @{
         @"navs": @[@{ @"id": @"n1", @"pos": @[@0, @0, @(-1000)] }],
         @"objectives": @[
@@ -425,6 +426,14 @@ static NSDictionary *TestLevel(void) {
             @{ @"when": @{ @"destroyed": @"relay" }, @"do": @[@{ @"radio": @{ @"from": @"Control", @"text": @"Relay lost" } }] },
         ],
     };
+}
+
+// Parsed once; lives for the process like a cached level.
+static const LevelDef *TestLevel(void) {
+    static LevelDef *level;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ level = LevelCreate(TestLevelJSON()); });
+    return level;
 }
 
 static FakeWorld *StartTestLevel(void) {
@@ -444,15 +453,29 @@ static void CheckMissionRuntime(void) {
     [MissionObjective registerType:@"test_flag" class:FlagObjective.class];
 
     // Every campaign level is valid for the runtime.
-    for (NSDictionary *m in CampaignMissions()) {
-        NSArray *problems = [MissionRunner problemsWithLevel:m];
-        if (problems.count) fprintf(stderr, "mission %s: %s\n", [m[@"id"] description].UTF8String, problems.description.UTF8String);
+    for (CampaignMission *m in CampaignMissions()) {
+        NSArray *problems = [MissionRunner problemsWithLevel:m.level];
+        if (problems.count) fprintf(stderr, "mission %s: %s\n", m.levelName.UTF8String, problems.description.UTF8String);
         CHECK(problems.count == 0);
     }
     // Unknown types, triggers and actions are reported.
-    NSArray *bad = [MissionRunner problemsWithLevel:@{ @"objectives": @[@{ @"id": @"x", @"type": @"teleport", @"text": @"?" }],
-                                                       @"events": @[@{ @"when": @{ @"moon": @1 }, @"do": @[@{ @"dance": @YES }] }] }];
-    CHECK(bad.count == 3);
+    LevelDef *bad = LevelCreate(@{ @"objectives": @[@{ @"id": @"x", @"type": @"teleport", @"text": @"?" }],
+                                   @"events": @[@{ @"when": @{ @"moon": @1 }, @"do": @[@{ @"dance": @YES }] }] });
+    CHECK([MissionRunner problemsWithLevel:bad].count == 3);
+    LevelRelease(bad);
+    // Fields of the wrong shape are reported by the level contract itself.
+    LevelDef *odd = LevelCreate(@{ @"entities": @[@{ @"id": @"e" }, @"junk"], @"waves": @[@{ @"id": @"w" }],
+                                   @"fields": @[@{ @"type": @"nebula" }], @"navs": @{} });
+    CHECK(odd->entityCount == 1 && odd->waveCount == 1 && odd->problems.count == 5);
+    CHECK(odd->waves[0].count == 1 && odd->waves[0].spread == 80 && [odd->waves[0].order isEqualToString:@"attack"]);
+    CHECK(odd->entities[0].invulnerable == -1 && odd->entities[0].hullFraction == 1 && odd->entities[0].facing.z == -1);
+    CHECK(odd->torpedoes == -1 && odd->rules.failWhenPlayersDown && odd->fields[0].kind == LevelFieldUnknown);
+    LevelRelease(odd);
+    LevelDef *escort = LevelCreate(@{ @"waves": @[@{ @"id": @"w", @"ship": @"wasp", @"order": @"escort:layer" }],
+                                      @"objectives": @[@{ @"id": @"o", @"type": @"destroy", @"targets": @"layer" }] });
+    CHECK([escort->waves[0].order isEqualToString:@"escort"] && [escort->waves[0].orderTarget isEqualToString:@"layer"]);
+    CHECK([escort->objectives[0].targets isEqualToArray:@[@"layer"]] && LevelWaveNamed(escort, @"w") == &escort->waves[0]);
+    LevelRelease(escort);
     CHECK([MissionRunner problemsWithLevel:TestLevel()].count == 0);
 
     // Success: reach the nav, the held raiders arrive, destroy them, the
@@ -507,38 +530,33 @@ static void CheckStory(void) {
     CHECK(LevelNames().count >= CampaignMissions().count && CampaignMissions().count > 0);
     for (NSUInteger i = 0; i < CampaignMissions().count; i++) {
         NSString *level = CampaignLevelName(i);
-        CHECK([LevelNamed(level)[@"name"] isEqualToString:level] && CampaignIndexOfLevel(level) == i);
-        CHECK([CampaignMission(i)[@"title"] isEqualToString:LevelNamed(level)[@"title"]] && CampaignMission(i)[@"briefing"]);
-        CHECK(!LevelNamed(level)[@"briefing"]);   // the game module never sees the campaign's half
+        CHECK([LevelNamed(level)->name isEqualToString:level] && CampaignIndexOfLevel(level) == i);
+        CHECK([CampaignMissionAt(i).title isEqualToString:LevelNamed(level)->title] && CampaignMissionAt(i).level == LevelNamed(level));
     }
     CHECK(CampaignIndexOfLevel(@"no-such-level") == NSNotFound && !LevelNamed(@"no-such-level"));
 
     NSString *player = StoryPlayer();
-    CHECK(player.length && StoryCharacter(player));
-    NSDictionary *defaults = CampaignData()[@"storyDefaults"];
-    CHECK(StoryCharacter(defaults[@"officer"]) && StoryRoom(defaults[@"room"]));
-    for (NSString *kind in defaults[@"briefingPages"]) CHECK([StoryBriefingPageKinds() containsObject:kind]);
-    for (NSDictionary *mission in CampaignMissions()) {
-        NSArray<NSDictionary *> *pages = StoryBriefingPages(mission);
-        NSDictionary *room = StoryRoom(StoryBriefingRoom(mission));
-        CHECK(room && [room[@"bezel"] count] >= 3 && [room[@"size"] count] == 2);
-        CHECK(StoryRoom(StoryDebriefRoom(mission)));
-        CHECK(pages.count > [mission[@"briefing"][@"dialogue"][@"lines"] count]);
-        CHECK([pages.firstObject[@"dialogue"] boolValue]);
-        NSString *officer = mission[@"briefing"][@"officer"] ?: defaults[@"officer"];
-        CHECK([pages.lastObject[@"portrait"] isEqualToString:StoryCharacter(officer)[@"portrait"]]);
-        for (NSDictionary *page in pages) CHECK([page[@"text"] length] && [page[@"channel"] length] && page[@"portrait"]);
+    CHECK(player.length && StoryCharacterNamed(player));
+    StoryDefaults *defaults = CampaignStoryDefaults();
+    CHECK(StoryCharacterNamed(defaults.officer) && StoryRoomNamed(defaults.room));
+    for (NSString *kind in defaults.briefingPages) CHECK([StoryBriefingPageKinds() containsObject:kind]);
+    for (CampaignMission *mission in CampaignMissions()) {
+        NSArray<BriefingPage *> *pages = StoryBriefingPages(mission);
+        StoryRoom *room = StoryRoomNamed(mission.briefingRoom);
+        CHECK(room && room.bezelCount >= 3 && room.size.x > 0 && room.size.y > 0);
+        CHECK(StoryRoomNamed(mission.debriefRoom));
+        CHECK(pages.count > mission.briefing.dialogue.lines.count);
+        CHECK(pages.firstObject.dialogue);
+        NSString *officer = mission.briefing.officer ?: defaults.officer;
+        CHECK([pages.lastObject.portrait isEqualToString:StoryCharacterNamed(officer).portrait]);
+        for (BriefingPage *page in pages) CHECK(page.text.length && page.channel.length && page.portrait);
     }
     // A game-registered page kind, named by a mission's own page order.
-    StoryRegisterBriefingPages(@"check_weather", ^NSArray *(NSDictionary *mission, NSDictionary *officer) {
-        return @[ @{ @"speaker": officer[@"speaker"], @"portrait": officer[@"portrait"], @"text": @"Fog", @"channel": @"WX" } ];
+    StoryRegisterBriefingPages(@"check_weather", ^NSArray *(CampaignMission *mission, StoryLine *officer) {
+        return @[ [BriefingPage pageBy:officer text:@"Fog" channel:@"WX" step:nil readout:nil] ];
     });
-    NSMutableDictionary *mission = [CampaignMission(0) mutableCopy];
-    NSMutableDictionary *brief = [mission[@"briefing"] mutableCopy];
-    brief[@"pages"] = @[ @"check_weather", @"intel" ];
-    mission[@"briefing"] = brief;
-    NSArray<NSDictionary *> *pages = StoryBriefingPages(mission);
-    CHECK(pages.count == 2 && [pages[0][@"text"] isEqualToString:@"Fog"] && [pages[1][@"readout"] count] > 0);
+    NSArray<BriefingPage *> *pages = StoryBriefingPagesOfKinds(CampaignMissionAt(0), @[ @"check_weather", @"intel" ]);
+    CHECK(pages.count == 2 && [pages[0].text isEqualToString:@"Fog"] && pages[1].readout.count > 0);
 }
 
 // A game with a base searches its own folder, then the base's, then the
@@ -570,12 +588,14 @@ static void CheckOtherGames(void) {
                                                                      subdirectory:[@"Games" stringByAppendingPathComponent:[game stringByAppendingPathComponent:@"Levels"]]];
         CHECK(own.count > 0);
         for (NSURL *url in own) {
-            NSDictionary *level = FSJSON(url);
-            NSString *player = level[@"player"][@"ship"];
-            CHECK(!player || ShipDefNamed(player) != NULL);
-            for (NSDictionary *e in level[@"entities"]) CHECK(CapitalDefNamed(e[@"asset"]) != NULL);
-            for (NSDictionary *w in level[@"waves"]) CHECK(ShipDefNamed(w[@"ship"]) != NULL);
+            LevelDef *level = LevelCreate(FSJSON(url));
+            CHECK(level != NULL);
+            if (!level) continue;
+            CHECK(!level->playerShip || ShipDefNamed(level->playerShip) != NULL);
+            for (int i = 0; i < level->entityCount; i++) CHECK(CapitalDefNamed(level->entities[i].asset) != NULL);
+            for (int i = 0; i < level->waveCount; i++) CHECK(ShipDefNamed(level->waves[i].ship) != NULL);
             NSArray *problems = [MissionRunner problemsWithLevel:level];
+            LevelRelease(level);
             if (problems.count) fprintf(stderr, "%s/%s: %s\n", game.UTF8String, url.lastPathComponent.UTF8String,
                                         [problems componentsJoinedByString:@"; "].UTF8String);
             CHECK(problems.count == 0);

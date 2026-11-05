@@ -204,19 +204,171 @@ const ProjectileDef *ProjectileDefForModel(NSString *model) {
 
 #pragma mark - Levels
 
-NSDictionary *LevelNamed(NSString *name) {
-    static NSMutableDictionary<NSString *, NSDictionary *> *cache;
+// Reads one array of objects into a calloc'd array of structs. Entries that
+// are not objects are reported and skipped.
+#define LEVEL_READ(json, key, type, out_, count_, problems, read)                              \
+    do {                                                                                     \
+        NSArray *items = JSONArray(json, key);                                               \
+        if (json[key] && !items) [problems addObject:@"\"" key "\" is not a list"];          \
+        out_ = (type *)calloc(MAX(1, items.count), sizeof(type));                            \
+        count_ = 0;                                                                          \
+        for (id item in items) {                                                             \
+            if (![item isKindOfClass:NSDictionary.class]) {                                  \
+                [problems addObject:@"\"" key "\" holds a non-object"];                      \
+                continue;                                                                    \
+            }                                                                                \
+            read(item, &out_[count_++], problems);                                          \
+        }                                                                                    \
+    } while (0)
+
+static void Require(id json, NSString *key, NSString *what, NSMutableArray *problems) {
+    if (!JSONString(json, key).length) [problems addObject:[NSString stringWithFormat:@"%@ without \"%@\"", what, key]];
+}
+
+static const simd_float3 Forward = { 0, 0, -1 };
+
+static void ReadNav(NSDictionary *j, LevelNav *n, NSMutableArray *problems) {
+    Require(j, @"id", @"nav", problems);
+    n->identifier = JSONString(j, @"id");
+    n->name = JSONString(j, @"name") ?: n->identifier;
+    n->pos = JSONVec3(j, @"pos", 0);
+}
+
+static void ReadEntity(NSDictionary *j, LevelEntity *e, NSMutableArray *problems) {
+    Require(j, @"asset", [NSString stringWithFormat:@"entity %@", JSONString(j, @"id") ?: @"?"], problems);
+    e->identifier = JSONString(j, @"id");
+    e->asset = JSONString(j, @"asset");
+    e->style = JSONString(j, @"style");
+    e->team = JSONString(j, @"team") ?: @"friend";
+    e->name = JSONString(j, @"name");
+    e->group = JSONString(j, @"group");
+    e->cargo = JSONString(j, @"cargo");
+    e->pos = JSONVec3(j, @"pos", 0);
+    e->facing = simd_normalize(JSONVec3(j, @"facing", Forward));
+    NSArray *path = JSONArray(j, @"path");
+    e->path = (simd_float3 *)calloc(MAX(1, path.count), sizeof(simd_float3));
+    for (id point in path) e->path[e->pathCount++] = Vec3(point);
+    e->speed = JSONFloat(j, @"speed", 0);
+    e->spin = JSONFloat(j, @"spin", 0);
+    e->stealth = JSONFloat(j, @"stealth", 0);
+    e->hull = JSONFloat(j, @"hull", 0);
+    e->hullFraction = JSONFloat(j, @"hullFraction", 1);
+    e->invulnerable = JSONNumber(j, @"invulnerable") ? JSONBool(j, @"invulnerable", false) : -1;
+    e->loop = JSONBool(j, @"loop", false);
+    e->hold = JSONBool(j, @"hold", false);
+    e->noHullDamage = JSONBool(j, @"noHullDamage", false);
+}
+
+static void ReadWave(NSDictionary *j, LevelWave *w, NSMutableArray *problems) {
+    NSString *what = [NSString stringWithFormat:@"wave %@", JSONString(j, @"id") ?: @"?"];
+    Require(j, @"id", what, problems);
+    Require(j, @"ship", what, problems);
+    w->identifier = JSONString(j, @"id");
+    w->ship = JSONString(j, @"ship");
+    w->team = JSONString(j, @"team") ?: @"friend";
+    w->name = JSONString(j, @"name");
+    w->callsigns = JSONStrings(j, @"callsigns");
+    NSString *order = JSONString(j, @"order") ?: @"attack";
+    NSRange colon = [order rangeOfString:@":"];
+    w->order = colon.location == NSNotFound ? order : [order substringToIndex:colon.location];
+    w->orderTarget = colon.location == NSNotFound ? nil : [order substringFromIndex:colon.location + 1];
+    w->pos = JSONVec3(j, @"pos", 0);
+    w->count = MAX(1, JSONInt(j, @"count", 1));
+    w->spread = JSONFloat(j, @"spread", 80);
+    w->hold = JSONBool(j, @"hold", false);
+}
+
+static void ReadField(NSDictionary *j, LevelField *f, NSMutableArray *problems) {
+    f->type = JSONString(j, @"type") ?: @"";
+    NSDictionary *kinds = @{ @"asteroids": @(LevelFieldAsteroids), @"mines": @(LevelFieldMines), @"buoys": @(LevelFieldBuoys) };
+    NSNumber *kind = kinds[f->type];
+    if (!kind) [problems addObject:[NSString stringWithFormat:@"field of unknown type \"%@\"", f->type]];
+    f->kind = kind ? (LevelFieldKind)kind.intValue : LevelFieldUnknown;
+    if (f->kind == LevelFieldMines) Require(j, @"group", @"minefield", problems);
+    f->group = JSONString(j, @"group");
+    f->navs = JSONStrings(j, @"navs");
+    f->center = JSONVec3(j, @"center", 0);
+    f->size = JSONVec3(j, @"size", 0);
+    f->radius = JSONFloat(j, @"radius", 0);
+    f->count = JSONInt(j, @"count", 0);
+    f->seed = JSONInt(j, @"seed", 0);
+    f->small = JSONBool(j, @"small", false);
+}
+
+static void ReadObjective(NSDictionary *j, LevelObjective *o, NSMutableArray *problems) {
+    NSString *what = [NSString stringWithFormat:@"objective %@", JSONString(j, @"id") ?: @"?"];
+    Require(j, @"id", what, problems);
+    Require(j, @"type", what, problems);
+    o->identifier = JSONString(j, @"id");
+    o->type = JSONString(j, @"type");
+    o->text = JSONString(j, @"text");
+    o->targets = JSONStrings(j, @"targets");
+    o->navs = JSONStrings(j, @"navs");
+    o->after = JSONStrings(j, @"after");
+    o->optional = JSONBool(j, @"optional", false);
+    o->hidden = JSONBool(j, @"hidden", false);
+    o->definition = j;
+}
+
+LevelDef *LevelCreate(NSDictionary *json) {
+    if (![json isKindOfClass:NSDictionary.class]) return NULL;
+    LevelDef *level = (LevelDef *)calloc(1, sizeof(LevelDef));
+    NSMutableArray<NSString *> *problems = [NSMutableArray array];
+    level->name = JSONString(json, @"name") ?: @"";
+    level->title = JSONString(json, @"title") ?: level->name;
+    level->seed = JSONInt(json, @"seed", 0);
+    NSDictionary *player = JSONObject(json, @"player");
+    level->playerPos = JSONVec3(player, @"pos", 0);
+    level->playerFacing = simd_normalize(JSONVec3(player, @"facing", Forward));
+    level->playerShip = JSONString(player, @"ship");
+    level->torpedoes = JSONInt(JSONObject(json, @"loadout"), @"torpedoes", -1);
+    LEVEL_READ(json, @"navs", LevelNav, level->navs, level->navCount, problems, ReadNav);
+    LEVEL_READ(json, @"entities", LevelEntity, level->entities, level->entityCount, problems, ReadEntity);
+    LEVEL_READ(json, @"waves", LevelWave, level->waves, level->waveCount, problems, ReadWave);
+    LEVEL_READ(json, @"fields", LevelField, level->fields, level->fieldCount, problems, ReadField);
+    LEVEL_READ(json, @"objectives", LevelObjective, level->objectives, level->objectiveCount, problems, ReadObjective);
+    NSArray *events = JSONArray(json, @"events");
+    if (json[@"events"] && !events) [problems addObject:@"\"events\" is not a list"];
+    level->events = events ?: @[];
+    NSDictionary *rules = JSONObject(json, @"rules");
+    level->rules = (LevelRules){
+        .succeedWhenObjectivesDone = JSONBool(rules, @"succeedWhenObjectivesDone", true),
+        .failOnObjectiveFailed = JSONBool(rules, @"failOnObjectiveFailed", true),
+        .failWhenPlayersDown = JSONBool(rules, @"failWhenPlayersDown", true),
+    };
+    level->problems = problems;
+    return level;
+}
+
+// Assigning empty structs releases their objects before the memory goes.
+#define LEVEL_FREE(items, count) do { for (int i = 0; i < (count); i++) (items)[i] = (typeof(*(items))){0}; free(items); } while (0)
+
+void LevelRelease(LevelDef *level) {
+    if (!level) return;
+    for (int i = 0; i < level->entityCount; i++) free(level->entities[i].path);
+    LEVEL_FREE(level->navs, level->navCount);
+    LEVEL_FREE(level->entities, level->entityCount);
+    LEVEL_FREE(level->waves, level->waveCount);
+    LEVEL_FREE(level->fields, level->fieldCount);
+    LEVEL_FREE(level->objectives, level->objectiveCount);
+    *level = (LevelDef){0};
+    free(level);
+}
+
+const LevelDef *LevelNamed(NSString *name) {
+    static NSMutableDictionary<NSString *, NSValue *> *cache;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
-    if (!name.length) return nil;
+    if (!name.length) return NULL;
     @synchronized (cache) {
-        NSDictionary *level = cache[name];
-        if (!level) {
-            id json = FSJSON(FSURL(@"Levels", name, @"json"));
-            if (![json isKindOfClass:NSDictionary.class]) return nil;
-            cache[name] = level = json;
+        NSValue *cached = cache[name];
+        if (!cached) {
+            LevelDef *level = LevelCreate(FSJSON(FSURL(@"Levels", name, @"json")));
+            if (!level) return NULL;
+            for (NSString *problem in level->problems) NSLog(@"Level %@: %@", name, problem);
+            cache[name] = cached = [NSValue valueWithPointer:level];
         }
-        return level;
+        return cached.pointerValue;
     }
 }
 
@@ -225,6 +377,13 @@ NSArray<NSString *> *LevelNames(void) {
     for (NSURL *url in FSURLs(@"Levels", @"json")) [names addObject:url.lastPathComponent.stringByDeletingPathExtension];
     return names;
 }
+
+#define LEVEL_FIND(items, count, name) \
+    do { if (name) for (int i = 0; i < (count); i++) if ([(items)[i].identifier isEqualToString:name]) return &(items)[i]; return NULL; } while (0)
+
+const LevelNav *LevelNavNamed(const LevelDef *level, NSString *identifier) { LEVEL_FIND(level->navs, level->navCount, identifier); }
+const LevelEntity *LevelEntityNamed(const LevelDef *level, NSString *identifier) { LEVEL_FIND(level->entities, level->entityCount, identifier); }
+const LevelWave *LevelWaveNamed(const LevelDef *level, NSString *identifier) { LEVEL_FIND(level->waves, level->waveCount, identifier); }
 
 // Cache alongside the definitions: resources are immutable for a process.
 #import <CommonCrypto/CommonDigest.h>

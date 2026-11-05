@@ -80,6 +80,7 @@ typedef NSEdgeInsets BriefingInsets;
 @property (nonatomic, readonly) CGFloat scrollOffset;
 @property (nonatomic, readonly) SKNode *scrollContent;
 @property (nonatomic, readonly) NSArray<NSValue *> *missionTiles;   // boxed CGRects
+@property (nonatomic, readonly) CGRect missionRows;                  // the scrolling area the tiles sit in
 @property (nonatomic, readonly) NSUInteger missionColumns;
 
 @end

@@ -159,7 +159,7 @@
 #pragma mark - Torpedoes
 
 // The round's look, Data/Projectiles/<rules.json secondary.projectile>.json; precached at spawn.
-NSString *GTorpedoProjectile(void) { return GRules()[@"secondary"][@"projectile"] ?: @"torpedo"; }
+NSString *GTorpedoProjectile(void) { return GRules()->secondaryProjectile; }
 
 - (void)fireTorpedoFor:(GClient *)cl {
     GFighter *s = cl.ship;

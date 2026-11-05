@@ -29,7 +29,7 @@ static int RunDedicated(int mission) {
     // Rotate through the campaign's levels, or every level in the game
     // folder when the game has no campaign.
     NSMutableArray<NSString *> *rotation = [NSMutableArray array];
-    for (NSDictionary *mission in CampaignMissions()) [rotation addObject:mission[@"level"]];
+    for (CampaignMission *entry in CampaignMissions()) [rotation addObject:entry.levelName];
     if (!rotation.count) [rotation addObjectsFromArray:LevelNames()];
     if (!rotation.count) { NSLog(@"Dedicated: game %@ has no levels", FSGame()); return 1; }
     NSUInteger count = rotation.count;

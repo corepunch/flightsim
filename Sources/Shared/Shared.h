@@ -369,17 +369,168 @@ const ProjectileDef *ProjectileDefNamed(NSString *name);
 NSString *ProjectileModelName(NSString *name);             // "proj:<name>"
 const ProjectileDef *ProjectileDefForModel(NSString *model);
 
+#pragma mark - JSON readers
+
+// Typed reads from parsed JSON. A value of the wrong type reads as missing,
+// so a contract's parser states each field's type and its default once.
+static inline NSString *JSONString(id json, NSString *key) {
+    id v = [json isKindOfClass:NSDictionary.class] ? json[key] : nil;
+    return [v isKindOfClass:NSString.class] ? v : nil;
+}
+static inline NSNumber *JSONNumber(id json, NSString *key) {
+    id v = [json isKindOfClass:NSDictionary.class] ? json[key] : nil;
+    return [v isKindOfClass:NSNumber.class] ? v : nil;
+}
+static inline float JSONFloat(id json, NSString *key, float fallback) {
+    NSNumber *n = JSONNumber(json, key);
+    return n ? n.floatValue : fallback;
+}
+static inline int JSONInt(id json, NSString *key, int fallback) {
+    NSNumber *n = JSONNumber(json, key);
+    return n ? n.intValue : fallback;
+}
+static inline bool JSONBool(id json, NSString *key, bool fallback) {
+    NSNumber *n = JSONNumber(json, key);
+    return n ? n.boolValue : fallback;
+}
+static inline NSDictionary *JSONObject(id json, NSString *key) {
+    id v = [json isKindOfClass:NSDictionary.class] ? json[key] : nil;
+    return [v isKindOfClass:NSDictionary.class] ? v : nil;
+}
+static inline NSArray *JSONArray(id json, NSString *key) {
+    id v = [json isKindOfClass:NSDictionary.class] ? json[key] : nil;
+    return [v isKindOfClass:NSArray.class] ? v : nil;
+}
+// A list of names: the strings of an array, or a single string as a list of
+// one; empty when the key is missing.
+static inline NSArray<NSString *> *JSONStrings(id json, NSString *key) {
+    NSString *single = JSONString(json, key);
+    if (single) return @[single];
+    NSMutableArray *strings = [NSMutableArray array];
+    for (id v in JSONArray(json, key)) if ([v isKindOfClass:NSString.class]) [strings addObject:v];
+    return strings;
+}
+static inline simd_float3 Vec3(NSArray *a) {
+    if (![a isKindOfClass:NSArray.class] || a.count < 3) return simd_make_float3(0, 0, 0);
+    return simd_make_float3([a[0] floatValue], [a[1] floatValue], [a[2] floatValue]);
+}
+static inline simd_float3 JSONVec3(id json, NSString *key, simd_float3 fallback) {
+    NSArray *a = JSONArray(json, key);
+    return a.count >= 3 ? Vec3(a) : fallback;
+}
+
 #pragma mark - Levels
 
-// Levels/<name>.json in the game folder: what the game module builds and the
-// briefing map draws. nil when there is no such level.
-NSDictionary *LevelNamed(NSString *name);
+// Levels/<name>.json in the game folder, read once into typed structs: what
+// the game module builds, the mission runtime runs and the briefing map draws.
+// C structs rather than classes because the engine and each game module link
+// their own copy of this file. Cached levels live for the process.
+//
+//   { "name": "09-mine-sweep", "title": "Mine Sweep", "seed": 9,
+//     "player":   { "pos": [x, y, z], "facing": [x, y, z], "ship": "<ship>" },
+//     "loadout":  { "torpedoes": 2 },
+//     "navs":     [ { "id": "n1", "name": "Nav 1", "pos": [x, y, z] } ],
+//     "entities": [ LevelEntity ], "waves": [ LevelWave ], "fields": [ LevelField ],
+//     "objectives": [ LevelObjective ], "events": [ … ], "rules": { LevelRules } }
+
+typedef struct {
+    NSString *identifier, *name;
+    simd_float3 pos;
+} LevelNav;
+
+// A capital ship, station or prop.
+//   { "id", "asset", "style", "team", "name", "group", "cargo", "pos", "facing",
+//     "path": [[x, y, z], …], "speed", "loop", "spin", "stealth", "hold",
+//     "invulnerable", "noHullDamage", "hull", "hullFraction" }
+typedef struct {
+    NSString *identifier, *asset, *style, *team, *name, *group, *cargo;
+    simd_float3 pos, facing;            // facing defaults to forward (-Z)
+    simd_float3 *path;                  // waypoints it flies, pathCount of them
+    int pathCount;
+    float speed, spin;
+    float stealth;                      // > 0: only on sensors within this range
+    float hull;                         // 0: the asset's
+    float hullFraction;                 // of the full hull at the start, 1 by default
+    int8_t invulnerable;                // -1: as the asset says
+    bool loop, hold, noHullDamage;      // hold: arrives when an event spawns it
+} LevelEntity;
+
+// A flight of AI fighters.
+//   { "id", "ship", "team", "name", "callsigns": [], "count", "pos", "spread",
+//     "order": "attack" | "escort:<id>" | …, "hold" }
+typedef struct {
+    NSString *identifier, *ship, *team, *name;
+    NSArray<NSString *> *callsigns;
+    NSString *order, *orderTarget;      // "escort:layer" reads as escort / layer
+    simd_float3 pos;
+    int count;                          // at least 1
+    float spread;                       // metres, 80 by default
+    bool hold;
+} LevelWave;
+
+typedef enum { LevelFieldAsteroids, LevelFieldMines, LevelFieldBuoys, LevelFieldUnknown } LevelFieldKind;
+
+// Things scattered at once.
+//   { "type": "asteroids", "center", "radius", "count", "small", "seed" }
+//   { "type": "mines", "group", "center", "size": [w, h, d], "count", "seed" }
+//   { "type": "buoys", "navs": [ids] }
+typedef struct {
+    LevelFieldKind kind;
+    NSString *type, *group;
+    NSArray<NSString *> *navs;
+    simd_float3 center, size;
+    float radius;
+    int count, seed;
+    bool small;
+} LevelField;
+
+// What every objective has; `definition` keeps the type's own fields (see
+// MissionObjective in Sources/Engine/Mission).
+//   { "id", "type", "text", "targets": [], "navs": [], "after": [], "optional", "hidden", … }
+typedef struct {
+    NSString *identifier, *type, *text;
+    NSArray<NSString *> *targets, *navs, *after;
+    bool optional, hidden;
+    NSDictionary *definition;
+} LevelObjective;
+
+// How the mission ends. All true by default.
+typedef struct {
+    bool succeedWhenObjectivesDone;     // every required objective complete (ongoing ones excepted)
+    bool failOnObjectiveFailed;         // a required objective failed
+    bool failWhenPlayersDown;           // every player's ship is down
+} LevelRules;
+
+typedef struct {
+    NSString *name, *title;
+    int seed;
+    simd_float3 playerPos, playerFacing;
+    NSString *playerShip;               // nil: the game's default
+    int torpedoes;                      // loadout; -1 when the level gives none
+    LevelNav *navs;             int navCount;
+    LevelEntity *entities;      int entityCount;
+    LevelWave *waves;           int waveCount;
+    LevelField *fields;         int fieldCount;
+    LevelObjective *objectives; int objectiveCount;
+    // Scripted events stay JSON: their triggers and actions are a registered
+    // vocabulary (MissionEvents), checked by MissionRunner's problems.
+    NSArray<NSDictionary *> *events;
+    LevelRules rules;
+    NSArray<NSString *> *problems;      // fields of the wrong shape; empty for a clean level
+} LevelDef;
+
+// NULL when there is no such level.
+const LevelDef *LevelNamed(NSString *name);
 // Every level in the game folder, sorted by name.
 NSArray<NSString *> *LevelNames(void);
+// A level from JSON already in hand (tools, checks). Not cached: release it.
+LevelDef *LevelCreate(NSDictionary *json);
+void LevelRelease(LevelDef *level);
 
-static inline simd_float3 Vec3(NSArray *a) {
-    return a.count >= 3 ? simd_make_float3([a[0] floatValue], [a[1] floatValue], [a[2] floatValue]) : simd_make_float3(0, 0, 0);
-}
+// Lookups by id; NULL when the level has none.
+const LevelNav *LevelNavNamed(const LevelDef *level, NSString *identifier);
+const LevelEntity *LevelEntityNamed(const LevelDef *level, NSString *identifier);
+const LevelWave *LevelWaveNamed(const LevelDef *level, NSString *identifier);
 
 // Exact ship JSON bytes, sorted by filename; changes require matching client data.
 NSString *ShipDataIdentity(void);

@@ -52,7 +52,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 
 - (void)prepareMainMenu {
     NSUInteger index = [self campaignEntry];
-    [_mainMenu showMission:index title:CampaignMission(index)[@"title"]
+    [_mainMenu showMission:index title:CampaignMissionAt(index).title
                    started:ProgressHasStarted() || index > 0 completed:ProgressCampaignCompleted()];
 }
 
@@ -93,13 +93,13 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 #pragma mark - Levels
 
 - (void)fillLoadingCard:(Loading *)card level:(NSUInteger)index {
-    NSDictionary *mission = CampaignMission(index);
-    NSDictionary *b = mission[@"briefing"];
-    NSString *detail = b[@"stardate"] ? L10nFormat(@"loading.location_stardate", b[@"location"] ?: @"", b[@"stardate"]) : b[@"location"];
-    [card showTitle:mission[@"title"] kicker:L10nFormat(@"loading.mission_kicker", (unsigned long)index + 1) detail:detail];
+    CampaignMission *mission = CampaignMissionAt(index);
+    MissionBriefing *b = mission.briefing;
+    NSString *detail = b.stardate ? L10nFormat(@"loading.location_stardate", b.location ?: @"", b.stardate) : b.location;
+    [card showTitle:mission.title kicker:L10nFormat(@"loading.mission_kicker", (unsigned long)index + 1) detail:detail];
 }
 
-- (NSString *)bannerForLevel:(NSUInteger)index { return [CampaignMission(index)[@"title"] uppercaseString]; }
+- (NSString *)bannerForLevel:(NSUInteger)index { return CampaignMissionAt(index).title.uppercaseString; }
 
 - (void)levelStarted:(NSUInteger)index remote:(BOOL)remote {
     if (!remote) ProgressMarkStarted();
