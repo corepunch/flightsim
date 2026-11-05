@@ -53,7 +53,7 @@
         for (GFighter *s in fighters) {
             if (!s.alive || s.team == b->team) continue;
             if (SegmentHits(p0, p1, s.position, s.radius * (s.client ? 0.8f : 0.85f))) {
-                BOOL shielded = s.shield > 0.02f;
+                BOOL shielded = s.shielded;
                 GEvent((GameEvent){ .type = EV_IMPACT, .id = b->id, .team = b->team, .pos = p1, .flags = shielded ? EVF_SHIELDED : 0 });
                 [self damageShip:s amount:b->damage by:b->owner shake:0.35f];
                 // A hit makes AI pilots jink.
@@ -158,28 +158,32 @@
 
 #pragma mark - Torpedoes
 
-// The round's look, Data/Projectiles/<rules.json secondary.projectile>.json; precached at spawn.
-NSString *GTorpedoProjectile(void) { return GRules()->secondaryProjectile; }
+static NSString *OrRule(const char *own, NSString *rule) { return own && own[0] ? @(own) : rule; }
+NSString *GSecondaryProjectile(const ShipDef *def) { return OrRule(def ? def->secondary.projectile : NULL, GRules()->secondaryProjectile); }
+NSString *GSecondaryName(const ShipDef *def) { return OrRule(def ? def->secondary.name : NULL, GRules()->secondaryName); }
+NSString *GSecondaryShort(const ShipDef *def) { return OrRule(def ? def->secondary.shortName : NULL, GRules()->secondaryShort); }
 
 - (void)fireTorpedoFor:(GClient *)cl {
     GFighter *s = cl.ship;
     id target = cl.selected;
     if (!s.alive) return;
+    const ShipSecondary *weapon = &s.definition->secondary;
     if (cl.torpedoes <= 0 || !BodyAlive(target)) {
         GCommand(cl, SVC_RADIO, MissionText(cl.torpedoes <= 0 ? @"combat.no_secondary" : @"combat.select_target", nil), @"", nil);
         return;
     }
-    if (simd_distance(BodyPosition(target), s.position) > 2500) {
+    if (simd_distance(BodyPosition(target), s.position) > weapon->range) {
         GCommand(cl, SVC_RADIO, MissionText(@"combat.out_of_range", nil), @"", nil);
         return;
     }
     cl.torpedoes--;
     GTorpedo *t = [GTorpedo new];
     t.number = [self allocEntity];
-    t.model = gi.modelIndex(ProjectileModelName(GTorpedoProjectile()).UTF8String);
+    t.weapon = *weapon;
+    t.model = gi.modelIndex(ProjectileModelName(GSecondaryProjectile(s.definition)).UTF8String);
     t.position = s.position + s.forward * 6 - s.up * 1.0f;
-    t.velocity = s.velocity + s.forward * 120;
-    t.life = 9;
+    t.velocity = s.velocity + s.forward * weapon->launchSpeed;
+    t.life = weapon->life;
     t.team = TeamFriend;
     t.owner = cl;
     t.target = target;
@@ -189,6 +193,7 @@ NSString *GTorpedoProjectile(void) { return GRules()->secondaryProjectile; }
 
 - (void)updateTorpedoes:(float)dt {
     for (GTorpedo *t in [_torpedoes copy]) {
+        ShipSecondary w = t.weapon;
         t.life -= dt;
         id target = t.target;
         if (BodyAlive(target)) {
@@ -197,15 +202,15 @@ NSString *GTorpedoProjectile(void) { return GRules()->secondaryProjectile; }
             float speed = simd_length(t.velocity);
             simd_float3 want = simd_normalize(goal + BodyVelocity(target) * (simd_distance(goal, t.position) / fmaxf(speed, 1)) - t.position);
             simd_float3 dir = simd_normalize(t.velocity);
-            dir = simd_normalize(dir + (want - dir) * fminf(1, 3.0f * dt));
-            speed = fminf(speed + 260 * dt, 420);
+            dir = simd_normalize(dir + (want - dir) * fminf(1, w.turn * dt));
+            speed = fminf(speed + w.acceleration * dt, w.maxSpeed);
             t.velocity = dir * speed;
         }
         simd_float3 p0 = t.position, p1 = p0 + t.velocity * dt;
         t.position = p1;
         BOOL boom = t.life <= 0;
-        if ([target isKindOfClass:[GFighter class]] && BodyAlive(target) && simd_distance(p1, BodyPosition(target)) < 10) {
-            [self damageShip:target amount:1.2f by:t.owner shake:0.35f];
+        if ([target isKindOfClass:[GFighter class]] && BodyAlive(target) && simd_distance(p1, BodyPosition(target)) < w.fuse) {
+            [self damageShip:target amount:w.damage by:t.owner shake:0.35f];
             boom = YES;
         }
         if (!boom)
@@ -216,7 +221,7 @@ NSString *GTorpedoProjectile(void) { return GRules()->secondaryProjectile; }
                 if (![c hitSegmentFrom:p0 to:p1 point:&point subsystem:&sub]) continue;
                 // Torpedoes are proximity-fused against the subsystem they were aimed at.
                 if (!sub && t.aim.alive && simd_distance(point, [c worldPoint:t.aim.local]) < 25) sub = t.aim;
-                [self hitCapital:c subsystem:sub amount:4.0f at:point by:t.owner team:t.team bolt:0];
+                [self hitCapital:c subsystem:sub amount:w.capitalDamage at:point by:t.owner team:t.team bolt:0];
                 boom = YES;
                 break;
             }

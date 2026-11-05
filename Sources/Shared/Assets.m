@@ -40,6 +40,28 @@ static ShipGun GunFrom(NSDictionary *d, ShipGun base) {
     return g;
 }
 
+static ShipSecondary SecondaryFrom(NSDictionary *d) {
+    // The defaults are a proton-torpedo-like round, as every ship flew before
+    // ships carried their own.
+    ShipSecondary w = { .range = 2500, .launchSpeed = 120, .acceleration = 260, .maxSpeed = 420, .turn = 3,
+                        .life = 9, .damage = 1.2f, .capitalDamage = 4, .fuse = 10 };
+    if (![d isKindOfClass:NSDictionary.class]) return w;
+    CopyName(w.name, JSONString(d, @"name"));
+    CopyName(w.shortName, JSONString(d, @"short"));
+    CopyName(w.projectile, JSONString(d, @"projectile"));
+    w.rounds = MAX(0, JSONInt(d, @"rounds", 0));
+    w.range = Number(d, @"range", w.range);
+    w.launchSpeed = Number(d, @"launchSpeed", w.launchSpeed);
+    w.acceleration = Number(d, @"acceleration", w.acceleration);
+    w.maxSpeed = Number(d, @"maxSpeed", w.maxSpeed);
+    w.turn = Number(d, @"turn", w.turn);
+    w.life = Number(d, @"life", w.life);
+    w.damage = Number(d, @"damage", w.damage);
+    w.capitalDamage = Number(d, @"capitalDamage", w.capitalDamage);
+    w.fuse = Number(d, @"fuse", w.fuse);
+    return w;
+}
+
 static ShipDef *LoadShipDef(NSString *name) {
     NSURL *url = FSURL(@"Data/Ships", name, @"json");
     NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
@@ -74,6 +96,10 @@ static ShipDef *LoadShipDef(NSString *name) {
     s->params = ParamsFrom(d[@"params"], params);
     s->aiParams = ParamsFrom(d[@"ai"], s->params);
     s->aiSpeedSpread = Number(d[@"ai"], @"speedSpread", 0);
+    s->hull = fmaxf(Number(d, @"hull", 1), 0.01f);
+    s->shield = fmaxf(Number(d, @"shield", 1), 0);
+    s->shieldRegen = fmaxf(Number(d, @"shieldRegen", 0.06f), 0);
+    s->secondary = SecondaryFrom(d[@"secondary"]);
     s->hologramScale = Number(d, @"hologramScale", 0.0075f);
     return s;
 }

@@ -69,7 +69,9 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic) int nameIndex;
 @property (nonatomic, readonly) float radius;
 @property (nonatomic) Team team;
-@property (nonatomic) float hull, shield, laserEnergy;
+@property (nonatomic) float hull, shield, laserEnergy;     // hull and shield in hull units, up to the ship's
+@property (nonatomic, readonly) float hullFraction, shieldFraction;     // 0..1 of the ship's, as the wire carries them
+@property (nonatomic, readonly) BOOL shielded;           // the shield still stops a hit
 @property (nonatomic) BOOL alive;
 @property (nonatomic) BOOL departed;              // left the level alive (jumped out or docked); not alive
 @property (nonatomic) double lastShot;
@@ -182,6 +184,7 @@ typedef NS_ENUM(NSInteger, PilotLeaving) { PilotStaying, PilotDocking, PilotJump
 
 @interface GTorpedo : NSObject
 @property (nonatomic) uint16_t number;
+@property (nonatomic) ShipSecondary weapon;     // the launching ship's: how it flies and hits
 @property (nonatomic) int model;                // "proj:<name>" configstring index
 @property (nonatomic) simd_float3 position, velocity;
 @property (nonatomic) float life;
@@ -243,7 +246,7 @@ typedef struct {
     NSMutableArray<NSString *> *_navOrder;  // navs sent to clients, in CS_NAVS order
     NSString *_currentNav;
     NSMutableArray *_explosionQueue;    // [time, GCapital, last] break-up sequences
-    int _startTorpedoes;
+    int _startTorpedoes;                // rounds each player launches with: the level's loadout, else the ship's
     int _fighterClassNames[TeamCount];  // CS_STRINGS indices for "<faction> fighter"
 
     NSMutableData *_entityStates;
@@ -276,7 +279,11 @@ extern GWorld *level;
 - (void)checkMine:(GCapital *)m;
 @end
 
-NSString *GTorpedoProjectile(void);             // projectile definition the torpedo is drawn with
+// The secondary a ship carries, with the game's rules.json name and
+// projectile filling in what its definition leaves empty.
+NSString *GSecondaryProjectile(const ShipDef *def);
+NSString *GSecondaryName(const ShipDef *def);
+NSString *GSecondaryShort(const ShipDef *def);
 // Data/rules.json, read once.
 typedef struct {
     NSString *defaultShip;

@@ -25,12 +25,16 @@
         move.orientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
         move.boostEnergy = 1;
         _laserEnergy = 1;
-        _hull = 1;
-        _shield = 1;
+        _hull = def->hull;
+        _shield = def->shield;
         _alive = YES;
     }
     return self;
 }
+
+- (float)hullFraction { return clampf(_hull / _definition->hull, 0, 1); }
+- (float)shieldFraction { return _definition->shield > 0 ? clampf(_shield / _definition->shield, 0, 1) : 0; }
+- (BOOL)shielded { return self.shieldFraction > 0.02f; }
 
 - (simd_float3)position { return move.origin; }
 - (void)setPosition:(simd_float3)p { move.origin = p; }
@@ -46,8 +50,8 @@
 - (void)resetAt:(simd_float3)position facing:(simd_quatf)orientation {
     ShipMoveReset(&move, position, orientation);
     _laserEnergy = 1;
-    _hull = 1;
-    _shield = 1;
+    _hull = _definition->hull;
+    _shield = _definition->shield;
     _alive = YES;
 }
 
@@ -55,7 +59,7 @@
     if (!_alive) return;
     ShipMove(&move, &params, input, dt);
     _laserEnergy = fminf(1, _laserEnergy + _gun.recharge * dt);
-    _shield = fminf(1, _shield + 0.06f * dt);   // shields regenerate slowly
+    _shield = fminf(_definition->shield, _shield + _definition->shieldRegen * dt);
 }
 
 - (simd_float3)nextGunWorldPosition {
@@ -66,7 +70,7 @@
 }
 
 - (BOOL)takeDamage:(float)amount {
-    BOOL shielded = _shield > 0.02f;
+    BOOL shielded = self.shielded;
     float absorbed = fminf(_shield, amount);
     _shield -= absorbed;
     _hull -= amount - absorbed;

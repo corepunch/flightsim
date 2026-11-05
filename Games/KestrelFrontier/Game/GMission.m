@@ -21,7 +21,8 @@ static Team TeamNamed(NSString *s) {
 
 static NSString *const kRed = @"red";
 // Data/rules.json: the content this module names, so a game built on it
-// (game.json "base") can rename its sides, ships and secondary weapon.
+// (game.json "base") can rename its sides, ships and secondary weapon. A ship
+// whose definition names its own secondary overrides the weapon here.
 //   { "defaultShip": "<ship>",
 //     "secondary": { "projectile": "<projectile>", "name": "TORPEDO", "short": "TORP" },
 //     "fighterClass": { "friend": "…", "enemy": "…", "neutral": "…" } }
@@ -69,8 +70,8 @@ static NSString *PartKindName(SubsystemKind kind) {
 - (simd_float3)missionPosition { return self.position; }
 - (float)missionRadius { return self.radius; }
 - (BOOL)missionAlive { return self.alive; }
-- (float)missionHullFraction { return clampf(self.hull, 0, 1); }
 - (BOOL)missionGone { return self.departed; }
+- (float)missionHullFraction { return self.hullFraction; }
 - (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly { return 0; }
 @end
 
@@ -136,13 +137,15 @@ static NSString *PartKindName(SubsystemKind kind) {
     gi.configString(CS_SKY, [NSString stringWithFormat:@"%u", seed].UTF8String);
     gi.configString(CS_GAME, ShipDataIdentity().UTF8String);
     gi.configString(CS_TEAMS, GTeamRelations().UTF8String);
-    gi.configString(CS_SECONDARY_NAME, GRules()->secondaryName.UTF8String);
-    gi.configString(CS_SECONDARY_SHORT, GRules()->secondaryShort.UTF8String);
+    // Every player flies the level's ship, so its secondary names the readouts.
+    const ShipDef *playerShip = ShipDefNamed(level->playerShip ?: DefaultPlayerShip()) ?: ShipDefNamed(DefaultPlayerShip());
+    gi.configString(CS_SECONDARY_NAME, GSecondaryName(playerShip).UTF8String);
+    gi.configString(CS_SECONDARY_SHORT, GSecondaryShort(playerShip).UTF8String);
     for (int i = 0; i < MAX_NAVS; i++) gi.configString(CS_NAVS + i, "");
     for (int t = 0; t < TeamCount; t++) _fighterClassNames[t] = gi.stringIndex(GRules()->fighterClass[t].UTF8String);
 
     _missionTime = 0;
-    _startTorpedoes = MAX(0, level->torpedoes);
+    _startTorpedoes = level->torpedoes >= 0 ? level->torpedoes : (playerShip ? playerShip->secondary.rounds : 0);
     _navOrder = [NSMutableArray array];
     for (int i = 0; i < level->navCount && _navOrder.count < MAX_NAVS; i++) {
         const LevelNav *n = &level->navs[i];
@@ -155,7 +158,7 @@ static NSString *PartKindName(SubsystemKind kind) {
     _heldWaves = [NSMutableDictionary dictionary];
 
     gi.modelIndex(ShipModelName(level->playerShip ?: DefaultPlayerShip()).UTF8String);
-    gi.modelIndex(ProjectileModelName(GTorpedoProjectile()).UTF8String);
+    gi.modelIndex(ProjectileModelName(GSecondaryProjectile(playerShip)).UTF8String);
     // Units marked "hold" arrive when an event spawns them; precache them now.
     for (int i = 0; i < level->entityCount; i++) {
         const LevelEntity *e = &level->entities[i];

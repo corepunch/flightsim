@@ -62,9 +62,15 @@ static ShipParams CheckShipDefinitions(void) {
         CHECK(def->params.maxSpeed > 0 && def->params.turnRate > 0 && def->params.agility > 0 && def->params.grip > 0);
         CHECK(def->params.boostDrain > 0 && def->params.boostRecharge > 0 && def->params.boostSpeed > 0);
         CHECK(def->aiParams.maxSpeed > 0 && def->aiGun.speed > 0);
+        CHECK(def->hull > 0 && def->shield >= 0 && def->shieldRegen >= 0);
+        const ShipSecondary *w = &def->secondary;
+        CHECK(w->rounds >= 0 && w->range > 0 && w->maxSpeed > 0 && w->life > 0 && w->damage > 0 && w->capitalDamage > 0 && w->fuse > 0);
         CHECK([ShipModelName(name) isEqualToString:[@"ship:" stringByAppendingString:name]] && ShipDefForModel(ShipModelName(name)) == def);
     }
     CHECK(ShipDefNamed(@"no-such-ship") == NULL && ShipDefForModel(@"cap:Carrier:concord") == NULL);
+    // The game's own tuning: the light fighter flies unshielded.
+    const ShipDef *wasp = ShipDefNamed(@"wasp");
+    CHECK(wasp && wasp->shield == 0 && wasp->hull > 1);
     const ShipDef *first = ShipDefNamed(names.firstObject);
     return first ? first->params : (ShipParams){ .maxSpeed = 150, .turnRate = 1 };
 }
@@ -665,6 +671,25 @@ static void CheckGameChain(void) {
     CHECK([FSGameChain() isEqualToArray:(@[ @"ZCheckMod", saved ])]);
     CHECK([FSURL(@"Levels", @"check", @"json").path containsString:@"/ZCheckMod/"]);           // its own
     CHECK([FSURL(@"Data/Ships", @"wasp", @"json").path containsString:saved]);               // the base's
+    // A ship that names none of the durability or secondary fields flies as
+    // every fighter did before ships carried their own.
+    const ShipDef *plain = ShipDefNamed(@"zcheck-plain");
+    CHECK(plain && plain->hull == 1 && plain->shield == 1 && NEAR(plain->shieldRegen, 0.06f, 1e-6f));
+    if (plain) {
+        const ShipSecondary *w = &plain->secondary;
+        CHECK(w->name[0] == 0 && w->projectile[0] == 0 && w->rounds == 0 && w->range == 2500 && w->launchSpeed == 120);
+        CHECK(w->acceleration == 260 && w->maxSpeed == 420 && w->turn == 3 && w->life == 9 && NEAR(w->damage, 1.2f, 1e-6f));
+        CHECK(w->capitalDamage == 4 && w->fuse == 10);
+    }
+    // Its own ship (run-unit-checks.sh writes it) states durability and a secondary.
+    const ShipDef *gunship = ShipDefNamed(@"zcheck-gunship");
+    CHECK(gunship && NEAR(gunship->hull, 2.5f, 1e-6f) && gunship->shield == 0 && NEAR(gunship->shieldRegen, 0.2f, 1e-6f));
+    if (gunship) {
+        const ShipSecondary *w = &gunship->secondary;
+        CHECK(!strcmp(w->name, "MISSILE") && !strcmp(w->shortName, "MSL") && !strcmp(w->projectile, "torpedo"));
+        CHECK(w->rounds == 6 && w->range == 1800 && w->maxSpeed == 600 && NEAR(w->damage, 0.8f, 1e-6f) && w->capitalDamage == 2);
+        CHECK(w->life == 9 && w->fuse == 10);   // unnamed fields keep their defaults
+    }
     CHECK(FSURL(@"Strings", @"en", @"json") && FSURLsLayered(@"Strings", @"json").count >= 2); // and the engine's
     NSArray<NSURL *> *levels = FSURLs(@"Levels", @"json");
     CHECK([[levels valueForKey:@"lastPathComponent"] containsObject:@"check.json"] && levels.count > 1);

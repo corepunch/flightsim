@@ -15,6 +15,13 @@ for game in Games/*(N/); do ln -s "$PWD/$game" "$qa/$game"; done
 mkdir -p "$qa/Games/ZCheckMod/Levels"
 print '{ "title": "Check", "base": "KestrelFrontier" }' > "$qa/Games/ZCheckMod/game.json"
 print '{ "name": "check", "title": "Check" }' > "$qa/Games/ZCheckMod/Levels/check.json"
+mkdir -p "$qa/Games/ZCheckMod/Data/Ships"
+print '{ "displayName": "Plain", "mesh": "Spitfire", "guns": [[0, 0, -3]], "nozzles": [[0, 0, 3, 0.5]] }' \
+    > "$qa/Games/ZCheckMod/Data/Ships/zcheck-plain.json"
+print '{ "displayName": "Gunship", "mesh": "Spitfire", "guns": [[0, 0, -3]], "nozzles": [[0, 0, 3, 0.5]],
+  "hull": 2.5, "shield": 0, "shieldRegen": 0.2,
+  "secondary": { "name": "MISSILE", "short": "MSL", "projectile": "torpedo", "rounds": 6, "range": 1800,
+                 "maxSpeed": 600, "damage": 0.8, "capitalDamage": 2 } }' > "$qa/Games/ZCheckMod/Data/Ships/zcheck-gunship.json"
 # The app's Info.plist (FSDefaultGame), embedded as a bare executable's bundle info.
 cp Resources/Info.plist "$qa/Info.plist"
 clang -fobjc-arc -Wall -Wno-unused-function -mmacosx-version-min=13.0 \

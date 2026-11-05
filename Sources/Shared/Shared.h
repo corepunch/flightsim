@@ -290,7 +290,13 @@ typedef enum {
 //     "aiGun": { "interval": 0.22, "damage": 0.07 },            // overrides for AI-flown ships
 //     "nozzles": [[-4.5, 0.135, 2.2, 0.6], ...], "exhaustColor": [1, 0.38, 0.18],
 //     "params": { "maxSpeed": 140, "turnRate": 0.8, ... },      // ShipParams, see Protocol above
-//     "ai": { "maxSpeed": 140, "turnRate": 0.8, "speedSpread": 8 } }
+//     "ai": { "maxSpeed": 140, "turnRate": 0.8, "speedSpread": 8 },
+//     "hull": 1, "shield": 1, "shieldRegen": 0.06,              // 0 shield: none at all
+//     "secondary": { "name": "MISSILE", "short": "MSL", "projectile": "missile", "rounds": 4,
+//                    "range": 2500, "launchSpeed": 120, "acceleration": 260, "maxSpeed": 420,
+//                    "turn": 3, "life": 9, "damage": 1.2, "capitalDamage": 4, "fuse": 10 } }
+//
+// Damage, hull and shield share one unit: 1 is a standard fighter's hull.
 
 #define SHIP_MAX_GUNS 4
 #define SHIP_MAX_NOZZLES 8
@@ -302,9 +308,25 @@ typedef struct {
     float energy;           // capacitor per shot, 0..1
     float recharge;         // capacitor per second
     float interval;         // seconds between shots
-    float damage;           // to fighters, fraction of hull
+    float damage;           // to fighters, in hull units
     float capitalDamage;    // to capital subsystems and hulls
 } ShipGun;
+
+// The guided round a ship launches at its target. The name, short name and
+// projectile fall back to the game's rules.json "secondary" when empty.
+typedef struct {
+    char name[SHIP_NAME_LENGTH];            // "TORPEDO", for readouts
+    char shortName[SHIP_NAME_LENGTH];       // "TORP", for small buttons
+    char projectile[SHIP_NAME_LENGTH];      // Data/Projectiles/<projectile>.json
+    int rounds;                             // carried when the level sets no loadout
+    float range;                            // farthest launch at the target, metres
+    float launchSpeed;                      // m/s added to the ship's velocity at launch
+    float acceleration, maxSpeed;           // m/s² and m/s
+    float turn;                             // how hard it steers onto the lead point (1/s)
+    float life;                             // seconds before it burns out
+    float damage, capitalDamage;            // to fighters; to capital hulls and subsystems
+    float fuse;                             // goes off this close to a fighter, metres
+} ShipSecondary;
 
 typedef struct {
     char name[SHIP_NAME_LENGTH];            // "wasp"
@@ -322,6 +344,10 @@ typedef struct {
     ShipParams params;                      // as flown by a player
     ShipParams aiParams;                    // as flown by the AI
     float aiSpeedSpread;                    // AI: extra max speed, per ship in a wave
+    float hull;                             // hull units; more than 0
+    float shield;                           // hull units it absorbs first; 0: unshielded
+    float shieldRegen;                      // shield units per second
+    ShipSecondary secondary;
     float hologramScale;
 } ShipDef;
 

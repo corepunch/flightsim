@@ -74,8 +74,8 @@ static EntityState FighterState(GFighter *s, GPilot *p) {
     e.orientation = s.orientation;
     e.scale = 1;
     e.throttle = s->move.throttle;
-    e.hull = s.hull;
-    e.shield = s.shield;
+    e.hull = s.hullFraction;
+    e.shield = s.shieldFraction;
     return e;
 }
 
@@ -142,8 +142,8 @@ static void BuildPlayerState(GClient *cl) {
         ps->model = (uint16_t)s.model;
         ps->team = (uint8_t)s.team;
         ps->alive = s.alive;
-        ps->hull = s.hull;
-        ps->shield = s.shield;
+        ps->hull = s.hullFraction;
+        ps->shield = s.shieldFraction;
     }
     ps->missionTime = (float)level->_missionTime;
     ps->stats[STAT_WEAPON_ENERGY] = (int16_t)lroundf(s.laserEnergy * 1000);
