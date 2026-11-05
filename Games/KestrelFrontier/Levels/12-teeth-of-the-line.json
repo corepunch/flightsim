@@ -31,6 +31,15 @@
       "pos": [900, -150, -2600],
       "spin": 4,
       "group": "platforms"
+    },
+    {
+      "id": "carrier",
+      "asset": "Carrier",
+      "team": "enemy",
+      "style": "skarn",
+      "name": "Skarn Carrier Dagger",
+      "pos": [300, 450, -5400],
+      "facing": [0, 0, 1]
     }
   ],
   "fields": [
@@ -42,28 +51,37 @@
       "ship": "wasp",
       "count": 4,
       "team": "enemy",
-      "pos": [0, 100, -2500],
       "spread": 200,
       "order": "attack",
-      "hold": true
-    },
-    {
-      "id": "reinf",
-      "ship": "wasp",
-      "count": 3,
-      "team": "enemy",
-      "pos": [0, 600, -4200],
-      "spread": 150,
-      "order": "attack",
-      "hold": true
+      "mothership": "carrier",
+      "arrival": { "when": { "time": 0 } },
+      "reinforcements": { "count": 2, "delay": 25 },
+      "formation": "diamond"
     }
   ],
   "objectives": [
-    { "id": "platforms", "type": "destroy", "targets": ["platforms"], "text": "Hit all 3 platform cores" }
+    { "id": "platforms", "type": "destroy", "targets": ["platforms"], "text": "Hit all 3 platform cores" },
+    {
+      "id": "carrier",
+      "type": "destroy",
+      "targets": ["carrier"],
+      "optional": true,
+      "text": "Sink Carrier Dagger to stop the Wasp launches"
+    }
   ],
   "events": [
-    { "when": {"time": 0}, "do": [{"spawn": "patrol"}] },
-    { "when": {"time": 90}, "do": [{"spawn": "reinf"}] },
+    {
+      "when": { "spawned": "patrol" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Carrier Dagger is launching Wasps from behind the platforms. Sink her and the patrols stop coming."} }
+      ]
+    },
+    {
+      "when": { "objective": "carrier" },
+      "do": [
+        { "radio": {"from": "Okafor", "text": "Dagger is gone. No more launches."} }
+      ]
+    },
     {
       "when": { "time": 3 },
       "do": [

@@ -956,7 +956,7 @@
         "text": [
           "Before we can do anything about the shipyard, we have to get past its defences: three turret platforms covering the approach.",
           "Each platform is armed all round. Their weak point is the reactor core in the central sphere - shoot the core and the platform dies.",
-          "Wasps patrol between them. Use your torpedoes on the cores."
+          "A Skarn carrier, Dagger, lies behind them and launches Wasps; each flight we kill is replaced, twice. Use your torpedoes on the cores, and sink the carrier if you can reach it."
         ],
         "steps": [
           {
@@ -970,11 +970,25 @@
             "focus": "plat1",
             "schematic": "Core"
           },
-          { "caption": "Wasps patrol between them.", "show": ["patrol"], "focus": "plat2" }
+          {
+            "caption": "*Carrier Dagger* sits behind the platforms and launches *Wasps* in flights of four.",
+            "show": ["carrier"],
+            "focus": "carrier",
+            "camera": { "center": "carrier", "span": 2400 },
+            "labels": [ { "text": "Wasp launches", "at": [300, -4800] } ],
+            "seconds": 5
+          },
+          {
+            "caption": "Each wiped-out flight is replaced twice over. Sinking the carrier ends the launches, but it is *optional*.",
+            "show": ["carrier", "plat2"],
+            "focus": "plat2",
+            "seconds": 5
+          }
         ],
         "intel": [
           "Targets: 3x defence platform (5 turrets each, core)",
-          "Hostile: Wasp patrol",
+          "Optional: Skarn Carrier Dagger (launches Wasp flights)",
+          "Hostile: Wasp flights, replaced twice when wiped out",
           "Tip: torpedoes on the cores"
         ]
       },
@@ -1121,7 +1135,7 @@
         "text": [
           "Fleet Command does not think we can stop the dreadnought here. The colonies are being evacuated.",
           "The liner Aurora Star is carrying six thousand civilians to the Halden gate. She is big, slow and has no guns.",
-          "Every Skarn fighter in the system will be after her. Lancer 6 is with you. Get her to the gate."
+          "Every Skarn fighter in the system will be after her. Lancer 6 is with you, and if the liner is hit I will launch our ready flight to cover her. Get her to the gate."
         ],
         "steps": [
           { "caption": "Liner Aurora Star, full of evacuees.", "show": ["aurora"], "focus": "aurora" },
@@ -1131,14 +1145,23 @@
             "route": ["aurora", "gate"]
           },
           {
-            "caption": "Attacks from every side. Bombers have priority.",
+            "caption": "Attacks from every side. *Bombers* have priority, and the last wave is flown by veterans.",
             "show": ["t1", "t2", "t3"],
-            "focus": "aurora"
+            "focus": "aurora",
+            "seconds": 5
+          },
+          {
+            "caption": "If the liner is hit, Bastion launches a *ready flight* of two Executioners to cover her.",
+            "show": ["relief", "aurora"],
+            "focus": "relief",
+            "labels": [ { "text": "Ready flight", "at": [150, 700] } ],
+            "seconds": 5
           }
         ],
         "intel": [
           "Escort: liner Aurora Star (unarmed, 6000 aboard)",
           "Hostile: repeated Wasp and Talon attacks",
+          "Reserve: ready flight launches if Aurora Star is hit",
           "Wingman: Lancer 6"
         ]
       },
@@ -1358,7 +1381,7 @@
         "text": [
           "Someone has been feeding the Skarn our patrol routes. We finally know how: a Skarn stealth prototype shadowing our fleet.",
           "It does not show on scanners beyond seven hundred metres. Our sensor buoys have caught it passing, so it is somewhere in this volume.",
-          "Find it and kill it. It is fragile once you have found it, but its escorts are not."
+          "Find it and kill it. It is fragile once you have found it, but its escorts are not, and it will jump out of the system in eight minutes."
         ],
         "steps": [
           {
@@ -1372,14 +1395,31 @@
             "focus": "ghost"
           },
           {
-            "caption": "Four Wasps guard it. Kill the prototype first if you can.",
+            "caption": "Four *veteran* Wasps guard it. Kill the prototype first if you can.",
             "show": ["guards"],
-            "focus": "ghost"
+            "focus": "ghost",
+            "seconds": 4
+          },
+          {
+            "caption": "Hurt the escorts and an *ace pair*, Strix, comes in from the nebula.",
+            "show": ["aces", "guards"],
+            "focus": "aces",
+            "camera": { "center": [0, -4000], "span": 3600 },
+            "labels": [ { "text": "Strix arrives", "at": [0, -4800] } ],
+            "seconds": 5
+          },
+          {
+            "caption": "You have *eight minutes*. After that the prototype jumps out with our routes and the mission fails.",
+            "show": ["ghost"],
+            "focus": "ghost",
+            "seconds": 4
           }
         ],
         "intel": [
           "Target: Skarn stealth prototype (radar range 700 m)",
-          "Hostile: 4x Wasp",
+          "Hostile: 4x veteran Wasp",
+          "Hostile: Strix, 2x ace Wasp (called in when the escorts are attacked)",
+          "Time limit: 8 minutes",
           "Visit the buoys to narrow the search"
         ]
       },
