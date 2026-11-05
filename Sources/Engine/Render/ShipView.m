@@ -1,5 +1,5 @@
-#import "ShipView.h"
-#import "FileSystem.h"
+#import "Render.h"
+#import "Shared.h"
 
 // Shield bubble: fresnel rim with a scrolling hex-ish ripple, additive.
 static NSString *const kShieldFragment =

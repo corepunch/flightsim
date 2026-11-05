@@ -1,7 +1,7 @@
 // The level in this game's world: spawning entities, waves and fields from
 // the level JSON, and the adapter the engine's mission runtime
 // (Sources/Engine/Mission) runs objectives, events and rules through.
-#import "GLocal.h"
+#import "Game.h"
 
 static NSValue *Vec3Value(simd_float3 v) { return [NSValue valueWithBytes:&v objCType:"[4f]"]; }
 

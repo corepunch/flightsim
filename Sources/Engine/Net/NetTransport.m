@@ -1,5 +1,5 @@
-#import "NetTransport.h"
-#import "Cvar.h"
+#import "Net.h"
+#import "Common.h"
 #import <QuartzCore/QuartzCore.h>
 #include <netdb.h>
 #include <arpa/inet.h>

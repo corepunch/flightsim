@@ -1,6 +1,5 @@
-#import "PauseMenu.h"
-#import "UILayout.h"
-#import "GameAudio.h"
+#import "UI.h"
+#import "Audio.h"
 
 static PauseCommand CommandFor(NSString *itemId) {
     static NSDictionary<NSString *, NSNumber *> *commands;

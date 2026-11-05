@@ -1,6 +1,6 @@
 // Entry points of the game module (GetGameAPI), the per-tick frame and the
 // per-command client think.
-#import "GLocal.h"
+#import "Game.h"
 
 GameImport gi;
 GWorld *level;

@@ -25,7 +25,7 @@ Games/<name>/
   Strings/       <locale>.json: overrides and additions to the engine's catalog
 ```
 
-Lookups go through `Sources/Shared/FileSystem.h`: the game's folder first,
+Lookups go through `Sources/Shared/Shared.h`: the game's folder first,
 then the engine's own `Resources/`. A game can therefore also replace the
 engine's `UI/theme.json`, `UI/menus/*.json` or `Audio/*.mp3` by shipping a
 file with the same path.

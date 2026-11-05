@@ -11,7 +11,7 @@ cp Resources/Info.plist "$contents/Info.plist"
     -c 'Set CFBundleIdentifier com.igor.spacefight.flarechecks' \
     -c 'Set CFBundleName Flare Checks' -c 'Add LSUIElement bool true' "$contents/Info.plist"
 cp Resources/Shaders/LensFlare.fsh "$contents/Resources/Shaders/"
-clang -fobjc-arc -Wall -mmacosx-version-min=13.0 -ISources/Engine/Render \
+clang -fobjc-arc -Wall -mmacosx-version-min=13.0 -ISources/Shared ${(@)$(print -l Sources/Engine/*/(/) | sed "s/^/-I/")} \
     Tools/GUI/LensFlareChecks.m Sources/Engine/Render/LensFlare.m \
     -framework Cocoa -framework SpriteKit -framework SceneKit -framework Metal -o "$contents/MacOS/FlareChecks"
 codesign --force --sign - "$app"

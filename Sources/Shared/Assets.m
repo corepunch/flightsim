@@ -1,4 +1,4 @@
-#import "Assets.h"
+#import "Shared.h"
 
 #pragma mark - Ship definitions
 

@@ -1,5 +1,5 @@
 // Bolts, torpedoes, damage, destruction and ramming.
-#import "GLocal.h"
+#import "Game.h"
 
 @implementation GWorld (Weapons)
 

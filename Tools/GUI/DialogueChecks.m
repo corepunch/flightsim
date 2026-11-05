@@ -1,9 +1,8 @@
 #import <Cocoa/Cocoa.h>
-#import "Assets.h"
+#import "Shared.h"
 #import "Story.h"
-#import "Briefing.h"
-#import "UIMotion.h"
-#import "Cvar.h"
+#import "UI.h"
+#import "Common.h"
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "Dialogue check failed at line %d: %s\n", __LINE__, #c); return EXIT_FAILURE; } } while (0)
 

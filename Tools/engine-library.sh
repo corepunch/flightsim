@@ -11,7 +11,7 @@ engine_libs=(build/Native/libengine.a -ObjC ${(@)$(make -s engine-frameworks | t
 # link_check_resources <bundle Resources directory>
 # Gives a check's bundle the app's resource layout without copying it: the
 # engine's own folders at the top level and Games/<name>/ for every game
-# (Sources/Shared/FileSystem.h). A game's Models are the baked .scn files in
+# (Sources/Shared/Shared.h). A game's Models are the baked .scn files in
 # build/ModelCache/<name>/Models when a build has made them.
 link_check_resources() {
     local resources=$1 directory game entry

@@ -1,10 +1,10 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
-#import "GameView.h"
-#import "Host.h"
-#import "Cmd.h"
-#import "GameLoader.h"
+#import "App.h"
+#import "App.h"
+#import "Common.h"
+#import "Server.h"
 
 @interface FlightViewController : UIViewController
 @end

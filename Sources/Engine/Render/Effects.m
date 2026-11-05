@@ -1,5 +1,4 @@
-#import "Effects.h"
-#import "Exhaust.h"
+#import "Render.h"
 
 #define MUZZLE_POOL 24
 #define FLASH_LIGHTS 2

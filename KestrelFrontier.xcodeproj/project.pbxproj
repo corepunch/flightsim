@@ -21,11 +21,14 @@
 					"$(SRCROOT)/Sources/Shared",
 					"$(SRCROOT)/Games/SpaceFight/Game",
 					"$(SRCROOT)/Sources/Engine/App",
+					"$(SRCROOT)/Sources/Engine/Audio",
 					"$(SRCROOT)/Sources/Engine/Client",
 					"$(SRCROOT)/Sources/Engine/Collision",
 					"$(SRCROOT)/Sources/Engine/Common",
+					"$(SRCROOT)/Sources/Engine/Input",
 					"$(SRCROOT)/Sources/Engine/Mission",
 					"$(SRCROOT)/Sources/Engine/Net",
+					"$(SRCROOT)/Sources/Engine/Refresh",
 					"$(SRCROOT)/Sources/Engine/Render",
 					"$(SRCROOT)/Sources/Engine/Server",
 					"$(SRCROOT)/Sources/Engine/Story",
@@ -53,11 +56,14 @@
 					"$(SRCROOT)/Sources/Shared",
 					"$(SRCROOT)/Games/SpaceFight/Game",
 					"$(SRCROOT)/Sources/Engine/App",
+					"$(SRCROOT)/Sources/Engine/Audio",
 					"$(SRCROOT)/Sources/Engine/Client",
 					"$(SRCROOT)/Sources/Engine/Collision",
 					"$(SRCROOT)/Sources/Engine/Common",
+					"$(SRCROOT)/Sources/Engine/Input",
 					"$(SRCROOT)/Sources/Engine/Mission",
 					"$(SRCROOT)/Sources/Engine/Net",
+					"$(SRCROOT)/Sources/Engine/Refresh",
 					"$(SRCROOT)/Sources/Engine/Render",
 					"$(SRCROOT)/Sources/Engine/Server",
 					"$(SRCROOT)/Sources/Engine/Story",
@@ -336,35 +342,9 @@
 			"defaultConfigurationIsVisible" = 0;
 			"defaultConfigurationName" = "Debug";
 		};
-		"46D5F6B01D29435F30D4E715" = {
+		"76A3A0FEB3A4012B5CBE6EDA" = {
 			"isa" = "PBXFileReference";
-			"path" = "GameAudio.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"54A6625D3399BA37902C0C94" = {
-			"isa" = "PBXFileReference";
-			"path" = "GameAudio.m";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.objc";
-		};
-		"866AD1EB6957FE6E0FCB7AB6" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "54A6625D3399BA37902C0C94";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
-			};
-		};
-		"21190BA521571FA646AEA9CE" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "54A6625D3399BA37902C0C94";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
-			};
-		};
-		"4DB6850B8BD766CED9162F02" = {
-			"isa" = "PBXFileReference";
-			"path" = "GameView.h";
+			"path" = "App.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
@@ -394,12 +374,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"432ACAFA941F06AC7F3724FB" = {
-			"isa" = "PBXFileReference";
-			"path" = "Host.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"4448D04AD3B5B572ADE6601B" = {
 			"isa" = "PBXFileReference";
 			"path" = "Host.m";
@@ -419,50 +393,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"F358A0F660B58608EE8A7FA2" = {
-			"isa" = "PBXFileReference";
-			"path" = "Input.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"4914AF3372C000B3BF2D1CBA" = {
-			"isa" = "PBXFileReference";
-			"path" = "Input.m";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.objc";
-		};
-		"D32BA9B6FE6986CFC5F90765" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "4914AF3372C000B3BF2D1CBA";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
-			};
-		};
-		"C74614CE128E6992FB6A06D9" = {
-			"isa" = "PBXFileReference";
-			"path" = "InputAction.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"78EFC49A0D9351DC6561B614" = {
-			"isa" = "PBXFileReference";
-			"path" = "InputIOS.m";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.objc";
-		};
-		"08CD45E734764309FC770345" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "78EFC49A0D9351DC6561B614";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
-			};
-		};
-		"4D43CE799CE10C26FDC5A14D" = {
-			"isa" = "PBXFileReference";
-			"path" = "TouchFlightControls.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"91A9CC2E2CA141715B398FE7" = {
 			"isa" = "PBXFileReference";
@@ -507,21 +437,48 @@
 			"isa" = "PBXGroup";
 			"path" = "App";
 			"children" = (
-				"46D5F6B01D29435F30D4E715",
-				"54A6625D3399BA37902C0C94",
-				"4DB6850B8BD766CED9162F02",
+				"76A3A0FEB3A4012B5CBE6EDA",
 				"E8EFEE7B86FAC508A1E57171",
 				"B6C9C2BDC1D956204FDD3BE9",
-				"432ACAFA941F06AC7F3724FB",
 				"4448D04AD3B5B572ADE6601B",
-				"F358A0F660B58608EE8A7FA2",
-				"4914AF3372C000B3BF2D1CBA",
-				"C74614CE128E6992FB6A06D9",
-				"78EFC49A0D9351DC6561B614",
-				"4D43CE799CE10C26FDC5A14D",
 				"91A9CC2E2CA141715B398FE7",
 				"D1446246734B3AFDAAE748AA",
 				"F2E4BD95C08E33E242106611",
+			);
+			"sourceTree" = "<group>";
+		};
+		"6202F85A316527E5BF03F41A" = {
+			"isa" = "PBXFileReference";
+			"path" = "Audio.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"FBC159CCCD7918AF91C61BE4" = {
+			"isa" = "PBXFileReference";
+			"path" = "GameAudio.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"71A00EE0C49935130947E10F" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "FBC159CCCD7918AF91C61BE4";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"D85F13E1DF30FBCAC0793CD4" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "FBC159CCCD7918AF91C61BE4";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"90D44246965991C4D557ACCA" = {
+			"isa" = "PBXGroup";
+			"path" = "Audio";
+			"children" = (
+				"6202F85A316527E5BF03F41A",
+				"FBC159CCCD7918AF91C61BE4",
 			);
 			"sourceTree" = "<group>";
 		};
@@ -551,12 +508,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"B043B52EF9A158D1BD5A2F60" = {
-			"isa" = "PBXFileReference";
-			"path" = "ClientView.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"636DAF786E099300451F6AF5" = {
 			"isa" = "PBXFileReference";
 			"path" = "ClientView.m";
@@ -583,14 +534,13 @@
 			"children" = (
 				"27B534DF06E0F6E626965F2A",
 				"FA0ADB7A3655C360ED99B8DC",
-				"B043B52EF9A158D1BD5A2F60",
 				"636DAF786E099300451F6AF5",
 			);
 			"sourceTree" = "<group>";
 		};
-		"46B47C56B4AFED6199D6271D" = {
+		"E802403F57E127EA303F84A3" = {
 			"isa" = "PBXFileReference";
-			"path" = "ModelInfo.h";
+			"path" = "Collision.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
@@ -614,27 +564,14 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"166F3B44D7D64DC14B9DC284" = {
-			"isa" = "PBXFileReference";
-			"path" = "SceneAsset.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"A6252FAC00594896E41BDACF" = {
 			"isa" = "PBXGroup";
 			"path" = "Collision";
 			"children" = (
-				"46B47C56B4AFED6199D6271D",
+				"E802403F57E127EA303F84A3",
 				"9A85D7031185E701A8635E29",
-				"166F3B44D7D64DC14B9DC284",
 			);
 			"sourceTree" = "<group>";
-		};
-		"E53A055BACF5C0314BCADEFC" = {
-			"isa" = "PBXFileReference";
-			"path" = "Cmd.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"714E0A7A2433FFA546F7B620" = {
 			"isa" = "PBXFileReference";
@@ -656,9 +593,9 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"B68EBE50E2DA3CF7C21EDDE6" = {
+		"3193C550A256654B5120CC07" = {
 			"isa" = "PBXFileReference";
-			"path" = "Cvar.h";
+			"path" = "Common.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
@@ -681,12 +618,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"7BED40911B36133DCDA840CF" = {
-			"isa" = "PBXFileReference";
-			"path" = "Localization.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"1388D38CB625F13520E5E2FA" = {
 			"isa" = "PBXFileReference";
@@ -712,18 +643,79 @@
 			"isa" = "PBXGroup";
 			"path" = "Common";
 			"children" = (
-				"E53A055BACF5C0314BCADEFC",
 				"714E0A7A2433FFA546F7B620",
-				"B68EBE50E2DA3CF7C21EDDE6",
+				"3193C550A256654B5120CC07",
 				"E947095C9A2A14660C2A02D6",
-				"7BED40911B36133DCDA840CF",
 				"1388D38CB625F13520E5E2FA",
 			);
 			"sourceTree" = "<group>";
 		};
-		"740544AC38F7B40AF3E43804" = {
+		"201B791709077407664843C8" = {
 			"isa" = "PBXFileReference";
-			"path" = "MissionEvents.h";
+			"path" = "Input.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"23A72E959FDAFD6677FE8AEB" = {
+			"isa" = "PBXFileReference";
+			"path" = "Input.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"69B8A17D50AD5A8B5959DF3B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "23A72E959FDAFD6677FE8AEB";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"DE95369566B7D36E2F8993A5" = {
+			"isa" = "PBXFileReference";
+			"path" = "InputIOS.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"C33024AB53F397792EE71476" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "DE95369566B7D36E2F8993A5";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"8CCABFA541762FD93AFAD567" = {
+			"isa" = "PBXFileReference";
+			"path" = "ScreenInput.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"6266C2BBBCDDF9D276BEDB45" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "8CCABFA541762FD93AFAD567";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"3FC0453EC288537C66BAEB2E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "8CCABFA541762FD93AFAD567";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"3F03E1DDA2C01E431260D28A" = {
+			"isa" = "PBXGroup";
+			"path" = "Input";
+			"children" = (
+				"201B791709077407664843C8",
+				"23A72E959FDAFD6677FE8AEB",
+				"DE95369566B7D36E2F8993A5",
+				"8CCABFA541762FD93AFAD567",
+			);
+			"sourceTree" = "<group>";
+		};
+		"833A828D8FAED6BF59A63BC4" = {
+			"isa" = "PBXFileReference";
+			"path" = "Mission.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
@@ -747,12 +739,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
 			};
 		};
-		"F87893C57A6E970101C826F1" = {
-			"isa" = "PBXFileReference";
-			"path" = "MissionObjective.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"C54585FF2AA23460B472AD79" = {
 			"isa" = "PBXFileReference";
 			"path" = "MissionObjective.m";
@@ -772,12 +758,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
 			};
-		};
-		"DC33D618DDADB92530F16646" = {
-			"isa" = "PBXFileReference";
-			"path" = "MissionRunner.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"3E169921926D4103E78925AA" = {
 			"isa" = "PBXFileReference";
@@ -799,31 +779,16 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
 			};
 		};
-		"8D4BA09BF7BA301E0F144A06" = {
-			"isa" = "PBXFileReference";
-			"path" = "MissionWorld.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"8CE5B0F6B680621BCE20F379" = {
 			"isa" = "PBXGroup";
 			"path" = "Mission";
 			"children" = (
-				"740544AC38F7B40AF3E43804",
+				"833A828D8FAED6BF59A63BC4",
 				"6BB3C37E2A1494B658BE24C0",
-				"F87893C57A6E970101C826F1",
 				"C54585FF2AA23460B472AD79",
-				"DC33D618DDADB92530F16646",
 				"3E169921926D4103E78925AA",
-				"8D4BA09BF7BA301E0F144A06",
 			);
 			"sourceTree" = "<group>";
-		};
-		"5E17814AEE2D3F82E69BBBEC" = {
-			"isa" = "PBXFileReference";
-			"path" = "LANBrowser.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"83EE68C6A43D3D9E6A640DAA" = {
 			"isa" = "PBXFileReference";
@@ -845,9 +810,9 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"6B6D60731DE49107435C730C" = {
+		"2FBD3706125D74A91A39EB82" = {
 			"isa" = "PBXFileReference";
-			"path" = "NetChannel.h";
+			"path" = "Net.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
@@ -871,12 +836,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"8CB7969007147A1057B2EB19" = {
-			"isa" = "PBXFileReference";
-			"path" = "NetMsg.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"1DF4000571D64B268F825346" = {
 			"isa" = "PBXFileReference";
 			"path" = "NetMsg.m";
@@ -896,12 +855,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"151E73B5908ED0B7CAA902EE" = {
-			"isa" = "PBXFileReference";
-			"path" = "NetProtocol.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"AAC062E630FAC2ABFB0BF4F2" = {
 			"isa" = "PBXFileReference";
@@ -923,12 +876,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"CE6490553C6380B9C671EBBB" = {
-			"isa" = "PBXFileReference";
-			"path" = "NetTransport.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"0192E71202C149913DD460B1" = {
 			"isa" = "PBXFileReference";
 			"path" = "NetTransport.m";
@@ -948,12 +895,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"789A261685BB7D198FD844AB" = {
-			"isa" = "PBXFileReference";
-			"path" = "UDPTransport.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"474485A4C72A1D560C04B21C" = {
 			"isa" = "PBXFileReference";
@@ -979,17 +920,12 @@
 			"isa" = "PBXGroup";
 			"path" = "Net";
 			"children" = (
-				"5E17814AEE2D3F82E69BBBEC",
 				"83EE68C6A43D3D9E6A640DAA",
-				"6B6D60731DE49107435C730C",
+				"2FBD3706125D74A91A39EB82",
 				"6CFDA83224EBC24B2A01D9D7",
-				"8CB7969007147A1057B2EB19",
 				"1DF4000571D64B268F825346",
-				"151E73B5908ED0B7CAA902EE",
 				"AAC062E630FAC2ABFB0BF4F2",
-				"CE6490553C6380B9C671EBBB",
 				"0192E71202C149913DD460B1",
-				"789A261685BB7D198FD844AB",
 				"474485A4C72A1D560C04B21C",
 			);
 			"sourceTree" = "<group>";
@@ -1000,11 +936,40 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
-		"8AC46CA6418487259119EB2A" = {
+		"468BDE5F5D6B5AFFB80A3017" = {
 			"isa" = "PBXFileReference";
-			"path" = "CapitalView.h";
+			"path" = "HUD.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"E414B0C55BCDE536AAD457F1" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "468BDE5F5D6B5AFFB80A3017";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"3AD13747CE68079AF6824DA7" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "468BDE5F5D6B5AFFB80A3017";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"0F6D3149AF99163FF6CD2D41" = {
+			"isa" = "PBXFileReference";
+			"path" = "Refresh.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"08F41C5A30ECAF525E3F203B" = {
+			"isa" = "PBXGroup";
+			"path" = "Refresh";
+			"children" = (
+				"468BDE5F5D6B5AFFB80A3017",
+				"0F6D3149AF99163FF6CD2D41",
+			);
+			"sourceTree" = "<group>";
 		};
 		"AF3787446BC2F59003DE4B51" = {
 			"isa" = "PBXFileReference";
@@ -1026,12 +991,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"E3B8130C427AE1BD9E9E9BBE" = {
-			"isa" = "PBXFileReference";
-			"path" = "Cockpit.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"7D9D66CE55ECFF849E8F5A18" = {
 			"isa" = "PBXFileReference";
 			"path" = "Cockpit.m";
@@ -1051,18 +1010,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"A042903D95282E7CB63B4E9C" = {
-			"isa" = "PBXFileReference";
-			"path" = "CockpitFrame.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"E6BE0DA7CB7F2FA15B6B9C16" = {
-			"isa" = "PBXFileReference";
-			"path" = "Effects.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"2E015069601436664CDEE7EE" = {
 			"isa" = "PBXFileReference";
@@ -1084,12 +1031,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"05FD554367B7927FD082EE17" = {
-			"isa" = "PBXFileReference";
-			"path" = "Exhaust.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"1C7825F9FA3C1A46FBFAF593" = {
 			"isa" = "PBXFileReference";
 			"path" = "Exhaust.m";
@@ -1110,12 +1051,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"F8A47039424D439889FB7A9F" = {
-			"isa" = "PBXFileReference";
-			"path" = "FXRecorder.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"C0905C6582FC6E4D7CE93E12" = {
 			"isa" = "PBXFileReference";
 			"path" = "FXRecorder.m";
@@ -1128,12 +1063,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"6F69C7B329C14533646D8E23" = {
-			"isa" = "PBXFileReference";
-			"path" = "FlightInstruments.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"809B6FD2D1275CDE4CA10F82" = {
 			"isa" = "PBXFileReference";
@@ -1155,38 +1084,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"C9B726265A993CEE8DC0B865" = {
-			"isa" = "PBXFileReference";
-			"path" = "HUD.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"00AE9593FE447C3B67F24D86" = {
-			"isa" = "PBXFileReference";
-			"path" = "HUD.m";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.objc";
-		};
-		"FC96CFD82D376A9CFBDE543E" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "00AE9593FE447C3B67F24D86";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
-			};
-		};
-		"4617A90784EAE623013A513A" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "00AE9593FE447C3B67F24D86";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
-			};
-		};
-		"937011A4EF7ADB12D821D115" = {
-			"isa" = "PBXFileReference";
-			"path" = "LensFlare.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"762700A52A57454CC41E3B4C" = {
 			"isa" = "PBXFileReference";
 			"path" = "LensFlare.m";
@@ -1207,21 +1104,9 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"D9F18179B8599993F0EF67C2" = {
+		"38D6C6295BB70C0C60CEFCDF" = {
 			"isa" = "PBXFileReference";
-			"path" = "PlatformImage.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"60DDF1C64B0B2797DD3E6C34" = {
-			"isa" = "PBXFileReference";
-			"path" = "Refresh.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"0065FE97EBE5453353A482DF" = {
-			"isa" = "PBXFileReference";
-			"path" = "SceneKitRefresh.h";
+			"path" = "Render.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
@@ -1245,12 +1130,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"DBC71C294EC981F222EB63CC" = {
-			"isa" = "PBXFileReference";
-			"path" = "ShipView.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"2F65CF19DDD6E64F52390E71" = {
 			"isa" = "PBXFileReference";
 			"path" = "ShipView.m";
@@ -1270,12 +1149,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"CC48770BFB36FC6C6509C976" = {
-			"isa" = "PBXFileReference";
-			"path" = "SpaceSky.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"516D93F6B2306E75F5F40271" = {
 			"isa" = "PBXFileReference";
@@ -1301,39 +1174,19 @@
 			"isa" = "PBXGroup";
 			"path" = "Render";
 			"children" = (
-				"8AC46CA6418487259119EB2A",
 				"AF3787446BC2F59003DE4B51",
-				"E3B8130C427AE1BD9E9E9BBE",
 				"7D9D66CE55ECFF849E8F5A18",
-				"A042903D95282E7CB63B4E9C",
-				"E6BE0DA7CB7F2FA15B6B9C16",
 				"2E015069601436664CDEE7EE",
-				"05FD554367B7927FD082EE17",
 				"1C7825F9FA3C1A46FBFAF593",
-				"F8A47039424D439889FB7A9F",
 				"C0905C6582FC6E4D7CE93E12",
-				"6F69C7B329C14533646D8E23",
 				"809B6FD2D1275CDE4CA10F82",
-				"C9B726265A993CEE8DC0B865",
-				"00AE9593FE447C3B67F24D86",
-				"937011A4EF7ADB12D821D115",
 				"762700A52A57454CC41E3B4C",
-				"D9F18179B8599993F0EF67C2",
-				"60DDF1C64B0B2797DD3E6C34",
-				"0065FE97EBE5453353A482DF",
+				"38D6C6295BB70C0C60CEFCDF",
 				"D4B848A51D4C6F1EB9CBD19F",
-				"DBC71C294EC981F222EB63CC",
 				"2F65CF19DDD6E64F52390E71",
-				"CC48770BFB36FC6C6509C976",
 				"516D93F6B2306E75F5F40271",
 			);
 			"sourceTree" = "<group>";
-		};
-		"540828806E044DA49B805294" = {
-			"isa" = "PBXFileReference";
-			"path" = "GameLoader.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"6D7AD44D2CBAB40BBEFA00C3" = {
 			"isa" = "PBXFileReference";
@@ -1385,7 +1238,6 @@
 			"isa" = "PBXGroup";
 			"path" = "Server";
 			"children" = (
-				"540828806E044DA49B805294",
 				"6D7AD44D2CBAB40BBEFA00C3",
 				"E6C88EF3E3BA2CBB02E328D7",
 				"47C411751EC74E7AE3101743",
@@ -1427,12 +1279,6 @@
 			);
 			"sourceTree" = "<group>";
 		};
-		"669C8F3E820E5A4DA408F5CB" = {
-			"isa" = "PBXFileReference";
-			"path" = "Briefing.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"F1E7F2E93458338C939D87F3" = {
 			"isa" = "PBXFileReference";
 			"path" = "Briefing.m";
@@ -1452,12 +1298,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"B170EC31EA36885555EAC7B6" = {
-			"isa" = "PBXFileReference";
-			"path" = "FrontEnd.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"1B5006FC2F9AF7CF04908665" = {
 			"isa" = "PBXFileReference";
@@ -1479,12 +1319,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"F8AA5E909FD98BA8A8CE154F" = {
-			"isa" = "PBXFileReference";
-			"path" = "Loading.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"D17A50858700207A61743937" = {
 			"isa" = "PBXFileReference";
 			"path" = "Loading.m";
@@ -1504,12 +1338,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"C7416FF7A83F4818FD3CEE79" = {
-			"isa" = "PBXFileReference";
-			"path" = "MainMenu.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"C730A0D6699A8EDB589CB230" = {
 			"isa" = "PBXFileReference";
@@ -1531,12 +1359,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"1EE48ABFA006EA41A782521B" = {
-			"isa" = "PBXFileReference";
-			"path" = "MonitorSignal.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"DFC6BC34568C7B917EA4C4D4" = {
 			"isa" = "PBXFileReference";
 			"path" = "MonitorSignal.m";
@@ -1556,12 +1378,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"F9632954BE94324DE06F9844" = {
-			"isa" = "PBXFileReference";
-			"path" = "PauseMenu.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"F823012616B291C3E4500451" = {
 			"isa" = "PBXFileReference";
@@ -1583,12 +1399,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"DCFE285AC4AD14417D7DADBA" = {
-			"isa" = "PBXFileReference";
-			"path" = "Progress.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"364505059E18631CF1A12ED1" = {
 			"isa" = "PBXFileReference";
 			"path" = "Progress.m";
@@ -1608,12 +1418,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"DB24E26C70ED4785A3F3C16F" = {
-			"isa" = "PBXFileReference";
-			"path" = "ScreenHost.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"0658C42B44887AD5A254EC00" = {
 			"isa" = "PBXFileReference";
@@ -1635,38 +1439,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"821C44FA2BDDDE60DCB6DB64" = {
-			"isa" = "PBXFileReference";
-			"path" = "ScreenInput.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"7D651F25047FF820E00DAA8F" = {
-			"isa" = "PBXFileReference";
-			"path" = "ScreenInput.m";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.objc";
-		};
-		"D272485CD4CCBCBDBF0FB9DB" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "7D651F25047FF820E00DAA8F";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
-			};
-		};
-		"6CD2DC2B76D72A40D67E139F" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "7D651F25047FF820E00DAA8F";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
-			};
-		};
-		"48AAB49AA1329952AD77F29B" = {
-			"isa" = "PBXFileReference";
-			"path" = "ServerBrowser.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"FED89264205E9FCA0283B4D4" = {
 			"isa" = "PBXFileReference";
 			"path" = "ServerBrowser.m";
@@ -1687,9 +1459,9 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"03E7C528A44BC92B8DC1AC27" = {
+		"8ED864D0D4366EC4C4A27E0A" = {
 			"isa" = "PBXFileReference";
-			"path" = "UILayout.h";
+			"path" = "UI.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
@@ -1713,12 +1485,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
-		"0800EFD946EE779D7780ECB7" = {
-			"isa" = "PBXFileReference";
-			"path" = "UIMotion.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"7C32390EA8CBB06D4BCFE81E" = {
 			"isa" = "PBXFileReference";
 			"path" = "UIMotion.m";
@@ -1738,18 +1504,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
-		};
-		"0121C9D1523A192D5381DADD" = {
-			"isa" = "PBXFileReference";
-			"path" = "UIStyle.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"30FE005D4D903B8D79F8BA02" = {
-			"isa" = "PBXFileReference";
-			"path" = "UITheme.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"2BCB8FB895967539AF73F765" = {
 			"isa" = "PBXFileReference";
@@ -1775,32 +1529,18 @@
 			"isa" = "PBXGroup";
 			"path" = "UI";
 			"children" = (
-				"669C8F3E820E5A4DA408F5CB",
 				"F1E7F2E93458338C939D87F3",
-				"B170EC31EA36885555EAC7B6",
 				"1B5006FC2F9AF7CF04908665",
-				"F8AA5E909FD98BA8A8CE154F",
 				"D17A50858700207A61743937",
-				"C7416FF7A83F4818FD3CEE79",
 				"C730A0D6699A8EDB589CB230",
-				"1EE48ABFA006EA41A782521B",
 				"DFC6BC34568C7B917EA4C4D4",
-				"F9632954BE94324DE06F9844",
 				"F823012616B291C3E4500451",
-				"DCFE285AC4AD14417D7DADBA",
 				"364505059E18631CF1A12ED1",
-				"DB24E26C70ED4785A3F3C16F",
 				"0658C42B44887AD5A254EC00",
-				"821C44FA2BDDDE60DCB6DB64",
-				"7D651F25047FF820E00DAA8F",
-				"48AAB49AA1329952AD77F29B",
 				"FED89264205E9FCA0283B4D4",
-				"03E7C528A44BC92B8DC1AC27",
+				"8ED864D0D4366EC4C4A27E0A",
 				"C3E696F413C994AF0CD075A8",
-				"0800EFD946EE779D7780ECB7",
 				"7C32390EA8CBB06D4BCFE81E",
-				"0121C9D1523A192D5381DADD",
-				"30FE005D4D903B8D79F8BA02",
 				"2BCB8FB895967539AF73F765",
 			);
 			"sourceTree" = "<group>";
@@ -1810,24 +1550,21 @@
 			"path" = "Engine";
 			"children" = (
 				"77B7ED04BBB1A5E0BAC17319",
+				"90D44246965991C4D557ACCA",
 				"81908590BFF96B57F4F05425",
 				"A6252FAC00594896E41BDACF",
 				"B7CC57B4C606FFE00800A6E2",
+				"3F03E1DDA2C01E431260D28A",
 				"8CE5B0F6B680621BCE20F379",
 				"ADDFA25450B9DE3B0C1C8AC4",
 				"1633E1957F7C4AB02AF3A827",
+				"08F41C5A30ECAF525E3F203B",
 				"CC736AA6B87DB36FC71DA4B5",
 				"C48449D9C087944E590A8C11",
 				"288B0BA44D4EEAB5F6E6E208",
 				"1ACA60CEC30688E618AB947B",
 			);
 			"sourceTree" = "<group>";
-		};
-		"AF259D801AED81A86865D8B6" = {
-			"isa" = "PBXFileReference";
-			"path" = "Assets.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"40F193704F3D6B4273923770" = {
 			"isa" = "PBXFileReference";
@@ -1847,18 +1584,6 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "40F193704F3D6B4273923770";
 		};
-		"0B3F4FF4580F51FE60D63D12" = {
-			"isa" = "PBXFileReference";
-			"path" = "CvarFlags.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"5A8AA75F580A0FB8F380252F" = {
-			"isa" = "PBXFileReference";
-			"path" = "FileSystem.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"532788FE1E8977261C7A5882" = {
 			"isa" = "PBXFileReference";
 			"path" = "FileSystem.m";
@@ -1877,21 +1602,9 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "532788FE1E8977261C7A5882";
 		};
-		"349A02879EAA7FD6DE844BB0" = {
+		"2038708BEF0950E0226888A9" = {
 			"isa" = "PBXFileReference";
-			"path" = "GameAPI.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"14A3FD612336DF5C08639DD4" = {
-			"isa" = "PBXFileReference";
-			"path" = "Protocol.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
-		"5DD434E910C18C4C22B80AAD" = {
-			"isa" = "PBXFileReference";
-			"path" = "SharedMath.h";
+			"path" = "Shared.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
@@ -1913,26 +1626,14 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "2ACB1B6BE7DACE217AF29CB6";
 		};
-		"E3FC20D262B16E14E56AB9DE" = {
-			"isa" = "PBXFileReference";
-			"path" = "ShipMove.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
-		};
 		"ED967DB9B7D273F09F981EE8" = {
 			"isa" = "PBXGroup";
 			"path" = "Shared";
 			"children" = (
-				"AF259D801AED81A86865D8B6",
 				"40F193704F3D6B4273923770",
-				"0B3F4FF4580F51FE60D63D12",
-				"5A8AA75F580A0FB8F380252F",
 				"532788FE1E8977261C7A5882",
-				"349A02879EAA7FD6DE844BB0",
-				"14A3FD612336DF5C08639DD4",
-				"5DD434E910C18C4C22B80AAD",
+				"2038708BEF0950E0226888A9",
 				"2ACB1B6BE7DACE217AF29CB6",
-				"E3FC20D262B16E14E56AB9DE",
 			);
 			"sourceTree" = "<group>";
 		};
@@ -1984,12 +1685,6 @@
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
 			};
-		};
-		"B12A112017A9AC5E6AD5871B" = {
-			"isa" = "PBXFileReference";
-			"path" = "GLocal.h";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.h";
 		};
 		"63DF763FAA6FF0A02CC5E547" = {
 			"isa" = "PBXFileReference";
@@ -2071,6 +1766,12 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
 			};
 		};
+		"19D9ADD6096686DC6DC3D666" = {
+			"isa" = "PBXFileReference";
+			"path" = "Game.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
 		"3DC925D3CB5FFC98A5E1271D" = {
 			"isa" = "PBXFileReference";
 			"path" = "Prefix.h";
@@ -2083,11 +1784,11 @@
 			"children" = (
 				"DD67BDD2A1E0A8DB29ED5979",
 				"413938D5D6CAAC17321F9035",
-				"B12A112017A9AC5E6AD5871B",
 				"63DF763FAA6FF0A02CC5E547",
 				"3BAC5B88DFF4CBA7F9B51BC1",
 				"2E6985D9BAF7C8892FC8CFED",
 				"3881F5D0E0F5C2D60854A608",
+				"19D9ADD6096686DC6DC3D666",
 				"3DC925D3CB5FFC98A5E1271D",
 			);
 			"sourceTree" = "<group>";
@@ -2127,18 +1828,19 @@
 		"AAACEF93EB2439F2C22BAACD" = {
 			"isa" = "PBXSourcesBuildPhase";
 			"files" = (
-				"866AD1EB6957FE6E0FCB7AB6",
 				"1B274F62EA705156334CA43E",
 				"21B0FC682C3B59BC5561C1F4",
-				"08CD45E734764309FC770345",
 				"9899D958E348C7E74DE15FA0",
 				"48F4276C4C5609F253933B13",
+				"71A00EE0C49935130947E10F",
 				"A47B25B97C64F8D1E1EE39B6",
 				"99917EB55A02B646FACCC91A",
 				"F0063AEB50DC8B1DD2294EE5",
 				"F69DF7CE2609616646E8F91E",
 				"473BEB1CAD54DE8921FB7B81",
 				"87E73A1EDCBF2DCC55778A26",
+				"C33024AB53F397792EE71476",
+				"6266C2BBBCDDF9D276BEDB45",
 				"9FA41724D17DD18DAD148662",
 				"00364BE747F85AF32D573909",
 				"2FAA6880CD54E3461C2864CB",
@@ -2148,12 +1850,12 @@
 				"3F52A3CF217303207A67FEEC",
 				"BA58EC1473DF9BBA54898BA9",
 				"0EF75916FE5418756E371AED",
+				"E414B0C55BCDE536AAD457F1",
 				"D1FEBB39F82A8EBCE3606821",
 				"06F32A0C21C063AE0BC2AB44",
 				"70058B7242DC47204E543A49",
 				"DBD40E9C57F0D3397567BE36",
 				"B69EAD2D82DB0C7D61BB739D",
-				"FC96CFD82D376A9CFBDE543E",
 				"C9EC08DF6A8741972FDDC954",
 				"9089BB3D562ACA6D16B3443A",
 				"48460BECD34C0A4FCC6DA83B",
@@ -2169,7 +1871,6 @@
 				"0FD41F083A3415049133A1F2",
 				"7D2BFC03890347100B33BA3D",
 				"4CA4F75C6172FD478C2BA73B",
-				"D272485CD4CCBCBDBF0FB9DB",
 				"823BCD1EB80AABB247023708",
 				"6BBC133171AFCBB20752CF2C",
 				"120A20A330F6DD850AEE0A5E",
@@ -2190,30 +1891,31 @@
 		"7FA2F43EDCB6FA8DC4873232" = {
 			"isa" = "PBXSourcesBuildPhase";
 			"files" = (
-				"21190BA521571FA646AEA9CE",
 				"7B6CA22EC859815F5E523DF1",
 				"328D247AE9EE8EC7C7745FB9",
-				"D32BA9B6FE6986CFC5F90765",
 				"D1CA0A86324D7C64EFF5A26D",
+				"D85F13E1DF30FBCAC0793CD4",
 				"17ECBDED95F68A3CB030196B",
 				"ACAFD3B172FD2B8F88AB3935",
 				"F5506A2850B8FEC6F44DF723",
 				"1155816D03F8379A3A01A4B8",
 				"2C7C58FFB483893475F96A29",
 				"BB4DBBFEE8AC5260CA7F9E1E",
+				"69B8A17D50AD5A8B5959DF3B",
+				"3FC0453EC288537C66BAEB2E",
 				"02FB92496785D072FAD8C3C0",
 				"9DD3E038506807F0BED669EB",
 				"FB71595F847246E57CF7819F",
 				"4766A9B34E1F6C4BE4649904",
 				"BAF55C743B3299C6DFF2F2B3",
 				"9BE0506ABD5DB138091CC781",
+				"3AD13747CE68079AF6824DA7",
 				"D54031935E92A487B16364AB",
 				"7430F60FFBCFC798731D816D",
 				"8AB6C4ED28436909A1E1C6C6",
 				"FC7A9F75C5243FEF24DCB84E",
 				"9AE6F2FE8FC3A8E8000780D4",
 				"051600704DF44584D3C182B7",
-				"4617A90784EAE623013A513A",
 				"72F029710AEF4B0C48ADF81A",
 				"291D6E6909C1E85A7B4F9EB2",
 				"E911D5715F645AB48C02B35A",
@@ -2229,7 +1931,6 @@
 				"832F120F0E272AF745DEBFC4",
 				"DB40B2AE82E8F54E3C69637A",
 				"15E9F61C973658A12AE9CD35",
-				"6CD2DC2B76D72A40D67E139F",
 				"C34C5676FE59C72E803DBA44",
 				"9F74F316AAA5A7CF2D210A04",
 				"4DF56D7F0E3ED68149B736B8",

@@ -1,9 +1,8 @@
-#import "FXRecorder.h"
+#import "Render.h"
 #import <SceneKit/SceneKit.h>
 #import <AVFoundation/AVFoundation.h>
 #import <Metal/Metal.h>
-#import "SceneKitRefresh.h"
-#import "Assets.h"
+#import "Shared.h"
 
 static const int kFPS = 60;
 static const CGSize kSize = { 1280, 720 };

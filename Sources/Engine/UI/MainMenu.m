@@ -1,10 +1,7 @@
-#import "MainMenu.h"
-#import "FileSystem.h"
-#import "UIStyle.h"
-#import "UIMotion.h"
-#import "GameAudio.h"
-#import "Localization.h"
-#import "UILayout.h"
+#import "UI.h"
+#import "Shared.h"
+#import "Audio.h"
+#import "Common.h"
 #import <ImageIO/ImageIO.h>
 
 

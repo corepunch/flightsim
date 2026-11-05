@@ -1,4 +1,4 @@
-#import "NetProtocol.h"
+#import "Net.h"
 
 enum {
     U_ORIGIN   = 1 << 0,

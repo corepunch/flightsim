@@ -1,6 +1,6 @@
 // Per-player target selection: cycling, automatic pick and the subsystem the
 // torpedo aims at.
-#import "GLocal.h"
+#import "Game.h"
 
 @implementation GWorld (Targeting)
 

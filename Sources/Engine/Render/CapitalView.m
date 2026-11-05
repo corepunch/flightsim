@@ -1,8 +1,5 @@
-#import "PlatformImage.h"
-#import "FileSystem.h"
-#import "CapitalView.h"
-#import "Assets.h"
-#import "ShipView.h"
+#import "Render.h"
+#import "Shared.h"
 
 #pragma mark - Materials
 

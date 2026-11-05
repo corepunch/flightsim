@@ -1,7 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_OSX
-#import "GameView.h"
-#import "HUD.h"
+#import "App.h"
+#import "Refresh.h"
 // Carbon's legacy EventType name overlaps the game protocol's event enum.
 #define EventType CarbonEventType
 #import <Carbon/Carbon.h>

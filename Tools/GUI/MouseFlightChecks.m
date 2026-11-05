@@ -1,9 +1,9 @@
 #import <Cocoa/Cocoa.h>
 #import "Input.h"
-#import "GameView.h"
-#import "HUD.h"
-#import "PauseMenu.h"
-#import "Cvar.h"
+#import "App.h"
+#import "Refresh.h"
+#import "UI.h"
+#import "Common.h"
 #import <math.h>
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); return EXIT_FAILURE; } } while (0)
@@ -127,7 +127,7 @@ int main(void) {
         CHECK(!c.fire && c.roll == 0 && c.yaw == 0 && c.pitch == 0);
         input.mouseCaptured = NO;
 
-        // Front-end screens: the view only queues pointer events (ScreenInput.h).
+        // Front-end screens: the view only queues pointer events (ScreenInput, Input.h).
         [input.pointer drain];
         [view mouseDown:event];                       // the HUD takes no pointer events
         CHECK(input.pointer.drain.length == 0);

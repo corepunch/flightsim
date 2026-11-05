@@ -1,5 +1,4 @@
-#include "ShipMove.h"
-#include "SharedMath.h"
+#include "Shared.h"
 
 void ShipMoveReset(ShipMoveState *s, simd_float3 origin, simd_quatf orientation) {
     s->origin = origin;

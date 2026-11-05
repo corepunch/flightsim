@@ -1,8 +1,7 @@
 #import <AppKit/AppKit.h>
-#import "Assets.h"
+#import "Shared.h"
 #import "Story.h"
-#import "Briefing.h"
-#import "UIMotion.h"
+#import "UI.h"
 
 // Report failures without aborting, so a failed check doesn't make a crash report.
 #define CHECK(condition) do { \

@@ -1,6 +1,6 @@
 #import "Story.h"
-#import "Assets.h"
-#import "Localization.h"
+#import "Shared.h"
+#import "Common.h"
 
 static NSDictionary *StoryFile(NSString *directory, NSString *name) {
     id json = FSJSON(FSURL(directory, name, @"json"));

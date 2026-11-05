@@ -1,12 +1,7 @@
-#import "Briefing.h"
-#import "FileSystem.h"
-#import "MonitorSignal.h"
-#import "Assets.h"
-#import "Progress.h"
-#import "UIStyle.h"
-#import "UIMotion.h"
-#import "GameAudio.h"
-#import "Localization.h"
+#import "UI.h"
+#import "Shared.h"
+#import "Audio.h"
+#import "Common.h"
 #import "Story.h"
 #import <ImageIO/ImageIO.h>
 

@@ -1,5 +1,5 @@
-#import "Exhaust.h"
-#import "FileSystem.h"
+#import "Render.h"
+#import "Shared.h"
 #import <ImageIO/ImageIO.h>
 
 static NSString *const kFlameGeometry =

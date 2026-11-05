@@ -1,5 +1,4 @@
-#import "NetChannel.h"
-#import "NetMsg.h"
+#import "Net.h"
 #import <QuartzCore/QuartzCore.h>
 
 #define FRAGMENT_SIZE 1200          // payload per datagram; safe under typical MTUs

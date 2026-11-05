@@ -1,8 +1,6 @@
-#import "FlightInstruments.h"
-#import "UIStyle.h"
-#import "Localization.h"
-#import "UIMotion.h"
-#import "PlatformImage.h"
+#import "Render.h"
+#import "UI.h"
+#import "Common.h"
 #import <Metal/Metal.h>
 
 static SKColor *ContactInk(TeamRelation relation) {

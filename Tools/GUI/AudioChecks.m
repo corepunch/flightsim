@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <AVFoundation/AVFoundation.h>
-#import "GameAudio.h"
-#import "MainMenu.h"
+#import "Audio.h"
+#import "UI.h"
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "Audio check failed at line %d: %s\n", __LINE__, #c); return EXIT_FAILURE; } } while (0)
 

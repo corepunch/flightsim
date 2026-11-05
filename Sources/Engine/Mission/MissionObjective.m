@@ -1,4 +1,4 @@
-#import "MissionObjective.h"
+#import "Mission.h"
 
 static NSMutableDictionary<NSString *, Class> *Registry(void);
 

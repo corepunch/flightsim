@@ -1,8 +1,4 @@
-#import "LANBrowser.h"
-#import "UDPTransport.h"
-#import "NetChannel.h"
-#import "NetProtocol.h"
-#import "NetMsg.h"
+#import "Net.h"
 #import <QuartzCore/QuartzCore.h>
 
 @implementation LANServer

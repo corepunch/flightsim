@@ -1,10 +1,5 @@
-#import "SceneKitRefresh.h"
-#import "ShipView.h"
-#import "CapitalView.h"
-#import "SpaceSky.h"
-#import "Effects.h"
-#import "Cockpit.h"
-#import "Assets.h"
+#import "Render.h"
+#import "Shared.h"
 
 static const NSUInteger kSkyFaceSize = TARGET_OS_IOS ? 1024 : 1536;
 

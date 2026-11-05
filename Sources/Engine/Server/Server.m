@@ -1,9 +1,7 @@
 #import "Server.h"
-#import "ModelInfo.h"
-#import "GameLoader.h"
-#import "NetChannel.h"
-#import "NetProtocol.h"
-#import "Cvar.h"
+#import "Collision.h"
+#import "Net.h"
+#import "Common.h"
 #import <QuartzCore/QuartzCore.h>
 
 typedef NS_ENUM(NSInteger, SlotState) { SlotFree, SlotConnected, SlotInGame };

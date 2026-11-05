@@ -1,4 +1,4 @@
-#import "GLocal.h"
+#import "Game.h"
 
 #pragma mark - Fighter
 

@@ -1,5 +1,5 @@
 // AI fighters, capital ship turrets and mines.
-#import "GLocal.h"
+#import "Game.h"
 
 // Capital ship turret rounds.
 static const float kTurretBoltSpeed = 700, kTurretBoltLife = 1.6f;

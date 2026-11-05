@@ -1,4 +1,8 @@
+#pragma once
+
 #import <Foundation/Foundation.h>
+
+// MARK: - Story
 
 // The story front end's data: who is in the cast, which rooms scenes are
 // played in, and how a mission's briefing breaks into pages. Nothing here

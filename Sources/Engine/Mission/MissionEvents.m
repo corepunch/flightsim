@@ -1,4 +1,4 @@
-#import "MissionEvents.h"
+#import "Mission.h"
 
 MissionObjectiveState MissionObjectiveStateNamed(NSString *name) {
     if ([name isEqualToString:@"failed"]) return MissionObjectiveFailed;

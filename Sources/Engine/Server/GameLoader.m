@@ -1,6 +1,6 @@
-#import "GameLoader.h"
-#import "Cvar.h"
-#import "FileSystem.h"
+#import "Server.h"
+#import "Common.h"
+#import "Shared.h"
 #import <TargetConditionals.h>
 #if TARGET_OS_OSX
 #include <dlfcn.h>
@@ -24,7 +24,7 @@ GetGameAPIFunc GameLoaderOpen(void) {
 #if TARGET_OS_IOS
     return GetGameAPI;
 #else
-    // The game's own module, else its base's (FileSystem.h).
+    // The game's own module, else its base's (FileSystem, Shared.h).
     NSString *path = nil;
     for (NSString *game in FSGameChain()) {
         path = [NSBundle.mainBundle.builtInPlugInsPath stringByAppendingPathComponent:[game stringByAppendingPathExtension:@"dylib"]];

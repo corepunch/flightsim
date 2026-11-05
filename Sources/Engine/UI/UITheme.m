@@ -1,5 +1,5 @@
-#import "UITheme.h"
-#import "FileSystem.h"
+#import "UI.h"
+#import "Shared.h"
 
 static NSDictionary *Theme(void) {
     static NSDictionary *theme;

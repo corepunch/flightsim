@@ -2,13 +2,9 @@
 // presentation are replaced. One virtual clock, no sleeps, seeds or LAN needed.
 #import "Server.h"
 #import "Client.h"
-#import "NetChannel.h"
-#import "UDPTransport.h"
-#import "NetProtocol.h"
-#import "Assets.h"
-#import "ShipMove.h"
-#import "GameLoader.h"
-#import "Cvar.h"
+#import "Net.h"
+#import "Shared.h"
+#import "Common.h"
 #include <stdio.h>
 #include <stdlib.h>
 

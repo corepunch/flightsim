@@ -1,5 +1,4 @@
-#import "Cmd.h"
-#import "Cvar.h"
+#import "Common.h"
 #import <QuartzCore/QuartzCore.h>
 #import <os/lock.h>
 

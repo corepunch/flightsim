@@ -1,5 +1,4 @@
-#import "ModelInfo.h"
-#import "SceneAsset.h"
+#import "Collision.h"
 
 @implementation ModelInfo {
     SCNNode *_root;                     // the parts, for hit tests (never in a scene)

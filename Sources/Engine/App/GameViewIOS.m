@@ -1,10 +1,10 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
-#import "GameView.h"
-#import "TouchFlightControls.h"
-#import "HUD.h"
-#import "MainMenu.h"
-#import "Briefing.h"
+#import "App.h"
+#import "App.h"
+#import "Refresh.h"
+#import "UI.h"
+#import "UI.h"
 
 @implementation GameView {
     TouchFlightControls *_flightControls;

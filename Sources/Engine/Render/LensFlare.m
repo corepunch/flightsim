@@ -1,4 +1,4 @@
-#import "LensFlare.h"
+#import "Render.h"
 
 // Shape references: Cooke's photographed anamorphic flares and ShareGrid's
 // Kowa tests. The streak is blue at its shoulders, warm near the source;

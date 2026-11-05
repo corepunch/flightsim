@@ -1,9 +1,8 @@
-#import "Loading.h"
-#import "FileSystem.h"
-#import "GameAudio.h"
-#import "UIStyle.h"
-#import "Localization.h"
-#import "PlatformImage.h"
+#import "UI.h"
+#import "Shared.h"
+#import "Audio.h"
+#import "Common.h"
+#import "Render.h"
 
 static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMode h) {
     return UIInterfaceLabel(size, c, h, SKLabelVerticalAlignmentModeBaseline);

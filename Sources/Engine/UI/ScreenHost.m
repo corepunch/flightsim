@@ -1,6 +1,5 @@
-#import "ScreenHost.h"
-#import "UIMotion.h"
-#import "GameAudio.h"
+#import "UI.h"
+#import "Audio.h"
 
 @implementation ScreenHost {
     void (^_install)(SKScene *, SKNode *);

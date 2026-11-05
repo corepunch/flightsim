@@ -1,13 +1,8 @@
-#import "FrontEnd.h"
+#import "UI.h"
 #import "Story.h"
-#import "MainMenu.h"
-#import "Briefing.h"
-#import "ServerBrowser.h"
-#import "Loading.h"
-#import "LANBrowser.h"
-#import "Progress.h"
-#import "Assets.h"
-#import "Localization.h"
+#import "Net.h"
+#import "Shared.h"
+#import "Common.h"
 
 typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampaign, FrontScreenBrowser };
 

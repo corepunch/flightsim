@@ -1,5 +1,5 @@
-#import "Localization.h"
-#import "FileSystem.h"
+#import "Common.h"
+#import "Shared.h"
 
 static NSString *const kFallbackLocale = @"en";
 

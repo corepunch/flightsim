@@ -1,21 +1,14 @@
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
-#import "HUD.h"
+#import "Refresh.h"
 #import "Story.h"
-#import "FlightInstruments.h"
-#import "PauseMenu.h"
-#import "FrontEnd.h"
-#import "MainMenu.h"
-#import "Briefing.h"
-#import "ServerBrowser.h"
-#import "UILayout.h"
-#import "Briefing.h"
-#import "Progress.h"
-#import "NetProtocol.h"
+#import "Render.h"
+#import "UI.h"
+#import "Net.h"
 #import "Server.h"
 #import "Client.h"
-#import "Cvar.h"
-#import "Assets.h"
+#import "Common.h"
+#import "Shared.h"
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); return 1; } } while (0)
 static NSString *Output;

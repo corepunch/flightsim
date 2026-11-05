@@ -1,7 +1,7 @@
-#import "TouchFlightControls.h"
+#import "App.h"
 #if TARGET_OS_IOS
-#import "UIStyle.h"
-#import "Localization.h"
+#import "UI.h"
+#import "Common.h"
 
 typedef NS_ENUM(NSInteger, TouchControl) {
     TouchControlNone = -1,

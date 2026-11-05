@@ -1,7 +1,6 @@
-#import "UILayout.h"
-#import "FileSystem.h"
-#import "UIStyle.h"
-#import "Localization.h"
+#import "UI.h"
+#import "Shared.h"
+#import "Common.h"
 
 // NSValue's CGRect boxing differs between AppKit and UIKit.
 static NSValue *BoxRect(CGRect r) { return [NSValue valueWithBytes:&r objCType:@encode(CGRect)]; }

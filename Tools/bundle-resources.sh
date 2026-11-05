@@ -28,7 +28,7 @@ for directory in Audio Fonts Shaders Particles Strings UI; do
 done
 cp -p CREDITS.md "$destination/"
 
-# Each game's folder, as Games/<name>/ (Sources/Shared/FileSystem.h): its data,
+# Each game's folder, as Games/<name>/ (Sources/Shared/Shared.h): its data,
 # with models baked to .scn. GAMES limits which games ship (the iOS app has one).
 games=(${=GAMES:-${(@)$(print -l Games/*/(N:t))}})
 # A game also needs the games it builds on (game.json "base").

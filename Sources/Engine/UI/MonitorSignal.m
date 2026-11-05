@@ -1,5 +1,4 @@
-#import "MonitorSignal.h"
-#import "UIMotion.h"
+#import "UI.h"
 
 SKShader *UIMonitorSignalShader(BOOL preserveAlpha) {
     SKShader *shader = [SKShader shaderWithSource:

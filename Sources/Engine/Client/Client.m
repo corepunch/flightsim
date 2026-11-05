@@ -1,12 +1,9 @@
 #import "Client.h"
-#import "NetChannel.h"
-#import "NetProtocol.h"
-#import "Localization.h"
+#import "Net.h"
+#import "Common.h"
 #import <QuartzCore/QuartzCore.h>
-#include "SharedMath.h"
-#include "ShipMove.h"
-#import "Assets.h"
-#import "Cvar.h"
+#include "Shared.h"
+#import "Shared.h"
 
 #define MAX_SNAPSHOTS 32
 #define CMD_BACKUP 64           // user commands kept (redundant resends)

@@ -1,6 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <SceneKit/SceneKit.h>
-#import "LensFlare.h"
+#import "Render.h"
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); return EXIT_FAILURE; } } while (0)
 

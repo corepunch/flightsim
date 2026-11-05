@@ -2,18 +2,18 @@
 #if TARGET_OS_OSX
 #import <Cocoa/Cocoa.h>
 #import <CoreGraphics/CoreGraphics.h>
-#import "GameView.h"
+#import "App.h"
 #import "Story.h"
-#import "Host.h"
-#import "FXRecorder.h"
+#import "App.h"
+#import "Render.h"
 #import "Server.h"
-#import "UDPTransport.h"
-#import "NetProtocol.h"
-#import "Assets.h"
-#import "Cvar.h"
-#import "Cmd.h"
-#import "GameLoader.h"
-#import "Localization.h"
+#import "Net.h"
+#import "Net.h"
+#import "Shared.h"
+#import "Common.h"
+#import "Common.h"
+#import "Server.h"
+#import "Common.h"
 #import <QuartzCore/QuartzCore.h>
 
 // Headless server: SpaceFight --dedicated [mission]. Flies the campaign from

@@ -1,8 +1,8 @@
-#import "ClientView.h"
-#import "GameAudio.h"
-#import "Localization.h"
-#import "Assets.h"
-#include "SharedMath.h"
+#import "Client.h"
+#import "Audio.h"
+#import "Common.h"
+#import "Shared.h"
+#include "Shared.h"
 
 #define MAX_HUD 64
 

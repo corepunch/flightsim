@@ -1,8 +1,7 @@
-#import "Progress.h"
-#import "FileSystem.h"
+#import "UI.h"
+#import "Shared.h"
 #import "Story.h"
-#import "Assets.h"
-#import "Cvar.h"
+#import "Common.h"
 
 // Progress is per game. The app's default game keeps the original keys, so
 // existing saves carry over; another game prefixes them with its name.

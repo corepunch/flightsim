@@ -1,11 +1,8 @@
-#import "ServerBrowser.h"
+#import "UI.h"
 #import "Story.h"
-#import "GameAudio.h"
-#import "Assets.h"
-#import "UIStyle.h"
-#import "UIMotion.h"
-#import "Localization.h"
-#import "UILayout.h"
+#import "Audio.h"
+#import "Shared.h"
+#import "Common.h"
 
 static SKColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static SKColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }

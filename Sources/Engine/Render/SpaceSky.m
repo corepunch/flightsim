@@ -1,4 +1,4 @@
-#import "SpaceSky.h"
+#import "Render.h"
 
 typedef struct {
     simd_float4 sunDir;

@@ -1,7 +1,6 @@
-#import "UIMotion.h"
-#import "GameAudio.h"
-#import "UIStyle.h"
-#import "Cvar.h"
+#import "UI.h"
+#import "Audio.h"
+#import "Common.h"
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
 typedef UIFont UIMotionFont;

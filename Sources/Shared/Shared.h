@@ -1,0 +1,526 @@
+#pragma once
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <simd/simd.h>
+#include <math.h>
+#ifdef __OBJC__
+#import <Foundation/Foundation.h>
+#endif
+
+// MARK: - FileSystem
+
+#ifdef __OBJC__
+
+// Quake's search path for this engine. The bundle's resources hold the
+// engine's own files (fonts, shaders, strings, UI theme) at the top level and
+// one folder per game under Games/<name>/. A lookup tries the game folder
+// first, then the top level, so a game ships only what it adds or overrides:
+//
+//   FSURL(@"Data/Ships", @"executioner", @"json")
+//     → Games/<game>/Data/Ships/executioner.json, else Data/Ships/executioner.json
+//
+// A game may build on another, as a Quake mod builds on baseq2: its
+// Games/<name>/game.json names a "base", searched after the game's own folder
+// and before the top level. A game with no module of its own runs its base's.
+//
+//   game.json  { "title": "…", "base": "<game>" }
+//
+// The game is fs_game. The engine sets it at boot; the game module, which has
+// its own copy of this file, sets it from the cvar in its init. Until then it
+// is the bundle's FSDefaultGame Info.plist key, else the first folder in Games/.
+// Thread-safe.
+
+void FSSetGame(NSString *name);
+NSString *FSGame(void);
+// Every game folder in the bundle, sorted.
+NSArray<NSString *> *FSGames(void);
+// Games/<name>/game.json, or an empty dictionary.
+NSDictionary *FSGameManifest(NSString *name);
+// The game, then its base, then the base's base: the folders searched, in order.
+NSArray<NSString *> *FSGameChain(void);
+
+// The first match on the search path, or nil.
+NSURL *FSURL(NSString *subdirectory, NSString *name, NSString *extension);
+// Every file with `extension` in `subdirectory` on the search path. A game
+// file hides a top-level file of the same name. Sorted by name.
+NSArray<NSURL *> *FSURLs(NSString *subdirectory, NSString *extension);
+// Every file with `extension` in `subdirectory`, top level first, then the
+// game's: for catalogs a game extends rather than replaces.
+NSArray<NSURL *> *FSURLsLayered(NSString *subdirectory, NSString *extension);
+// The JSON object in a file, or nil (logged when the file exists but does not parse).
+id FSJSON(NSURL *url);
+
+#endif // __OBJC__
+
+// MARK: - Protocol
+
+// Everything the engine (server, client, renderer) and the game module agree
+// on: limits, the per-tick entity and player state the server sends to
+// clients, the user command clients send back, temp-entity events and the
+// configstring layout. Plain C so the game module can stay behind a C ABI.
+//
+// This is a flight engine's vocabulary: ships with a flight model, hull and
+// shield, a target, a nav marker, a primary weapon with a capacitor and a
+// secondary weapon with rounds. What the ships are, who the teams are, what
+// the secondary weapon is called and what the game counts on top of that
+// come from the game, through ship definitions, configstrings and the game
+// stats range.
+
+// Version 4 requires ship-data identity validation before beginning.
+// Version 3 clients do not validate CS_GAME and must not join these servers.
+#define PROTOCOL_VERSION 5
+
+#define TICK_RATE 30
+#define TICK_DT (1.0f / TICK_RATE)
+
+#define MAX_CLIENTS 8
+#define MAX_PACKET_ENTITIES 512
+#define MAX_EVENTS 256          // temp entities per snapshot
+#define MAX_PARTS 64            // subsystems per capital model (deadParts is a 64-bit mask)
+#define MAX_TEAMS 8
+
+typedef enum { SubsystemTurret, SubsystemEngine, SubsystemShield, SubsystemCore } SubsystemKind;
+
+#pragma mark - Teams
+
+// Teams are numbers; the game says how they stand to each other through
+// CS_TEAMS: MAX_TEAMS rows of MAX_TEAMS digits, row a column b being the
+// relation of team a to team b (0 neutral, 1 friendly, 2 hostile).
+typedef enum { RelationNeutral, RelationFriendly, RelationHostile } TeamRelation;
+
+static inline TeamRelation TeamRelationIn(const char *csTeams, int a, int b) {
+    if (!csTeams || a < 0 || b < 0 || a >= MAX_TEAMS || b >= MAX_TEAMS) return RelationNeutral;
+    for (int i = 0; i < a * MAX_TEAMS + b; i++) if (!csTeams[i]) return RelationNeutral;
+    char c = csTeams[a * MAX_TEAMS + b];
+    return c == '2' ? RelationHostile : (c == '1' ? RelationFriendly : RelationNeutral);
+}
+
+#pragma mark - Configstrings
+
+// Indexed strings the server keeps in sync on every client. Models and
+// strings are registered by the game (gi.modelIndex / gi.stringIndex);
+// index 0 of each range means "none".
+#define CS_LEVEL 0              // the running level's name
+#define CS_SKY 1                // sky seed, decimal
+#define CS_GAME 2               // "<game> <data version>", for the client to check its data
+#define CS_TEAMS 3              // team relations, see TeamRelationIn
+#define CS_SECONDARY_NAME 4     // the secondary weapon's name for readouts ("TORPEDO")
+#define CS_SECONDARY_SHORT 5    // and a short form for small buttons ("TORP")
+#define CS_MODELS 16            // "ship:<definition>" or "cap:<Asset>:<style>"
+#define MAX_MODELS 256
+#define CS_STRINGS (CS_MODELS + MAX_MODELS)   // names, class names
+#define MAX_STRINGS 512
+#define CS_NAVS (CS_STRINGS + MAX_STRINGS)    // "name|x|y|z"
+#define MAX_NAVS 32
+#define MAX_CONFIGSTRINGS (CS_NAVS + MAX_NAVS)
+
+#pragma mark - Entities
+
+typedef enum {
+    EntityFighter = 1,      // flies a ship definition
+    EntityCapital,          // capital ships, stations and props (EF_PROP)
+    EntityAsteroid,
+    EntityBuoy,
+    EntityProjectile,       // a guided round in flight
+} EntityKind;
+
+enum {
+    EF_BOOST      = 1 << 0,     // fighter: boost firing
+    EF_DEAD       = 1 << 1,     // capital breaking up: drawn, not targeted
+    EF_SHIELDED   = 1 << 2,     // capital: shield generators up
+    EF_PROP       = 1 << 3,     // small thing that dies in one blast
+    EF_MINE       = 1 << 4,     // prop that is a danger to fly near
+    EF_ATTACKING  = 1 << 5,     // AI fighter on an attack run at `target`
+    EF_SCANNED    = 1 << 6,     // cargo manifest identified
+};
+
+// One visible thing, as of the end of a server tick.
+typedef struct {
+    uint16_t number;            // stable for the entity's life, never 0
+    uint8_t kind;               // EntityKind
+    uint8_t team;
+    uint16_t model;             // configstring index relative to CS_MODELS
+    uint16_t name;              // relative to CS_STRINGS: label / callsign
+    uint16_t cargo;             // manifest in CS_STRINGS; only sent after scanning
+    uint16_t className;         // relative to CS_STRINGS
+    uint16_t target;            // entity this one is attacking (EF_ATTACKING)
+    uint32_t flags;             // EF_*
+    simd_float3 origin, velocity;
+    simd_quatf orientation;
+    float scale;
+    float throttle;             // fighters: drives the exhaust
+    float hull, shield;         // 0..1
+    float stealthRange;         // > 0: only on sensors within this range
+    uint64_t deadParts;         // capital subsystems destroyed, bit per part
+} EntityState;
+
+#pragma mark - Player
+
+// What the flight model needs; shared by the game and client prediction.
+typedef struct {
+    simd_float3 origin, velocity;
+    simd_float3 angularVelocity;    // local: pitch, -yaw, -roll (rad/s about X,Y,Z)
+    simd_quatf orientation;
+    float throttle;
+    float boostEnergy;              // 0..1
+    uint8_t boosting;
+    uint8_t boostDepleted;          // locked out until 15% recharged
+} ShipMoveState;
+
+// The flight model's knobs, from the ship definition. Sent with the player
+// state so prediction runs on the same numbers as the server.
+typedef struct {
+    float maxSpeed;                 // m/s at full throttle
+    float turnRate;                 // multiplier on the three rates
+    float pitchRate, yawRate, rollRate;   // rad/s at full stick
+    float agility;                  // how fast the rates chase the stick (1/s)
+    float grip;                     // how fast velocity follows the nose (1/s)
+    float boostSpeed;               // extra speed while boosting, as a fraction of maxSpeed
+    float boostGrip;                // grip while boosting
+    float boostTurn;                // turn rate multiplier while boosting
+    float boostDrain, boostRecharge;    // boost energy per second
+} ShipParams;
+
+// Engine stats come first; a game counts whatever else it likes from STAT_GAME.
+enum {
+    STAT_KILLS,
+    STAT_DEATHS,
+    STAT_TARGET,                // selected entity number, 0 none
+    STAT_AIM_PART,              // aimed subsystem of the target, part index + 1
+    STAT_NAV,                   // current nav, index + 1 (CS_NAVS)
+    STAT_WEAPON_ENERGY,         // primary weapon capacitor, 0..1000
+    STAT_SECONDARY,             // secondary weapon rounds left
+    STAT_SECONDARY_CAPACITY,    // rounds carried at launch
+    STAT_GAME,
+    MAX_STATS = 16,
+};
+
+typedef struct {
+    ShipMoveState move;
+    ShipParams params;
+    uint16_t entity;            // own ship's entity number
+    uint16_t model;             // own ship's model, relative to CS_MODELS
+    uint8_t team;
+    uint8_t alive;
+    float hull, shield;
+    float missionTime;
+    int16_t stats[MAX_STATS];
+    uint32_t commandTime;       // ms of user commands the server has run
+    uint32_t lastCommand;       // sequence of the last command run
+} PlayerState;
+
+#pragma mark - User commands
+
+enum {
+    BUTTON_FIRE  = 1 << 0,
+    BUTTON_BOOST = 1 << 1,
+};
+
+enum {
+    IMPULSE_NONE,
+    IMPULSE_TARGET,             // cycle target
+    IMPULSE_SECONDARY,          // launch the secondary weapon
+};
+
+typedef struct {
+    uint32_t sequence;
+    uint8_t msec;               // duration this command covers
+    uint8_t buttons;
+    uint8_t impulse;
+    float pitch, yaw, roll;     // -1..1
+    float throttle;             // 0..1
+} UserCmd;
+
+#pragma mark - Events (temp entities)
+
+typedef enum {
+    EV_BOLT = 1,        // id, pos, vel, team, scale = flight time in seconds; entity = the player who fired, 0 for AI
+    EV_IMPACT,          // id (bolt, 0 none), pos, team, flags EVF_SHIELDED
+    EV_MUZZLE,          // entity, pos = gun in ship space, team
+    EV_DAMAGE,          // entity hit, flags EVF_SHIELDED, scale = camera shake if it is you
+    EV_EXPLOSION,       // pos, vel, scale, model (hull material), radius = shake falloff
+    EV_JUMP,            // pos, scale
+} EventType;
+
+enum { EVF_SHIELDED = 1 };
+
+typedef struct {
+    uint8_t type;
+    uint8_t team;
+    uint8_t flags;
+    uint16_t entity;
+    uint16_t id;
+    uint16_t model;
+    simd_float3 pos, vel;
+    float scale;
+    float radius;
+} GameEvent;
+
+#pragma mark - Reliable server commands
+
+typedef enum {
+    SVC_RADIO = 1,      // a = text, b = from
+    SVC_BANNER,         // a = text, b = "red" or ""
+    SVC_OBJECTIVES,     // a = lines joined by \n, b = state digits (0 active, 1 done, 2 failed, 3 optional), c = summary
+    SVC_STATUS,         // a = status line under the boresight ("" clears)
+    SVC_LEVEL_END,      // a = "1" success / "0", b = result lines joined by \n
+    SVC_GAME,           // a, b, c = whatever the game's presentation hook understands
+} ServerCommandType;
+
+// MARK: - Assets
+
+#ifdef __OBJC__
+
+// Static tables both sides read: ship definitions and capital assets. C
+// functions, not classes, so the engine and the game module can each link a
+// copy without clashing.
+
+#pragma mark - Ship definitions
+
+// A flyable ship, from Resources/Ships/<name>.json. Positions are in ship
+// space (forward is -Z, metres). The game registers its model as
+// "ship:<name>"; the client dresses entities with that model from the same
+// definition. Example:
+//
+//   { "displayName": "Wasp", "mesh": "Spitfire", "texture": "Spitfire_Red", "radius": 5,
+//     "guns": [[-1.2, -0.2, -3.5], [1.2, -0.2, -3.5]],
+//     "gun": { "speed": 900, "life": 1.6, "energy": 0.035, "recharge": 0.22, "interval": 0.11,
+//              "damage": 0.12, "capitalDamage": 0.12 },
+//     "aiGun": { "interval": 0.22, "damage": 0.07 },            // overrides for AI-flown ships
+//     "nozzles": [[-4.5, 0.135, 2.2, 0.6], ...], "exhaustColor": [1, 0.38, 0.18],
+//     "params": { "maxSpeed": 140, "turnRate": 0.8, ... },      // ShipParams, see Protocol above
+//     "ai": { "maxSpeed": 140, "turnRate": 0.8, "speedSpread": 8 } }
+
+#define SHIP_MAX_GUNS 4
+#define SHIP_MAX_NOZZLES 8
+#define SHIP_NAME_LENGTH 48
+
+typedef struct {
+    float speed;            // projectile m/s
+    float life;             // projectile flight time, seconds
+    float energy;           // capacitor per shot, 0..1
+    float recharge;         // capacitor per second
+    float interval;         // seconds between shots
+    float damage;           // to fighters, fraction of hull
+    float capitalDamage;    // to capital subsystems and hulls
+} ShipGun;
+
+typedef struct {
+    char name[SHIP_NAME_LENGTH];            // "wasp"
+    char displayName[SHIP_NAME_LENGTH];     // "Wasp"
+    char mesh[SHIP_NAME_LENGTH];            // Resources/Models/<mesh>.scn (OBJ space, +Z nose)
+    char texture[SHIP_NAME_LENGTH];         // Resources/Models/<texture>.png
+    float radius;
+    int gunCount;
+    simd_float3 guns[SHIP_MAX_GUNS];
+    ShipGun gun;                            // as flown by a player
+    ShipGun aiGun;                          // as flown by the AI
+    int nozzleCount;
+    simd_float4 nozzles[SHIP_MAX_NOZZLES];  // xyz position, w size
+    simd_float3 exhaustColor;
+    ShipParams params;                      // as flown by a player
+    ShipParams aiParams;                    // as flown by the AI
+    float aiSpeedSpread;                    // AI: extra max speed, per ship in a wave
+    float hologramScale;
+} ShipDef;
+
+// NULL if there is no such definition. The result lives for the process.
+const ShipDef *ShipDefNamed(NSString *name);
+NSArray<NSString *> *ShipDefNames(void);                // every definition in the bundle, sorted
+NSString *ShipModelName(NSString *name);               // "ship:<name>"
+const ShipDef *ShipDefForModel(NSString *model);       // "ship:<name>" -> definition, else NULL
+
+#pragma mark - Capital definitions
+
+// A capital ship, station, prop or rock, from Resources/Capitals/<Asset>.json:
+//   { "className": "Fleet Carrier", "hp": 120, "style": "concord",
+//     "invulnerable": false, "prop": false, "mine": false }
+// The mesh is Resources/Models/Capital/<Asset>.scn; `style` names the hull
+// material set in Resources/Styles/<style>.json. The model configstring is
+// "cap:<Asset>:<style>".
+typedef struct {
+    char name[SHIP_NAME_LENGTH];
+    char className[SHIP_NAME_LENGTH];
+    char style[SHIP_NAME_LENGTH];
+    float hp;
+    bool invulnerable;          // never takes damage
+    bool prop;                  // small thing that dies in one blast
+    bool mine;                  // prop that goes off near a ship
+} CapitalDef;
+
+const CapitalDef *CapitalDefNamed(NSString *asset);     // NULL if there is no such definition
+NSArray<NSString *> *CapitalDefNames(void);
+NSString *CapitalModelName(NSString *asset, NSString *style);      // "cap:Carrier:concord"; nil style = the definition's
+
+#pragma mark - Projectile definitions
+
+// A guided round's look, from Resources/Projectiles/<name>.json:
+//   { "glow": "flare_01", "tint": [3.0, 1.6, 0.6], "size": 7 }
+// The model configstring is "proj:<name>".
+typedef struct {
+    char name[SHIP_NAME_LENGTH];
+    char glow[SHIP_NAME_LENGTH];    // Resources/Particles/<glow>.png, drawn additively, facing the camera
+    simd_float3 tint;               // HDR tint of the glow
+    float size;                     // metres
+} ProjectileDef;
+
+const ProjectileDef *ProjectileDefNamed(NSString *name);
+NSString *ProjectileModelName(NSString *name);             // "proj:<name>"
+const ProjectileDef *ProjectileDefForModel(NSString *model);
+
+#pragma mark - Levels
+
+// Levels/<name>.json in the game folder: what the game module builds and the
+// briefing map draws. nil when there is no such level.
+NSDictionary *LevelNamed(NSString *name);
+// Every level in the game folder, sorted by name.
+NSArray<NSString *> *LevelNames(void);
+
+static inline simd_float3 Vec3(NSArray *a) {
+    return a.count >= 3 ? simd_make_float3([a[0] floatValue], [a[1] floatValue], [a[2] floatValue]) : simd_make_float3(0, 0, 0);
+}
+
+// Exact ship JSON bytes, sorted by filename; changes require matching client data.
+NSString *ShipDataIdentity(void);
+
+#endif // __OBJC__
+
+// MARK: - CvarFlags
+
+// Console variable flags, shared by the engine's Cvar class and the game
+// module (which reaches cvars through GameImport). After Quake 2's CVAR_*.
+
+enum {
+    CVAR_ARCHIVE = 1 << 0,      // saved to the user's defaults and restored at launch
+    CVAR_LATCH   = 1 << 1,      // a new value waits until the next level spawn
+    CVAR_CHEAT   = 1 << 2,      // can only be changed while sv_cheats is 1
+    CVAR_NOSET   = 1 << 3,      // can only be set from the command line (+set)
+};
+
+// MARK: - GameAPI
+
+// The boundary between the engine and the game module, in the style of
+// Quake 2's game_import_t / game_export_t. The engine hands the game a table
+// of services (GameImport); the game hands back its entry points
+// (GameExport). Only plain C crosses it, so the game can live in its own
+// dylib and be rebuilt or swapped without touching the engine.
+
+#define GAME_API_VERSION 3
+
+typedef struct {
+    float radius;
+    int numParts;
+    struct { uint8_t kind; simd_float3 center; } parts[MAX_PARTS];   // SubsystemKind, model space
+} GameModelInfo;
+
+typedef struct {
+    simd_float3 point;          // world
+    int part;                   // subsystem index, -1 for the hull
+} GameTrace;
+
+typedef struct {
+    int apiVersion;
+
+    void (*print)(const char *text);
+
+    // Registers a model / string configstring and returns its index (relative
+    // to CS_MODELS / CS_STRINGS). Registering a model also loads its
+    // collision mesh on the server. Index 0 is "none".
+    int (*modelIndex)(const char *name);
+    int (*stringIndex)(const char *text);
+    void (*configString)(int index, const char *value);
+    // Radius and subsystems of a registered model (capitals only).
+    const GameModelInfo *(*modelInfo)(int model);
+
+    // Segment test against a model placed in the world. Parts set in
+    // deadParts are ignored. Returns true on a hit.
+    bool (*trace)(int model, simd_float3 origin, simd_quatf orientation, float scale, uint64_t deadParts,
+                  simd_float3 from, simd_float3 to, GameTrace *out);
+
+    // Temp entity, sent to every client with the next snapshot.
+    void (*event)(const GameEvent *event);
+    // Reliable command to one client, or every client with -1.
+    void (*command)(int client, int type, const char *a, const char *b, const char *c);
+
+    // Console variables (engine-owned; see Engine/Common/Common.h). Register
+    // in init with CVAR_* flags, then read at use: values can change at any
+    // time. cvarString's result is valid until the cvar changes.
+    void (*cvarRegister)(const char *name, const char *value, int flags, const char *help);
+    const char *(*cvarString)(const char *name);
+    float (*cvarValue)(const char *name);
+    void (*cvarSet)(const char *name, const char *value);
+} GameImport;
+
+typedef struct {
+    int apiVersion;
+
+    void (*init)(void);
+    void (*shutdown)(void);
+
+    // Clears the world and builds a level by name (Levels/<name>.json in the
+    // game folder). May be slow (collision meshes); the server calls it off
+    // the render thread.
+    void (*spawnLevel)(const char *name);
+
+    bool (*clientConnect)(int client, const char *name);
+    void (*clientBegin)(int client);        // spawns the player's ship
+    void (*clientDisconnect)(int client);
+    // Runs one user command: flight, guns, torpedoes, targeting. Called as
+    // commands arrive, between ticks.
+    void (*clientThink)(int client, const UserCmd *cmd);
+
+    void (*runFrame)(void);                 // one tick of TICK_DT
+
+    // State after the last tick. The pointers stay valid until the next call.
+    int (*entities)(const EntityState **out);
+    const PlayerState *(*playerState)(int client);
+} GameExport;
+
+typedef GameExport *(*GetGameAPIFunc)(const GameImport *import);
+// The one symbol the game dylib exports.
+__attribute__((visibility("default"))) GameExport *GetGameAPI(const GameImport *import);
+
+// MARK: - SharedMath
+
+static inline float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+// Orientation whose -Z points along forward.
+static inline simd_quatf LookRotation(simd_float3 forward, simd_float3 up) {
+    simd_float3 f = simd_normalize(forward);
+    if (fabsf(simd_dot(f, up)) > 0.98f) up = simd_make_float3(1, 0, 0);
+    simd_float3 r = simd_normalize(simd_cross(f, up));
+    simd_float3 u = simd_cross(r, f);
+    return simd_quaternion(simd_matrix(r, u, -f));
+}
+
+static inline simd_float3 QuatForward(simd_quatf q) { return simd_act(q, simd_make_float3(0, 0, -1)); }
+static inline simd_float3 QuatUp(simd_quatf q) { return simd_act(q, simd_make_float3(0, 1, 0)); }
+static inline simd_float3 QuatRight(simd_quatf q) { return simd_act(q, simd_make_float3(1, 0, 0)); }
+
+// Segment vs sphere: does p0->p1 pass within r of c?
+static inline bool SegmentHits(simd_float3 p0, simd_float3 p1, simd_float3 c, float r) {
+    simd_float3 d = p1 - p0;
+    float len2 = simd_length_squared(d);
+    float t = len2 > 0 ? clampf(simd_dot(c - p0, d) / len2, 0, 1) : 0;
+    return simd_distance_squared(p0 + d * t, c) < r * r;
+}
+
+// MARK: - ShipMove
+
+// The fighter flight model, as a pure function of (state, input, dt). The game
+// runs it for every ship; the client runs the same code to predict its own
+// ship between snapshots, so both must stay bit-for-bit in step.
+
+typedef struct {
+    float pitch, yaw, roll;     // -1..1
+    float throttle;             // 0..1
+    bool boost;
+} ShipInput;
+
+void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput in, float dt);
+void ShipMoveReset(ShipMoveState *s, simd_float3 origin, simd_quatf orientation);
+
+static inline ShipInput ShipInputFromCmd(const UserCmd *c) {
+    return (ShipInput){ c->pitch, c->yaw, c->roll, c->throttle, (c->buttons & BUTTON_BOOST) != 0 };
+}

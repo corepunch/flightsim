@@ -5,7 +5,7 @@
   L10nList, and key literals passed to them indirectly);
 - every other locale has a name and direction, only keys English has, and
   the same format specifiers, in the same order, as English;
-- Resources/UI/theme.json has every colour, font and metric UIStyle.h names;
+- Resources/UI/theme.json has every colour, font and metric UI.h names;
 - every catalog key a screen layout (Resources/UI/menus/*.json) names exists, and
   every layout the code loads is there.
 """
@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STRINGS = ROOT / "Resources/Strings"
 THEME = ROOT / "Resources/UI/theme.json"
-STYLE = ROOT / "Sources/Engine/UI/UIStyle.h"
+STYLE = ROOT / "Sources/Engine/UI/UI.h"
 
 # Catalog keys are dotted, under one of these areas. Any string literal of
 # that shape in the sources counts as a key, so keys picked by a ternary or

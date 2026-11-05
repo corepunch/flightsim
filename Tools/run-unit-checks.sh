@@ -28,7 +28,7 @@ if ! "$qa/UnitChecks"; then
     exit 1
 fi
 
-# The client draws only through the Refresh facade (Sources/Engine/Render/Refresh.h):
+# The client draws only through the Refresh facade (Sources/Engine/Refresh/Refresh.h):
 # its files must compile, and pull in no header, without SceneKit.
 print '#import <Cocoa/Cocoa.h>\n#import <SpriteKit/SpriteKit.h>' > "$qa/NoSceneKit.h"
 includes=(-ISources/Shared ${(@)$(print -l Sources/Engine/*/(/) | sed 's/^/-I/')})

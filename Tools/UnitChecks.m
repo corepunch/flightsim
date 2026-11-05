@@ -3,15 +3,11 @@
 // module: it links the Shared, Common and Net sources and runs anywhere a
 // Mac can compile. Tools/run-unit-checks.sh builds and runs it.
 #import <Foundation/Foundation.h>
-#include "Protocol.h"
-#include "ShipMove.h"
-#include "SharedMath.h"
-#import "Assets.h"
-#import "Cvar.h"
-#import "Cmd.h"
-#import "NetProtocol.h"
-#import "Localization.h"
-#import "MissionRunner.h"
+#include "Shared.h"
+#import "Shared.h"
+#import "Common.h"
+#import "Net.h"
+#import "Mission.h"
 #import "Story.h"
 
 static int failures;

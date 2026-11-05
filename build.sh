@@ -3,7 +3,7 @@
 #
 # Sources/Shared       protocol, flight model, file system and data tables (engine and game)
 # Sources/Engine       server, client, renderer, UI and the app itself
-# Games/<name>/Game    a game module: all gameplay, behind GameAPI.h
+# Games/<name>/Game    a game module: all gameplay, behind GameAPI (Sources/Shared/Shared.h)
 # Games/<name>/...     that game's data, levels, campaign and art
 #
 # GAME picks the game the app starts with, and the only one the iOS app ships.

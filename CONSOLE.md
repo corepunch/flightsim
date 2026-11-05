@@ -3,7 +3,7 @@
 The engine is configured the way Quake 2 is: through **cvars** (named values
 every module registers at init and reads at use) and **commands**, from the
 command line, from `.cfg` files or from code. There are no environment
-variables. `Sources/Engine/Common/Cvar.h` and `Cmd.h` are the implementation;
+variables. `Sources/Engine/Common/Common.h` (Cvar, Cmd) is the implementation;
 the game module reaches cvars through `GameImport`.
 
 ## Command line

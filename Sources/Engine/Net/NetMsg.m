@@ -1,4 +1,4 @@
-#import "NetMsg.h"
+#import "Net.h"
 #include <libkern/OSByteOrder.h>
 
 @implementation MsgWriter

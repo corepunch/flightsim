@@ -1,13 +1,10 @@
-#import "PlatformImage.h"
-#import "Cockpit.h"
-#import "FlightInstruments.h"
+#import "Render.h"
 #import <SpriteKit/SpriteKit.h>
 #import <Metal/Metal.h>
-#import "SceneAsset.h"
-#import "Localization.h"
-#import "UIStyle.h"
+#import "Collision.h"
+#import "Common.h"
+#import "UI.h"
 
-static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
 static SKColor *ScreenColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static SKColor *WarnColor(CGFloat a) { return [SKColor colorWithRed:1.0 green:0.68 blue:0.2 alpha:a]; }

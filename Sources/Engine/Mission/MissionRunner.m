@@ -1,4 +1,4 @@
-#import "MissionRunner.h"
+#import "Mission.h"
 
 static const float kNavVisitRange = 400;            // metres: a nav counts as visited
 static const double kFailedPause = 3.5, kSuccessPause = 4.0;   // seconds between the banner and the debrief
