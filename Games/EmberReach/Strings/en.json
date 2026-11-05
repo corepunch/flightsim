@@ -1,0 +1,21 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH STATION  /  KITE FLIGHT",
+    "loading.mission_kicker": "EMBER REACH  /  MISSION %02lu",
+    "browser.kicker": "EMBER REACH  /  MULTIPLAYER",
+    "controls.kicker": "EMBER REACH  /  FLIGHT MANUAL",
+    "menu.unit": "HEARTH STATION   /   KITE FLIGHT",
+    "menu.wordmark": ["EMBER", "REACH"],
+    "menu.caption": "KITE 01   /   PATROL CRAFT",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "Hearth Control",
+    "briefing.orders_line": "Your orders are on the board, pilot.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Loadout: twin cutters, %d torpedo",
+    "briefing.loadout_many": "Loadout: twin cutters, %d torpedoes",
+    "combat.no_secondary": "Torpedoes spent",
+    "combat.select_target": "Lock a target to launch a torpedo",
+    "combat.out_of_range": "Target beyond torpedo reach"
+  }
+}

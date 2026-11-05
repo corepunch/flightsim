@@ -1,0 +1,9 @@
+{
+  "player": "Lancer1",
+  "characters": {
+    "Varn": { "name": "Marshal Odessa Brant", "portrait": "Varn", "faces": "right" },
+    "Rhea": { "name": "Quartermaster Pell Ostrander", "portrait": "Rhea", "faces": "right" },
+    "Lancer1": { "name": "Pilot Tam Reyes", "portrait": "Lancer1", "faces": "left" },
+    "Lancer3": { "name": "Ivo Calder", "portrait": "Lancer3", "faces": "right" }
+  }
+}

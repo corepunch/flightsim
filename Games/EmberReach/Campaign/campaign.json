@@ -1,0 +1,199 @@
+{
+  "campaign": "Ember Reach",
+  "storyDefaults": {
+    "officer": "Varn",
+    "room": "Ops",
+    "briefingPages": ["dialogue", "situation", "tactical", "objectives", "intel"]
+  },
+  "story": {
+    "title": "COLD HEARTH",
+    "logline": "A mining militia trailing a few ash-cloud raiders finds someone is selling the convoy schedules.",
+    "antagonists": ["Syndic Maro Quill, Cinderfall Ore Syndicate", "The Ashmaw raider fleet"],
+    "chapters": [
+      { "title": "Ash and Ore", "missions": [1, 2] }
+    ]
+  },
+  "missions": [
+    {
+      "level": "01-ash-patrol",
+      "briefing": {
+        "location": "Ember Reach - Hearth Station picket",
+        "stardate": "884.12",
+        "dialogue": {
+          "room": "Ops",
+          "cast": ["Varn", "Lancer3", "Lancer1"],
+          "focus": "nav2",
+          "lines": [
+            {
+              "speaker": "Marshal Odessa Brant",
+              "portrait": "Varn",
+              "text": "Three beacons, one slow orbit. Your first patrol should be dull enough to bore a rock."
+            },
+            {
+              "speaker": "Ivo Calder",
+              "portrait": "Lancer3",
+              "text": "Somebody has been scraping our beacons for data. If you meet them, find out what they wanted."
+            },
+            {
+              "speaker": "Pilot Tam Reyes",
+              "portrait": "Lancer1",
+              "text": "Where were they last seen, Calder? I'd like to know when to stop admiring the ash.",
+              "listener": "Lancer3"
+            },
+            {
+              "speaker": "Ivo Calder",
+              "portrait": "Lancer3",
+              "text": "Near NAV 2. They know our route as well as we do."
+            },
+            {
+              "speaker": "Marshal Odessa Brant",
+              "portrait": "Varn",
+              "text": "I'll hold the station. Bring the raiders' log home if you can.",
+              "expression": "angry"
+            },
+            {
+              "speaker": "Pilot Tam Reyes",
+              "portrait": "Lancer1",
+              "text": "Understood. I'll keep my wing close.",
+              "listener": "Varn",
+              "expression": "amused"
+            }
+          ]
+        },
+        "speaker": "Marshal Odessa Brant, Hearth Station",
+        "officer": "Varn",
+        "text": [
+          "Welcome to Hearth Station, pilot. The militia is small, so everyone flies and nobody gets a speech.",
+          "For a month raiders have been sniffing around the outer beacons, counting who comes and goes.",
+          "Fly the three-beacon patrol. If the raiders show, make sure none of them leaves. Then come home."
+        ],
+        "steps": [
+          {
+            "caption": "You launch from Hearth Station, the militia's anchor in the Reach.",
+            "show": ["hearth", "start"],
+            "focus": "hearth"
+          },
+          {
+            "caption": "Fly the patrol route: NAV 1, NAV 2 and NAV 3, in that order.",
+            "show": ["nav1", "nav2", "nav3"],
+            "route": ["start", "nav1", "nav2", "nav3"]
+          },
+          {
+            "caption": "Raiders were seen hiding in the ash near NAV 2. Expect three Jackals.",
+            "show": ["nav2", "raiders"],
+            "focus": "nav2"
+          },
+          {
+            "caption": "When the route is clear, return to Hearth Station.",
+            "show": ["home", "hearth"],
+            "route": ["nav3", "home"]
+          }
+        ],
+        "intel": [
+          "Hostile: 3x Jackal raider (light, fast, lightly armed)",
+          "Friendly: Hearth Station, militia anchor",
+          "Wingman: Kite 3",
+          "Craft: Kite patrol craft, twin lasers"
+        ]
+      },
+      "debrief": {
+        "win": "Three raiders down and the beacons hold. The Ashmaw now know we are watching.",
+        "lose": "We lost you out in the ash. The raiders will know exactly how thin our patrols are.",
+        "dialogue": [
+          {
+            "speaker": "Marshal Odessa Brant",
+            "portrait": "Varn",
+            "text": "The raider log lists our hauler schedule. Down to the hour. That did not come from a scan."
+          },
+          {
+            "speaker": "Pilot Tam Reyes",
+            "portrait": "Lancer1",
+            "text": "Then warn the Cinder before we hunt the leak. Is the quartermaster on the line?",
+            "listener": "Varn"
+          }
+        ]
+      }
+    },
+    {
+      "level": "02-ore-convoy",
+      "briefing": {
+        "location": "Ember Reach - Cinder lane",
+        "stardate": "884.15",
+        "dialogue": {
+          "room": "Ops",
+          "cast": ["Rhea", "Varn", "Lancer1"],
+          "focus": "cinder",
+          "lines": [
+            {
+              "speaker": "Quartermaster Pell Ostrander",
+              "portrait": "Rhea",
+              "text": "Ostrander, supply. The Cinder carries every ounce of ore we trade this quarter, and her departure was moved without my say.",
+              "expression": "strained",
+              "channel": "OPS / SUPPLY"
+            },
+            {
+              "speaker": "Pilot Tam Reyes",
+              "portrait": "Lancer1",
+              "text": "Can she go faster, Quartermaster? One hauler is easier to cover if she keeps pace with us.",
+              "listener": "Rhea"
+            },
+            {
+              "speaker": "Quartermaster Pell Ostrander",
+              "portrait": "Rhea",
+              "text": "She's loaded to the rails. You fly to her speed, not the other way round.",
+              "channel": "OPS / SUPPLY"
+            },
+            {
+              "speaker": "Marshal Odessa Brant",
+              "portrait": "Varn",
+              "text": "Get her to Reach Relay first. We can find out who moved the schedule once she is alive to be asked."
+            },
+            {
+              "speaker": "Pilot Tam Reyes",
+              "portrait": "Lancer1",
+              "text": "Understood. Kite 3 stays with the hauler if they try to draw us off.",
+              "listener": "Varn"
+            }
+          ]
+        },
+        "speaker": "Marshal Odessa Brant, Hearth Station",
+        "officer": "Varn",
+        "text": [
+          "The Cinder is hauling the quarter's ore to Reach Relay. Escort her through the lane.",
+          "The lane is long and open, and the raiders have the schedule. Fly escort with Kite 3.",
+          "Pickets will test you first. The real strike comes across the lane for the hauler."
+        ],
+        "steps": [
+          {
+            "caption": "The ore hauler Cinder starts here, bound for Reach Relay.",
+            "show": ["cinder"],
+            "focus": "cinder"
+          },
+          {
+            "caption": "Reach Relay, almost four kilometres down the lane. Past it the militia can cover her.",
+            "show": ["relay"],
+            "route": ["cinder", "relay"]
+          },
+          {
+            "caption": "Expect pickets from the flank, then a strike group going for the hauler.",
+            "show": ["pickets", "strike"],
+            "focus": "strike"
+          }
+        ],
+        "intel": ["Escort: 1x ore hauler (slow, unarmed)", "Hostile: Jackal raiders in two groups", "Wingman: Kite 3"]
+      },
+      "debrief": {
+        "win": "The Cinder docked at the Relay. The Reach eats and trades this quarter.",
+        "lose": "We lost the ore the Reach cannot replace.",
+        "dialogue": [
+          {
+            "speaker": "Quartermaster Pell Ostrander",
+            "portrait": "Rhea",
+            "text": "You saved the quarter. The raiders flew straight for her, as if they had the lane map on their dash.",
+            "expression": "strained"
+          }
+        ]
+      }
+    }
+  ]
+}

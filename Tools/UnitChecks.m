@@ -562,6 +562,35 @@ static void CheckGameChain(void) {
     CHECK([FSGameChain() isEqualToArray:(@[ saved ])]);
 }
 
+// Every other game in the bundle: its levels resolve on its own search path
+// (its folder, then its base), every ship and capital they place is defined,
+// and its campaign names only its levels.
+static void CheckOtherGames(void) {
+    NSString *saved = FSGame();
+    for (NSString *game in FSGames()) {
+        if ([game isEqualToString:saved] || [game hasPrefix:@"ZCheck"]) continue;
+        FSSetGame(game);
+        NSArray<NSURL *> *own = [NSBundle.mainBundle URLsForResourcesWithExtension:@"json"
+                                                                     subdirectory:[@"Games" stringByAppendingPathComponent:[game stringByAppendingPathComponent:@"Levels"]]];
+        CHECK(own.count > 0);
+        for (NSURL *url in own) {
+            NSDictionary *level = FSJSON(url);
+            NSString *player = level[@"player"][@"ship"];
+            CHECK(!player || ShipDefNamed(player) != NULL);
+            for (NSDictionary *e in level[@"entities"]) CHECK(CapitalDefNamed(e[@"asset"]) != NULL);
+            for (NSDictionary *w in level[@"waves"]) CHECK(ShipDefNamed(w[@"ship"]) != NULL);
+            NSArray *problems = [MissionRunner problemsWithLevel:level];
+            if (problems.count) fprintf(stderr, "%s/%s: %s\n", game.UTF8String, url.lastPathComponent.UTF8String,
+                                        [problems componentsJoinedByString:@"; "].UTF8String);
+            CHECK(problems.count == 0);
+        }
+        NSDictionary *campaign = FSJSON(FSURL(@"Campaign", @"campaign", @"json"));
+        for (NSDictionary *entry in campaign[@"missions"])
+            CHECK([[own valueForKey:@"lastPathComponent"] containsObject:[entry[@"level"] stringByAppendingPathExtension:@"json"]]);
+    }
+    FSSetGame(saved);
+}
+
 static void CheckLocalization(void) {
     CHECK(L10nCatalogs()[@"en"] != nil && L10nCatalogs().count >= 2);
     CHECK(L10nLocale().length > 0);
@@ -587,6 +616,7 @@ int main(void) {
         CheckLocalization();
         CheckStory();
         CheckGameChain();
+        CheckOtherGames();
         CheckMissionRuntime();
         if (failures) {
             fprintf(stderr, "%d check(s) failed\n", failures);

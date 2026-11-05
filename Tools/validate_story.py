@@ -11,12 +11,31 @@ import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ART = CAST = PLAYER = PORTRAITS = ROOMS = None   # per game, set by load_game
+CHAIN = CAST = PLAYER = PORTRAITS = ROOMS = None   # per game, set by load_game
+
+
+def game_chain(game):
+    """The game's folder, then its base's (game.json "base"), as the engine searches them."""
+    chain = [game]
+    while (chain[-1] / "game.json").is_file():
+        base = json.loads((chain[-1] / "game.json").read_text()).get("base")
+        if not base or ROOT / "Games" / base in chain:
+            break
+        chain.append(ROOT / "Games" / base)
+    return chain
+
+
+def art(relative):
+    """Briefing art on the search path."""
+    for folder in CHAIN:
+        if (folder / "Briefing" / relative).is_file():
+            return folder / "Briefing" / relative
+    raise AssertionError(f"No art Briefing/{relative} in {[folder.name for folder in CHAIN]}")
 
 
 def load_game(game):
-    global ART, CAST, PLAYER, PORTRAITS, ROOMS
-    ART = game / "Briefing"
+    global CHAIN, CAST, PLAYER, PORTRAITS, ROOMS
+    CHAIN = game_chain(game)
     CAST = json.loads((game / "Story/characters.json").read_text())
     PLAYER = CAST["player"]
     PORTRAITS = {character["portrait"] for character in CAST["characters"].values()}
@@ -38,8 +57,8 @@ def check_art(path, transparent=False):
 
 def check_expression(portrait, expression):
     assert isinstance(expression, str) and re.fullmatch(r"[a-z]+(?:-[a-z]+)*", expression), expression
-    variant = ART / "Expressions" / f"{portrait}-{expression}.png"
-    assert check_art(variant, transparent=True) == check_art(ART / f"{portrait}.png"), (
+    variant = art(f"Expressions/{portrait}-{expression}.png")
+    assert check_art(variant, transparent=True) == check_art(art(f"{portrait}.png")), (
         f"Expression canvas differs from base portrait: {variant}"
     )
 
@@ -85,7 +104,7 @@ def validate_mission(mission):
         assert step["caption"].strip() and refs <= map_ids, (index, step, refs - map_ids)
         if "schematic" in step:
             asset = entities[step["focus"]]["asset"]
-            check_art(ART / "Schematics" / f'{asset}-{step["schematic"]}.png', transparent=True)
+            check_art(art(f'Schematics/{asset}-{step["schematic"]}.png'), transparent=True)
 
     objectives = mission["objectives"]
     objective_ids = {item["id"] for item in objectives}
@@ -172,13 +191,13 @@ def validate_game(game):
     assert defaults["officer"] in CAST["characters"] and defaults["room"] in ROOMS
     assert set(defaults["briefingPages"]) <= PAGE_KINDS
     for name, room in ROOMS.items():
-        width, height = check_art(ART / f'{room["image"]}.png')
+        width, height = check_art(art(f'{room["image"]}.png'))
         assert room["size"] == [width, height], f"Room {name}: size differs from its art"
         assert len(room["bezel"]) >= 3 and all(0 <= x <= width and 0 <= y <= height for x, y in room["bezel"]), name
     for character in CAST["characters"].values():
         assert character["faces"] in ("left", "right") and character["name"].strip(), character
     for portrait in PORTRAITS:
-        check_art(ART / f"{portrait}.png", transparent=True)
+        check_art(art(f"{portrait}.png"), transparent=True)
     beats, cast = 0, set()
     for entry in entries:
         count, speakers = validate_mission({**levels[entry["level"]], **entry})

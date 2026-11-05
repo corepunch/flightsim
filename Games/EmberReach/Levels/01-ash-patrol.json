@@ -1,0 +1,79 @@
+{
+  "name": "01-ash-patrol",
+  "seed": 101,
+  "title": "Ash Patrol",
+  "loadout": { "torpedoes": 2 },
+  "player": { "pos": [0, 0, 500], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "hearth",
+      "asset": "RingStation",
+      "team": "friend",
+      "name": "Hearth Station",
+      "pos": [0, -80, 1400],
+      "facing": [0, 0, -1]
+    }
+  ],
+  "navs": [
+    { "id": "nav1", "name": "NAV 1", "pos": [-900, 100, -1500] },
+    { "id": "nav2", "name": "NAV 2", "pos": [400, -200, -2800] },
+    { "id": "nav3", "name": "NAV 3", "pos": [2000, 150, -1800] },
+    { "id": "home", "name": "HEARTH", "pos": [200, 0, 800] }
+  ],
+  "fields": [
+    { "type": "buoys", "navs": ["nav1", "nav2", "nav3"] }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "kite",
+      "count": 1,
+      "team": "friend",
+      "pos": [60, 10, 470],
+      "order": "attack",
+      "name": "Kite 3"
+    },
+    {
+      "id": "raiders",
+      "ship": "jackal",
+      "count": 3,
+      "team": "enemy",
+      "pos": [1500, 300, -3000],
+      "spread": 130,
+      "order": "attack",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "Patrol NAV 1, 2, 3 in order" },
+    { "id": "raiders", "type": "destroy", "targets": ["raiders"], "text": "Destroy 3 Jackal raiders" },
+    {
+      "id": "rtb",
+      "type": "reach",
+      "navs": ["home"],
+      "after": ["patrol", "raiders"],
+      "text": "Return to Hearth Station"
+    }
+  ],
+  "events": [
+    {
+      "when": { "time": 2 },
+      "do": [
+        { "radio": {"from": "Hearth Control", "text": "Fly the beacons in order, Kite 1. Log each one."} }
+      ]
+    },
+    { "when": {"nav": "nav2"}, "do": [{"spawn": "raiders"}] },
+    {
+      "when": { "spawned": "raiders" },
+      "do": [
+        { "radio": {"from": "Hearth Control", "text": "Three Jackals off the ash cloud. Engage."} }
+      ]
+    },
+    {
+      "when": { "objective": "raiders" },
+      "do": [
+        { "radio": {"from": "Hearth Control", "text": "Clean scopes. Bring it home, Kite."} }
+      ]
+    }
+  ]
+}
