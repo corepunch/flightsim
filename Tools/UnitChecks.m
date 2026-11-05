@@ -684,6 +684,12 @@ static void CheckStory(void) {
     CHECK([step.camera.center.identifier isEqualToString:@"corvette"] && step.camera.span == 2500);
     CHECK(step.labels.count == 1 && !step.labels[0].at.identifier && step.labels[0].at.position.y == -3400);
     CHECK(![BriefingStep stepWithJSON:@{ @"caption": @"c" }].camera);
+    // Keyword marks: removed from the text, ranges count visible characters.
+    NSArray<NSValue *> *marks;
+    CHECK([StoryPlainText(@"Kill *Corvette Vesk* now, *fast*.", &marks) isEqualToString:@"Kill Corvette Vesk now, fast."]);
+    CHECK(marks.count == 2 && NSEqualRanges(marks[0].rangeValue, NSMakeRange(5, 13)) && NSEqualRanges(marks[1].rangeValue, NSMakeRange(24, 4)));
+    CHECK([StoryPlainText(@"a ** b *unclosed", &marks) isEqualToString:@"a * b *unclosed"] && marks.count == 0);
+    CHECK([StoryPlainText(@"plain", NULL) isEqualToString:@"plain"]);
     // A game-registered page kind, named by a mission's own page order.
     StoryRegisterBriefingPages(@"check_weather", ^NSArray *(CampaignMission *mission, StoryLine *officer) {
         return @[ [BriefingPage pageBy:officer text:@"Fog" channel:@"WX" step:nil readout:nil] ];

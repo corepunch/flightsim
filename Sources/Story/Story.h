@@ -168,6 +168,11 @@ StoryRoom *StoryRoomNamed(NSString *identifier);             // nil if there is 
                   step:(BriefingStep *)step readout:(NSArray<NSString *> *)readout;
 @end
 
+// Briefing text marks keywords with asterisks: "Destroy the *corvette Vesk*."
+// Returns the text without the marks and the character ranges (NSValue of
+// NSRange, UTF-16) that were marked. A lone asterisk, or "**", reads as one.
+NSString *StoryPlainText(NSString *marked, NSArray<NSValue *> **highlights);
+
 // `officer` is the character giving the briefing: speaker and portrait, no text.
 typedef NSArray<BriefingPage *> *(^BriefingPageKind)(CampaignMission *mission, StoryLine *officer);
 

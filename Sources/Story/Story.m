@@ -338,6 +338,35 @@ StoryRoom *StoryRoomNamed(NSString *identifier) { return identifier ? Rooms()[id
 
 #pragma mark - Briefing pages
 
+NSString *StoryPlainText(NSString *marked, NSArray<NSValue *> **highlights) {
+    NSMutableString *plain = [NSMutableString stringWithCapacity:marked.length];
+    NSMutableArray<NSValue *> *ranges = [NSMutableArray array];
+    NSUInteger i = 0, n = marked.length;
+    while (i < n) {
+        unichar c = [marked characterAtIndex:i];
+        if (c != '*') {
+            [plain appendFormat:@"%C", c];
+            i++;
+            continue;
+        }
+        NSRange close = [marked rangeOfString:@"*" options:0 range:NSMakeRange(i + 1, n - i - 1)];
+        if (close.location == NSNotFound) {
+            [plain appendString:@"*"];
+            i++;
+        } else if (close.location == i + 1) {
+            [plain appendString:@"*"];
+            i += 2;
+        } else {
+            NSString *word = [marked substringWithRange:NSMakeRange(i + 1, close.location - i - 1)];
+            [ranges addObject:[NSValue valueWithRange:NSMakeRange(plain.length, word.length)]];
+            [plain appendString:word];
+            i = close.location + 1;
+        }
+    }
+    if (highlights) *highlights = ranges;
+    return plain;
+}
+
 @implementation BriefingPage
 
 + (instancetype)dialogueLine:(StoryLine *)line channel:(NSString *)channel {

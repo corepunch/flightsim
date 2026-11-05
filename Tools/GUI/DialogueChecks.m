@@ -109,6 +109,39 @@ static int CheckCaret(NSString *output) {
     return EXIT_SUCCESS;
 }
 
+// Marked keywords: the asterisks are gone, the keyword is in the highlight
+// colour from the first frame it is revealed, and typing counts visible characters.
+static int CheckHighlight(void) {
+    CGSize size = CGSizeMake(640, 360);
+    SizeTarget(size);
+    SKScene *scene = [SKScene sceneWithSize:size];
+    SKView *renderer = view;
+    [view presentScene:scene];
+    SKLabelNode *speech = UIMonoLabel(22, SKColor.whiteColor, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
+    speech.fontName = UIBodyFont;
+    speech.numberOfLines = 0;
+    speech.preferredMaxLayoutWidth = 500;
+    NSArray<NSValue *> *marks;
+    speech.text = StoryPlainText(@"Destroy the *Corvette Vesk* now.", &marks);
+    CHECK([speech.text isEqualToString:@"Destroy the Corvette Vesk now."] && marks.count == 1);
+    UIMotionHighlight(speech, marks, UIColorWithOpacity(UIYellow, 1));
+    speech.position = CGPointMake(50, 300);
+    [scene addChild:speech];
+    double duration = UIMotionDialogueTypeOn(speech, 0, 40);
+    NSString *plain = speech.text;
+    Render(renderer, 0);
+    for (int i = 1; i < (duration + 0.3) * 60; i++) Render(renderer, i / 60.0);
+    CHECK(!UIMotionIsTyping(speech) && RevealedCount(speech) == plain.length);
+    NSAttributedString *text = speech.attributedText;
+    NSRange keyword = marks[0].rangeValue;
+    CHECK([text.string isEqualToString:plain]);
+    CHECK(![[text.string substringWithRange:keyword] containsString:@"*"]);
+    NSColor *inside = [text attribute:NSForegroundColorAttributeName atIndex:keyword.location effectiveRange:NULL];
+    NSColor *outside = [text attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL];
+    CHECK(![inside isEqual:outside]);
+    return EXIT_SUCCESS;
+}
+
 static int CheckCampaignCaptions(void) {
     for (NSValue *value in @[[NSValue valueWithSize:NSMakeSize(1600, 900)],
                              [NSValue valueWithSize:NSMakeSize(640, 660)],
@@ -176,6 +209,7 @@ int main(int argc, const char **argv) {
         CHECK(!UIMotionReduced());
         if (CheckCampaignCaptions() != EXIT_SUCCESS) return EXIT_FAILURE;
         if (CheckCaret(output) != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (CheckHighlight() != EXIT_SUCCESS) return EXIT_FAILURE;
         for (NSValue *value in @[[NSValue valueWithSize:NSMakeSize(1600, 900)], [NSValue valueWithSize:NSMakeSize(852, 393)]]) {
             CGSize size = value.sizeValue;
             SizeTarget(size);

@@ -1309,7 +1309,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     speech.fontName = UIBodyFont;
     CGFloat height = 0;
     for (StoryLine *line in lines) {
-        speech.text = line.text;
+        speech.text = StoryPlainText(line.text, NULL);
         height = MAX(height, speech.frame.size.height);
     }
     return height;
@@ -1339,7 +1339,9 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
     SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), width);
     speech.fontName = UIBodyFont;
-    speech.text = line.text;
+    NSArray<NSValue *> *highlights;
+    speech.text = StoryPlainText(line.text, &highlights);
+    UIMotionHighlight(speech, highlights, UIColorWithOpacity(UIYellow, 1));
     speech.position = CGPointMake(left, top - 32);
     [layer addChild:speech];
 
