@@ -1,0 +1,40 @@
+{
+  "displayName": "Kite",
+  "mesh": "Executioner",
+  "texture": "Executioner_Blue",
+  "radius": 5.0,
+  "guns": [[-4.38, 0.1, -2.5], [4.38, 0.1, -2.5]],
+  "gun": {
+    "speed": 820,
+    "life": 1.8,
+    "energy": 0.03,
+    "recharge": 0.25,
+    "interval": 0.14,
+    "damage": 0.1,
+    "capitalDamage": 0.1
+  },
+  "aiGun": { "interval": 0.28, "damage": 0.07, "capitalDamage": 0.08 },
+  "nozzles": [
+    [-0.937, -0.155, 2.85, 0.42],
+    [0.937, -0.155, 2.85, 0.42],
+    [-4.379, 0.161, 3.0, 0.55],
+    [4.379, 0.161, 3.0, 0.55]
+  ],
+  "exhaustColor": [1.0, 0.62, 0.2],
+  "params": {
+    "maxSpeed": 145,
+    "turnRate": 1.1,
+    "pitchRate": 1.5,
+    "yawRate": 0.9,
+    "rollRate": 2.8,
+    "agility": 6.0,
+    "grip": 1.5,
+    "boostSpeed": 0.9,
+    "boostGrip": 2.2,
+    "boostTurn": 0.7,
+    "boostDrain": 0.28,
+    "boostRecharge": 0.12
+  },
+  "ai": { "maxSpeed": 135, "turnRate": 0.85 },
+  "hologramScale": 0.0075
+}

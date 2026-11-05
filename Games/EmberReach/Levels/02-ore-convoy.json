@@ -1,0 +1,110 @@
+{
+  "name": "02-ore-convoy",
+  "seed": 102,
+  "title": "Ore Convoy",
+  "loadout": { "torpedoes": 2 },
+  "player": { "pos": [0, 40, 400], "facing": [0, 0, -1] },
+  "entities": [
+    {
+      "id": "cinder",
+      "asset": "Freighter",
+      "team": "friend",
+      "name": "Ore Hauler Cinder",
+      "pos": [0, 0, 0],
+      "facing": [0, 0, -1],
+      "path": [[0, 0, -3800]],
+      "speed": 40,
+      "group": "convoy"
+    },
+    {
+      "id": "sluice",
+      "asset": "AsteroidA",
+      "team": "neutral",
+      "name": "Sluice Rock",
+      "pos": [900, -200, -1800],
+      "facing": [0, 0, -1]
+    },
+    {
+      "id": "relay",
+      "asset": "CommRelay",
+      "team": "friend",
+      "name": "Reach Relay",
+      "pos": [0, 100, -4000],
+      "facing": [0, 0, -1]
+    }
+  ],
+  "navs": [
+    { "id": "dock", "name": "RELAY", "pos": [0, 0, -3800] }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "kite",
+      "count": 1,
+      "team": "friend",
+      "pos": [60, 40, 450],
+      "order": "escort:convoy",
+      "name": "Kite 3"
+    },
+    {
+      "id": "pickets",
+      "ship": "jackal",
+      "count": 3,
+      "team": "enemy",
+      "pos": [-1700, 200, -1400],
+      "spread": 140,
+      "order": "attack",
+      "hold": true
+    },
+    {
+      "id": "strike",
+      "ship": "jackal",
+      "count": 3,
+      "team": "enemy",
+      "pos": [1700, -100, -2600],
+      "spread": 110,
+      "order": "strike:convoy",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "Keep the Cinder intact" },
+    {
+      "id": "escort",
+      "type": "escort",
+      "targets": ["convoy"],
+      "navs": ["dock"],
+      "text": "Escort the Cinder to Reach Relay",
+      "depart": true
+    },
+    {
+      "id": "raiders",
+      "type": "destroy",
+      "targets": ["strike"],
+      "optional": true,
+      "text": "Destroy the raiders hitting the hauler"
+    }
+  ],
+  "events": [
+    {
+      "when": { "time": 3 },
+      "do": [
+        { "radio": {"from": "Cinder", "text": "Cinder under way, ore sealed. Stay close, militia."} }
+      ]
+    },
+    { "when": {"time": 20}, "do": [{"spawn": "pickets"}] },
+    { "when": {"time": 55}, "do": [{"spawn": "strike"}] },
+    {
+      "when": { "spawned": "strike" },
+      "do": [
+        { "radio": {"from": "Kite 3", "text": "Second raider group, cutting across the lane for the hauler!"} }
+      ]
+    },
+    {
+      "when": { "objective": "escort" },
+      "do": [
+        { "radio": {"from": "Cinder", "text": "Relay lock. Ore's safe. Drinks in Cinderfall are on me."} }
+      ]
+    }
+  ]
+}

@@ -15,12 +15,14 @@ for game in Games/*(N/); do ln -s "$PWD/$game" "$qa/$game"; done
 mkdir -p "$qa/Games/ZCheckMod/Levels"
 print '{ "title": "Check", "base": "SpaceFight" }' > "$qa/Games/ZCheckMod/game.json"
 print '{ "name": "check", "title": "Check" }' > "$qa/Games/ZCheckMod/Levels/check.json"
+# The app's Info.plist (FSDefaultGame), embedded as a bare executable's bundle info.
+cp Resources/Info.plist "$qa/Info.plist"
 clang -fobjc-arc -Wall -Wno-unused-function -mmacosx-version-min=13.0 \
     -ISources/Shared -ISources/Engine/Common -ISources/Engine/Net -ISources/Engine/Mission -ISources/Engine/Story \
     Tools/UnitChecks.m Sources/Shared/*.m Sources/Shared/*.c Sources/Engine/Common/*.m Sources/Engine/Mission/*.m Sources/Engine/Story/*.m \
     Sources/Engine/Net/NetMsg.m Sources/Engine/Net/NetProtocol.m \
     -framework Foundation -framework QuartzCore \
-    -o "$qa/UnitChecks"
+    -sectcreate __TEXT __info_plist "$qa/Info.plist" -o "$qa/UnitChecks"
 if ! "$qa/UnitChecks"; then
     print -u2 "Unit checks failed. Binary: $qa"
     exit 1
