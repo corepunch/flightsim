@@ -12,6 +12,16 @@ static NSArray<NSString *> *Names(id value) {
     return [value isKindOfClass:NSArray.class] ? value : @[];
 }
 
+// Every name has arrived (some unit exists) and all its units satisfy the test.
+static BOOL AllUnits(id names, id<MissionEventContext> c, BOOL (^test)(id<MissionUnit>)) {
+    for (NSString *n in Names(names)) {
+        NSArray<id<MissionUnit>> *units = [c.world missionUnitsNamed:n];
+        if (!units.count) return NO;
+        for (id<MissionUnit> u in units) if (!test(u)) return NO;
+    }
+    return YES;
+}
+
 static NSMutableDictionary<NSString *, MissionTrigger> *Triggers(void);
 static NSMutableDictionary<NSString *, MissionAction> *Actions(void);
 
@@ -176,6 +186,20 @@ static NSMutableDictionary<NSString *, MissionTrigger> *Triggers(void) {
                 for (id<MissionUnit> u in units) if (u.missionAlive || u.missionGone) return NO;
             }
             return YES;
+        };
+        triggers[@"attacked"] = ^BOOL(id v, id<MissionEventContext> c) {
+            for (NSString *n in Names(v)) {
+                BOOL any = NO;
+                for (id<MissionUnit> u in [c.world missionUnitsNamed:n]) any = any || u.missionAttacked;
+                if (!any) return NO;
+            }
+            return YES;
+        };
+        triggers[@"scanned"] = ^BOOL(id v, id<MissionEventContext> c) {
+            return AllUnits(v, c, ^BOOL(id<MissionUnit> u) { return u.missionScanned; });
+        };
+        triggers[@"disabled"] = ^BOOL(id v, id<MissionEventContext> c) {
+            return AllUnits(v, c, ^BOOL(id<MissionUnit> u) { return u.missionDisabled; });
         };
         triggers[@"nav"] = ^BOOL(id v, id<MissionEventContext> c) {
             for (NSString *n in Names(v)) if (![c navVisited:n]) return NO;

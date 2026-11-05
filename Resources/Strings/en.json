@@ -285,6 +285,8 @@
     "mission.optional_objective": "Optional objective",
     "mission.complete": "MISSION COMPLETE",
     "mission.failed": "MISSION FAILED",
-    "mission.optional_suffix": " (optional)"
+    "mission.optional_suffix": " (optional)",
+    "mission.time_minute": "One minute remaining",
+    "mission.time_ten": "Ten seconds remaining"
   }
 }

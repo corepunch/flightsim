@@ -457,7 +457,8 @@ static inline simd_float3 JSONVec3(id json, NSString *key, simd_float3 fallback)
 //     "loadout":  { "torpedoes": 2 },
 //     "navs":     [ { "id": "n1", "name": "Nav 1", "pos": [x, y, z] } ],
 //     "entities": [ LevelEntity ], "waves": [ LevelWave ], "fields": [ LevelField ],
-//     "objectives": [ LevelObjective ], "events": [ … ], "rules": { LevelRules } }
+//     "objectives": [ LevelObjective ], "events": [ … ], "rules": { LevelRules },
+//     "timeLimit": 600, "onTimeLimit": "failure" | "success" }
 
 typedef struct {
     NSString *identifier, *name;
@@ -546,6 +547,11 @@ typedef struct {
 // What every objective has; `definition` keeps the type's own fields (see
 // MissionObjective in Sources/Mission).
 //   { "id", "type", "text", "targets": [], "navs": [], "after": [], "optional", "hidden", … }
+// "targets" name entity ids, groups, wave ids or one pilot's callsign, so a wave's
+// special craft is its own target: { "type": "destroy", "targets": ["Viper"] }.
+// destroy and protect take "percent" (1-100, 100 by default): destroy completes
+// once that share of the targets (reinforcements still to come included) is
+// destroyed; protect fails once more than (100 - percent)% of them are lost.
 typedef struct {
     NSString *identifier, *type, *text;
     NSArray<NSString *> *targets, *navs, *after;
@@ -575,6 +581,8 @@ typedef struct {
     // vocabulary (MissionEvents), checked by MissionRunner's problems.
     NSArray<NSDictionary *> *events;
     LevelRules rules;
+    float timeLimit;                    // mission seconds; 0: none
+    bool timeLimitSucceeds;             // the mission ends in success at the limit, else in failure
     NSArray<NSString *> *problems;      // fields of the wrong shape; empty for a clean level
 } LevelDef;
 

@@ -73,6 +73,7 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic, readonly) float hullFraction, shieldFraction;     // 0..1 of the ship's, as the wire carries them
 @property (nonatomic, readonly) BOOL shielded;           // the shield still stops a hit
 @property (nonatomic) BOOL alive;
+@property (nonatomic) BOOL attacked;              // taken hostile damage
 @property (nonatomic) BOOL departed;              // left the level alive (jumped out or docked); not alive
 @property (nonatomic) double lastShot;
 @property (nonatomic) double deathTime;
@@ -113,6 +114,7 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSString *cargo;
 @property (nonatomic) BOOL scanned;
+@property (nonatomic) BOOL attacked;             // hit by a hostile since it arrived
 @property (nonatomic, readonly) NSString *className;
 @property (nonatomic) Team team;
 @property (nonatomic) float hull, maxHull;
@@ -296,7 +298,8 @@ const GameRules *GRules(void);
 - (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life
                team:(Team)team damage:(float)damage capDamage:(float)capDamage owner:(GClient *)owner;
 - (void)muzzleFlash:(GFighter *)s;
-- (void)damageShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake;
+- (void)damageShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake;   // hostile fire: marks the ship attacked
+- (void)harmShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake;     // the same without that (collisions, scripted kills)
 - (void)updateBolts:(float)dt;
 - (void)updateTorpedoes:(float)dt;
 - (void)updateExplosions;

@@ -411,6 +411,12 @@ LevelDef *LevelCreate(NSDictionary *json) {
         .failOnObjectiveFailed = JSONBool(rules, @"failOnObjectiveFailed", true),
         .failWhenPlayersDown = JSONBool(rules, @"failWhenPlayersDown", true),
     };
+    level->timeLimit = JSONFloat(json, @"timeLimit", 0);
+    if (json[@"timeLimit"] && !(level->timeLimit > 0)) {
+        [problems addObject:@"\"timeLimit\" must be a positive number of seconds"];
+        level->timeLimit = 0;
+    }
+    level->timeLimitSucceeds = ReadName(json, @"onTimeLimit", @{ @"failure": @NO, @"success": @YES }, NO, @"level", problems);
     level->problems = problems;
     return level;
 }
