@@ -181,6 +181,11 @@ static const double kNetInterpDelay = TICK_DT * 3;
                 int index = [r u16];
                 NSString *value = [r string];
                 if (index < MAX_CONFIGSTRINGS) _cs[index] = value;
+                if (index == CS_GAME && _state == ClientActive && ![value isEqualToString:ShipDataIdentity()]) {
+                    [self disconnect];
+                    [self dropWithReason:@"Incompatible game or ship data"];
+                    return;
+                }
                 _view.configStrings = _cs;
                 break;
             }

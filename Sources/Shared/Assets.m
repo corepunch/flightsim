@@ -231,10 +231,12 @@ NSString *ShipDataIdentity(void) {
     dispatch_once(&once, ^{
         CC_SHA256_CTX ctx;
         CC_SHA256_Init(&ctx);
-        for (NSString *name in ShipDefNames()) {
+        NSArray<NSString *> *names = ShipDefNames();
+        if (!names.count) return; // incomplete bundle: fail closed at the client
+        for (NSString *name in names) {
             NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:@"Ships"];
             NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
-            if (!data) { identity = @"invalid ship data"; return; }
+            if (!data) return;
             NSData *label = [name dataUsingEncoding:NSUTF8StringEncoding];
             // Length delimiters prevent ambiguous concatenations.
             NSString *header = [NSString stringWithFormat:@"%lu:%@:%lu:",

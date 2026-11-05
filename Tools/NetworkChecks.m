@@ -39,6 +39,7 @@ static double delay;
 static NSUInteger sent, dropped, dropEvery;
 static BOOL blackout;
 static NSUInteger predictionChecks;
+static BOOL assertPendingPrediction;
 @interface Link : NSObject <NetTransport>
 @property int port;
 @property NSMutableArray<Datagram *> *queue;
@@ -95,7 +96,7 @@ static void Step(Server *server, NSArray<Client *> *clients, ControlState contro
     for (Client *c in clients) {
         [c readPackets]; [c sendInput:controls actions:0 dt:1.0f / 30];
         ShipMoveState predicted = {0};
-        BOOL valid = delay == 0 && !dropEvery && !blackout && [c predictFrom:Latest(c) into:&predicted];
+        BOOL valid = assertPendingPrediction && delay == 0 && !dropEvery && !blackout && [c predictFrom:Latest(c) into:&predicted];
         [predictions addObject:valid ? [NSData dataWithBytes:&predicted length:sizeof predicted] : NSData.data];
         [sequences addObject:[c valueForKey:@"sequence"]];
     }
@@ -118,6 +119,7 @@ static void Steps(Server *s, NSArray *clients, ControlState controls, int n) {
 
 static void Scenario(int mission, BOOL impaired) {
     routes = [NSMutableDictionary dictionary]; delay = impaired ? 0.1 : 0;
+    assertPendingPrediction = !impaired;
     dropEvery = impaired ? 11 : 0; blackout = NO; sent = dropped = 0;
     Server *server = [[Server alloc] initWithName:@"regression"]; CHECK(server);
     [server addTransport:[Link port:1]]; [server spawnMission:mission];
@@ -176,10 +178,14 @@ static void Scenario(int mission, BOOL impaired) {
     Steps(server, clients, fly, 90); CHECK(server.clientCount == 2 && Latest(clients[0]));
     // Exercise protocol rejection through the server's real connectionless path.
     Link *old = [Link port:20];
-    [NetChannel sendOutOfBand:[NSString stringWithFormat:@"connect %d old", PROTOCOL_VERSION-1] transport:old to:[NetAddress loopback:1]];
-    [server frame:0]; NetAddress *from; NSData *reply = [old receiveFrom:&from];
-    CHECK([[NetChannel outOfBandText:reply] isEqualToString:@"reject protocol"]);
-    CHECK(server.clientCount == 2);
+    for (NSString *connect in @[[NSString stringWithFormat:@"connect %d old", PROTOCOL_VERSION-1],
+                               [NSString stringWithFormat:@"connect %d future", PROTOCOL_VERSION+1],
+                               @"connect", @"connect invalid pilot"]) {
+        [NetChannel sendOutOfBand:connect transport:old to:[NetAddress loopback:1]];
+        [server frame:0]; NetAddress *from; NSData *reply = [old receiveFrom:&from];
+        CHECK([[NetChannel outOfBandText:reply] isEqualToString:@"reject protocol"]);
+        CHECK(server.clientCount == 2);
+    }
     // A data mismatch must never invoke begin or leave a multiplayer slot live.
     Client *bad = [[Client alloc] initWithView:nil]; __block BOOL refused = NO;
     bad.disconnectHandler = ^(NSString *reason) { refused = [reason containsString:@"Incompatible"]; };
@@ -200,6 +206,7 @@ static void Scenario(int mission, BOOL impaired) {
         (unsigned long)sent, (unsigned long)dropped);
 }
 static void UDPSmoke(void) {
+    assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
     Server *server = [[Server alloc] initWithName:@"UDP localhost"]; CHECK(server);
     UDPTransport *host = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(host);
