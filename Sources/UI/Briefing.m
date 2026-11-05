@@ -810,6 +810,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     UITransition _transition;
     BOOL _presented;
     NSMutableArray<SKNode *> *_footerNodes;
+    TitleBar *_bar;                         // in _footerNodes when touch navigation is up
     Shown _shown;
     Autoplay _autoplay;
     SKNode *_portraitLayer;
@@ -817,9 +818,11 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     // The speech bubble on screen, and the one being replaced.
     Caption _caption, _oldCaption;
     UIHover *_hover;
+    // Insets as set, possibly from outside the frame update; taken up at the
+    // next tick or rebuild so the node tree only changes during the update.
+    BriefingInsets _contentInsets, _pendingInsets;
+    BOOL _hasPendingInsets;
 }
-
-@synthesize contentInsets = _contentInsets;
 
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
@@ -860,6 +863,40 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 - (BOOL)compactStoryLayout { return MIN(self.size.width, self.size.height) <= 500 && [self illustrated]; }
 
+// Phone-sized story screens are seen from farther away relative to their size:
+// larger portraits, captions and controls.
+static const CGFloat PhoneSpeakerFont = 16;
+static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
+
+- (CGFloat)footerInset {
+    BriefingInsets safe = self.contentInsets;
+    return MAX(MIN(50, self.size.width * 0.05), MAX(safe.left, safe.right) + 12);
+}
+
+- (NSString *)footerActionLabel:(NSString *)action {
+    return [action stringByReplacingOccurrencesOfString:@"↵  " withString:@""];
+}
+
+// The mission list keeps a hint line in its footer where there is room for it.
+- (BOOL)listHasHint { return !ScreenRegionsMake(self.size, self.contentInsets, 0).compact && self.size.width > 750; }
+
+- (ScreenRegions)listRegions { return ScreenRegionsMake(self.size, self.contentInsets, [self listHasHint] ? 20 : 0); }
+
+// The story screens' title bar for touch: back to the missions, then the
+// previous page and the action in the top-right corner. The monitor carries
+// the mission's title, so the bar has none of its own.
+- (TitleBar *)storyBar:(NSString *)action rects:(FooterButtons *)rects {
+    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets, 0);
+    BOOL compact = regions.compact;
+    TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:compact];
+    FooterButtons b = { .back = [bar addBack:L10n(@"story.missions") accent:UIAmber] };
+    if (action) b.confirm = [bar addAction:[self footerActionLabel:action] accent:UIAmber minWidth:compact ? 132 : 144];
+    BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
+    if (hasPrevious) b.previous = [bar addAction:L10n(@"story.previous") accent:UIAmber minWidth:0];
+    if (rects) *rects = b;
+    return bar;
+}
+
 - (BOOL)intro { return _transition == UITransitionIntro; }
 - (BOOL)paging { return _transition == UITransitionPage; }
 
@@ -877,6 +914,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 }
 
 - (void)rebuild {
+    [self takePendingInsets];
     BOOL keepScroll = _transition == UITransitionNone || (_mode == ModeList && _transition == UITransitionSelect);
     if (!keepScroll) {
         _scrollOffset = 0;
@@ -933,6 +971,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         if (node != _portraitLayer) [node removeFromParent];
     [_hover reset];
     _footerNodes = [NSMutableArray array];
+    _bar = nil;
     _buttons = (FooterButtons){0};
     _grid = (MissionGrid){0};
     _map = nil;
@@ -990,27 +1029,35 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     [self rebuild];
 }
 
+- (BriefingInsets)contentInsets { return _contentInsets; }
+
 - (void)setContentInsets:(BriefingInsets)insets {
-    BOOL changed = !InsetsEqual(insets, _contentInsets);
+    @synchronized (self) {
+        _pendingInsets = insets;
+        _hasPendingInsets = YES;
+    }
+}
+
+// Takes up insets set since the last call; YES when they changed.
+- (BOOL)takePendingInsets {
+    BriefingInsets insets = {0};
+    BOOL pending = NO;
+    @synchronized (self) {
+        pending = _hasPendingInsets;
+        insets = _pendingInsets;
+        _hasPendingInsets = NO;
+    }
+    if (!pending || InsetsEqual(insets, _contentInsets)) return NO;
     _contentInsets = insets;
-    if (changed && _root) [self rebuild];
+    return YES;
 }
 
 - (void)buildList {
     CGSize s = self.size;
-    BriefingInsets safe = self.contentInsets;
-    CGFloat left = safe.left + 24, right = s.width - safe.right - 24;
-    CGFloat top = s.height - safe.top - 24, bottom = safe.bottom + 82;
     BOOL compact = s.height < 550;
-    SKLabelNode *title = Text(compact ? 23 : 34, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
-    title.fontName = UIInterfaceBoldFont;
-    title.text = L10n(@"missions.title");
-    title.position = CGPointMake(left + 4, top - 10);
-    [_root addChild:title];
-    SKLabelNode *sub = Text(compact ? 11 : 13, UIColorWithOpacity(UIInk, 0.65), SKLabelHorizontalAlignmentModeLeft);
-    sub.text = L10n(@"missions.kicker");
-    sub.position = CGPointMake(left + 4, top - (compact ? 38 : 46));
-    [_root addChild:sub];
+    // The grid fills the body; on a phone it runs to the screen's bottom edge.
+    CGRect body = [self listRegions].bodyToEdge;
+    CGFloat left = CGRectGetMinX(body), right = CGRectGetMaxX(body);
 
     NSArray<CampaignMission *> *missions = CampaignMissions();
     NSUInteger unlocked = ProgressUnlockedCount();
@@ -1018,7 +1065,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     _grid.columns = MAX(1, MIN(6, (NSUInteger)((width + gap) / 160)));
     CGFloat tileW = (width - gap * (_grid.columns - 1)) / _grid.columns;
     CGFloat tileH = compact ? 144 : 172;
-    _grid.rows = RectFromEdges(left, bottom, right, MAX(bottom + 1, top - (compact ? 62 : 76)));
+    _grid.rows = body;
     SKNode *content = [SKNode node];
     NSMutableArray *tiles = [NSMutableArray array];
     for (NSUInteger i = 0; i < missions.count; i++) {
@@ -1082,12 +1129,16 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 - (void)footer:(NSString *)text action:(NSString *)action {
     [self buildFooter:text action:action];
-    SKNode *confirm = action && [_footerNodes.lastObject isKindOfClass:SKShapeNode.class] ? _footerNodes.lastObject : nil;
+    SKNode *confirm = !action ? nil : _bar ? _bar.action
+                    : [_footerNodes.lastObject isKindOfClass:SKShapeNode.class] ? _footerNodes.lastObject : nil;
     if ([self intro]) {
         NSUInteger i = 0;
         for (SKNode *node in _footerNodes) {
             if ([node isKindOfClass:SKLabelNode.class]) UIMotionFlickerIn(node, 0.45);
-            else UIMotionSlideIn(node, CGVectorMake(0, -44), 0.18 + 0.05 * i++, 0.32);
+            else if (node == _bar) {
+                [_bar revealAfter:0.18 + 0.05 * i];
+                i += _bar.controls.count;
+            } else UIMotionSlideIn(node, CGVectorMake(0, -44), 0.18 + 0.05 * i++, 0.32);
         }
     } else if ([self paging] && action && _shown.action && ![action isEqualToString:_shown.action] && confirm) {
         // The footer action changed: the button re-strikes.
@@ -1111,39 +1162,34 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     return button;
 }
 
+- (void)footerBar:(TitleBar *)bar {
+    _bar = bar;
+    [self footerAdd:bar];
+    [bar registerHover:_hover];
+}
+
 - (void)buildFooter:(NSString *)text action:(NSString *)action {
     BriefingInsets safe = self.contentInsets;
-    CGFloat inset = MAX(MIN(50, self.size.width * 0.05), MAX(safe.left, safe.right) + 12);
+    CGFloat inset = [self footerInset];
     BOOL console = [self illustrated];
     if (_mode == ModeList) {
-        CGFloat left = safe.left + 24, right = self.size.width - safe.right - 24, bottom = safe.bottom + 16;
-        CGFloat buttonW = MIN(150, (right - left - 12) / 2);
-        _buttons.back = CGRectMake(left, bottom, buttonW, 44);
-        [self footerButton:_buttons.back title:L10n(@"missions.back_compact") accent:UIInk];
-        if (action) {
-            _buttons.confirm = CGRectMake(right - buttonW, bottom, buttonW, 44);
-            [self footerButton:_buttons.confirm title:action accent:UIAmber];
-        }
-        if (right - left > 650) {
+        ScreenRegions regions = [self listRegions];
+        TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact];
+        _buttons.back = [bar addBack:L10n(@"missions.main_menu") accent:UIInk];
+        if (action) _buttons.confirm = [bar addAction:action accent:UIAmber minWidth:regions.compact ? 132 : 150];
+        [bar setTitle:L10n(@"missions.title") kicker:L10n(@"missions.kicker")];
+        [self footerBar:bar];
+        if (!CGRectIsEmpty(regions.footer)) {
             SKLabelNode *hint = Text(11, UIColorWithOpacity(UIInk, 0.65), SKLabelHorizontalAlignmentModeCenter);
-            hint.text = text; hint.position = CGPointMake((left + right) / 2, bottom + 22);
+            hint.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
+            hint.text = text;
+            hint.position = RectCenter(regions.footer);
             [self footerAdd:hint];
         }
         return;
     }
     if (self.touchNavigationEnabled || [self compactStoryLayout]) {
-        CGFloat bottom = safe.bottom + 16, height = 44;
-        _buttons.back = CGRectMake(inset, bottom, 84, height);
-        [self footerButton:_buttons.back title:L10n(@"story.missions") accent:UIAmber];
-        BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
-        if (hasPrevious) {
-            _buttons.previous = CGRectMake(CGRectGetMaxX(_buttons.back) + 8, bottom, 44, height);
-            [self footerButton:_buttons.previous title:@"←" accent:UIAmber];
-        }
-        CGFloat width = MIN(144, self.size.width * 0.38);
-        _buttons.confirm = CGRectMake(self.size.width - inset - width, bottom, width, height);
-        NSString *label = [action stringByReplacingOccurrencesOfString:@"↵  " withString:@""];
-        [self footerButton:_buttons.confirm title:label accent:UIAmber];
+        [self footerBar:[self storyBar:action rects:&_buttons]];
         return;
     }
     CGRect rail = CGRectMake(inset - 10, safe.bottom + 14, self.size.width - 2 * inset + 20, 52);
@@ -1201,7 +1247,9 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
 // A room from Story/rooms.json: the art, cropped to fill the screen, and its
 // wall monitor traced by the room's bezel polygon (source pixels, y down).
-- (CGRect)addBackdrop:(NSString *)roomName raiseBoard:(BOOL)raiseBoard {
+// clear: rects the monitor should stay below, such as a navigation bar's
+// controls; the art moves down as far as it can while still filling the screen.
+- (CGRect)addBackdrop:(NSString *)roomName raiseBoard:(BOOL)raiseBoard clear:(NSArray<NSValue *> *)clear {
     CGSize size = self.size;
     StoryRoom *room = StoryRoomNamed(roomName);
     SKSpriteNode *art = room ? [self artNamed:room.image] : nil;
@@ -1210,14 +1258,30 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     CGSize source = room.size.x > 0 ? CGSizeMake(room.size.x, room.size.y) : art.size;
     const CGFloat boardBottom = room.boardBottom / source.height, boardHeight = room.boardHeight / source.height;
     CGFloat scale = MAX(size.width / art.size.width, size.height / art.size.height * (raiseBoard ? 1.15 : 1));
+    CGSize artSize = CGSizeMake(art.size.width * scale, art.size.height * scale);
     CGFloat centerY = size.height / 2;
     if (raiseBoard && room.hasBoard) {
-        CGFloat artHeight = art.size.height * scale;
         // Give the caption more room while keeping the top of the monitor visible.
-        CGFloat boardTop = artHeight * (boardBottom + boardHeight);
+        CGFloat boardTop = artSize.height * (boardBottom + boardHeight);
         CGFloat originY = MIN(0, size.height * 0.96 - boardTop);
-        centerY = MAX(centerY, originY + artHeight / 2);
+        centerY = MAX(centerY, originY + artSize.height / 2);
     }
+    NSUInteger count = room.bezelCount;
+    CGRect board = CGRectNull;
+    for (NSUInteger i = 0; i < count; i++) {
+        simd_float2 bezel = [room bezelPoint:i];
+        CGPoint fraction = CGPointMake(bezel.x / source.width, 1 - bezel.y / source.height);
+        board = CGRectUnion(board, (CGRect){ PointMultiply(fraction, artSize), CGSizeZero });
+    }
+    CGPoint origin = CGPointMake(size.width / 2 - artSize.width / 2, centerY - artSize.height / 2);
+    CGFloat drop = 0;
+    for (NSValue *value in clear) {
+        CGRect rect = UnboxRect(value), placed = CGRectOffset(board, origin.x, origin.y);
+        if (CGRectGetMaxX(rect) > CGRectGetMinX(placed) && CGRectGetMinX(rect) < CGRectGetMaxX(placed))
+            drop = MAX(drop, CGRectGetMaxY(placed) - CGRectGetMinY(rect) + 4);
+    }
+    // Never so far that the art's top edge comes into view.
+    centerY -= MIN(drop, MAX(0, origin.y + artSize.height - size.height));
     [art setScale:scale];
     art.position = CGPointMake(size.width / 2, centerY);
     CGRect frame = art.frame;
@@ -1235,7 +1299,6 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     [_root addChild:shade];
 
     // Counterclockwise once converted to scene coordinates.
-    NSUInteger count = room.bezelCount;
     if (count < 3) return CGRectZero;
     CGPoint corners[count];
     for (NSUInteger i = 0; i < count; i++) {
@@ -1252,7 +1315,9 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     // Keep faces inside the usable landscape width, while the illustration
     // can still extend behind the bottom caption and footer.
     BriefingInsets safe = self.contentInsets;
-    CGFloat side = MAX(safe.left, safe.right);
+    // On a phone the outer shoulder may pass under the notch so the figure can
+    // grow without its face crowding the monitor.
+    CGFloat side = MAX(safe.left, safe.right) * ([self compactStoryLayout] ? PhonePortraitInset : 1);
     CGRect portraitBounds = CGRectMake(side, 0, MAX(1, self.size.width - 2 * side),
                                        MAX(1, self.size.height - safe.top));
     area = CGRectIntersection(area, portraitBounds);
@@ -1315,6 +1380,9 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     return playerSpeaking;
 }
 
+// From the bubble's top edge to its first line of text, below the speaker's name.
+- (CGFloat)captionHeader { return [self compactStoryLayout] ? 36 : 32; }
+
 - (CGFloat)captionTextHeightForLines:(NSArray<StoryLine *> *)lines width:(CGFloat)width fontSize:(CGFloat)fontSize {
     SKLabelNode *speech = Para(fontSize, UIColorWithOpacity(UIWhite, 1), MAX(1, width - 32));
     speech.fontName = UIBodyFont;
@@ -1336,7 +1404,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     [layer addChild:panel];
     CGFloat left = CGRectGetMinX(rect) + 16, top = CGRectGetMaxY(rect);
     CGFloat width = MAX(1, rect.size.width - 32);
-    SKLabelNode *speaker = Text(13, UIColorWithOpacity(UIAmber, 1),
+    BOOL phone = [self compactStoryLayout];
+    SKLabelNode *speaker = Text(phone ? PhoneSpeakerFont : 13, UIColorWithOpacity(UIAmber, 1),
                                speakerOnRight ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeLeft);
     speaker.fontName = UIInterfaceBoldFont;
     speaker.text = line.speaker.uppercaseString;
@@ -1353,7 +1422,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     NSArray<NSValue *> *highlights;
     speech.text = StoryPlainText(line.text, &highlights);
     UIMotionHighlight(speech, highlights, UIColorWithOpacity(UIYellow, 1));
-    speech.position = CGPointMake(left, top - 32);
+    speech.position = CGPointMake(left, top - [self captionHeader]);
     [layer addChild:speech];
 
     // The bubble hangs from its top edge, which stays put between lines.
@@ -1394,16 +1463,26 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     CGSize size = self.size;
     CampaignMission *mission = _mission;
     BriefingPage *page = _pages[_page];
-    CGFloat textSize = MIN(24, MAX(14, size.width / 60));
     BOOL narrow = size.width < size.height * 1.24;
     BOOL compact = [self compactStoryLayout];
-    CGFloat floor = self.contentInsets.bottom + (compact ? 64 : 70);
+    BOOL phone = compact && !narrow;
+    CGFloat textSize = phone ? 19 : MIN(24, MAX(14, size.width / 60));
+    CGFloat minTextSize = phone ? 15 : 12;
+    NSString *action = L10n([self hasNextBriefingPage] ? @"briefing.skip" : @"briefing.launch");
+    // Touch screens navigate from a bar along the top, which leaves the bottom
+    // to the caption; desktop keeps its hint rail along the bottom.
+    BOOL topBar = self.touchNavigationEnabled || compact;
+    TitleBar *bar = topBar ? [self storyBar:action rects:NULL] : nil;
+    CGFloat floor = self.contentInsets.bottom + (topBar ? (compact ? 10 : 16) : 70);
 
-    CGRect screen = [self addBackdrop:mission.briefingRoom raiseBoard:compact && !narrow];
+    NSMutableArray<NSValue *> *clear = [NSMutableArray array];
+    for (SKShapeNode *control in bar.controls) [clear addObject:BoxRect(control.frame)];
+    CGRect screen = [self addBackdrop:mission.briefingRoom raiseBoard:compact && !narrow clear:clear];
     BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
     if (!paintedBoard) {
-        CGFloat margin = size.width * 0.06;
-        screen = CGRectMake(margin, size.height * 0.59, size.width - margin * 2, size.height * 0.34);
+        CGFloat margin = size.width * 0.06, panelTop = size.height * 0.93;
+        if (bar) panelTop = MIN(panelTop, CGRectGetMinY(bar.row) - 8);
+        screen = RectFromEdges(margin, panelTop - size.height * 0.34, size.width - margin, panelTop);
         SKShapeNode *panel = UIReadoutPanel(screen, UIColorWithOpacity(UIConsoleEdge, 0.95),
                                           UIColorWithOpacity(UIConsoleGlass, 1));
         [_root addChild:panel];
@@ -1418,13 +1497,16 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         screen = CGPathGetBoundingBox(_monitorMask.path);
     }
 
-    CGFloat captionWidth = screen.size.width * 0.70;
-    const CGFloat captionPadding = 44; // Speaker header and bottom inset.
+    // The bubble hangs below the monitor on its speaker's side; on a phone it
+    // takes most of the monitor's width.
+    CGFloat captionWidth = screen.size.width * (phone ? 0.9 : 0.70);
+    CGFloat laneLeft = CGRectGetMinX(screen), laneRight = CGRectGetMaxX(screen);
+    const CGFloat captionPadding = [self captionHeader] + 12; // Speaker header and bottom inset.
     CGFloat tallestCaption = [self captionTextHeightForLines:_pages width:captionWidth fontSize:textSize] + captionPadding;
     // Leave a gap below the monitor while keeping the caption above the footer.
     CGFloat captionTop = CGRectGetMinY(screen) + (paintedBoard ? 0 : 3) - CaptionDrop;
-    while (tallestCaption > captionTop - floor && textSize > 12) {
-        textSize = MAX(12, textSize - 1);
+    while (tallestCaption > captionTop - floor && textSize > minTextSize) {
+        textSize = MAX(minTextSize, textSize - 1);
         tallestCaption = [self captionTextHeightForLines:_pages width:captionWidth fontSize:textSize] + captionPadding;
     }
     CGFloat captionHeight = [self captionTextHeightForLines:@[page] width:captionWidth fontSize:textSize] + captionPadding;
@@ -1434,7 +1516,13 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
     CGFloat wing = CGRectGetMinX(screen);
     CGRect speakerArea, playerArea;
-    if (narrow) {
+    if (phone) {
+        // As large as the height allows, from the screen edge inward, below the bar.
+        CGFloat side = MAX(self.contentInsets.left, self.contentInsets.right) * PhonePortraitInset;
+        CGFloat width = size.width * 0.36, height = MAX(1, CGRectGetMinY(bar.row) - 4);
+        speakerArea = CGRectMake(side, 0, width, height);
+        playerArea = CGRectMake(size.width - side - width, 0, width, height);
+    } else if (narrow) {
         CGFloat height = MAX(floor, captionTop - tallestCaption) + 6;
         speakerArea = CGRectMake(0, 0, size.width / 2, height);
         playerArea = CGRectOffset(speakerArea, size.width / 2, 0);
@@ -1448,10 +1536,10 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     }
     BOOL playerSpeaking = [self addPortraitsForLine:page speakerArea:speakerArea playerArea:playerArea];
 
-    [self addCaption:page inRect:CGRectMake(CGRectGetMinX(screen), captionBottom, captionWidth, captionHeight)
+    CGFloat captionLeft = playerSpeaking ? laneRight - captionWidth : laneLeft;
+    [self addCaption:page inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
              fontSize:textSize speakerOnRight:playerSpeaking];
-    [self footer:L10n(@"briefing.hint")
-           action:L10n([self hasNextBriefingPage] ? @"briefing.skip" : @"briefing.launch")];
+    [self footer:L10n(@"briefing.hint") action:action];
 }
 
 - (void)buildMonitor:(CGRect)screen mission:(CampaignMission *)mission page:(BriefingPage *)page {
@@ -1626,20 +1714,22 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     CGFloat inset = MAX(MIN(50, s.width * 0.05), MAX(safe.left, safe.right) + 12);
     CGFloat width = MAX(1, s.width - 2 * inset);
     CGFloat fontSize = MIN(23, MAX(15, s.width / 58));
+    if (_debriefBeat > 0 && MIN(s.width, s.height) <= 500) fontSize = 18;
     BOOL more = _success && _index + 1 < CampaignMissions().count;
     NSString *next = L10n(more ? @"debrief.next_mission" : @"debrief.missions");
 
     if (_debriefBeat > 0 && _debriefBeat <= conversation.count) {
         StoryLine *line = conversation[_debriefBeat - 1];
-        [self addBackdrop:mission.debriefRoom raiseBoard:NO];
-        CGFloat captionHeight = MAX(72, [self captionTextHeightForLines:conversation width:width fontSize:fontSize] + 40);
+        [self addBackdrop:mission.debriefRoom raiseBoard:NO clear:nil];
+        CGFloat captionHeight = MAX(72, [self captionTextHeightForLines:conversation width:width fontSize:fontSize] + [self captionHeader] + 8);
         BOOL compact = [self compactStoryLayout];
         CGFloat floor = compact ? (s.height - captionHeight) / 2 : safe.bottom + 72;
         CGFloat bottom = compact ? 0 : floor + captionHeight - 8;
         CGFloat height = compact ? floor + 6 : s.height - bottom - 26;
         CGRect leftArea = CGRectMake(inset, bottom, width / 2, MAX(1, height));
         BOOL playerSpeaking = [self addPortraitsForLine:line speakerArea:leftArea playerArea:CGRectOffset(leftArea, width / 2, 0)];
-        CGFloat captionBottom = MAX(safe.bottom + (compact ? 64 : 70), floor - CaptionDrop);
+        CGFloat captionBottom = MAX(safe.bottom + (compact ? 10 : self.touchNavigationEnabled ? 16 : 70),
+                                    floor - CaptionDrop);
         [self addCaption:line inRect:CGRectMake(inset, captionBottom, width, captionHeight)
                  fontSize:fontSize speakerOnRight:playerSpeaking];
         [self footer:L10n(@"debrief.conversation_hint")
@@ -1843,8 +1933,10 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     NSTimeInterval caption = [self closeOldCaption];
     NSUInteger i = 0;
     for (SKNode *node in _footerNodes) {
+        // The navigation bar leaves upward, the footer downward.
+        CGFloat away = node == _bar ? 40 : -40;
         [node runAction:UIAfter(i++ * 0.03, [SKAction group:@[
-            UIEased([SKAction moveByX:0 y:-40 duration:0.2], UICurveIn), [SKAction fadeOutWithDuration:0.2],
+            UIEased([SKAction moveByX:0 y:away duration:0.2], UICurveIn), [SKAction fadeOutWithDuration:0.2],
         ]])];
     }
     NSTimeInterval hold = MAX(caption, 0.16);
@@ -1859,7 +1951,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 }
 
 - (void)tick:(double)time {
-    if (!CGSizeEqualToSize(self.size, _laidOut)) [self rebuild];
+    if ([self takePendingInsets] || !CGSizeEqualToSize(self.size, _laidOut)) [self rebuild];
     if (_mode == ModeBriefing) {
         [_map pulse:time];
         [self autoplayAt:time];

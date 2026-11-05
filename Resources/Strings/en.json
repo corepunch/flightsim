@@ -64,8 +64,8 @@
     "browser.in_menus": "in the menus",
     "browser.help_wide": "Direct IP: KestrelFrontier +connect <host[:port]>   /   Dedicated: KestrelFrontier --dedicated [mission]",
     "browser.help": "↑ / ↓  Select   •   Return  Join   •   Esc  Back",
-    "browser.back": "‹  BACK",
-    "browser.join": "JOIN GAME  ›",
+    "browser.back": "BACK",
+    "browser.join": "JOIN GAME",
     "menu.campaign_replay": "REPLAY CAMPAIGN",
     "menu.campaign_continue": "CONTINUE CAMPAIGN",
     "menu.campaign_start": "START CAMPAIGN",
@@ -110,7 +110,7 @@
       "I",
       "J  /  K"
     ],
-    "controls.back": "‹  MAIN MENU",
+    "controls.back": "MAIN MENU",
     "menu.unit": "FLIGHT WING",
     "menu.wordmark": [
       "FLIGHT"
@@ -130,8 +130,9 @@
     "missions.hint_touch": "SWIPE TO BROWSE  /  TAP A MISSION",
     "missions.hint": "ARROWS SELECT  /  SCROLL TO BROWSE",
     "missions.briefing": "BRIEFING",
-    "missions.back_compact": "‹ MAIN MENU",
+    "missions.main_menu": "MAIN MENU",
     "story.missions": "MISSIONS",
+    "story.previous": "PREV",
     "briefing.hint": "Click or ← / →  Browse briefing     Esc  Missions",
     "briefing.skip": "SKIP",
     "briefing.launch": "↵  LAUNCH",

@@ -1,7 +1,16 @@
 // Included by PortraitChecks.m so the existing GUI runner and CI exercise it.
-static BOOL SafeButton(Briefing *scene, NSString *key, CGRect safe) {
-    CGRect rect = [[scene valueForKey:key] rectValue];
-    return CGRectIsEmpty(rect) || (CGRectContainsRect(safe, rect) && rect.size.height >= 44);
+// Title bars may reach into the side insets: landscape
+// phones keep their sensor housing at mid-height, so the bar's controls only
+// have to stay inside the safe area vertically, in the top or bottom third, and
+// off the screen's rounded edge.
+static BOOL SafeBarButton(Briefing *scene, NSString *key, CGRect safe) {
+    CGRect rect = [[scene valueForKey:key] rectValue], screen = RectWithSize(scene.size);
+    if (CGRectIsEmpty(rect)) return YES;
+    BOOL vertical = CGRectGetMinY(rect) >= CGRectGetMinY(safe) && CGRectGetMaxY(rect) <= CGRectGetMaxY(safe);
+    CGFloat third = scene.size.height / 3;
+    BOOL clearOfHousing = CGRectGetMaxY(rect) <= third || CGRectGetMinY(rect) >= 2 * third;
+    return rect.size.height >= 44 && vertical && CGRectContainsRect(CGRectInset(screen, 16, 0), rect)
+        && (CGRectContainsRect(safe, rect) || clearOfHousing);
 }
 
 static int CheckCampaignSafeAreas(void) {
@@ -19,16 +28,16 @@ static int CheckCampaignSafeAreas(void) {
                                  sizes[v].height - insets[v].top - insets[v].bottom);
         for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
             [scene showListSelecting:mission];
-            CHECK(SafeButton(scene, @"backRect", safe));
-            CHECK(SafeButton(scene, @"confirmRect", safe));
+            CHECK(SafeBarButton(scene, @"backRect", safe));
+            CHECK(SafeBarButton(scene, @"confirmRect", safe));
             [scene showBriefing:mission];
             NSArray *pages = [scene valueForKey:@"_pages"];
             for (NSUInteger page = 0; page < pages.count; page++) {
                 CHECK(!CGRectIsEmpty(scene.backRect));
-                CHECK(SafeButton(scene, @"backRect", safe));
+                CHECK(SafeBarButton(scene, @"backRect", safe));
                 if (page > 0) CHECK(!CGRectIsEmpty(scene.previousRect));
-                CHECK(SafeButton(scene, @"previousRect", safe));
-                CHECK(SafeButton(scene, @"confirmRect", safe));
+                CHECK(SafeBarButton(scene, @"previousRect", safe));
+                CHECK(SafeBarButton(scene, @"confirmRect", safe));
                 CHECK(CGRectContainsRect(safe, scene.captionRect));
                 if (page + 1 < pages.count) Advance(scene);
             }
@@ -39,7 +48,7 @@ static int CheckCampaignSafeAreas(void) {
             CHECK([scene handle:0] == BriefingCommandLaunch);
             for (NSUInteger success = 0; success < 2; success++) {
                 [scene showDebrief:mission success:success results:@[@"+ Objective completed"]];
-                CHECK(SafeButton(scene, @"confirmRect", safe));
+                CHECK(SafeBarButton(scene, @"confirmRect", safe));
                 if (!success) {
                     CHECK([scene handle:InputActionConfirm] == BriefingCommandLaunch);
                     continue;
@@ -47,7 +56,7 @@ static int CheckCampaignSafeAreas(void) {
                 NSArray *lines = CampaignMissionAt(mission).debrief.dialogue;
                 for (NSUInteger beat = 0; beat < lines.count; beat++) {
                     Advance(scene);
-                    CHECK(SafeButton(scene, @"confirmRect", safe));
+                    CHECK(SafeBarButton(scene, @"confirmRect", safe));
                     CHECK(CGRectContainsRect(safe, scene.captionRect));
                 }
                 UIMotionFinishTyping(scene.speech);

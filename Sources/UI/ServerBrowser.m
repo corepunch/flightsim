@@ -89,17 +89,28 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     shade.anchorPoint = CGPointZero;
     [_root addChild:shade];
 
-    CGFloat x = MIN(M(@"margin", 110), s.width * M(@"marginFraction", 0.08)), y = s.height - MIN(M(@"top", 90), s.height * M(@"topFraction", 0.14));
-    SKLabelNode *kicker = Text(M(@"kickerSize", 14), Ink(0.6));
-    kicker.text = L10n(@"browser.kicker");
-    kicker.position = CGPointMake(x, y);
-    [_root addChild:kicker];
-    SKLabelNode *title = Text(M(@"titleSize", 34), Ink(1));
-    title.text = L10n(@"browser.title");
-    title.position = CGPointMake(x, y - M(@"titleOffset", 26));
-    [_root addChild:title];
+    // Title bar on top, servers in the body, status and notes in the footer.
+    ScreenInsets safe = {0};
+#if TARGET_OS_IOS
+    if (self.view) safe = self.view.safeAreaInsets;
+#endif
+    NSArray *lines = @[
+        _status ?: @"",
+        _hostLine ?: @"",
+        L10n(s.width >= M(@"wideHelpWidth", 850) ? @"browser.help_wide" : @"browser.help"),
+    ];
+    CGFloat step = M(@"notesStep", 20);
+    ScreenRegions regions = ScreenRegionsMake(s, safe, lines.count * step);
+    TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact];
+    _backRect = [bar addBack:L10n(@"browser.back") accent:UIInk];
+    _joinRect = self.selected ? [bar addAction:L10n(@"browser.join") accent:UIAmber minWidth:M(@"buttonWidth", 145)]
+                              : CGRectZero;
+    [bar setTitle:L10n(@"browser.title") kicker:L10n(@"browser.kicker")];
+    [_root addChild:bar];
+    [bar registerHover:_hover];
 
-    y -= M(@"listOffset", 84);
+    CGRect body = regions.body;
+    CGFloat x = CGRectGetMinX(body), y = CGRectGetMaxY(body), width = body.size.width;
     if (!_servers.count) {
         SKLabelNode *none = Text(M(@"emptySize", 17), Ink(0.55));
         none.text = L10n(@"browser.searching");
@@ -107,8 +118,8 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
         none.position = CGPointMake(x, y);
         [_root addChild:none];
     }
-    CGFloat rowHeight = _rowHeight = M(@"rowHeight", 36), width = s.width - 2 * x;
-    NSUInteger visible = MIN(_servers.count, (NSUInteger)MAX(1, floor((y - M(@"listBottom", 143)) / rowHeight)));
+    CGFloat rowHeight = _rowHeight = M(@"rowHeight", 36);
+    NSUInteger visible = MIN(_servers.count, (NSUInteger)MAX(1, floor(body.size.height / rowHeight)));
     _firstVisible = visible && _index >= visible ? _index - visible + 1 : 0;
     _serverRows = CGRectMake(x, y - visible * rowHeight, width, visible * rowHeight);
     for (NSUInteger i = _firstVisible; i < _firstVisible + visible; i++) {
@@ -127,43 +138,25 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
         [rows addObject:l];
     }
 
-    NSArray *lines = @[
-        _status ?: @"",
-        _hostLine ?: @"",
-        L10n(s.width >= M(@"wideHelpWidth", 850) ? @"browser.help_wide" : @"browser.help"),
-    ];
+    CGRect footer = regions.footer;
     for (NSUInteger i = 0; i < lines.count; i++) {
         SKLabelNode *l = Text(i == 0 ? M(@"statusSize", 14) : M(@"noteSize", 12), i == 0 ? Amber(1) : Ink(0.55));
         l.text = lines[i];
         l.numberOfLines = 1;
-        l.preferredMaxLayoutWidth = width;
+        l.preferredMaxLayoutWidth = footer.size.width;
         l.lineBreakMode = NSLineBreakByTruncatingTail;
-        l.position = CGPointMake(x, M(@"notesTop", 130) - i * M(@"notesStep", 20));
+        l.position = CGPointMake(CGRectGetMinX(footer), CGRectGetMaxY(footer) - i * step);
         [_root addChild:l];
         [notes addObject:l];
     }
-    CGFloat bw = M(@"buttonWidth", 145), bh = M(@"buttonHeight", 44), by = M(@"buttonBottom", 20);
-    _backRect = CGRectMake(x, by, bw, bh);
-    _joinRect = self.selected ? CGRectMake(s.width - x - bw, by, bw, bh) : CGRectZero;
-    SKNode *back = UIActionButton(_backRect, L10n(@"browser.back"), UIInk);
-    [_root addChild:back];
-    [_hover addButton:back rect:_backRect accent:UIInk];
-    SKNode *join = self.selected ? UIActionButton(_joinRect, L10n(@"browser.join"), UIAmber) : nil;
-    if (join) {
-        [_root addChild:join];
-        [_hover addButton:join rect:_joinRect accent:UIAmber];
-    }
     if (!intro) return;
     UIMotionFlickerIn(shade, 0);
-    UIMotionDecode(kicker, 0.05, 0.4);
-    UIMotionDecode(title, 0.12, 0.45);
     for (NSUInteger i = 0; i < rows.count; i++) {
         UIMotionSlideIn(rows[i], CGVectorMake(-24, 0), 0.25 + i * 0.04, 0.28);
         UIMotionDecode(rows[i], 0.25 + i * 0.04, 0.35);
     }
     for (SKLabelNode *note in notes) UIMotionFlickerIn(note, 0.4);
-    UIMotionSlideIn(back, CGVectorMake(0, -44), 0.25, 0.32);
-    if (join) UIMotionSlideIn(join, CGVectorMake(0, -44), 0.3, 0.32);
+    [bar revealAfter:0.05];
     if (!rows.count) for (SKNode *child in _root.children)
         if ([child isKindOfClass:SKLabelNode.class] && [child.name isEqualToString:@"searching"]) {
             UIMotionDecode((SKLabelNode *)child, 0.25, 0.5);

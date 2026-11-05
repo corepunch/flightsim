@@ -668,12 +668,17 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
 }
 
 - (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent {
+    [self addButton:button rect:rect accent:accent outline:NULL];
+}
+
+- (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent outline:(CGPathRef)outline {
     if (!button || CGRectIsEmpty(rect)) return;
     // A brighter edge and a lit face, extending out of the left edge.
     CGPoint pivot = CGPointMake(CGRectGetMinX(rect), CGRectGetMidY(rect));
     SKNode *overlay = [SKNode node];
     overlay.position = pivot;
     SKShapeNode *face = UISkewedShape(rect, UIColorWithOpacity(accent, 1), UIColorWithOpacity(accent, 0.14));
+    if (outline) face.path = outline;
     face.blendMode = SKBlendModeAdd;
     face.position = CGPointMake(-pivot.x, -pivot.y);
     [overlay addChild:face];

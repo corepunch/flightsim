@@ -419,14 +419,55 @@ static inline SKShapeNode *UIControlRail(CGRect rect, BOOL console) {
                         UIColorWithOpacity(console ? UIConsoleSteel : UIPanel, 0.91));
 }
 
-static inline SKShapeNode *UIActionButton(CGRect rect, NSString *text, UIRGB accent) {
-    SKShapeNode *button = UISkewedShape(rect, UIColorWithOpacity(accent, 0.85), UIColorWithOpacity(UIPanel, 0.96));
-    SKLabelNode *label = UIInterfaceLabel(13, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeCenter,
+static inline SKLabelNode *UIButtonLabel(NSString *text, CGFloat fontSize, CGPoint at) {
+    SKLabelNode *label = UIInterfaceLabel(fontSize, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeCenter,
                                    SKLabelVerticalAlignmentModeCenter);
     label.fontName = UIInterfaceBoldFont;
-    label.position = CGPointMake(CGRectGetMidX(rect), CGRectGetMidY(rect));
+    label.position = at;
     label.text = text;
-    [button addChild:label];
+    return label;
+}
+
+static inline SKShapeNode *UIActionButtonSized(CGRect rect, NSString *text, UIRGB accent, CGFloat fontSize) {
+    SKShapeNode *button = UISkewedShape(rect, UIColorWithOpacity(accent, 0.85), UIColorWithOpacity(UIPanel, 0.96));
+    [button addChild:UIButtonLabel(text, fontSize, RectCenter(rect))];
+    return button;
+}
+
+static inline SKShapeNode *UIActionButton(CGRect rect, NSString *text, UIRGB accent) {
+    return UIActionButtonSized(rect, text, accent, 13);
+}
+
+// Navigation back: a plate whose left end is an arrowhead, so leaving a screen
+// reads differently from acting on it. First on the left of a control bar.
+static inline CGFloat UIBackControlTip(CGRect rect) { return rect.size.height * 0.45; }
+
+static inline CGFloat UIBackControlWidth(NSString *text, CGFloat height, CGFloat fontSize) {
+    return UIButtonLabel(text, fontSize, CGPointZero).frame.size.width + UIBackControlTip(CGRectMake(0, 0, 0, height)) + 30;
+}
+
+static inline CGPathRef UICreateBackControlPath(CGRect rect) CF_RETURNS_RETAINED {
+    CGFloat left = CGRectGetMinX(rect), right = CGRectGetMaxX(rect);
+    CGFloat bottom = CGRectGetMinY(rect), top = CGRectGetMaxY(rect), tip = UIBackControlTip(rect);
+    const CGPoint corners[] = {
+        { left, CGRectGetMidY(rect) }, { left + tip, top }, { right, top },
+        { right - MIN(rect.size.height * UISlant, rect.size.width * 0.25), bottom }, { left + tip, bottom },
+    };
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPathAddLines(path, NULL, corners, sizeof(corners) / sizeof(*corners));
+    CGPathCloseSubpath(path);
+    return path;
+}
+
+static inline SKShapeNode *UIBackControl(CGRect rect, NSString *text, UIRGB accent, CGFloat fontSize) {
+    CGPathRef path = UICreateBackControlPath(rect);
+    SKShapeNode *button = [SKShapeNode shapeNodeWithPath:path];
+    CGPathRelease(path);
+    button.strokeColor = UIColorWithOpacity(accent, 0.85);
+    button.fillColor = UIColorWithOpacity(UIPanel, 0.96);
+    button.lineWidth = 1;
+    CGPoint at = RectCenter(RectInsetEdges(rect, UIBackControlTip(rect), 0, rect.size.height * UISlant, 0));
+    [button addChild:UIButtonLabel(text, fontSize, at)];
     return button;
 }
 
@@ -560,6 +601,58 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size);
 - (void)reset;
 // button's children must be laid out in the same space as rect.
 - (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent;
+// Lights the given outline instead of the skewed action shape. Pass a path of
+// the caller's own, never one read back from a node on screen: reading a live
+// shape node's path races the renderer.
+- (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent outline:(CGPathRef)outline;
 // Render thread, once per frame.
 - (void)updateInScene:(SKScene *)scene;
+@end
+
+// MARK: - ScreenRegions
+
+// Every screen is laid out in the same regions, and content goes into a region,
+// never at an ad hoc position: the title bar along the top (TitleBar: back,
+// title, actions), the body (lists, grids, the story), and an optional footer
+// for status lines and hints. Compact screens are phones.
+#if TARGET_OS_IOS
+typedef UIEdgeInsets ScreenInsets;
+#else
+typedef NSEdgeInsets ScreenInsets;
+#endif
+
+typedef struct {
+    CGRect header, body, footer;   // footer is empty when the screen has none
+    CGRect bodyToEdge;             // body run to the bottom screen edge, for scrolling grids on phones
+    BOOL compact;
+} ScreenRegions;
+
+ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHeight);
+
+// MARK: - TitleBar
+
+// The bar along the top of a screen or panel: the back control on the left (an
+// arrow plate), the screen's kicker and title beside it, and the screen's
+// actions on the right, filling in from the right end so the primary action
+// sits in the corner. Neighbouring controls tuck their slanted edges together.
+//
+// Add the controls, then the title, then add the bar to the scene; its rects
+// are in the bar's parent's coordinates, so put it at the origin.
+@interface TitleBar : SKNode
++ (CGFloat)heightCompact:(BOOL)compact;
+// header: the region the bar fills; its height is the bar's.
+- (instancetype)initWithHeader:(CGRect)header compact:(BOOL)compact;
+- (CGRect)addBack:(NSString *)title accent:(UIRGB)accent;
+// At least minWidth wide, at most two fifths of the bar. The first is primary.
+- (CGRect)addAction:(NSString *)title accent:(UIRGB)accent minWidth:(CGFloat)minWidth;
+// In the space between the back control and the actions; kicker may be nil.
+- (void)setTitle:(NSString *)title kicker:(NSString *)kicker;
+@property (nonatomic, readonly) CGFloat height, fontSize;
+@property (nonatomic, readonly) CGRect row, lane;   // the whole bar, and the space for the title
+@property (nonatomic, readonly) NSArray<SKShapeNode *> *controls;   // in the order added
+@property (nonatomic, readonly) SKShapeNode *action;                // the primary action
+@property (nonatomic, readonly) SKLabelNode *titleLabel, *kickerLabel;
+- (void)registerHover:(UIHover *)hover;
+// The controls drop in from above in turn and the title decodes.
+- (void)revealAfter:(NSTimeInterval)delay;
 @end

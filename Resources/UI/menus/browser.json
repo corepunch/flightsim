@@ -1,13 +1,10 @@
 {
   "metrics": {
     "shade": 0.72,
-    "margin": 110, "marginFraction": 0.08,
-    "top": 90, "topFraction": 0.14,
-    "kickerSize": 14, "titleSize": 34, "titleOffset": 26,
-    "listOffset": 84, "emptySize": 17,
-    "rowHeight": 36, "rowSize": 16, "listBottom": 143,
-    "notesTop": 130, "notesStep": 20, "statusSize": 14, "noteSize": 12,
+    "emptySize": 17,
+    "rowHeight": 36, "rowSize": 16,
+    "notesStep": 20, "statusSize": 14, "noteSize": 12,
     "wideHelpWidth": 850,
-    "buttonWidth": 145, "buttonHeight": 44, "buttonBottom": 20
+    "buttonWidth": 145
   }
 }

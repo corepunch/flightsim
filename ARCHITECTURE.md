@@ -53,7 +53,7 @@ headers only).
 | `Collision/` | `ModelInfo`: capital models' parts and subsystems for server traces and renderer dressing; baked-scene loading. |
 | `Mission/` | The mission runtime (objectives, scripted events, scheduled arrivals and departures, win/lose rules) that runs a `LevelDef` against a `MissionWorld` the game supplies. Linked into game modules, not the engine binary. |
 | `Story/` | The campaign and its story data: missions with briefings and debriefs, cast, rooms, briefing pages (immutable classes). |
-| `UI/` | SpriteKit screens: `FrontEnd` (which screen shows), main menu, mission list/briefing/debrief (`Briefing`), loading card, pause menu, server browser, `ScreenHost` (transitions), `UILayout` (menus from JSON), theme, motion. |
+| `UI/` | SpriteKit screens: `FrontEnd` (which screen shows), main menu, mission list/briefing/debrief (`Briefing`), loading card, pause menu, server browser, `ScreenHost` (transitions), `UILayout` (menus from JSON), `ScreenRegions` and `TitleBar` (every screen's header, body and footer; the bar with back, title and actions), theme, motion. |
 | `Input/` | Keyboard, mouse, controllers and touch into `InputAction` and a `ControlState`; pointer events for screens (`ScreenInput`). |
 | `Audio/` | `GameAudio`: music, engine sound, effects, on a private queue. |
 

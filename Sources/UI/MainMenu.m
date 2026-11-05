@@ -51,7 +51,7 @@ static SKShader *MenuArtShader(void) {
     SKNode *_rowNodes[MenuItemCount];
     NSMutableArray<SKLabelNode *> *_header, *_rowLabels[MenuItemCount], *_footerLabels;
     NSMutableArray<SKNode *> *_controlRows;
-    SKNode *_backButton;
+    TitleBar *_controlsBar;
     UIHover *_hover;
 }
 
@@ -183,11 +183,14 @@ static SKShader *MenuArtShader(void) {
 - (void)drawControlsIn:(CGRect)bounds {
     CGFloat x = CGRectGetMinX(bounds), y = CGRectGetMaxY(bounds);
     CGFloat width = MIN(580, CGRectGetWidth(bounds));
-    [_header addObject:[self label:L10n(@"controls.kicker") size:12 color:UIAmber opacity:1 x:x y:y - 8]];
-    SKLabelNode *title = [self label:L10n(@"controls.title") size:MIN(34, CGRectGetHeight(bounds) * 0.09)
-                               color:UIMenuTitle opacity:1 x:x y:y - 43];
-    title.fontName = UIInterfaceBoldFont;
-    [_header addObject:title];
+    // The panel's title bar: back to the main menu, then the title.
+    CGRect header = RectFromEdges(x, y - [TitleBar heightCompact:NO], x + width, y);
+    _controlsBar = [[TitleBar alloc] initWithHeader:header compact:NO];
+    _controlsBack = [_controlsBar addBack:L10n(@"controls.back") accent:UIAmber];
+    [_controlsBar setTitle:L10n(@"controls.title") kicker:L10n(@"controls.kicker")];
+    [_root addChild:_controlsBar];
+    [_controlsBar registerHover:_hover];
+    CGFloat listTop = CGRectGetMinY(header) - 27;
     // Action and binding columns, from the catalog.
 #if TARGET_OS_IOS
     NSArray<NSString *> *actions = L10nList(@"controls.touch.actions"), *keys = L10nList(@"controls.touch.keys");
@@ -200,7 +203,7 @@ static SKShader *MenuArtShader(void) {
     CGFloat font = width < 390 ? 11 : 14;
     _controlRows = [NSMutableArray array];
     for (NSUInteger i = 0; i < bindings.count; i++) {
-        CGFloat rowY = y - 77 - i * line;
+        CGFloat rowY = listTop - i * line;
         SKNode *row = [SKNode node];
         [_root addChild:row];
         _target = row;
@@ -211,10 +214,6 @@ static SKShader *MenuArtShader(void) {
         _target = nil;
         [_controlRows addObject:row];
     }
-    _controlsBack = CGRectMake(x, CGRectGetMinY(bounds), MIN(210, width), 44);
-    _backButton = UIActionButton(_controlsBack, L10n(@"controls.back"), UIAmber);
-    [_root addChild:_backButton];
-    [_hover addButton:_backButton rect:_controlsBack accent:UIAmber];
 }
 
 - (MainMenuInsets)layoutInsets {
@@ -237,7 +236,7 @@ static SKShader *MenuArtShader(void) {
     if (_selected >= [self itemCount]) _selected = 0;
     [_root removeAllChildren];
     [_hover reset];
-    _backButton = nil;
+    _controlsBar = nil;
     _controlRows = nil;
     memset(_rowNodes, 0, sizeof(_rowNodes));
     _header = [NSMutableArray array];
@@ -432,7 +431,7 @@ static SKShader *MenuArtShader(void) {
         SKLabelNode *key = (SKLabelNode *)[row childNodeWithName:@"key"];
         if (key) UIMotionDecode(key, 0.2 + i * 0.045, 0.35);
     }
-    if (_backButton) UIMotionSlideIn(_backButton, CGVectorMake(0, -40), 0.3, 0.32);
+    [_controlsBar revealAfter:0.3];
 }
 
 // Life while the menu sits: the art drifts, the selected chevron beckons,
@@ -486,7 +485,7 @@ static SKShader *MenuArtShader(void) {
     }
     for (SKLabelNode *label in _footerLabels) [label runAction:[SKAction fadeOutWithDuration:0.12]];
     for (SKNode *row in _controlRows) [row runAction:[SKAction fadeOutWithDuration:0.15]];
-    [_backButton runAction:[SKAction fadeOutWithDuration:0.15]];
+    [_controlsBar runAction:[SKAction fadeOutWithDuration:0.15]];
     return MAX(longest, 0.24);
 }
 
