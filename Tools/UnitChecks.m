@@ -355,7 +355,7 @@ static void CheckDefinitions(void) {
 @property (nonatomic, strong) NSString *missionKey, *missionName, *group;
 @property (nonatomic) simd_float3 missionPosition;
 @property (nonatomic) float missionRadius, missionHullFraction;
-@property (nonatomic) BOOL missionAlive, missionGone;
+@property (nonatomic) BOOL missionAlive, missionGone, missionAttacked, missionScanned, missionDisabled;
 @property (nonatomic) NSUInteger turrets, turretsAlive;
 @end
 @implementation FakeUnit
@@ -423,7 +423,7 @@ static FakeUnit *Unit(NSString *key, NSString *group, simd_float3 p) {
 - (void)missionSetTeam:(NSString *)team ofUnits:(NSArray *)units {}
 - (void)missionDepart:(id<MissionUnit>)unit { ((FakeUnit *)unit).missionGone = YES; ((FakeUnit *)unit).missionAlive = NO; }
 - (void)missionCollect:(id<MissionUnit>)unit { ((FakeUnit *)unit).missionGone = YES; ((FakeUnit *)unit).missionAlive = NO; }
-- (void)missionMarkScanned:(id<MissionUnit>)unit {}
+- (void)missionMarkScanned:(id<MissionUnit>)unit { ((FakeUnit *)unit).missionScanned = YES; }
 - (void)missionDestroy:(id<MissionUnit>)unit { ((FakeUnit *)unit).missionAlive = NO; }
 - (void)missionRadio:(NSString *)text from:(NSString *)from { [_radio addObject:text]; }
 - (void)missionBanner:(NSString *)text alert:(BOOL)alert { [_banners addObject:text]; }
@@ -573,6 +573,37 @@ static void CheckArrivals(void) {
     LevelRelease(level);
 }
 
+// attacked, scanned and disabled read what the world reports about the units
+// by a name; scanned and disabled need all of them.
+static void CheckUnitStateTriggers(void) {
+    LevelDef *level = LevelCreate(@{
+        @"events": @[
+            @{ @"when": @{ @"attacked": @"convoy" }, @"do": @[@{ @"set_flag": @"hit" }] },
+            @{ @"when": @{ @"scanned": @[@"convoy"] }, @"do": @[@{ @"set_flag": @"scanned" }] },
+            @{ @"when": @{ @"disabled": @"convoy" }, @"do": @[@{ @"set_flag": @"disabled" }] },
+        ],
+    });
+    CHECK([MissionRunner problemsWithLevel:level].count == 0);
+    FakeWorld *w = [FakeWorld new];
+    FakeUnit *a = Unit(@"a", @"convoy", 0), *b = Unit(@"b", @"convoy", 0);
+    w.runner = [[MissionRunner alloc] initWithLevel:level world:w];
+    Run(w, 0.5f);
+    CHECK(![w.runner flag:@"hit"] && ![w.runner flag:@"scanned"] && ![w.runner flag:@"disabled"]);   // nobody has arrived
+    [w.units addObjectsFromArray:@[a, b]];
+    Run(w, 0.5f);
+    CHECK(![w.runner flag:@"hit"]);
+    a.missionAttacked = YES;
+    Run(w, 0.1f);
+    CHECK([w.runner flag:@"hit"]);       // one is enough
+    [w missionMarkScanned:a]; a.missionDisabled = YES;
+    Run(w, 0.1f);
+    CHECK(![w.runner flag:@"scanned"] && ![w.runner flag:@"disabled"]);   // both are needed
+    [w missionMarkScanned:b]; b.missionDisabled = YES;
+    Run(w, 0.1f);
+    CHECK([w.runner flag:@"scanned"] && [w.runner flag:@"disabled"]);
+    LevelRelease(level);
+}
+
 static void CheckMissionRuntime(void) {
     [MissionObjective registerType:@"test_flag" class:FlagObjective.class];
 
@@ -632,6 +663,7 @@ static void CheckMissionRuntime(void) {
     CHECK(w.ended == 2);
 
     CheckArrivals();
+    CheckUnitStateTriggers();
 
     // Tokens expand on the client.
     NSString *scanned = [L10nCatalogs()[@"en"][@"strings"][@"mission.scanned"] stringByReplacingOccurrencesOfString:@"%@" withString:@"Relay"];

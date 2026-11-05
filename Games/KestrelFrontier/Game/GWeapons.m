@@ -29,6 +29,11 @@
 }
 
 - (void)damageShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake {
+    if (s.alive) s.attacked = YES;
+    [self harmShip:s amount:amount by:attacker shake:shake];
+}
+
+- (void)harmShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake {
     if (!s.alive) return;
     if (s.client && GCvar("g_god")) amount = 0;   // cheat: invulnerable players
     BOOL shielded = [s takeDamage:amount];
@@ -86,6 +91,7 @@
 - (void)hitCapital:(GCapital *)c subsystem:(GSubsystem *)sub amount:(float)amount at:(simd_float3)point
                 by:(GClient *)attacker team:(Team)team bolt:(uint16_t)boltId {
     BOOL subAlive = sub.alive;
+    c.attacked = YES;
     BOOL absorbed = [c damage:amount subsystem:sub];
     GEvent((GameEvent){ .type = EV_IMPACT, .id = boltId, .team = team, .pos = point,
                         .flags = absorbed && !c.invulnerable ? EVF_SHIELDED : 0 });
@@ -147,7 +153,7 @@
         if (![c hitSegmentFrom:before to:ahead point:&point subsystem:&sub]) continue;
         cl.lastBump = cl.cmdTime;
         float speed = simd_length(s.velocity);
-        [self damageShip:s amount:0.08f + speed * 0.0025f by:nil shake:0.8f];
+        [self harmShip:s amount:0.08f + speed * 0.0025f by:nil shake:0.8f];
         s.position = before - simd_normalize(s.velocity + 1e-3f) * 2.0f;
         s.velocity = -s.velocity * 0.35f;
         GEvent((GameEvent){ .type = EV_IMPACT, .team = TeamNeutral, .pos = point, .flags = EVF_SHIELDED });

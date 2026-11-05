@@ -142,7 +142,7 @@ def validate_mission(mission):
                 assert value in objective_ids, (index, when)
             elif key == "nav":
                 assert value in navs, (index, when)
-            elif key in ("spawned", "destroyed"):
+            elif key in ("spawned", "destroyed", "attacked", "scanned", "disabled"):
                 assert set([value] if isinstance(value, str) else value) <= named, (index, when)
 
     for item in arrivals:

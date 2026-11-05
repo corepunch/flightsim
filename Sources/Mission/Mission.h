@@ -24,6 +24,9 @@
 @property (nonatomic, readonly) BOOL missionAlive;          // alive and still in the level
 @property (nonatomic, readonly) BOOL missionGone;           // left safely (departed, collected): not a loss
 @property (nonatomic, readonly) float missionHullFraction;  // 0..1; 1 when it has no hull to speak of
+@property (nonatomic, readonly) BOOL missionAttacked;       // hostile damage since it arrived (hull, shield or part)
+@property (nonatomic, readonly) BOOL missionScanned;        // identified by a scan (missionMarkScanned:)
+@property (nonatomic, readonly) BOOL missionDisabled;       // helpless but alive: a capital with every engine dead
 // Destroyable parts of a kind ("Turret", "Engine", "Shield", "Core", …).
 - (NSUInteger)missionPartsOfKind:(NSString *)kind alive:(BOOL)aliveOnly;
 @end
@@ -153,6 +156,11 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 //   spawned: name            a unit, wave or group has arrived
 //   destroyed: name          everything by that name has arrived and is gone (dead, not departed),
 //                            with no reinforcements still to come
+//   attacked: name | [names]  some unit by each name has taken hostile damage since it arrived
+//                            (hull, shield or part hits, from players, AI, turrets, torpedoes, mines)
+//   scanned: name | [names]  every unit by each name that has arrived has been scanned
+//   disabled: name | [names] every unit by each name that has arrived is disabled (MissionUnit
+//                            missionDisabled: a capital's engines are all dead; fighters not yet)
 //   nav: id                  a player has been within 400 m of the nav
 //   flag: name               set by the set_flag action
 //   all: [ … ], any: [ … ], not: { … }
