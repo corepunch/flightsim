@@ -638,6 +638,7 @@ typedef struct {
     f.weaponShotEnergy = _playerDef ? _playerDef->gun.energy : 0;
 
     simd_quatf inv = simd_inverse(ps->move.orientation);
+    f.sun = simd_act(inv, _refresh.sunDirection);
     CockpitContact contacts[COCKPIT_MAX_CONTACTS];
     NSUInteger n = 0;
     NSMutableArray<EntityView *> *bodies = [NSMutableArray array];
@@ -675,6 +676,7 @@ typedef struct {
         if (fighter) {
             const ShipDef *def = v.definition;
             k.hologram = [_refresh hologramForModel:v.refModel];
+            k.preview = [_refresh previewForModel:v.refModel];
             k.holoScale = def ? def->hologramScale : 0.0075f;
             k.name = [self stringAt:s.name] ?: (def ? @(def->displayName) : L10n(@"cockpit.fighter"));
             k.className = [self stringAt:s.className] ?: (def ? @(def->displayName) : @"");
@@ -686,6 +688,7 @@ typedef struct {
             BOOL prop = (s.flags & EF_PROP) != 0;
             k.capital = !prop;
             k.hologram = [_refresh hologramForModel:v.refModel];
+            k.preview = [_refresh previewForModel:v.refModel];
             k.holoScale = 0.04f / fmaxf(radius, 1);
             k.name = [self stringAt:s.name];
             k.className = [self stringAt:s.className];

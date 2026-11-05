@@ -54,11 +54,16 @@ static int CheckSensors(void) {
     return 0;
 }
 static int CheckHUD(void) {
-    CockpitContact contact = {.local={100,50,-1210}, .relation=RelationHostile, .hull=.72, .shield=.4, .systems=.75,
+    // What -[SceneKitRefresh previewForModel:] hands out for a fighter.
+    SCNNode *preview = [SCNNode node];
+    SCNNode *mesh = [SCNNode nodeWithGeometry:[ShipView geometryForDefinition:ShipDefNamed(@"executioner")]];
+    mesh.eulerAngles = SCNVector3Make(0, M_PI, 0);
+    [preview addChildNode:mesh];
+    CockpitContact contact = {.preview=preview, .local={100,50,-1210}, .relation=RelationHostile, .hull=.72, .shield=.4, .systems=.75,
         .name=@"Corsair Cutter Rask", .className=@"Corsair cutter", .cargo=@"Skarn munitions", .component=@"SHIELD GENERATOR",
         .hologram=[ShipView geometryForDefinition:ShipDefNamed(@"executioner")], .holoScale=.0075,
         .orientation=simd_quaternion(0.7f, simd_make_float3(0,1,0))};
-    CockpitFrame instrument = {.alive=YES, .target=0, .weaponEnergy=.85, .weaponShotEnergy=.035, .shield=.6, .closingSpeed=42, .time=2};
+    CockpitFrame instrument = {.alive=YES, .target=0, .sun={-0.6f, 0.5f, 0.6f}, .weaponEnergy=.85, .weaponShotEnergy=.035, .shield=.6, .closingSpeed=42, .time=2};
     for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(1194,834)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(852,393)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {
         HUD *hud = [[HUD alloc] initWithSize:size.sizeValue];
         hud.backgroundColor = [SKColor colorWithRed:.015 green:.025 blue:.035 alpha:1];
@@ -101,6 +106,23 @@ static int CheckHUD(void) {
         SCNNode *holder = [readout valueForKey:@"holder"];
         simd_float3 towardPlayer = simd_act(holder.simdOrientation, simd_make_float3(-1, 0, 0));
         CHECK(simd_distance(towardPlayer, simd_make_float3(0, 0, 1)) < .001);
+        // The preview is the lit model, not a wireframe, framed to fill the
+        // display whichever way the ship faces us.
+        SCNNode *model = [readout valueForKey:@"model"];
+        CHECK(model && model != preview);
+        __block BOOL lit = NO, lines = NO;
+        [model enumerateHierarchyUsingBlock:^(SCNNode *node, BOOL *stop) {
+            for (SCNMaterial *m in node.geometry.materials) {
+                lit |= m.lightingModelName != SCNLightingModelConstant;
+                lines |= m.fillMode == SCNFillModeLines;
+            }
+        }];
+        CHECK(lit && !lines);
+        SCNNode *camera = [readout valueForKey:@"camera"];
+        float sideOn = camera.camera.orthographicScale;
+        side.local = simd_make_float3(0, 0, -1000);   // dead ahead, seen from behind: a smaller outline
+        for (int i = 0; i < 20; i++) [readout updateFrame:instrument contacts:&side count:1];
+        CHECK(camera.camera.orthographicScale < sideOn - 0.05);
         [readout updateFrame:instrument contacts:&contact count:1];
 
         for (SKNode *node in readout.children) CHECK(![node isKindOfClass:SKShapeNode.class]);

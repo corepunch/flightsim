@@ -105,6 +105,10 @@ typedef struct {
 - (const GameModelInfo *)infoForModel:(RefModel)model;
 // Mesh for the target hologram (OBJ space), or nil.
 - (id)hologramForModel:(RefModel)model;
+// The model as the world draws it (textures, hull styles), in ship space with
+// -Z forward, for the target preview. The same object for every call with
+// one model; clone it before changing it. nil for models with no shape.
+- (id)previewForModel:(RefModel)model;
 // World point to view points, origin bottom-left (the HUD's space). NO when
 // behind the camera.
 - (BOOL)projectPoint:(simd_float3)world to:(CGPoint *)out;

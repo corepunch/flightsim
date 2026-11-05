@@ -19,6 +19,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @property (nonatomic, copy) NSString *asset, *style;
 @property (nonatomic, strong) ModelInfo *info;
 @property (nonatomic, strong) SCNNode *prototype;
+@property (nonatomic, strong) SCNNode *preview;   // -previewForModel:, built on first use
 @end
 @implementation RefModelEntry
 @end
@@ -505,6 +506,22 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     if (m.kind == RefKindShip) return [ShipView geometryForDefinition:m.ship];
     if (m.kind == RefKindCapital) return [m.prototype childNodeWithName:@"Body" recursively:NO].geometry;
     return nil;
+}
+
+- (id)previewForModel:(RefModel)model {
+    RefModelEntry *m = [self entry:model];
+    if (!m.preview) {
+        if (m.kind == RefKindShip) {
+            SCNNode *holder = [SCNNode node];
+            SCNNode *mesh = [SCNNode nodeWithGeometry:[ShipView geometryForDefinition:m.ship]];
+            mesh.eulerAngles = SCNVector3Make(0, M_PI, 0);   // OBJ +Z nose -> ship -Z nose, as ShipView
+            [holder addChildNode:mesh];
+            m.preview = holder;
+        } else if (m.kind == RefKindCapital) {
+            m.preview = m.prototype;
+        }
+    }
+    return m.preview;
 }
 
 - (BOOL)projectPoint:(simd_float3)world to:(CGPoint *)out {
