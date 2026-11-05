@@ -1,0 +1,9 @@
+{
+  "id" : "f2cc77d8-a654-4b28-b640-c536722855ed",
+  "targets" : [
+    {
+      "id" : "9d22f84c-c911-4ed6-82be-3de96f49c477",
+      "name" : "KestrelFrontier-iOS"
+    }
+  ]
+}

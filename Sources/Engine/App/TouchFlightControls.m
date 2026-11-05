@@ -132,7 +132,10 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     _centers[TouchControlFire] = CGPointMake(right - 35, centerY);
     _centers[TouchControlTorpedo] = CGPointMake(right - 85, centerY - 53);
     _centers[TouchControlTarget] = CGPointMake(right - 85, centerY + 53);
-    _centers[TouchControlPause] = CGPointMake(right - 46, CGRectGetMinY(safe) + 30);
+    // Keep the pause button beside the rear scanner, which occupies the
+    // upper-right corner at the same height as the forward scanner.
+    CGFloat scannerScale = CGRectGetHeight(self.bounds) < 550 ? 0.56 : 0.86;
+    _centers[TouchControlPause] = CGPointMake(right - 128 * scannerScale - 54, CGRectGetMinY(safe) + 30);
     for (TouchControl control = 0; control < TouchControlCount; control++) {
         CGPoint center = _centers[control];
         _faces[control].position = CGPointMake(center.x, CGRectGetHeight(self.bounds) - center.y);

@@ -53,7 +53,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
             _holder = [SCNNode node]; _mesh = [SCNNode node];
             [_holder addChildNode:_mesh]; [scene.rootNode addChildNode:_holder];
             SCNNode *camera = [SCNNode node]; camera.camera = [SCNCamera camera];
-            camera.camera.usesOrthographicProjection = YES; camera.camera.orthographicScale = 1.3;
+            camera.camera.usesOrthographicProjection = YES; camera.camera.orthographicScale = 1.05;
             camera.position = SCNVector3Make(0, 0, 4);
             [scene.rootNode addChildNode:camera];
             _previewRenderer = [SCNRenderer rendererWithDevice:MTLCreateSystemDefaultDevice() options:nil];
@@ -71,7 +71,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
 }
 - (void)setCompact:(BOOL)compact {
     // The phone panel keeps full-size text while reducing vertical spacing.
-    CGFloat height = compact ? 260 : 400;
+    CGFloat height = compact ? 310 : 400;
     _empty.position = CGPointMake(304, 20);
     _name.position = CGPointMake(304, height - 30);
     _kind.position = CGPointMake(304, height - 63);
@@ -80,12 +80,13 @@ static NSString *Short(NSString *text, NSUInteger length) {
     _systems.position = CGPointMake(22, compact ? 109 : 191);
     _range.position = CGPointMake(586, compact ? 169 : 275);
     _closing.position = CGPointMake(586, compact ? 139 : 233);
-    _mode.position = CGPointMake(304, compact ? 78 : 109);
+    _mode.horizontalAlignmentMode = compact ? SKLabelHorizontalAlignmentModeRight : SKLabelHorizontalAlignmentModeCenter;
+    _mode.position = CGPointMake(compact ? 586 : 304, compact ? 21 : 109);
     _cargo.position = CGPointMake(22, compact ? 48 : 65);
     _component.position = CGPointMake(22, compact ? 21 : 30);
-    _preview.size = CGSizeMake(180, compact ? 100 : 205);
-    _preview.position = CGPointMake(304, compact ? 140 : 220);
-    [_preview setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){180, compact ? 100 : 205}] forAttributeNamed:@"a_screen_size"];
+    _preview.size = CGSizeMake(compact ? 240 : 220, compact ? 150 : 205);
+    _preview.position = CGPointMake(304, compact ? 155 : 220);
+    [_preview setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){compact ? 240 : 220, compact ? 150 : 205}] forAttributeNamed:@"a_screen_size"];
 }
 - (void)updateFrame:(CockpitFrame)f contacts:(const CockpitContact *)contacts count:(NSUInteger)count {
     BOOL has = f.alive && f.target >= 0 && f.target < (int)count;
@@ -117,10 +118,21 @@ static NSString *Short(NSString *text, NSUInteger length) {
             _mesh.eulerAngles = SCNVector3Make(0, fabsf(c.holoScale - 0.0075f) < 1e-5 ? M_PI : 0, 0);
         }
         _material.diffuse.contents = ContactInk(c.team);
-        _holder.simdOrientation = c.orientation;
+        // Look along the player-to-target line, using the player's up as the
+        // horizon. Transform the target into that view, not merely into the
+        // player's forward-facing coordinate system.
+        float distance = simd_length(c.local);
+        simd_float3 direction = distance > 0.001f ? c.local / distance : simd_make_float3(0, 0, -1);
+        simd_float3 up = simd_make_float3(0, 1, 0);
+        simd_float3 right = simd_cross(direction, up);
+        if (simd_length_squared(right) < 1e-6f) right = simd_cross(direction, simd_make_float3(0, 0, 1));
+        right = simd_normalize(right);
+        up = simd_normalize(simd_cross(right, direction));
+        simd_quatf view = simd_quaternion(simd_matrix(right, up, -direction));
+        _holder.simdOrientation = simd_mul(simd_inverse(view), c.orientation);
         if (_previewAt < 0 || f.time < _previewAt || f.time - _previewAt >= 0.12) {
             _previewAt = f.time;
-            PlatformImage *picture = [_previewRenderer snapshotAtTime:f.time withSize:CGSizeMake(240, 180) antialiasingMode:SCNAntialiasingModeMultisampling2X];
+            PlatformImage *picture = [_previewRenderer snapshotAtTime:f.time withSize:CGSizeMake(240, 240 * _preview.size.height / _preview.size.width) antialiasingMode:SCNAntialiasingModeMultisampling2X];
             if (picture) _preview.texture = [SKTexture textureWithImage:picture];
         }
     }

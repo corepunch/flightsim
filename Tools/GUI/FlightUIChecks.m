@@ -53,11 +53,11 @@ static int CheckHUD(void) {
         .geometry=[ShipView geometryForClass:ShipClassExecutioner], .holoScale=.0075,
         .orientation=simd_quaternion(0.7f, simd_make_float3(0,1,0))};
     CockpitFrame instrument = {.alive=YES, .target=0, .laserEnergy=.85, .shield=.6, .closingSpeed=42, .time=2};
-    for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(852,393)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {
+    for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(1194,834)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(852,393)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {
         HUD *hud = [[HUD alloc] initWithSize:size.sizeValue];
         hud.backgroundColor = [SKColor colorWithRed:.015 green:.025 blue:.035 alpha:1];
-        hud.touchLayout = hud.size.width < 1000;
-        if (hud.touchLayout) hud.contentInsets = NSEdgeInsetsMake(0,59,21,59);
+        hud.touchLayout = hud.size.width < 1200;
+        if (hud.touchLayout) hud.contentInsets = hud.size.width == 1194 ? NSEdgeInsetsMake(24,0,20,0) : NSEdgeInsetsMake(0,59,21,59);
         [hud setHelpVisible:NO];
         [hud setInputText:hud.touchLayout ? @"" : @"CONTROLLER: USB  /  T TARGET  /  G TORPEDO  /  ESC PAUSE"];
         [hud setObjectives:@[@"Patrol NAV 1, 2, 3 in order  0/3"] states:@[@0]];
@@ -68,15 +68,34 @@ static int CheckHUD(void) {
         CHECK(!CGRectIntersectsRect(laser.frame, speed.frame));
         CHECK(!CGRectIntersectsRect(laser.frame, throttle.frame));
         CHECK(!CGRectIntersectsRect(speed.frame, throttle.frame));
-        if (!hud.touchLayout) CHECK(CGRectGetMinY(target.frame) > CGRectGetMaxY(input.frame) + 8);
+        if (!hud.touchLayout) CHECK([(SKLabelNode *)input text].length == 0);
         else {
             CHECK(speed.position.x < 90);
             SKNode *shield = [hud valueForKey:@"shieldFill"];
             CHECK(shield.position.x > hud.size.width - 170);
         }
+        SKNode *forward = [hud valueForKey:@"forwardScope"], *rear = [hud valueForKey:@"rearScope"];
+        SKNode *objectives = [hud valueForKey:@"objectivePanel"];
+        CHECK(fabs(forward.position.y - rear.position.y) < 0.01);
+        CHECK(CGRectGetMaxX(forward.frame) + 8 <= CGRectGetMinX([objectives calculateAccumulatedFrame]));
+        CHECK(CGRectGetMinX(forward.frame) >= (hud.touchLayout ? hud.contentInsets.left : 0));
+        CHECK(CGRectGetMaxX(rear.frame) <= hud.size.width - (hud.touchLayout ? hud.contentInsets.right : 0));
+        if (hud.touchLayout) {
+            CGFloat right = hud.size.width - hud.contentInsets.right - 12;
+            CGFloat pauseRight = right - 128 * forward.xScale - 8;
+            CHECK(pauseRight + 4 <= CGRectGetMinX(rear.frame));
+        }
         TargetReadout *readout = (TargetReadout *)target;
         CHECK([[(SKLabelNode *)[readout valueForKey:@"cargo"] text] containsString:@"SKARN MUNITIONS"]);
         CHECK([[(SKLabelNode *)[readout valueForKey:@"component"] text] containsString:@"SHIELD GENERATOR"]);
+        CockpitContact side = contact;
+        side.local = simd_make_float3(1000, 0, 0);
+        side.orientation = simd_quaternion(0, simd_make_float3(0, 1, 0));
+        [readout updateFrame:instrument contacts:&side count:1];
+        SCNNode *holder = [readout valueForKey:@"holder"];
+        simd_float3 towardPlayer = simd_act(holder.simdOrientation, simd_make_float3(-1, 0, 0));
+        CHECK(simd_distance(towardPlayer, simd_make_float3(0, 0, 1)) < .001);
+        [readout updateFrame:instrument contacts:&contact count:1];
 
         for (SKNode *node in readout.children) CHECK(![node isKindOfClass:SKShapeNode.class]);
         NSString *prefix = [NSString stringWithFormat:@"hud-%.0fx%.0f", hud.size.width, hud.size.height];

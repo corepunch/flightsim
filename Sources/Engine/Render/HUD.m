@@ -323,13 +323,13 @@ static SKShapeNode *Bracket(void) {
         insets.top == _laidOutInsets.top && insets.bottom == _laidOutInsets.bottom) return;
     _laidOutInsets = insets; _laidOutTouch = _touchLayout;
     _laidOut = s;
-    _throttleFrame.position = CGPointMake(40, 60);
-    _throttleLabel.position = CGPointMake(66, 70);
-    _speedLabel.position = CGPointMake(66, 100);
-    _hullLabel.position = CGPointMake(s.width - 252, 70);
-    _shieldLabel.position = CGPointMake(s.width - 252, 88);
-    _hullFill.position = CGPointMake(s.width - 240, 67);
-    _shieldFill.position = CGPointMake(s.width - 240, 85);
+    _throttleFrame.position = CGPointMake(20, 22);
+    _throttleLabel.position = CGPointMake(46, 32);
+    _speedLabel.position = CGPointMake(46, 62);
+    _hullLabel.position = CGPointMake(s.width - 222, 32);
+    _shieldLabel.position = CGPointMake(s.width - 222, 50);
+    _hullFill.position = CGPointMake(s.width - 210, 29);
+    _shieldFill.position = CGPointMake(s.width - 210, 47);
     _scoreLabel.position = CGPointMake(s.width - 40, s.height - 40);
     _inputLabel.position = CGPointMake(40, 30);
     _deadLabel.position = CGPointMake(s.width / 2, s.height / 2 + 80);
@@ -339,9 +339,9 @@ static SKShapeNode *Bracket(void) {
     _bannerLabel.position = CGPointMake(s.width / 2, s.height * 0.68);
     if (_touchLayout) {
     // Telemetry follows the safe edges, below the touch control clusters.
-    CGFloat left = insets.left + 14, right = s.width - insets.right - 14;
+    CGFloat left = insets.left + 8, right = s.width - insets.right - 8;
     CGFloat top = s.height - insets.top - 18;
-    CGFloat stats = insets.bottom + (s.width > s.height ? 18 : 177);
+    CGFloat stats = insets.bottom + (s.width > s.height ? 9 : 177);
     CGFloat leftStats = left;
     CGFloat rightStats = right;
     _throttleLabel.position = CGPointMake(leftStats, stats + 36);
@@ -355,16 +355,20 @@ static SKShapeNode *Bracket(void) {
     _inputLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
     _inputLabel.position = CGPointMake(right - 100, top - 44);
     }
-    CGFloat edgeLeft = 24, edgeRight = s.width - 24, edgeTop = s.height, edgeBottom = 60;
+    BOOL phoneLayout = _touchLayout && MIN(s.width, s.height) < 550 && MAX(s.width, s.height) < 1100;
+    CGFloat edgeLeft = 12, edgeRight = s.width - 12, edgeTop = s.height;
+    CGFloat edgeBottom = phoneLayout ? 2 : (_touchLayout ? insets.bottom + 24 : 40);
     if (_touchLayout) {
-    edgeLeft = insets.left + 14; edgeRight = s.width - insets.right - 14;
-    edgeTop -= insets.top; edgeBottom = insets.bottom + 12;
+    edgeLeft = insets.left + 4; edgeRight = s.width - insets.right - 4;
+    edgeTop -= insets.top;
     }
     BOOL compact = s.height < 550;
     CGFloat scopeScale = compact ? 0.56 : 0.86;
     [_forwardScope setScale:scopeScale]; [_rearScope setScale:scopeScale];
-    _forwardScope.position = CGPointMake(edgeLeft + 64 * scopeScale, edgeTop - (compact ? 100 : 132));
-    _rearScope.position = CGPointMake(edgeRight - 64 * scopeScale, _forwardScope.position.y);
+    // The top label extends 82 points from the centre at the authored scale.
+    CGFloat scopeY = edgeTop - 82 * scopeScale - (_touchLayout ? 4 : 12);
+    _forwardScope.position = CGPointMake(edgeLeft + 64 * scopeScale, scopeY);
+    _rearScope.position = CGPointMake(edgeRight - 64 * scopeScale, scopeY);
     [_targetReadout setCompact:compact];
     CGFloat panelWidth = MIN(compact ? 270 : 380, MAX(160, s.width - 380));
     CGFloat panelScale = panelWidth / 608;
@@ -372,7 +376,13 @@ static SKShapeNode *Bracket(void) {
     _targetReadout.position = CGPointMake((s.width - panelWidth) / 2, edgeBottom);
     _laserLabel.position = CGPointMake(_throttleLabel.position.x, _throttleLabel.position.y + (_touchLayout ? 20 : 60));
     _rechargeLabel.position = CGPointMake(edgeRight, _shieldLabel.position.y - 33);
-    if (!_touchLayout) _objectivePanel.position = CGPointMake(edgeLeft + 150, s.height - 40);
+    // Match the actual text edge to the bottom of the target details.
+    SKNode *heading = _objectivePanel.children.firstObject;
+    CGFloat bottomMargin = edgeBottom + (compact ? 11 : 20) * panelScale;
+    CGFloat topMargin = phoneLayout ? MAX(insets.top, bottomMargin) : (_touchLayout ? insets.top + 30 : 36);
+    CGFloat headingTop = heading ? CGRectGetMaxY(heading.frame) : 7;
+    _objectivePanel.position = CGPointMake(edgeLeft + 128 * scopeScale + 16,
+                                           s.height - topMargin - headingTop);
     _torpLabel.position = CGPointMake(_shieldLabel.position.x, _shieldLabel.position.y + 18);
     _torpedoRack.position = CGPointMake(_shieldFill.position.x, _shieldFill.position.y + 18);
     [self layoutTorpedoes];
@@ -444,6 +454,7 @@ static SKShapeNode *Bracket(void) {
     head.text = @"OBJECTIVES";
     head.fontColor = HUDColor(0.6);
     [_objectivePanel addChild:head];
+    _laidOut = CGSizeZero; // Heading metrics determine the matching top margin.
     // The border's outside edge matches the capital D, rather than the font's
     // point size. All states share exactly the same square control geometry.
     PlatformFont *font = [PlatformFont fontWithName:UIMonoFont size:14];
