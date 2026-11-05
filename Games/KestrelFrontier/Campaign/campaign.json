@@ -1135,7 +1135,7 @@
         "text": [
           "Fleet Command does not think we can stop the dreadnought here. The colonies are being evacuated.",
           "The liner Aurora Star is carrying six thousand civilians to the Halden gate. She is big, slow and has no guns.",
-          "Every Skarn fighter in the system will be after her. Lancer 6 is with you. Get her to the gate."
+          "Every Skarn fighter in the system will be after her. Lancer 6 is with you, and if the liner is hit I will launch our ready flight to cover her. Get her to the gate."
         ],
         "steps": [
           { "caption": "Liner Aurora Star, full of evacuees.", "show": ["aurora"], "focus": "aurora" },
@@ -1145,14 +1145,23 @@
             "route": ["aurora", "gate"]
           },
           {
-            "caption": "Attacks from every side. Bombers have priority.",
+            "caption": "Attacks from every side. *Bombers* have priority, and the last wave is flown by veterans.",
             "show": ["t1", "t2", "t3"],
-            "focus": "aurora"
+            "focus": "aurora",
+            "seconds": 5
+          },
+          {
+            "caption": "If the liner is hit, Bastion launches a *ready flight* of two Executioners to cover her.",
+            "show": ["relief", "aurora"],
+            "focus": "relief",
+            "labels": [ { "text": "Ready flight", "at": [150, 700] } ],
+            "seconds": 5
           }
         ],
         "intel": [
           "Escort: liner Aurora Star (unarmed, 6000 aboard)",
           "Hostile: repeated Wasp and Talon attacks",
+          "Reserve: ready flight launches if Aurora Star is hit",
           "Wingman: Lancer 6"
         ]
       },

@@ -31,6 +31,18 @@
       "name": "Lancer 6"
     },
     {
+      "id": "relief",
+      "ship": "executioner",
+      "count": 2,
+      "team": "friend",
+      "name": "Ready",
+      "pos": [150, 80, 500],
+      "order": "escort:aurora",
+      "skill": "veteran",
+      "formation": "echelon-right",
+      "arrival": { "when": { "attacked": "aurora" }, "delay": 10 }
+    },
+    {
       "id": "w1",
       "ship": "wasp",
       "count": 3,
@@ -38,7 +50,7 @@
       "pos": [-1600, 300, -1500],
       "spread": 120,
       "order": "attack",
-      "hold": true
+      "arrival": { "when": { "time": 12 } }
     },
     {
       "id": "t1",
@@ -48,7 +60,7 @@
       "pos": [1600, 0, -1800],
       "spread": 100,
       "order": "strike:aurora",
-      "hold": true
+      "arrival": { "when": { "time": 25 } }
     },
     {
       "id": "t2",
@@ -58,7 +70,8 @@
       "pos": [0, 1500, -3000],
       "spread": 100,
       "order": "strike:aurora",
-      "hold": true
+      "formation": "vic",
+      "arrival": { "when": { "time": 55 } }
     },
     {
       "id": "w2",
@@ -68,7 +81,7 @@
       "pos": [0, -1400, -3500],
       "spread": 120,
       "order": "attack",
-      "hold": true
+      "arrival": { "when": { "time": 70 } }
     },
     {
       "id": "t3",
@@ -78,7 +91,9 @@
       "pos": [-1500, -300, -4800],
       "spread": 100,
       "order": "strike:aurora",
-      "hold": true
+      "formation": "vic",
+      "skill": "veteran",
+      "arrival": { "when": { "time": 85 } }
     }
   ],
   "objectives": [
@@ -93,17 +108,18 @@
     }
   ],
   "events": [
-    { "when": {"time": 12}, "do": [{"spawn": "w1"}] },
-    { "when": {"time": 25}, "do": [{"spawn": "t1"}] },
-    { "when": {"time": 55}, "do": [{"spawn": "t2"}] },
-    { "when": {"time": 70}, "do": [{"spawn": "w2"}] },
-    { "when": {"time": 85}, "do": [{"spawn": "t3"}] },
     {
       "when": { "time": 3 },
       "do": [
         {
           "radio": { "from": "Aurora Star", "text": "This is Captain Lusk. We have children aboard, Lancer. Please." }
         }
+      ]
+    },
+    {
+      "when": { "spawned": "relief" },
+      "do": [
+        { "radio": {"from": "Commander Varn", "text": "Aurora is hit. Bastion's ready flight is launching to cover her. Hold on."} }
       ]
     },
     {
