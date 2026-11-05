@@ -73,22 +73,29 @@
         ],
         "steps": [
           {
-            "caption": "You launch from the CNS Bastion, our fleet carrier and your home for this campaign.",
+            "caption": "You launch from the *CNS Bastion*, our fleet carrier and your home for this campaign.",
             "show": ["bastion", "start"],
-            "focus": "bastion"
+            "focus": "bastion",
+            "camera": { "center": [0, 1050], "span": 2200 },
+            "labels": [ { "text": "Hangar approach", "at": [-420, 1250] } ],
+            "seconds": 4
           },
           {
-            "caption": "Fly the patrol route: NAV 1, NAV 2 and NAV 3, in that order.",
+            "caption": "Fly the patrol route: *NAV 1*, *NAV 2* and *NAV 3*, in that order.",
             "show": ["nav1", "nav2", "nav3"],
-            "route": ["start", "nav1", "nav2", "nav3"]
+            "route": ["start", "nav1", "nav2", "nav3"],
+            "seconds": 4
           },
           {
-            "caption": "Scouts were last seen near NAV 2. Expect three Skarn Wasp interceptors.",
+            "caption": "Scouts were last seen near NAV 2. Expect three *Skarn Wasp* interceptors.",
             "show": ["nav2", "scouts"],
-            "focus": "nav2"
+            "focus": "nav2",
+            "camera": { "center": [2050, -2900], "span": 2400 },
+            "labels": [ { "text": "Last contact", "at": [1650, -2300] } ],
+            "seconds": 4
           },
           {
-            "caption": "When the route is clear, return to the Bastion's approach point.",
+            "caption": "When the route is clear, return to the Bastion's *approach point*.",
             "show": ["home", "bastion"],
             "route": ["nav3", "home"]
           }
@@ -170,17 +177,21 @@
         ],
         "steps": [
           {
-            "caption": "The freighters Mira and Tobin start here, heading for the gate.",
+            "caption": "The freighters *Mira* and *Tobin* start here, heading for the gate.",
             "show": ["mira", "tobin"],
-            "focus": "mira"
+            "focus": "mira",
+            "camera": { "center": [0, 150], "span": 1100 },
+            "seconds": 4
           },
           {
-            "caption": "The Halden jump gate, four kilometres down the lane. Once they reach it, they are safe.",
+            "caption": "The *Halden jump gate*, four kilometres down the lane. Once they reach it, they are safe.",
             "show": ["gate"],
-            "route": ["mira", "gate"]
+            "route": ["mira", "gate"],
+            "labels": [ { "text": "Safe beyond here", "at": [180, -3800] } ],
+            "seconds": 5
           },
           {
-            "caption": "Expect interceptors from the flank first, then Talon bombers going for the freighters.",
+            "caption": "Expect *interceptors* from the flank first, then *Talon bombers* going for the freighters.",
             "show": ["wasps1", "talons"],
             "focus": "talons"
           }
@@ -319,18 +330,24 @@
         ],
         "steps": [
           {
-            "caption": "The corvette patrols a loop through the belt.",
+            "caption": "The *Corvette Vesk* patrols a loop through the belt.",
             "show": ["corvette"],
             "route": ["corvette", "p2"],
-            "focus": "corvette"
+            "focus": "corvette",
+            "camera": { "center": [0, -3600], "span": 2800 },
+            "labels": [ { "text": "Dust belt", "at": [-1100, -3300] } ],
+            "seconds": 4
           },
           {
-            "caption": "Four Wasps fly escort. Thin them out or they will chase you off your attack run.",
+            "caption": "Four *Wasps* fly escort. Thin them out or they will chase you off your attack run.",
             "show": ["escorts"],
-            "focus": "corvette"
+            "focus": "corvette",
+            "camera": { "center": "corvette", "span": 1400 },
+            "labels": [ { "text": "Escort screen", "at": [-250, -2750] } ],
+            "seconds": 5
           },
           {
-            "caption": "Torpedoes: target the corvette (T) and fire (G) from inside 1.5 km.",
+            "caption": "*Torpedoes*: target the corvette (T) and fire (G) from inside *1.5 km*.",
             "show": ["corvette", "start"]
           }
         ],
