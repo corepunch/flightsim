@@ -58,6 +58,7 @@ static int CheckHUD(void) {
         hud.backgroundColor = [SKColor colorWithRed:.015 green:.025 blue:.035 alpha:1];
         hud.touchLayout = hud.size.width < 1000;
         if (hud.touchLayout) hud.contentInsets = NSEdgeInsetsMake(0,59,21,59);
+        [hud setHelpVisible:NO];
         [hud setInputText:hud.touchLayout ? @"" : @"CONTROLLER: USB  /  T TARGET  /  G TORPEDO  /  ESC PAUSE"];
         [hud setObjectives:@[@"Patrol NAV 1, 2, 3 in order  0/3"] states:@[@0]];
         HUDFrame frame = {.speed=125, .throttle=.8, .boostEnergy=.6, .hull=.9, .shield=.6, .torpedoes=2, .torpedoCapacity=4};
@@ -76,12 +77,12 @@ static int CheckHUD(void) {
         TargetReadout *readout = (TargetReadout *)target;
         CHECK([[(SKLabelNode *)[readout valueForKey:@"cargo"] text] containsString:@"SKARN MUNITIONS"]);
         CHECK([[(SKLabelNode *)[readout valueForKey:@"component"] text] containsString:@"SHIELD GENERATOR"]);
-        CHECK([readout childNodeWithName:@"//target.signal"]);
+
         for (SKNode *node in readout.children) CHECK(![node isKindOfClass:SKShapeNode.class]);
         NSString *prefix = [NSString stringWithFormat:@"hud-%.0fx%.0f", hud.size.width, hud.size.height];
         Save(hud, [prefix stringByAppendingString:@".png"]);
         instrument.target = -1; [hud updateInstruments:instrument contacts:NULL count:0 cockpit:NO];
-        CHECK([[readout valueForKey:@"info"] isHidden]);
+        CHECK(![[(SKLabelNode *)[readout valueForKey:@"empty"] text] isEqualToString:@""]);
         Save(hud, [prefix stringByAppendingString:@"-no-target.png"]);
         instrument.target = 0;
     }

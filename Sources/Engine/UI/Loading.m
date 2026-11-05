@@ -141,6 +141,18 @@ static NSArray<NSString *> *Tips(void) {
     _laidOut = s;
     [_root addChild:[self backdropWithSize:s]];
 
+    if (_hangarTexture) {
+        SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_hangarTexture];
+        CGSize image = _hangarTexture.size;
+        CGFloat scale = MAX(s.width / MAX(image.width, 1), s.height / MAX(image.height, 1));
+        art.size = CGSizeMake(image.width * scale, image.height * scale);
+        art.position = CGPointMake(s.width * 0.5, s.height * 0.5);
+        [_root addChild:art];
+        SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:0.55] size:s];
+        shade.anchorPoint = CGPointZero;
+        [_root addChild:shade];
+    }
+
     // A slow parallax star drift: bigger stars are "nearer" and move faster.
     srand48(4242);
     for (int i = 0; i < (_hangarTexture ? 0 : 220); i++) {

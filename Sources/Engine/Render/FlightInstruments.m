@@ -2,6 +2,8 @@
 #import "UIStyle.h"
 #import "MonitorSignal.h"
 #import "UIMotion.h"
+#import "PlatformImage.h"
+#import <Metal/Metal.h>
 
 static SKColor *ContactInk(Team team) {
     return UIColorWithOpacity(team == TeamEnemy ? UIRed : team == TeamFriend ? UIFriendly : UIHUDNeutral, 1);
@@ -21,8 +23,9 @@ static NSString *Short(NSString *text, NSUInteger length) {
 @implementation TargetReadout {
     SKNode *_info;
     SKLabelNode *_empty, *_name, *_kind, *_shield, *_hull, *_systems, *_range, *_closing, *_cargo, *_component, *_mode;
-    SK3DNode *_preview;
-    SKEffectNode *_signal;
+    SKSpriteNode *_preview;
+    SCNRenderer *_previewRenderer;
+    double _previewAt;
     SCNNode *_holder, *_mesh;
     SCNGeometry *_source;
     SCNMaterial *_material;
@@ -43,10 +46,8 @@ static NSString *Short(NSString *text, NSUInteger length) {
         _cargo = Readout(_info, @"", 22, 65, 20, SKLabelHorizontalAlignmentModeLeft);
         _component = Readout(_info, @"", 22, 30, 20, SKLabelHorizontalAlignmentModeLeft);
         if (preview) {
-            _preview = [[SK3DNode alloc] initWithViewportSize:CGSizeMake(220, 205)];
+            _preview = [SKSpriteNode spriteNodeWithColor:SKColor.clearColor size:CGSizeMake(220, 205)];
             _preview.position = CGPointMake(304, 220);
-            _preview.autoenablesDefaultLighting = NO;
-            _preview.playing = NO;
             SCNScene *scene = [SCNScene scene];
             scene.background.contents = SKColor.clearColor;
             _holder = [SCNNode node]; _mesh = [SCNNode node];
@@ -55,13 +56,12 @@ static NSString *Short(NSString *text, NSUInteger length) {
             camera.camera.usesOrthographicProjection = YES; camera.camera.orthographicScale = 1.3;
             camera.position = SCNVector3Make(0, 0, 4);
             [scene.rootNode addChildNode:camera];
-            _preview.scnScene = scene; _preview.pointOfView = camera;
-            _signal = [SKEffectNode node];
-            _signal.name = @"target.signal";
-            _signal.shader = UIMonitorSignalShader(YES);
-            [_signal setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){220, 205}] forAttributeNamed:@"a_screen_size"];
-            _signal.shouldEnableEffects = !UIMotionReduced();
-            [_signal addChild:_preview]; [_info addChild:_signal];
+            _previewRenderer = [SCNRenderer rendererWithDevice:MTLCreateSystemDefaultDevice() options:nil];
+            _previewRenderer.scene = scene; _previewRenderer.pointOfView = camera;
+            _preview.shader = UIMotionReduced() ? nil : UIMonitorSignalShader(YES);
+            [_preview setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){220, 205}] forAttributeNamed:@"a_screen_size"];
+            [_info addChild:_preview];
+            _previewAt = -1;
             _material = [SCNMaterial material];
             _material.lightingModelName = SCNLightingModelConstant;
             _material.fillMode = SCNFillModeLines; _material.doubleSided = YES;
@@ -83,9 +83,9 @@ static NSString *Short(NSString *text, NSUInteger length) {
     _mode.position = CGPointMake(304, compact ? 78 : 109);
     _cargo.position = CGPointMake(22, compact ? 48 : 65);
     _component.position = CGPointMake(22, compact ? 21 : 30);
-    _preview.viewportSize = CGSizeMake(180, compact ? 100 : 205);
+    _preview.size = CGSizeMake(180, compact ? 100 : 205);
     _preview.position = CGPointMake(304, compact ? 140 : 220);
-    [_signal setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){180, compact ? 100 : 205}] forAttributeNamed:@"a_screen_size"];
+    [_preview setValue:[SKAttributeValue valueWithVectorFloat2:(vector_float2){180, compact ? 100 : 205}] forAttributeNamed:@"a_screen_size"];
 }
 - (void)updateFrame:(CockpitFrame)f contacts:(const CockpitContact *)contacts count:(NSUInteger)count {
     BOOL has = f.alive && f.target >= 0 && f.target < (int)count;
@@ -118,6 +118,11 @@ static NSString *Short(NSString *text, NSUInteger length) {
         }
         _material.diffuse.contents = ContactInk(c.team);
         _holder.simdOrientation = c.orientation;
+        if (_previewAt < 0 || f.time < _previewAt || f.time - _previewAt >= 0.12) {
+            _previewAt = f.time;
+            PlatformImage *picture = [_previewRenderer snapshotAtTime:f.time withSize:CGSizeMake(240, 180) antialiasingMode:SCNAntialiasingModeMultisampling2X];
+            if (picture) _preview.texture = [SKTexture textureWithImage:picture];
+        }
     }
 }
 @end

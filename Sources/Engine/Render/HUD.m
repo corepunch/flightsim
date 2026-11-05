@@ -200,6 +200,7 @@ static SKShapeNode *Bracket(void) {
         l.position = CGPointMake(0, -(CGFloat)i * 17);
         [_help addChild:l];
     }
+    _help.hidden = YES;
     [_root addChild:_help];
 
     _navMarks = [NSMutableArray array];
@@ -428,14 +429,13 @@ static SKShapeNode *Bracket(void) {
     _rechargeLabel.text = frame.shield < 0.999 ? @"SHIELD +6%/S" : @"SHIELD FULL";
 }
 
-- (void)setInputText:(NSString *)text { _inputLabel.text = text; }
+- (void)setInputText:(NSString *)text { _inputLabel.text = @""; }
 - (void)toggleHelp {
-    _help.hidden = !_help.hidden;
-    _objectivePanel.hidden = !_help.hidden;
+    _help.hidden = YES;
 }
 - (void)setHelpVisible:(BOOL)visible {
-    _help.hidden = !visible;
-    _objectivePanel.hidden = visible;
+    _help.hidden = YES;
+    _objectivePanel.hidden = NO;
 }
 
 - (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {

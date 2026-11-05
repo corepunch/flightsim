@@ -1291,6 +1291,32 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
+		"1EE48ABFA006EA41A782521B" = {
+			"isa" = "PBXFileReference";
+			"path" = "MonitorSignal.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"DFC6BC34568C7B917EA4C4D4" = {
+			"isa" = "PBXFileReference";
+			"path" = "MonitorSignal.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"65F593C0F1ED128F2C2DC46F" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "DFC6BC34568C7B917EA4C4D4";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
+		"83013EA509DC6900D389CB2C" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "DFC6BC34568C7B917EA4C4D4";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
 		"F9632954BE94324DE06F9844" = {
 			"isa" = "PBXFileReference";
 			"path" = "PauseMenu.h";
@@ -1412,6 +1438,8 @@
 				"FFD254A8F67061025159DC33",
 				"C7416FF7A83F4818FD3CEE79",
 				"C730A0D6699A8EDB589CB230",
+				"1EE48ABFA006EA41A782521B",
+				"DFC6BC34568C7B917EA4C4D4",
 				"F9632954BE94324DE06F9844",
 				"F823012616B291C3E4500451",
 				"DCFE285AC4AD14417D7DADBA",
@@ -1741,6 +1769,7 @@
 				"17F07E3D537C055C34D580C8",
 				"5059A849CAEF011A5ECBB926",
 				"AC71D88E0BE45410B0E6DE92",
+				"65F593C0F1ED128F2C2DC46F",
 				"0FD41F083A3415049133A1F2",
 				"7D2BFC03890347100B33BA3D",
 				"823BCD1EB80AABB247023708",
@@ -1791,6 +1820,7 @@
 				"0DAFD5B826888156390412A8",
 				"99D7FBD3A775949FBFE449CD",
 				"2F34B4286E88EFF46E8BB5A8",
+				"83013EA509DC6900D389CB2C",
 				"832F120F0E272AF745DEBFC4",
 				"DB40B2AE82E8F54E3C69637A",
 				"C34C5676FE59C72E803DBA44",
