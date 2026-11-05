@@ -10,7 +10,7 @@ cp Resources/Info.plist "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set CFBundleExecutable FlightUIChecks' -c 'Set CFBundleIdentifier com.igor.spacefight.flightuichecks' -c 'Set CFBundleName Flight UI Checks' -c 'Add LSUIElement bool true' "$contents/Info.plist"
 source Tools/engine-library.sh
 # Bake only the changed cockpit into the existing small model cache.
-build/tools/BakeModels build/ModelCache/SpaceFight/Models Games/SpaceFight/Models/Cockpit.obj
+build/tools/BakeModels build/ModelCache/KestrelFrontier/Models Games/KestrelFrontier/Models/Cockpit.obj
 link_check_resources "$contents/Resources"
 for module in build/Native/*.dylib; do ln -s "$PWD/$module" "$contents/PlugIns/${module:t}"; done
 clang $engine_cflags Tools/GUI/FlightUIChecks.m $engine_libs -o "$contents/MacOS/FlightUIChecks"

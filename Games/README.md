@@ -23,6 +23,8 @@ Games/<name>/
   Models/        .obj sources, baked to .scn when the app is bundled
   Textures/
   Strings/       <locale>.json: overrides and additions to the engine's catalog
+  Art/           source art and generators (.blend, build_*.py) that write into
+                 Models/, Textures/ and Briefing/. Not bundled.
 ```
 
 Lookups go through `Sources/Shared/Shared.h`: the game's folder first,

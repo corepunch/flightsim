@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>FSDefaultGame</key>
-    <string>SpaceFight</string>
+    <string>KestrelFrontier</string>
     <key>CFBundleExecutable</key>
-    <string>SpaceFight</string>
+    <string>KestrelFrontier</string>
     <key>CFBundleIdentifier</key>
     <string>com.igor.spacefight</string>
     <key>CFBundleName</key>
-    <string>Space Fight</string>
+    <string>Kestrel Frontier</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundlePackageType</key>

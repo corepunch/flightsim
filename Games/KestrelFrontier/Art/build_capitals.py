@@ -1,9 +1,9 @@
 # Builds the capital ships, stations and props and exports one OBJ per asset
-# into Resources/Models/Capital/. Ships are kitbashed from the CC0
+# into Games/KestrelFrontier/Models/Capital/. Ships are kitbashed from the CC0
 # "Shipyard" parts set by greyoxide (Art/kit/fetch.sh downloads it), scaled
 # up to capital size and combined with procedural glows, trusses and rings.
 #
-#   Blender -b --factory-startup --python Art/build_capitals.py [-- Name ...]
+#   Blender -b --factory-startup --python Games/KestrelFrontier/Art/build_capitals.py [-- Name ...]
 #   CAPITAL_PREVIEW=<dir> also renders a 3/4 preview of each asset there.
 #
 # Space: metres, +Y is the bow, +Z up. The OBJ export maps +Y to -Z, the
@@ -26,8 +26,8 @@ import random
 import sys
 from mathutils import Matrix, Vector, noise
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "Resources", "Models", "Capital")
+GAME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(GAME, "Models", "Capital")
 PREVIEW = os.environ.get("CAPITAL_PREVIEW")
 TILE = 24.0          # metres per hull texture repeat
 WIN_TILE = (16.0, 4.0)
@@ -294,7 +294,7 @@ def truss(m, p0, p1, w, mat="Trim"):
 
 # ---------------------------------------------------------------- kit
 
-KIT = os.path.join(ROOT, "Art", "kit", "Shipyard.blend")
+KIT = os.path.join(GAME, "Art", "kit", "Shipyard.blend")
 PARTS = {}   # name -> (verts, faces, face materials, size), centred on the bounds
 KIT_MATS = {"Glass": "Windows", "Flat.001": "HullDark", "Wire": "Hull", "Wire fade": "Hull"}
 

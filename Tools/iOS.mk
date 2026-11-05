@@ -1,4 +1,4 @@
-# Compile one game (GAME, default SpaceFight) into the mobile executable: iOS
+# Compile one game (GAME, default KestrelFrontier) into the mobile executable: iOS
 # apps cannot load a dylib at runtime. The Mac loads each game's module from
 # PlugIns and uses the same SceneKit assets baked by the Mac tools.
 IOS_PLATFORM ?= iphonesimulator
@@ -15,9 +15,9 @@ IOS_ENGINE_OBJECTS := $(addprefix $(IOS_BUILD)/engine/,$(addsuffix .o,$(IOS_ENGI
 IOS_GAME_OBJECTS := $(addprefix $(IOS_BUILD)/game/,$(addsuffix .o,$(filter-out $(SHARED),$(call game_sources,$(call game_module_of,$(GAME))))))
 
 .PHONY: ios
-ios: $(IOS_BUILD)/SpaceFight
+ios: $(IOS_BUILD)/KestrelFrontier
 
-$(IOS_BUILD)/SpaceFight: $(IOS_ENGINE_OBJECTS) $(IOS_GAME_OBJECTS) Makefile Tools/iOS.mk
+$(IOS_BUILD)/KestrelFrontier: $(IOS_ENGINE_OBJECTS) $(IOS_GAME_OBJECTS) Makefile Tools/iOS.mk
 	@printf '  Linking %s (%s)\n' '$(@F)' '$(IOS_PLATFORM)'
 	@$(IOS_CC) $(IOS_FLAGS) $(IOS_ENGINE_OBJECTS) $(IOS_GAME_OBJECTS) $(addprefix -framework ,$(IOS_FRAMEWORKS)) -o "$@"
 

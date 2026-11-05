@@ -19,7 +19,7 @@
 				"HEADER_SEARCH_PATHS" = (
 					"$(inherited)",
 					"$(SRCROOT)/Sources/Shared",
-					"$(SRCROOT)/Games/SpaceFight/Game",
+					"$(SRCROOT)/Games/KestrelFrontier/Game",
 					"$(SRCROOT)/Sources/Engine/App",
 					"$(SRCROOT)/Sources/Engine/Audio",
 					"$(SRCROOT)/Sources/Engine/Client",
@@ -54,7 +54,7 @@
 				"HEADER_SEARCH_PATHS" = (
 					"$(inherited)",
 					"$(SRCROOT)/Sources/Shared",
-					"$(SRCROOT)/Games/SpaceFight/Game",
+					"$(SRCROOT)/Games/KestrelFrontier/Game",
 					"$(SRCROOT)/Sources/Engine/App",
 					"$(SRCROOT)/Sources/Engine/Audio",
 					"$(SRCROOT)/Sources/Engine/Client",
@@ -292,7 +292,7 @@
 				"SDKROOT" = "macosx";
 				"SUPPORTED_PLATFORMS" = "macosx";
 				"MACOSX_DEPLOYMENT_TARGET" = "13.0";
-				"PRODUCT_NAME" = "SpaceFight";
+				"PRODUCT_NAME" = "KestrelFrontier";
 				"EXECUTABLE_PREFIX" = "";
 				"MACH_O_TYPE" = "mh_dylib";
 				"SKIP_INSTALL" = "YES";
@@ -316,7 +316,7 @@
 				"SDKROOT" = "macosx";
 				"SUPPORTED_PLATFORMS" = "macosx";
 				"MACOSX_DEPLOYMENT_TARGET" = "13.0";
-				"PRODUCT_NAME" = "SpaceFight";
+				"PRODUCT_NAME" = "KestrelFrontier";
 				"EXECUTABLE_PREFIX" = "";
 				"MACH_O_TYPE" = "mh_dylib";
 				"SKIP_INSTALL" = "YES";
@@ -729,14 +729,14 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "6BB3C37E2A1494B658BE24C0";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
 		"853BFCC637C70CCC4842C96A" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "6BB3C37E2A1494B658BE24C0";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
 		"C54585FF2AA23460B472AD79" = {
@@ -749,14 +749,14 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "C54585FF2AA23460B472AD79";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
 		"6E49BE22BDF0FC8A9856D73F" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "C54585FF2AA23460B472AD79";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
 		"3E169921926D4103E78925AA" = {
@@ -769,14 +769,14 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "3E169921926D4103E78925AA";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
 		"82E81D356F77B5FEDA0D6A64" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "3E169921926D4103E78925AA";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
 		"8CE5B0F6B680621BCE20F379" = {
@@ -1646,158 +1646,158 @@
 			);
 			"sourceTree" = "<group>";
 		};
-		"DD67BDD2A1E0A8DB29ED5979" = {
+		"4E267A473352FE179B29C778" = {
 			"isa" = "PBXFileReference";
 			"path" = "GAI.m";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"58276560DCA12B9324FD7D8D" = {
+		"D333CB6EC38148AC7C563FB0" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "DD67BDD2A1E0A8DB29ED5979";
+			"fileRef" = "4E267A473352FE179B29C778";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"FD68D4EFA9C3160E44FF08F1" = {
+		"DF27D0FDF4D1F41A3FBC1F9E" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "DD67BDD2A1E0A8DB29ED5979";
+			"fileRef" = "4E267A473352FE179B29C778";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"413938D5D6CAAC17321F9035" = {
+		"257B4CF89D382FD916C5E281" = {
 			"isa" = "PBXFileReference";
 			"path" = "GEntities.m";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"6BD117E2D0E9E5CC3F8A7E55" = {
+		"9A8F4D5042691289620BFD69" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "413938D5D6CAAC17321F9035";
+			"fileRef" = "257B4CF89D382FD916C5E281";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"FE6C2E65C282CA5064F19178" = {
+		"83A8897DD976F2FCEE850815" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "413938D5D6CAAC17321F9035";
+			"fileRef" = "257B4CF89D382FD916C5E281";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"63DF763FAA6FF0A02CC5E547" = {
+		"1016A54AB1D6E7E8D7F416CB" = {
 			"isa" = "PBXFileReference";
 			"path" = "GMain.m";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"642B70ADA50F81DCECE3E8CF" = {
+		"895AE943B6B4278E975BE9D4" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "63DF763FAA6FF0A02CC5E547";
+			"fileRef" = "1016A54AB1D6E7E8D7F416CB";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"F9F4614BF9D2EEF71289322B" = {
+		"6A309B2B740486772C9D5017" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "63DF763FAA6FF0A02CC5E547";
+			"fileRef" = "1016A54AB1D6E7E8D7F416CB";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"3BAC5B88DFF4CBA7F9B51BC1" = {
+		"6B54261038EED8273ECB9694" = {
 			"isa" = "PBXFileReference";
 			"path" = "GMission.m";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"E039888EE58B8D996A99C6B6" = {
+		"5CF325A3FC3C2DDA6321FACE" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "3BAC5B88DFF4CBA7F9B51BC1";
+			"fileRef" = "6B54261038EED8273ECB9694";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"57A42B644F4B3577DCFB12E0" = {
+		"A5FC0976428705F14776AECC" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "3BAC5B88DFF4CBA7F9B51BC1";
+			"fileRef" = "6B54261038EED8273ECB9694";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"2E6985D9BAF7C8892FC8CFED" = {
+		"274A749528F5B18AB7BC7B60" = {
 			"isa" = "PBXFileReference";
 			"path" = "GTargeting.m";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"709496095309D160E810C275" = {
+		"72ED681343D9DF3912A0B260" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "2E6985D9BAF7C8892FC8CFED";
+			"fileRef" = "274A749528F5B18AB7BC7B60";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"EA5AE8EAE839B03945569889" = {
+		"8EAB3BBAE84BC3F634024196" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "2E6985D9BAF7C8892FC8CFED";
+			"fileRef" = "274A749528F5B18AB7BC7B60";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"3881F5D0E0F5C2D60854A608" = {
+		"2089AD0F3051C9C1B00D8C5A" = {
 			"isa" = "PBXFileReference";
 			"path" = "GWeapons.m";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.objc";
 		};
-		"22ECF3D7DB744B0F8E570D4C" = {
+		"B2C7D2B04DA20A6B0A8DB685" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "3881F5D0E0F5C2D60854A608";
+			"fileRef" = "2089AD0F3051C9C1B00D8C5A";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"A79C163C7DECA97FB839FF3D" = {
+		"9188B8AA5A774E53BA44A96E" = {
 			"isa" = "PBXBuildFile";
-			"fileRef" = "3881F5D0E0F5C2D60854A608";
+			"fileRef" = "2089AD0F3051C9C1B00D8C5A";
 			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/SpaceFight/Game/Prefix.h\"";
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Games/KestrelFrontier/Game/Prefix.h\"";
 			};
 		};
-		"19D9ADD6096686DC6DC3D666" = {
+		"BEC91ABC24E6E4B0235BADD0" = {
 			"isa" = "PBXFileReference";
 			"path" = "Game.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
-		"3DC925D3CB5FFC98A5E1271D" = {
+		"CB3F2093B850583B0E92F2ED" = {
 			"isa" = "PBXFileReference";
 			"path" = "Prefix.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
-		"D352D6700786D4BED910E7E4" = {
+		"28499B86EE26864C7CE57156" = {
 			"isa" = "PBXGroup";
 			"path" = "Game";
 			"children" = (
-				"DD67BDD2A1E0A8DB29ED5979",
-				"413938D5D6CAAC17321F9035",
-				"63DF763FAA6FF0A02CC5E547",
-				"3BAC5B88DFF4CBA7F9B51BC1",
-				"2E6985D9BAF7C8892FC8CFED",
-				"3881F5D0E0F5C2D60854A608",
-				"19D9ADD6096686DC6DC3D666",
-				"3DC925D3CB5FFC98A5E1271D",
+				"4E267A473352FE179B29C778",
+				"257B4CF89D382FD916C5E281",
+				"1016A54AB1D6E7E8D7F416CB",
+				"6B54261038EED8273ECB9694",
+				"274A749528F5B18AB7BC7B60",
+				"2089AD0F3051C9C1B00D8C5A",
+				"BEC91ABC24E6E4B0235BADD0",
+				"CB3F2093B850583B0E92F2ED",
 			);
 			"sourceTree" = "<group>";
 		};
-		"C166799371268BE45323894B" = {
+		"820BB3A628109378B885B1E9" = {
 			"isa" = "PBXGroup";
-			"path" = "Games/SpaceFight";
+			"path" = "Games/KestrelFrontier";
 			"children" = (
-				"D352D6700786D4BED910E7E4",
+				"28499B86EE26864C7CE57156",
 			);
 			"sourceTree" = "<group>";
 		};
@@ -1878,12 +1878,12 @@
 				"C5EB970F6F9D6A01AA21691D",
 				"A4F63592999AB8436389240D",
 				"419640121AD728914FAEB565",
-				"58276560DCA12B9324FD7D8D",
-				"6BD117E2D0E9E5CC3F8A7E55",
-				"642B70ADA50F81DCECE3E8CF",
-				"E039888EE58B8D996A99C6B6",
-				"709496095309D160E810C275",
-				"22ECF3D7DB744B0F8E570D4C",
+				"D333CB6EC38148AC7C563FB0",
+				"9A8F4D5042691289620BFD69",
+				"895AE943B6B4278E975BE9D4",
+				"5CF325A3FC3C2DDA6321FACE",
+				"72ED681343D9DF3912A0B260",
+				"B2C7D2B04DA20A6B0A8DB685",
 			);
 			"buildActionMask" = 2147483647;
 			"runOnlyForDeploymentPostprocessing" = 0;
@@ -1951,12 +1951,12 @@
 				"3262C3C0E2DD6DE73130369C",
 				"13106E22BB5E4799A7B3BC07",
 				"D1CD86F41330DCE9376E64FD",
-				"FD68D4EFA9C3160E44FF08F1",
-				"FE6C2E65C282CA5064F19178",
-				"F9F4614BF9D2EEF71289322B",
-				"57A42B644F4B3577DCFB12E0",
-				"EA5AE8EAE839B03945569889",
-				"A79C163C7DECA97FB839FF3D",
+				"DF27D0FDF4D1F41A3FBC1F9E",
+				"83A8897DD976F2FCEE850815",
+				"6A309B2B740486772C9D5017",
+				"A5FC0976428705F14776AECC",
+				"8EAB3BBAE84BC3F634024196",
+				"9188B8AA5A774E53BA44A96E",
 			);
 			"buildActionMask" = 2147483647;
 			"runOnlyForDeploymentPostprocessing" = 0;
@@ -1965,7 +1965,7 @@
 			"isa" = "PBXShellScriptBuildPhase";
 			"name" = "Bundle runtime resources";
 			"shellPath" = "/bin/zsh";
-			"shellScript" = "set -e\ncd \"$SRCROOT\"\nGAMES=SpaceFight /bin/zsh Tools/bundle-resources.sh \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\" \"$PROJECT_TEMP_DIR/KestrelFrontierResources\"\n";
+			"shellScript" = "set -e\ncd \"$SRCROOT\"\nGAMES=KestrelFrontier /bin/zsh Tools/bundle-resources.sh \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\" \"$PROJECT_TEMP_DIR/KestrelFrontierResources\"\n";
 			"buildActionMask" = 2147483647;
 			"runOnlyForDeploymentPostprocessing" = 0;
 			"alwaysOutOfDate" = 1;
@@ -1995,7 +1995,7 @@
 		};
 		"A81A4044967C6D4277D1776C" = {
 			"isa" = "PBXFileReference";
-			"path" = "SpaceFight.dylib";
+			"path" = "KestrelFrontier.dylib";
 			"sourceTree" = "BUILT_PRODUCTS_DIR";
 			"explicitFileType" = "compiled.mach-o.dylib";
 		};
@@ -2013,7 +2013,7 @@
 			"isa" = "PBXGroup";
 			"children" = (
 				"05F8A25BDBF403CDE3C749DE",
-				"C166799371268BE45323894B",
+				"820BB3A628109378B885B1E9",
 				"A0C03B473BEE5D5B4E94E821",
 				"2F59E4C1FBE609FAC2DF50AE",
 				"0A3E27B8CA818264D75C8D81",
@@ -2038,7 +2038,7 @@
 		"0F26821D05D2582A45D17E0A" = {
 			"isa" = "PBXNativeTarget";
 			"name" = "KestrelFrontier-Game";
-			"productName" = "SpaceFight";
+			"productName" = "KestrelFrontier";
 			"productReference" = "A81A4044967C6D4277D1776C";
 			"productType" = "com.apple.product-type.library.dynamic";
 			"buildConfigurationList" = "29E4AF27E5BB1B6C635EA166";

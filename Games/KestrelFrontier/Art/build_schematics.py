@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter
 
-ROOT = Path(__file__).resolve().parents[1]
+GAME = Path(__file__).resolve().parents[1]
 WIDTH, HEIGHT = 896, 320
 PITCH = math.radians(74)
 GRID = (100, 200, 198)
@@ -16,7 +16,7 @@ TARGET = (255, 137, 104)
 
 def load_mesh(asset):
     vertices, faces = [], []
-    path = ROOT / "Resources/Models/Capital" / f"{asset}.obj"
+    path = GAME / "Models/Capital" / f"{asset}.obj"
     for line in path.read_text().splitlines():
         tag, _, values = line.partition(" ")
         if tag == "v":
@@ -143,12 +143,13 @@ def render(asset, kind, output):
 
 
 def main():
-    output = ROOT / "Resources/Briefing/Schematics"
+    output = GAME / "Briefing/Schematics"
     output.mkdir(exist_ok=True)
-    campaign = json.loads((ROOT / "Resources/Missions/missions.json").read_text())
+    campaign = json.loads((GAME / "Campaign/campaign.json").read_text())
     requested = set()
     for mission in campaign["missions"]:
-        assets = {e["id"]: e["asset"] for e in mission["entities"]}
+        level = json.loads((GAME / "Levels" / f"{mission['level']}.json").read_text())
+        assets = {e["id"]: e["asset"] for e in level["entities"]}
         for step in mission["briefing"]["steps"]:
             if "schematic" in step:
                 requested.add((assets[step["focus"]], step["schematic"]))

@@ -10,7 +10,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <QuartzCore/QuartzCore.h>
 
-static NSString *const MixKey = @"SpaceFight.audioMix";
+static NSString *const MixKey = @"KestrelFrontier.audioMix";
 static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 
 @implementation GameAudio {
@@ -47,12 +47,17 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 
 - (instancetype)init {
     if ((self = [super init])) {
-        _queue = dispatch_queue_create("SpaceFight.audio", DISPATCH_QUEUE_SERIAL);
+        _queue = dispatch_queue_create("KestrelFrontier.audio", DISPATCH_QUEUE_SERIAL);
         _effects = [NSMutableDictionary dictionary];
         _lastPlayed = [NSMutableDictionary dictionary];
         _observers = [NSMutableArray array];
         _active = YES;
-        _mix = MIN(2, MAX(0, [NSUserDefaults.standardUserDefaults integerForKey:MixKey]));
+        NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+        // The key was SpaceFight.audioMix before the game took its real name.
+        id legacy = [defaults objectForKey:@"SpaceFight.audioMix"];
+        if (legacy && ![defaults objectForKey:MixKey]) [defaults setObject:legacy forKey:MixKey];
+        if (legacy) [defaults removeObjectForKey:@"SpaceFight.audioMix"];
+        _mix = MIN(2, MAX(0, [defaults integerForKey:MixKey]));
         // Do not block the renderer on compressed-file preparation.
         dispatch_async(_queue, ^{
 #if TARGET_OS_IOS

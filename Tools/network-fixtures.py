@@ -11,7 +11,7 @@ if len(sys.argv) == 2:
     # A one-game bundle: Games/NetCheck with only ship and projectile data and two levels.
     game = qa / 'Games' / 'NetCheck'
     for name in ('Ships', 'Projectiles'):
-        shutil.copytree(root / 'Games' / 'SpaceFight' / 'Data' / name, game / 'Data' / name)
+        shutil.copytree(root / 'Games' / 'KestrelFrontier' / 'Data' / name, game / 'Data' / name)
     shutil.copytree(root / 'Resources' / 'Strings', qa / 'Strings')
     missions = []
     for i, ship in enumerate(('executioner', 'wasp')):

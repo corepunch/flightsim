@@ -104,7 +104,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         [GameAudio shared];
         _input = input;
         [self registerConsole];
-        _loadQueue = dispatch_queue_create("SpaceFight.loading", DISPATCH_QUEUE_SERIAL);
+        _loadQueue = dispatch_queue_create("KestrelFrontier.loading", DISPATCH_QUEUE_SERIAL);
         _frontEnd = [[FrontEnd alloc] initWithSize:view.bounds.size services:self];
         _pauseMenu = [[PauseMenu alloc] initWithSize:view.bounds.size];
         _loading = [[Loading alloc] initWithSize:view.bounds.size];

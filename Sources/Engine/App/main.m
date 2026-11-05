@@ -16,7 +16,7 @@
 #import "Common.h"
 #import <QuartzCore/QuartzCore.h>
 
-// Headless server: SpaceFight --dedicated [mission]. Flies the campaign from
+// Headless server: KestrelFrontier --dedicated [mission]. Flies the campaign from
 // that mission on, moving to the next one ten seconds after each debrief.
 // +map <n> on the command line (or from a cfg) changes the mission.
 static int RunDedicated(int mission) {
@@ -117,13 +117,13 @@ static int RunDedicated(int mission) {
 
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
-        // Console: SpaceFight +set <cvar> <value> ... +map 3 / +connect host / +exec file.cfg.
+        // Console: KestrelFrontier +set <cvar> <value> ... +map 3 / +connect host / +exec file.cfg.
         // Sets apply now, before any module registers its cvars; the rest
         // once the game has booted.
         [Cmd setArguments:NSProcessInfo.processInfo.arguments];
         [Cmd executeEarlyCommands];
         GameLoaderSelectGame();
-        // Offline effect preview: SpaceFight --record-fx <effect> <out.mp4> [seconds]
+        // Offline effect preview: KestrelFrontier --record-fx <effect> <out.mp4> [seconds]
         if (argc >= 4 && !strcmp(argv[1], "--record-fx"))
             return [FXRecorder recordEffect:@(argv[2]) toFile:@(argv[3]) seconds:argc >= 5 ? atof(argv[4]) : 3.0];
         if (argc >= 2 && !strcmp(argv[1], "--dedicated"))

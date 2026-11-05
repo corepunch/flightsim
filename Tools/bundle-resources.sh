@@ -45,7 +45,7 @@ for game in $games; do
     source_dir=Games/$game
     output_dir=$destination/Games/$game
     mkdir -p "$output_dir"
-    rsync -a --delete --exclude '/Game/' --exclude '*.obj' --exclude '*.mtl' --exclude '*.scn' "$source_dir/" "$output_dir/"
+    rsync -a --delete --exclude '/Game/' --exclude '/Art/' --exclude '*.obj' --exclude '*.mtl' --exclude '*.scn' "$source_dir/" "$output_dir/"
     for obj in $source_dir/Models/**/*.obj(N); do
         relative=${obj#$source_dir/}
         scene=$cache/$game/${relative:r}.scn

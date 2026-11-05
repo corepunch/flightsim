@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds SpaceFight.app. Usage: ./build.sh [run|ios-simulator|ios-device|iphone|ipad]
+# Builds KestrelFrontier.app. Usage: ./build.sh [run|ios-simulator|ios-device|iphone|ipad]
 #
 # Sources/Shared       protocol, flight model, file system and data tables (engine and game)
 # Sources/Engine       server, client, renderer, UI and the app itself
@@ -14,7 +14,7 @@ log() {
     printf '[build +%ss] %s\n' "$SECONDS" "$*"
 }
 
-APP=build/SpaceFight.app
+APP=build/KestrelFrontier.app
 mkdir -p build
 zmodload zsh/system
 : >> build/.lock
@@ -23,7 +23,7 @@ if ! zsystem flock -t 0 -f build_lock build/.lock 2>/dev/null; then
     zsystem flock -f build_lock build/.lock
 fi
 
-GAME=${GAME:-SpaceFight}
+GAME=${GAME:-KestrelFrontier}
 jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null) || jobs=1
 platform=
 case "$1" in
@@ -32,7 +32,7 @@ case "$1" in
 esac
 if [[ -n $platform ]]; then
     mobile=build/iOS/$platform-$arch
-    APP=$mobile/SpaceFight.app
+    APP=$mobile/KestrelFrontier.app
     log "Building for $platform ($arch)"
     make -j "$jobs" ios IOS_PLATFORM="$platform" GAME="$GAME"
     export GAMES=$GAME
@@ -46,7 +46,7 @@ rm -rf "$APP"
 if [[ -n $platform ]]; then
     bundle_resources=$APP
     mkdir -p "$APP"
-    cp "$mobile/SpaceFight" "$APP/"
+    cp "$mobile/KestrelFrontier" "$APP/"
     cp Resources/Info-iOS.plist "$APP/Info.plist"
     info_plist=$APP/Info.plist
     sdk_version=$(xcrun --sdk "$platform" --show-sdk-version)
@@ -62,7 +62,7 @@ if [[ -n $platform ]]; then
 else
     bundle_resources=$APP/Contents/Resources
     mkdir -p "$APP/Contents/MacOS" "$bundle_resources" "$APP/Contents/PlugIns"
-    cp build/Native/SpaceFight "$APP/Contents/MacOS/"
+    cp build/Native/KestrelFrontier "$APP/Contents/MacOS/"
     for module in Games/*/Game(N/); do cp "build/Native/${module:h:t}.dylib" "$APP/Contents/PlugIns/"; done
     cp Resources/Info.plist "$APP/Contents/"
     info_plist=$APP/Contents/Info.plist
@@ -87,9 +87,9 @@ fi
 log "Built $APP"
 zsystem flock -u "$build_lock"
 if [[ "$1" == "run" ]]; then
-    log "Launching SpaceFight through macOS Launch Services"
+    log "Launching KestrelFrontier through macOS Launch Services"
     if ! /usr/bin/open -n -W "$PWD/$APP"; then
-        print -u2 "Could not open SpaceFight.app. Run from your macOS desktop session or open the app in Finder."
+        print -u2 "Could not open KestrelFrontier.app. Run from your macOS desktop session or open the app in Finder."
         exit 1
     fi
 fi

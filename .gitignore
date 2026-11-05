@@ -2,7 +2,7 @@
 fx/
 .DS_Store
 *.blend1
-Art/kit/*.blend
+Games/*/Art/kit/*.blend
 
 # Xcode user settings (the generated project and shared scheme are tracked).
 xcuserdata/

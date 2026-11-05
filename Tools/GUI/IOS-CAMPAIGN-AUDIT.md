@@ -2,7 +2,7 @@
 
 Audited main at `1ca1567ae1b8c6f0f4af3313576425648013a3fe`.
 The Xcode project is now named KestrelFrontier; the make-based build still
-uses SpaceFight for its executable.
+uses KestrelFrontier for its executable.
 
 ## Rendering and input paths
 

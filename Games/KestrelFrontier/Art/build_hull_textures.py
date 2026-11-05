@@ -1,11 +1,11 @@
-# Generates tileable spaceship hull texture sets into Resources/Textures/:
+# Generates tileable spaceship hull texture sets into Games/KestrelFrontier/Textures/:
 #   <set>_color.png  albedo (neutral, tinted per faction in game)
 #   <set>_normal.png OpenGL-convention normal map
 #   <set>_rough.png  roughness
 #   <set>_metal.png  metalness
 #   <set>_emit.png   lit windows and running lights
 #
-#   Blender -b --factory-startup --python Art/build_hull_textures.py [-- set ...]
+#   Blender -b --factory-startup --python Games/KestrelFrontier/Art/build_hull_textures.py [-- set ...]
 #
 # With no set names it builds every set in SETS (bottom of the file). The
 # game loads <set>_<map>.jpg or .png, so the large colour and roughness maps
@@ -19,8 +19,8 @@ import bpy
 import numpy as np
 import os
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "Resources", "Textures")
+GAME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(GAME, "Textures")
 N = 2048
 
 

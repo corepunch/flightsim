@@ -21,7 +21,7 @@ ENGINE_FRAMEWORKS := Cocoa SceneKit SpriteKit Metal CoreGraphics QuartzCore IOKi
 # build/Native/<name>.dylib; everything else in the folder is its data
 # (Tools/bundle-resources.sh). GAME is the one the iOS app links in.
 GAMES := $(notdir $(patsubst %/Game/,%,$(wildcard Games/*/Game/)))
-GAME ?= SpaceFight
+GAME ?= KestrelFrontier
 # The module a game runs: its own Game/, else its base's (game.json "base").
 game_module_of = $(if $(wildcard Games/$(1)/Game/),$(1),$(shell plutil -extract base raw -o - Games/$(1)/game.json 2>/dev/null))
 game_sources = $(SHARED) $(MISSION_SOURCES) $(wildcard Games/$(1)/Game/*.m)
@@ -31,7 +31,7 @@ GAME_MODULES := $(addprefix $(NATIVE)/,$(addsuffix .dylib,$(GAMES)))
 GAME_PCHS := $(addprefix $(NATIVE)/games/,$(addsuffix .pch,$(GAMES)))
 
 .PHONY: all FORCE
-all: $(ENGINE_PCH) $(GAME_PCHS) $(NATIVE)/SpaceFight $(GAME_MODULES) $(NATIVE)/libengine.a
+all: $(ENGINE_PCH) $(GAME_PCHS) $(NATIVE)/KestrelFrontier $(GAME_MODULES) $(NATIVE)/libengine.a
 
 # Reuse objects only while the selected compiler and SDK match.
 $(TOOLCHAIN): FORCE
@@ -40,7 +40,7 @@ $(TOOLCHAIN): FORCE
 	@if cmp -s "$@.tmp" "$@"; then rm "$@.tmp"; else mv "$@.tmp" "$@"; fi
 
 # Source directories also trigger relinking when a file or directory is removed.
-$(NATIVE)/SpaceFight: $(ENGINE_OBJECTS) Sources/Shared Sources/Engine $(ENGINE_DIRS) Makefile
+$(NATIVE)/KestrelFrontier: $(ENGINE_OBJECTS) Sources/Shared Sources/Engine $(ENGINE_DIRS) Makefile
 	@printf '  Linking %s\n' '$(@F)'
 	@clang $(COMMON_FLAGS) $(ENGINE_OBJECTS) $(addprefix -framework ,$(ENGINE_FRAMEWORKS)) -o "$@.tmp"
 	@mv "$@.tmp" "$@"

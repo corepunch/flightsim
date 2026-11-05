@@ -13,9 +13,9 @@ Everything from the first `+` on is a command; each `+` starts a new one.
 game has booted (or, for a dedicated server, once it is listening).
 
 ```sh
-build/SpaceFight.app/Contents/MacOS/SpaceFight +set sv_cheats 1 +set g_god 1 +map 3
-build/SpaceFight.app/Contents/MacOS/SpaceFight +connect 192.168.1.20
-build/SpaceFight.app/Contents/MacOS/SpaceFight --dedicated 4 +set net_port 27911
+build/KestrelFrontier.app/Contents/MacOS/KestrelFrontier +set sv_cheats 1 +set g_god 1 +map 3
+build/KestrelFrontier.app/Contents/MacOS/KestrelFrontier +connect 192.168.1.20
+build/KestrelFrontier.app/Contents/MacOS/KestrelFrontier --dedicated 4 +set net_port 27911
 xcrun simctl launch booted com.igor.spacefight +set in_touchOnly 1 +map 1
 ```
 

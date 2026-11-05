@@ -177,7 +177,7 @@ void ApplyHullRolloff(SCNMaterial *m);
 // game camera's HDR + bloom settings at a fixed 60 fps timestep and encodes
 // it to H.264 .mp4 (plus a contact-sheet .png of 12 frames next to it).
 //
-//   SpaceFight --record-fx explosion out.mp4 [seconds]
+//   KestrelFrontier --record-fx explosion out.mp4 [seconds]
 //   effects: explosion, impact, shield, bolt, exhaust, all
 @interface FXRecorder : NSObject
 

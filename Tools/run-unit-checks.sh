@@ -13,7 +13,7 @@ ln -s "$PWD/Resources/Strings" "$qa/Strings"
 for game in Games/*(N/); do ln -s "$PWD/$game" "$qa/$game"; done
 # A game that builds on another (game.json "base"), for the search-path checks.
 mkdir -p "$qa/Games/ZCheckMod/Levels"
-print '{ "title": "Check", "base": "SpaceFight" }' > "$qa/Games/ZCheckMod/game.json"
+print '{ "title": "Check", "base": "KestrelFrontier" }' > "$qa/Games/ZCheckMod/game.json"
 print '{ "name": "check", "title": "Check" }' > "$qa/Games/ZCheckMod/Levels/check.json"
 # The app's Info.plist (FSDefaultGame), embedded as a bare executable's bundle info.
 cp Resources/Info.plist "$qa/Info.plist"

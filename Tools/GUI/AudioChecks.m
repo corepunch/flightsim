@@ -17,7 +17,7 @@ static void Frames(GameAudio *audio, BOOL flying, int count) {
 
 static int Checks(NSString *output) {
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-    [defaults setInteger:0 forKey:@"SpaceFight.audioMix"];
+    [defaults setInteger:0 forKey:@"KestrelFrontier.audioMix"];
     NSURL *manifestURL = [NSBundle.mainBundle URLForResource:@"manifest" withExtension:@"json" subdirectory:@"Audio"];
     NSDictionary *manifest = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:manifestURL] options:0 error:nil];
     CHECK([manifest[@"assets"] count] == 14);
@@ -83,12 +83,12 @@ static int Checks(NSString *output) {
     CHECK(!music[0][0].playing && music[0][1].playing);
 
     [audio cycleMix]; Frames(audio, NO, 5);
-    CHECK([defaults integerForKey:@"SpaceFight.audioMix"] == 1 && !music[0][1].playing);
+    CHECK([defaults integerForKey:@"KestrelFrontier.audioMix"] == 1 && !music[0][1].playing);
     [audio play:@"ui-confirm"]; Drain(audio);
     CHECK(effects[@"ui-confirm"][0].playing);
     [audio cycleMix]; Drain(audio);
     [audio play:@"explosion"]; Frames(audio, YES, 5);
-    CHECK([defaults integerForKey:@"SpaceFight.audioMix"] == 2);
+    CHECK([defaults integerForKey:@"KestrelFrontier.audioMix"] == 2);
     for (NSArray *voices in effects.allValues) for (AVAudioPlayer *p in voices) CHECK(!p.playing);
     [audio cycleMix]; Frames(audio, NO, 90);
     CHECK(music[0][1].playing);
@@ -114,9 +114,9 @@ static int Checks(NSString *output) {
         [window orderBack:nil];
         [view presentScene:menu];
         for (int i = 0; i < 4; i++) [menu handle:InputActionDown];
-        NSInteger previous = [defaults integerForKey:@"SpaceFight.audioMix"];
+        NSInteger previous = [defaults integerForKey:@"KestrelFrontier.audioMix"];
         [menu handle:InputActionConfirm]; Drain(audio);
-        CHECK([defaults integerForKey:@"SpaceFight.audioMix"] == (previous + 1) % 3);
+        CHECK([defaults integerForKey:@"KestrelFrontier.audioMix"] == (previous + 1) % 3);
         SKNode *root = [menu valueForKey:@"root"];
         for (SKNode *node in root.children) if ([node isKindOfClass:SKLabelNode.class]) {
             CHECK(CGRectGetMinY(node.frame) >= 0 && CGRectGetMaxY(node.frame) <= size.height + 1);

@@ -3,7 +3,7 @@
 Open `KestrelFrontier.xcodeproj`. Choose the shared `KestrelFrontier-iOS`
 scheme for iPhone and iPad, or `KestrelFrontier-macOS` for a native Mac build.
 Both schemes support Debug, Release, and Archive. The Mac target builds and
-embeds the game module (`SpaceFight.dylib`, from `Games/SpaceFight/Game`) automatically;
+embeds the game module (`KestrelFrontier.dylib`, from `Games/KestrelFrontier/Game`) automatically;
 the iOS target compiles that game into the app and ships only its `Games/` folder.
 
 For iOS, select an iPhone or iPad simulator to build and run. For a physical device,
@@ -39,7 +39,7 @@ On a Mac with Xcode and an installed iOS Simulator runtime:
 
 ```sh
 ./build.sh ios-simulator
-app="build/iOS/iphonesimulator-$(uname -m)/SpaceFight.app"
+app="build/iOS/iphonesimulator-$(uname -m)/KestrelFrontier.app"
 xcrun simctl install booted "$app"
 xcrun simctl launch booted com.igor.spacefight
 ```
@@ -63,7 +63,7 @@ profile covering both the device and `com.igor.spacefight`. Use
 `PROFILE=/path/to/profile.mobileprovision` or `TEAM=<team-id>` to select signing
 credentials, or set `BUNDLE_ID` to the identifier covered by your profile.
 `./build.sh ios-device` still creates the unsigned bundle at
-`build/iOS/iphoneos-arm64/SpaceFight.app`. Command-line builds share a model bake cache.
+`build/iOS/iphoneos-arm64/KestrelFrontier.app`. Command-line builds share a model bake cache.
 
 The game runs in either landscape orientation. The flight controls are centered
 vertically on both iPhone and iPad.

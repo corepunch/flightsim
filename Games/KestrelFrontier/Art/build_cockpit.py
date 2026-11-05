@@ -1,7 +1,7 @@
-# Builds the player cockpit and exports Resources/Models/Cockpit.obj.
+# Builds the player cockpit and exports Games/KestrelFrontier/Models/Cockpit.obj.
 #
 # Run inside Blender (background is fine):
-#   Blender -b Art/Cockpit.blend --python Art/build_cockpit.py
+#   Blender -b Games/KestrelFrontier/Art/Cockpit.blend --python Games/KestrelFrontier/Art/build_cockpit.py
 #
 # Space: the pilot's eye is the origin, +Y is forward, +Z is up, metres.
 # The OBJ export maps Blender +Y to -Z, matching the game's ship space.
@@ -18,8 +18,8 @@ import math
 import os
 from mathutils import Matrix, Vector
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "Resources", "Models", "Cockpit.obj")
+GAME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(GAME, "Models", "Cockpit.obj")
 
 # Fresh scene.
 for o in list(bpy.data.objects):

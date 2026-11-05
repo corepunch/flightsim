@@ -17,7 +17,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>FSDefaultGame</key>
-	<string>SpaceFight</string>
+	<string>KestrelFrontier</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
