@@ -14,7 +14,9 @@
 #include <stdbool.h>
 #include <simd/simd.h>
 
-#define PROTOCOL_VERSION 3
+// Version 4 requires ship-data identity validation before beginning.
+// Version 3 clients do not validate CS_GAME and must not join these servers.
+#define PROTOCOL_VERSION 4
 
 #define TICK_RATE 30
 #define TICK_DT (1.0f / TICK_RATE)
