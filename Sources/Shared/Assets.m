@@ -204,19 +204,21 @@ const ProjectileDef *ProjectileDefForModel(NSString *model) {
 
 #pragma mark - Campaign
 
-NSArray<NSDictionary *> *CampaignMissions(void) {
-    static NSArray *missions;
+NSDictionary *CampaignData(void) {
+    static NSDictionary *root;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         NSURL *url = [[NSBundle mainBundle] URLForResource:@"missions" withExtension:@"json" subdirectory:@"Missions"];
         NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
         NSError *err = nil;
-        NSDictionary *root = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&err] : nil;
-        if (!root) NSLog(@"Campaign: cannot load missions.json: %@", err);
-        missions = root[@"missions"] ?: @[];
+        NSDictionary *json = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&err] : nil;
+        if (![json isKindOfClass:NSDictionary.class]) NSLog(@"Campaign: cannot load missions.json: %@", err);
+        root = [json isKindOfClass:NSDictionary.class] ? json : @{};
     });
-    return missions;
+    return root;
 }
+
+NSArray<NSDictionary *> *CampaignMissions(void) { return CampaignData()[@"missions"] ?: @[]; }
 
 NSDictionary *CampaignMission(NSUInteger i) {
     NSArray *all = CampaignMissions();

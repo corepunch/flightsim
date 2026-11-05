@@ -50,6 +50,7 @@
 		58BA6F4BE3823F4E58B1A727 /* Server.m in Sources */ = {isa = PBXBuildFile; fileRef = 47C411751EC74E7AE3101743 /* Server.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		65F593C0F1ED128F2C2DC46F /* MonitorSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = DFC6BC34568C7B917EA4C4D4 /* MonitorSignal.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		6BBC133171AFCBB20752CF2C /* UILayout.m in Sources */ = {isa = PBXBuildFile; fileRef = C3E696F413C994AF0CD075A8 /* UILayout.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		C12F95CEC261E2E744E3560D /* Story.m in Sources */ = {isa = PBXBuildFile; fileRef = A44D9FED59119D79FEF6A987 /* Story.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		6CD2DC2B76D72A40D67E139F /* ScreenInput.m in Sources */ = {isa = PBXBuildFile; fileRef = 7D651F25047FF820E00DAA8F /* ScreenInput.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		6E49BE22BDF0FC8A9856D73F /* MissionObjective.m in Sources */ = {isa = PBXBuildFile; fileRef = C54585FF2AA23460B472AD79 /* MissionObjective.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
 		6F981AF9C24FDE0387D2A98A /* GAI.m in Sources */ = {isa = PBXBuildFile; fileRef = 91CA5E34091F3E00ABDA2413 /* GAI.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
@@ -80,6 +81,7 @@
 		9C98CF9FBBB4F3E870A72407 /* NetChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CFDA83224EBC24B2A01D9D7 /* NetChannel.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		9DD3E038506807F0BED669EB /* NetChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CFDA83224EBC24B2A01D9D7 /* NetChannel.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		9F74F316AAA5A7CF2D210A04 /* UILayout.m in Sources */ = {isa = PBXBuildFile; fileRef = C3E696F413C994AF0CD075A8 /* UILayout.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		5E564C9F422A6A0DC7510E53 /* Story.m in Sources */ = {isa = PBXBuildFile; fileRef = A44D9FED59119D79FEF6A987 /* Story.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		9FA41724D17DD18DAD148662 /* MissionEvents.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BB3C37E2A1494B658BE24C0 /* MissionEvents.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
 		A47B25B97C64F8D1E1EE39B6 /* Client.m in Sources */ = {isa = PBXBuildFile; fileRef = FA0ADB7A3655C360ED99B8DC /* Client.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		A741547534C73A721F83CF72 /* UITheme.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BCB8FB895967539AF73F765 /* UITheme.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
@@ -151,6 +153,8 @@
 		0121C9D1523A192D5381DADD /* UIStyle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UIStyle.h; sourceTree = "<group>"; };
 		0192E71202C149913DD460B1 /* NetTransport.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NetTransport.m; sourceTree = "<group>"; };
 		03E7C528A44BC92B8DC1AC27 /* UILayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UILayout.h; sourceTree = "<group>"; };
+		62CB28421B45BB8601AE4C8B /* Story.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Story.h; sourceTree = "<group>"; };
+		A44D9FED59119D79FEF6A987 /* Story.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Story.m; sourceTree = "<group>"; };
 		05FD554367B7927FD082EE17 /* Exhaust.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Exhaust.h; sourceTree = "<group>"; };
 		0658C42B44887AD5A254EC00 /* ScreenHost.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScreenHost.m; sourceTree = "<group>"; };
 		0800EFD946EE779D7780ECB7 /* UIMotion.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UIMotion.h; sourceTree = "<group>"; };
@@ -292,6 +296,15 @@
 				A81A4044967C6D4277D1776C /* game.dylib */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		288B0BA44D4EEAB5F6E6E208 /* Story */ = {
+			isa = PBXGroup;
+			children = (
+				62CB28421B45BB8601AE4C8B /* Story.h */,
+				A44D9FED59119D79FEF6A987 /* Story.m */,
+			);
+			path = Story;
 			sourceTree = "<group>";
 		};
 		1ACA60CEC30688E618AB947B /* UI */ = {
@@ -443,6 +456,7 @@
 				1633E1957F7C4AB02AF3A827 /* Prefix.h */,
 				CC736AA6B87DB36FC71DA4B5 /* Render */,
 				C48449D9C087944E590A8C11 /* Server */,
+				288B0BA44D4EEAB5F6E6E208 /* Story */,
 				1ACA60CEC30688E618AB947B /* UI */,
 			);
 			path = Engine;
@@ -698,6 +712,7 @@
 				DB40B2AE82E8F54E3C69637A /* Progress.m in Sources */,
 				C34C5676FE59C72E803DBA44 /* ServerBrowser.m in Sources */,
 				9F74F316AAA5A7CF2D210A04 /* UILayout.m in Sources */,
+				5E564C9F422A6A0DC7510E53 /* Story.m in Sources */,
 				4DF56D7F0E3ED68149B736B8 /* UIMotion.m in Sources */,
 				975B61AC13A2C20C93310039 /* Assets.m in Sources */,
 				DDC0D67AAAA5499A4BEA641A /* ShipMove.c in Sources */,
@@ -753,6 +768,7 @@
 				7D2BFC03890347100B33BA3D /* Progress.m in Sources */,
 				823BCD1EB80AABB247023708 /* ServerBrowser.m in Sources */,
 				6BBC133171AFCBB20752CF2C /* UILayout.m in Sources */,
+				C12F95CEC261E2E744E3560D /* Story.m in Sources */,
 				120A20A330F6DD850AEE0A5E /* UIMotion.m in Sources */,
 				166582EBCC518E79612F2EF6 /* GAI.m in Sources */,
 				14A7C3593840A75DBECDBC53 /* GEntities.m in Sources */,
@@ -793,9 +809,11 @@
 					"$(SRCROOT)/Sources/Engine/App",
 					"$(SRCROOT)/Sources/Engine/Client",
 					"$(SRCROOT)/Sources/Engine/Common",
+					"$(SRCROOT)/Sources/Engine/Mission",
 					"$(SRCROOT)/Sources/Engine/Net",
 					"$(SRCROOT)/Sources/Engine/Render",
 					"$(SRCROOT)/Sources/Engine/Server",
+					"$(SRCROOT)/Sources/Engine/Story",
 					"$(SRCROOT)/Sources/Engine/UI",
 				);
 				ONLY_ACTIVE_ARCH = YES;
@@ -914,9 +932,11 @@
 					"$(SRCROOT)/Sources/Engine/App",
 					"$(SRCROOT)/Sources/Engine/Client",
 					"$(SRCROOT)/Sources/Engine/Common",
+					"$(SRCROOT)/Sources/Engine/Mission",
 					"$(SRCROOT)/Sources/Engine/Net",
 					"$(SRCROOT)/Sources/Engine/Render",
 					"$(SRCROOT)/Sources/Engine/Server",
+					"$(SRCROOT)/Sources/Engine/Story",
 					"$(SRCROOT)/Sources/Engine/UI",
 				);
 				ONLY_ACTIVE_ARCH = NO;

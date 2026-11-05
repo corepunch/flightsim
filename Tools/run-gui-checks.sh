@@ -16,15 +16,10 @@ cp Resources/Info.plist "$contents/Info.plist"
     -c 'Add LSUIElement bool true' "$contents/Info.plist"
 cp -R Resources/Briefing Resources/Fonts Resources/Missions Resources/Ships Resources/Capitals "$contents/Resources/"
 ln -s "$PWD/Resources/Audio" "$contents/Resources/Audio"
-for directory in Strings UI; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
+for directory in Strings UI Story; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
 
-ui=Sources/Engine/UI
-clang -fobjc-arc -Wall -mmacosx-version-min=13.0 \
-    -ISources/Shared -ISources/Engine/App -ISources/Engine/Common -I"$ui" \
-    Tools/GUI/PortraitChecks.m "$ui"/{Briefing,Progress,UIMotion,MonitorSignal,UITheme}.m Sources/Shared/Assets.m Sources/Engine/App/GameAudio.m \
-    Sources/Engine/Common/{Cvar,Localization}.m \
-    -framework Cocoa -framework SpriteKit -framework ImageIO -framework CoreGraphics -framework AVFoundation -framework QuartzCore \
-    -o "$contents/MacOS/PortraitChecks"
+source Tools/engine-library.sh
+clang $engine_cflags Tools/GUI/PortraitChecks.m $engine_libs -o "$contents/MacOS/PortraitChecks"
 /usr/bin/codesign --force --sign - "$app"
 
 # Launch the bundle in the desktop session. open -W does not report the app's exit status.

@@ -6,6 +6,7 @@
 #import "UIMotion.h"
 #import "GameAudio.h"
 #import "Localization.h"
+#import "Story.h"
 #import <ImageIO/ImageIO.h>
 
 static NSValue *BoxPoint(CGPoint point) { return [NSValue value:&point withObjCType:@encode(CGPoint)]; }
@@ -36,8 +37,7 @@ typedef struct {
 
 static const CGFloat ScrollGutter = 10;
 static NSString *const PortraitDeparture = @"portraitDeparture";
-static NSString *const PlayerPortrait = @"Lancer1";
-// Reserve room for the widest portrait canvas (Mira) at the shared height.
+// Reserve room for the widest portrait canvas at the shared height.
 static const CGFloat MaxPortraitAspect = 1.04;
 static const CGFloat CaptionDrop = 42;
 static const CGFloat PortraitDepth = 1, CaptionDepth = 2, FooterDepth = 3;
@@ -536,44 +536,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)startPage {
     _index = MIN(index, CampaignMissions().count - 1);
     NSDictionary *mission = CampaignMission(_index);
-    NSDictionary *brief = mission[@"briefing"];
-    _dialogueScene = brief[@"dialogue"];
-    NSString *speaker = brief[@"speaker"] ?: L10n(@"briefing.default_speaker");
-    NSString *portrait = [speaker containsString:@"Okafor"] ? @"Okafor" : @"Varn";
-    NSMutableArray<NSDictionary *> *pages = [NSMutableArray array];
-    for (NSDictionary *line in _dialogueScene[@"lines"]) {
-        NSMutableDictionary *page = [line mutableCopy];
-        page[@"channel"] = line[@"channel"] ?: L10n(@"briefing.channel_briefing");
-        page[@"dialogue"] = @YES;
-        [pages addObject:page];
-    }
-
-    // The mission's original briefing is the officer's speech. Each tactical
-    // cue and each readout gets its own beat on the same wall monitor.
-    for (NSString *text in brief[@"text"]) {
-        [pages addObject:@{ @"speaker": speaker, @"portrait": portrait,
-                            @"text": text, @"channel": L10n(@"briefing.channel_situation") }];
-    }
-    for (NSDictionary *step in brief[@"steps"]) {
-        [pages addObject:@{ @"speaker": speaker, @"portrait": portrait, @"tactical": step,
-                            @"text": step[@"caption"] ?: @"",
-                            @"channel": L10n(step[@"schematic"] ? @"briefing.channel_schematic" : @"briefing.channel_flight_plan") }];
-    }
-
-    NSMutableArray<NSString *> *orders = [NSMutableArray array];
-    for (NSDictionary *objective in mission[@"objectives"]) {
-        [orders addObject:[NSString stringWithFormat:@"%@%@", objective[@"text"],
-                           [objective[@"optional"] boolValue] ? L10n(@"briefing.optional_suffix") : @""]];
-    }
-    if (orders.count) {
-        [pages addObject:@{ @"speaker": speaker, @"portrait": portrait, @"readout": orders,
-                            @"text": L10n(@"briefing.orders_line"), @"channel": L10n(@"briefing.channel_objectives") }];
-    }
-    int torpedoes = [mission[@"loadout"][@"torpedoes"] intValue];
-    NSString *loadout = L10nFormat(torpedoes == 1 ? @"briefing.loadout_one" : @"briefing.loadout_many", torpedoes);
-    NSArray *intel = [(brief[@"intel"] ?: @[]) arrayByAddingObject:loadout];
-    [pages addObject:@{ @"speaker": speaker, @"portrait": portrait, @"readout": intel,
-                        @"text": L10n(@"briefing.intel_line"), @"channel": L10n(@"briefing.channel_intel") }];
+    _dialogueScene = mission[@"briefing"][@"dialogue"];
+    NSArray<NSDictionary *> *pages = StoryBriefingPages(mission);
     _pages = pages;
     _page = MIN(startPage, pages.count - 1);
     _mode = ModeBriefing;
@@ -604,15 +568,22 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     return texture ? [SKSpriteNode spriteNodeWithTexture:texture] : nil;
 }
 
-// Trace the cyan bezel in Bastion.png, then inset its full silhouette.
-- (CGRect)addBackdrop:(NSString *)name raiseBoard:(BOOL)raiseBoard {
+// A room from Story/rooms.json: the art, cropped to fill the screen, and its
+// wall monitor traced by the room's bezel polygon (source pixels, y down).
+- (CGRect)addBackdrop:(NSString *)roomName raiseBoard:(BOOL)raiseBoard {
     CGSize size = self.size;
-    SKSpriteNode *art = [self artNamed:name];
+    NSDictionary *room = StoryRoom(roomName);
+    SKSpriteNode *art = room ? [self artNamed:room[@"image"] ?: roomName] : nil;
     if (!art) return CGRectZero;
-    const CGFloat boardBottom = 417.0 / 941, boardHeight = 391.0 / 941;
+    NSArray<NSNumber *> *source = room[@"size"];
+    CGFloat sourceWidth = source.count == 2 ? source[0].doubleValue : art.size.width;
+    CGFloat sourceHeight = source.count == 2 ? source[1].doubleValue : art.size.height;
+    NSDictionary *board = room[@"board"];
+    const CGFloat boardBottom = [board[@"bottom"] doubleValue] / sourceHeight;
+    const CGFloat boardHeight = [board[@"height"] doubleValue] / sourceHeight;
     CGFloat scale = MAX(size.width / art.size.width, size.height / art.size.height * (raiseBoard ? 1.15 : 1));
     CGFloat centerY = size.height / 2;
-    if (raiseBoard) {
+    if (raiseBoard && board) {
         CGFloat artHeight = art.size.height * scale;
         // Give the caption more room while keeping the top of the monitor visible.
         CGFloat boardTop = artHeight * (boardBottom + boardHeight);
@@ -635,17 +606,15 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     shade.anchorPoint = CGPointZero;
     [_root addChild:shade];
 
-    // Source-image pixels, counterclockwise once converted to scene coordinates.
-    const CGPoint bezel[] = {
-        {410, 524}, {1262, 524}, {1286, 502}, {1286, 157},
-        {1257, 133}, {416, 133}, {388, 157}, {386, 502},
-    };
-    CGPoint corners[8];
-    for (NSUInteger i = 0; i < 8; i++) {
-        corners[i] = CGPointMake(frame.origin.x + frame.size.width * bezel[i].x / 1672,
-                                frame.origin.y + frame.size.height * (1 - bezel[i].y / 941));
+    // Counterclockwise once converted to scene coordinates.
+    NSArray<NSArray<NSNumber *> *> *bezel = room[@"bezel"];
+    if (bezel.count < 3) return CGRectZero;
+    CGPoint corners[bezel.count];
+    for (NSUInteger i = 0; i < bezel.count; i++) {
+        corners[i] = CGPointMake(frame.origin.x + frame.size.width * bezel[i][0].doubleValue / sourceWidth,
+                                frame.origin.y + frame.size.height * (1 - bezel[i][1].doubleValue / sourceHeight));
     }
-    _monitorMask = MonitorMask(corners, 8);
+    _monitorMask = MonitorMask(corners, bezel.count);
     return CGPathGetBoundingBox(_monitorMask.path);
 }
 
@@ -679,9 +648,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat height = MIN(area.size.height, area.size.width / MaxPortraitAspect);
     CGFloat scale = height / portrait.size.height;
     [portrait setScale:scale];
-    BOOL sourceFacesRight = ![name isEqualToString:PlayerPortrait] &&
-                            ![name isEqualToString:@"Lancer5"] && ![name isEqualToString:@"Lancer6"] &&
-                            ![name isEqualToString:@"Okafor"] && ![name isEqualToString:@"MiraCaptain"];
+    BOOL sourceFacesRight = StoryPortraitFacesRight(name);
     if (sourceFacesRight != facingRight) portrait.xScale = -scale;
     portrait.anchorPoint = CGPointMake(0.5, 0);
     portrait.position = home;
@@ -697,7 +664,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 }
 
 - (BOOL)addPortraitsForLine:(NSDictionary *)line speakerArea:(CGRect)speakerArea playerArea:(CGRect)playerArea {
-    BOOL playerSpeaking = [line[@"portrait"] isEqualToString:PlayerPortrait];
+    NSString *player = StoryPlayer();
+    BOOL playerSpeaking = [line[@"portrait"] isEqualToString:player];
     NSString *other = playerSpeaking ? line[@"listener"] : line[@"portrait"];
     NSString *expression = line[@"expression"];
     NSString *listenerExpression = line[@"listenerExpression"];
@@ -705,7 +673,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         [self addPortrait:other expression:playerSpeaking ? listenerExpression : expression
               facingRight:YES active:!playerSpeaking inRect:speakerArea];
     }
-    [self addPortrait:PlayerPortrait expression:playerSpeaking ? expression : listenerExpression
+    [self addPortrait:player expression:playerSpeaking ? expression : listenerExpression
           facingRight:NO active:playerSpeaking inRect:playerArea];
     return playerSpeaking;
 }
@@ -800,7 +768,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     BOOL compact = [self compactStoryLayout];
     CGFloat floor = compact ? 64 : 70;
 
-    CGRect screen = [self addBackdrop:_dialogueScene[@"room"] ?: @"Bastion" raiseBoard:compact && !narrow];
+    CGRect screen = [self addBackdrop:StoryBriefingRoom(mission) raiseBoard:compact && !narrow];
     BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
     if (!paintedBoard) {
         CGFloat margin = size.width * 0.06;
@@ -1417,7 +1385,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 
     if (_debriefBeat > 0 && _debriefBeat <= conversation.count) {
         NSDictionary *line = conversation[_debriefBeat - 1];
-        [self addBackdrop:@"Bastion" raiseBoard:NO];
+        [self addBackdrop:StoryDebriefRoom(mission) raiseBoard:NO];
         CGFloat captionHeight = MAX(72, [self captionTextHeightForLines:conversation width:width fontSize:fontSize] + 40);
         BOOL compact = [self compactStoryLayout];
         CGFloat floor = compact ? (s.height - captionHeight) / 2 : 72;

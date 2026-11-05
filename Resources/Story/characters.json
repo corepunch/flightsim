@@ -1,0 +1,90 @@
+{
+  "player": "Lancer1",
+  "characters": {
+    "Hale": {
+      "name": "Director Soren Hale",
+      "portrait": "Hale",
+      "faces": "right"
+    },
+    "Imani": {
+      "name": "Dr. Sera Imani",
+      "portrait": "Imani",
+      "faces": "right"
+    },
+    "Juno": {
+      "name": "Juno Vale",
+      "portrait": "Juno",
+      "faces": "right"
+    },
+    "Kesh": {
+      "name": "Kesh Ardan",
+      "portrait": "Kesh",
+      "faces": "right"
+    },
+    "Korr": {
+      "name": "Admiral Korr",
+      "portrait": "Korr",
+      "faces": "right"
+    },
+    "Lancer1": {
+      "name": "Lancer 1",
+      "portrait": "Lancer1",
+      "faces": "left"
+    },
+    "Lancer2": {
+      "name": "Lancer 2",
+      "portrait": "Lancer2",
+      "faces": "right"
+    },
+    "Lancer3": {
+      "name": "Lancer 3",
+      "portrait": "Lancer3",
+      "faces": "right"
+    },
+    "Lancer4": {
+      "name": "Lancer 4",
+      "portrait": "Lancer4",
+      "faces": "right"
+    },
+    "Lancer5": {
+      "name": "Lancer 5",
+      "portrait": "Lancer5",
+      "faces": "left"
+    },
+    "Lancer6": {
+      "name": "Lancer 6",
+      "portrait": "Lancer6",
+      "faces": "left"
+    },
+    "Lusk": {
+      "name": "Captain Lusk",
+      "portrait": "Lusk",
+      "faces": "right"
+    },
+    "MiraCaptain": {
+      "name": "Captain Elara Sen",
+      "portrait": "MiraCaptain",
+      "faces": "left"
+    },
+    "Okafor": {
+      "name": "Lt. Cmdr Daro Okafor",
+      "portrait": "Okafor",
+      "faces": "left"
+    },
+    "Orin": {
+      "name": "Chief Engineer Mae Orin",
+      "portrait": "Orin",
+      "faces": "right"
+    },
+    "Rhea": {
+      "name": "Captain Rhea Sol",
+      "portrait": "Rhea",
+      "faces": "right"
+    },
+    "Varn": {
+      "name": "Commander Ilse Varn",
+      "portrait": "Varn",
+      "faces": "right"
+    }
+  }
+}

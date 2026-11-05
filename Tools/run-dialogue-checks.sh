@@ -16,14 +16,9 @@ ln -s "$PWD/Resources/Missions" "$contents/Resources/Missions"
 ln -s "$PWD/Resources/Audio" "$contents/Resources/Audio"
 ln -s "$PWD/Resources/Fonts" "$contents/Resources/Fonts"
 ln -s "$PWD/Resources/Capitals" "$contents/Resources/Capitals"
-for directory in Strings UI; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
-ui=Sources/Engine/UI
-clang -fobjc-arc -Wall -mmacosx-version-min=13.0 \
-    -ISources/Shared -ISources/Engine/App -ISources/Engine/Common -I"$ui" \
-    Tools/GUI/DialogueChecks.m "$ui"/{Briefing,Progress,UIMotion,MonitorSignal,UITheme}.m Sources/Shared/Assets.m Sources/Engine/App/GameAudio.m \
-    Sources/Engine/Common/{Cvar,Localization}.m \
-    -framework Cocoa -framework SpriteKit -framework Metal -framework ImageIO -framework CoreGraphics -framework AVFoundation -framework QuartzCore \
-    -o "$contents/MacOS/DialogueChecks"
+for directory in Strings UI Story; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
+source Tools/engine-library.sh
+clang $engine_cflags Tools/GUI/DialogueChecks.m $engine_libs -o "$contents/MacOS/DialogueChecks"
 /usr/bin/codesign --force --sign - "$app"
 /usr/bin/open -n -g -W --stdout "$qa/stdout.log" --stderr "$qa/stderr.log" "$app" --args "$qa"
 cat "$qa/stderr.log" >&2
