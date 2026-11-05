@@ -1,5 +1,5 @@
 #!/bin/zsh
-set -eu
+set -euo pipefail
 cd "${0:A:h}/.."
 mkdir -p build
 qa=$(mktemp -d "$PWD/build/network-checks.XXXXXX")
