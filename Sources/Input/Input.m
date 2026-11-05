@@ -299,10 +299,8 @@ static NSString *AxisName(uint32_t key) {
     if (!self.mouseCaptured) return;
     os_unfair_lock_lock(&_lock);
     const CGFloat sens = 1.0 / 320.0;
-    _stick.x += dx * sens;
-    _stick.y -= dy * sens * (_invertMouse ? -1 : 1);
-    CGFloat len = hypot(_stick.x, _stick.y);
-    if (len > 1) { _stick.x /= len; _stick.y /= len; }
+    CGPoint move = CGPointMake(dx, -dy * (_invertMouse ? -1 : 1));
+    _stick = PointClampLength(PointAdd(_stick, PointScale(move, sens)), 1);
     self.mouseStick = _stick;
     os_unfair_lock_unlock(&_lock);
 }

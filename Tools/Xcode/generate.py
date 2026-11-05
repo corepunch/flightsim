@@ -101,15 +101,15 @@ class Project:
             settings = {}
             # The mission runtime is engine code that links into game modules
             # (Makefile: MISSION_SOURCES), built like game code.
-            mission = relative.parts[:3] == ("Sources", "Engine", "Mission")
+            mission = relative.parts[:2] == ("Sources", "Mission")
             game_code = relative.parts[0] == "Games"
             if path.suffix == ".m":
                 prefix = (f"Games/{DEFAULT_GAME}/Game/Prefix.h" if game_code or mission
-                          else f"Sources/{relative.parts[1]}/Prefix.h")
-                if (ROOT / prefix).is_file():
+                          else "Sources/Prefix.h" if relative.parts[1] != "Shared" else "")
+                if prefix and (ROOT / prefix).is_file():
                     settings["COMPILER_FLAGS"] = f'-include "$(SRCROOT)/{prefix}"'
             fields = {"settings": settings} if settings else {}
-            module = "Game" if game_code else relative.parts[1]
+            module = "Game" if game_code else "Shared" if relative.parts[1] == "Shared" else "Engine"
             for platform, files in sources.items():
                 if platform == "ios" and module == "Engine" and path.name in MAC_ONLY:
                     continue
@@ -175,7 +175,7 @@ def generate(args):
         GCC_C_LANGUAGE_STANDARD="gnu11", OTHER_CFLAGS=["$(inherited)", "-Wno-deprecated-declarations"],
         HEADER_SEARCH_PATHS=["$(inherited)", "$(SRCROOT)/Sources/Shared", f"$(SRCROOT)/Games/{DEFAULT_GAME}/Game"] +
                             [f"$(SRCROOT)/{path.relative_to(ROOT)}"
-                             for path in sorted((ROOT / "Sources/Engine").iterdir()) if path.is_dir()],
+                             for path in sorted((ROOT / "Sources").iterdir()) if path.is_dir() and path.name != "Shared"],
     )
     app_settings = dict(
         PRODUCT_NAME=GAME, CODE_SIGN_STYLE="Automatic", GENERATE_INFOPLIST_FILE="NO",

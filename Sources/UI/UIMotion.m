@@ -101,7 +101,7 @@ SKNode *UIMotionPivot(SKNode *node, CGPoint pivot) {
     SKNode *parent = node.parent;
     NSUInteger index = parent ? [parent.children indexOfObject:node] : NSNotFound;
     [node removeFromParent];
-    node.position = CGPointMake(node.position.x - pivot.x, node.position.y - pivot.y);
+    node.position = PointSub(node.position, pivot);
     [holder addChild:node];
     if (parent) {
         if (index == NSNotFound || index > parent.children.count) [parent addChild:holder];
@@ -116,7 +116,7 @@ void UIMotionSlideIn(SKNode *node, CGVector offset, NSTimeInterval delay, NSTime
     if (UIMotionReduced()) return;
     CGPoint home = node.position;
     CGFloat alpha = node.alpha;
-    node.position = CGPointMake(home.x + offset.dx, home.y + offset.dy);
+    node.position = PointOffset(home, offset);
     node.alpha = 0;
     [node runAction:UIAfter(delay, [SKAction group:@[
         UIEased([SKAction moveTo:home duration:duration], UICurveOut),
@@ -272,13 +272,14 @@ NSTimeInterval UIMotionDialogueTypeOn(SKLabelNode *label, NSTimeInterval delay, 
         CGRect line = [layout lineFragmentUsedRectForGlyphAtIndex:glyph effectiveRange:NULL];
         CGPoint location = [layout locationForGlyphAtIndex:glyph];
         CGRect ink = [layout boundingRectForGlyphRange:glyphs inTextContainer:container];
-        CGFloat x = line.origin.x + location.x;
+        CGFloat x = PointAdd(line.origin, location).x;
         if (ink.size.width > 0) x = MIN(x, CGRectGetMinX(ink));
         x -= 1;
         UITypeStop *stop = [UITypeStop new];
         stop.count = count;
         // TextKit's glyph location includes the baseline inset inside the line.
-        stop.point = CGPointMake(left + x, top - line.origin.y - location.y + centerAboveBaseline);
+        CGFloat below = PointAdd(line.origin, location).y;   // text-container y grows downwards
+        stop.point = CGPointMake(left + x, top - below + centerAboveBaseline);
         stop.size = CGSizeMake(MAX(cellWidth, CGRectGetMaxX(ink) - x + 1), height);
         UITypeStop *previous = stops.lastObject;
         stop.carriageReturn = previous && stop.point.y < previous.point.y - height / 2;
@@ -320,7 +321,8 @@ NSTimeInterval UIMotionDialogueTypeOn(SKLabelNode *label, NSTimeInterval delay, 
             UITypeStop *next = stops[index + 1];
             CGFloat t = MIN(1, MAX(0, (elapsed - current.time) / (next.time - current.time)));
             CGFloat eased = Curve(UICurveOutExpo, t);
-            caret.position = CGPointMake(current.point.x + (next.point.x - current.point.x) * eased, next.point.y);
+            // Slides back along the line, then drops to the next one.
+            caret.position = CGPointMake(PointLerp(current.point, next.point, eased).x, next.point.y);
             trail.hidden = NO;
             trail.size = CGSizeMake(MAX(1, current.point.x - caret.position.x), height * 0.65);
             trail.alpha = (1 - t) * 0.8;
@@ -376,12 +378,13 @@ static void RunGlitch(SKLabelNode *label, NSTimeInterval delay, NSTimeInterval d
         CGFloat intensity = strength * (1 - progress) * (1 - progress);
         for (int i = 0; i < 2; i++) {
             ghosts[i].alpha = 0.15 + 0.7 * intensity;
-            ghosts[i].position = CGPointMake(home.x + (i ? -1 : 1) * (2 + 12 * Random01()) * intensity,
-                                             home.y + RandomSigned() * 3 * intensity);
+            CGPoint jitter = CGPointMake((i ? -1 : 1) * (2 + 12 * Random01()), RandomSigned() * 3);
+            ghosts[i].position = PointAdd(home, PointScale(jitter, intensity));
         }
         if (resolve) node.alpha = Random01() < progress * 1.4 ? alpha : (Random01() < 0.5 ? 0 : alpha * 0.4);
         else node.alpha = Random01() < 0.25 * intensity ? alpha * 0.5 : alpha;
-        node.position = CGPointMake(home.x + (Random01() < 0.3 * intensity ? RandomSigned() * 7 * intensity : 0), home.y);
+        CGFloat jolt = Random01() < 0.3 * intensity ? RandomSigned() * 7 * intensity : 0;
+        node.position = PointAdd(home, CGPointMake(jolt, 0));
     }];
     [label runAction:UIAfter(delay, [SKAction sequence:@[glitch, [SKAction runBlock:^{
         label.position = home;

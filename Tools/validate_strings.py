@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STRINGS = ROOT / "Resources/Strings"
 THEME = ROOT / "Resources/UI/theme.json"
-STYLE = ROOT / "Sources/Engine/UI/UI.h"
+STYLE = ROOT / "Sources/UI/UI.h"
 
 # Catalog keys are dotted, under one of these areas. Any string literal of
 # that shape in the sources counts as a key, so keys picked by a ternary or

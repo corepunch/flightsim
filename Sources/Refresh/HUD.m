@@ -535,7 +535,7 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     CGFloat ringR = MIN(s.width, s.height) * 0.22;
     _ring.hidden = _cursor.hidden = _cursorLine.hidden = !f.mouseCaptured || f.playerDead;
     _ring.xScale = _ring.yScale = ringR / 100.0;
-    CGPoint cur = CGPointMake(center.x + f.mouseStick.x * ringR, center.y + f.mouseStick.y * ringR);
+    CGPoint cur = PointAdd(center, PointScale(f.mouseStick, ringR));
     _cursor.position = cur;
     CGMutablePathRef lp = CGPathCreateMutable();
     CGPathMoveToPoint(lp, NULL, center.x, center.y);
@@ -623,7 +623,7 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
             d.text = named ? [NSString stringWithFormat:@"%@ %@", t.label, dist] : dist;
             if (t.selected) d.text = L10nFormat(@"hud.target_prefix", d.text);
             CGFloat half = nav ? 12 : (t.selected ? MAX(44, t.size) : t.size) * 0.5;
-            d.position = CGPointMake(t.point.x + half + 6, t.point.y + half + (t.selected ? 10 : -4));
+            d.position = PointAdd(t.point, CGPointMake(half + 6, half + (t.selected ? 10 : -4)));
             if (t.selected) {
                 CGRect text = d.frame;
                 // Keep the larger label below the contact, away from the

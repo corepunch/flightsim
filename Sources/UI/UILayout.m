@@ -137,8 +137,10 @@
     CGPoint anchor = [self pair:n[@"anchor"] fallback:CGPointMake(0.5, 0.5)];
     CGPoint pivot = [self pair:n[@"pivot"] fallback:anchor];
     CGPoint offset = [self pair:n[@"offset"] fallback:CGPointZero];
-    return CGRectMake(CGRectGetMinX(parent) + parent.size.width * anchor.x - w * pivot.x + offset.x,
-                      CGRectGetMinY(parent) + parent.size.height * anchor.y - h * pivot.y + offset.y, w, h);
+    // The node's pivot lands on the parent's anchor, then moves by the offset.
+    CGSize nodeSize = CGSizeMake(w, h);
+    CGPoint at = PointAdd(parent.origin, PointMultiply(anchor, parent.size));
+    return (CGRect){ PointAdd(PointSub(at, PointMultiply(pivot, nodeSize)), offset), nodeSize };
 }
 
 - (CGRect)inner:(CGRect)frame of:(NSDictionary *)n {
@@ -146,7 +148,7 @@
     if (![inset isKindOfClass:NSArray.class] || inset.count < 4) return frame;
     CGFloat l = [self number:inset[0] fallback:0], t = [self number:inset[1] fallback:0];
     CGFloat r = [self number:inset[2] fallback:0], b = [self number:inset[3] fallback:0];
-    return CGRectMake(frame.origin.x + l, frame.origin.y + b, MAX(0, frame.size.width - l - r), MAX(0, frame.size.height - t - b));
+    return RectInsetEdges(frame, l, t, r, b);
 }
 
 - (void)build:(NSDictionary *)raw in:(CGRect)parent into:(SKNode *)into result:(UILayoutResult *)result {

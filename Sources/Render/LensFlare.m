@@ -1,4 +1,5 @@
 #import "Render.h"
+#import "Common.h"
 
 // Shape references: Cooke's photographed anamorphic flares and ShareGrid's
 // Kowa tests. The streak is blue at its shoulders, warm near the source;
@@ -81,16 +82,16 @@ static SKShader *FlareShader(int profile) {
     _glow.alpha = 0.28;
     _streak.alpha = 0.8;
 
-    CGPoint centre = CGPointMake(viewport.width / 2, viewport.height / 2);
-    CGVector axis = CGVectorMake(source.x - centre.x, source.y - centre.y);
-    CGFloat separation = hypot(axis.dx, axis.dy) / shortSide;
+    CGPoint centre = PointScale(PointFromSize(viewport), 0.5);
+    CGPoint axis = PointSub(source, centre);   // ghosts sit along the line through the optical centre
+    CGFloat separation = PointLength(axis) / shortSide;
     CGFloat ghosts = MIN(1, separation / 0.25);
     ghosts *= ghosts; // Reflections merge into the source at the optical centre.
     const CGFloat offset[] = { -0.45, -1.15, 0.30 };
     const CGFloat diameter[] = { 0.105, 0.065, 0.045 };
     const CGFloat intensity[] = { 0.045, 0.028, 0.04 };
     for (int i = 0; i < 3; i++) {
-        _ghosts[i].position = CGPointMake(centre.x + axis.dx * offset[i], centre.y + axis.dy * offset[i]);
+        _ghosts[i].position = PointAdd(centre, PointScale(axis, offset[i]));
         _ghosts[i].size = CGSizeMake(shortSide * diameter[i], shortSide * diameter[i] * 1.45);
         _ghosts[i].alpha = intensity[i] * ghosts;
     }

@@ -247,10 +247,7 @@ static void ClientDisconnect(int index) {
     GClient *cl = w->_clients[index];
     for (int i = 0; i < MAX_BOLTS; i++) if (w->_bolts[i].owner == cl) w->_bolts[i].owner = nil;
     GPrint(@"%@ disconnected", cl.name);
-    cl.inGame = NO;
-    cl.ship = nil;
-    cl.autopilot = nil;
-    cl.selected = nil;
+    [cl leaveLevel];
     [w buildEntityStates];
 }
 

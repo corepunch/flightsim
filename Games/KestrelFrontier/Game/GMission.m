@@ -1,6 +1,6 @@
 // The level in this game's world: spawning entities, waves and fields from
 // the level (LevelDef), and the adapter the engine's mission runtime
-// (Sources/Engine/Mission) runs objectives, events and rules through.
+// (Sources/Mission) runs objectives, events and rules through.
 #import "Game.h"
 
 static NSValue *Vec3Value(simd_float3 v) { return [NSValue valueWithBytes:&v objCType:"[4f]"]; }
@@ -104,14 +104,7 @@ static NSString *PartKindName(SubsystemKind kind) {
     [_torpedoes removeAllObjects];
     [_explosionQueue removeAllObjects];
     for (int i = 0; i < MAX_BOLTS; i++) _bolts[i].active = NO;
-    for (GClient *c in _clients) {
-        c.ship = nil;
-        c.autopilot = nil;
-        c.selected = nil;
-        c.aimSubsystem = nil;
-        c.inGame = NO;
-        c.status = c.sentStatus = nil;
-    }
+    for (GClient *c in _clients) [c leaveLevel];
     _running = NO;
     _over = NO;
     _runner = nil;

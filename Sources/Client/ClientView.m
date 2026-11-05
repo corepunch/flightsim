@@ -27,6 +27,32 @@ typedef struct {
 @implementation EntityView
 @end
 
+// What the cockpit's sounds last reflected, so a change plays its cue once.
+typedef struct {
+    uint16_t entity;
+    int secondary, target;
+    bool hullLow;
+} CockpitCues;
+
+static CockpitCues CockpitCuesOf(const PlayerState *ps) {
+    return (CockpitCues){ .entity = ps->entity, .secondary = ps->stats[STAT_SECONDARY],
+                          .target = ps->stats[STAT_TARGET], .hullLow = ps->hull < 0.25f };
+}
+
+// The chase camera's eased state, carried from frame to frame. Every field
+// chases its target with 1 - exp(-k dt), so it never depends on frame rate.
+typedef struct {
+    simd_quatf orientation;     // lags the ship's
+    float lookYaw, lookPitch;   // free look, toward the hat
+    float boost;                // boost effects, 0..1
+    float fov;
+    float shake;                // hits and explosions, decaying
+} ChaseCam;
+
+static float Ease(float value, float target, float rate, float dt) {
+    return value + (target - value) * (1.0f - expf(-rate * dt));
+}
+
 @implementation ClientView {
     Input *_input;
     // Model configstring index -> renderer handle, filled while precaching.
@@ -46,19 +72,14 @@ typedef struct {
     uint32_t _boltSerial[REF_MAX_BOLTS], _nextBoltSerial;
 
     // The camera as last set, for projection and the HUD's edge arrows.
-    simd_float3 _camPos;
-    simd_quatf _camQ;
-    float _fov;
-
-    simd_quatf _camOrientation;
-    float _shake, _damageFlash, _lookYaw, _lookPitch, _boostFx;
+    RefCamera _camera;
+    ChaseCam _chase;
+    float _damageFlash;
     double _time;
     NSString *_status, *_objectiveSummary, *_lastInputText;
     uint16_t _playerEntity;
     BOOL _hadPlayer;
-    uint16_t _audioEntity;
-    int _audioSecondary, _audioTarget;
-    BOOL _audioHullLow;
+    CockpitCues _cues;
 }
 
 - (instancetype)initWithRefresh:(id<Refresh>)refresh input:(Input *)input {
@@ -67,9 +88,9 @@ typedef struct {
         _input = input;
         _hud = [[HUD alloc] initWithSize:refresh.viewSize];
         _views = [NSMutableDictionary dictionary];
-        _fov = 70;
-        _camOrientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
-        _camQ = _camOrientation;
+        simd_quatf level = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
+        _chase = (ChaseCam){ .orientation = level, .fov = 70 };
+        _camera = (RefCamera){ .orientation = level, .fov = 70 };
 #if TARGET_OS_IOS
         if (UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
             _weaponFeedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
@@ -141,7 +162,7 @@ typedef struct {
     _objectiveSummary = nil;
     _hadPlayer = NO;
     _damageFlash = 0;
-    _shake = 0;
+    _chase.shake = 0;
 }
 
 - (void)clearMission {
@@ -275,7 +296,7 @@ typedef struct {
             }
             if (e->entity && e->entity == ps->entity) {
                 _damageFlash = 1;
-                _shake = fmaxf(_shake, e->scale);
+                _chase.shake = fmaxf(_chase.shake, e->scale);
 #if TARGET_OS_IOS
                 [_damageFeedback impactOccurred];
                 [_damageFeedback prepare];
@@ -284,7 +305,7 @@ typedef struct {
             break;
         case EV_EXPLOSION:
             [_refresh explosionAt:e->pos velocity:e->vel model:[self refModel:e->model] scale:e->scale];
-            if (e->radius > 0) _shake = fmaxf(_shake, clampf(1.0f - simd_distance(e->pos, me) / e->radius, 0, 1));
+            if (e->radius > 0) _chase.shake = fmaxf(_chase.shake, clampf(1.0f - simd_distance(e->pos, me) / e->radius, 0, 1));
             break;
         case EV_JUMP:
             [_refresh jumpFlashAt:e->pos scale:e->scale];
@@ -322,9 +343,8 @@ typedef struct {
 
 - (void)menuFrame:(double)time {
     [_refresh setPlayer:NULL alive:NO interior:NO];
-    _camPos = simd_make_float3(0, 0, 0);
-    _camQ = simd_quaternion((float)time * 0.02f, simd_make_float3(0, 1, 0));
-    [_refresh setCamera:(RefCamera){ .origin = _camPos, .orientation = _camQ }];
+    _camera = (RefCamera){ .orientation = simd_quaternion((float)time * 0.02f, simd_make_float3(0, 1, 0)) };
+    [_refresh setCamera:_camera];
 }
 
 - (void)updateBolts:(float)dt {
@@ -364,15 +384,13 @@ typedef struct {
     // Own ship.
     BOOL alive = ps->alive && ps->entity;
     [[GameAudio shared] shipThrottle:ps->move.throttle boost:ps->move.boosting alive:alive];
-    if (_hadPlayer && _playerEntity == _audioEntity && alive) {
-        if (ps->stats[STAT_SECONDARY] < _audioSecondary) [[GameAudio shared] play:@"secondary"];
-        if (ps->stats[STAT_TARGET] && ps->stats[STAT_TARGET] != _audioTarget) [[GameAudio shared] play:@"ui-hover"];
-        if (ps->hull < 0.25f && !_audioHullLow) [[GameAudio shared] play:@"ui-alert"];
+    CockpitCues cues = CockpitCuesOf(ps);
+    if (_hadPlayer && _playerEntity == _cues.entity && alive) {
+        if (cues.secondary < _cues.secondary) [[GameAudio shared] play:@"secondary"];
+        if (cues.target && cues.target != _cues.target) [[GameAudio shared] play:@"ui-hover"];
+        if (cues.hullLow && !_cues.hullLow) [[GameAudio shared] play:@"ui-alert"];
     }
-    _audioEntity = ps->entity;
-    _audioSecondary = ps->stats[STAT_SECONDARY];
-    _audioTarget = ps->stats[STAT_TARGET];
-    _audioHullLow = ps->hull < 0.25f;
+    _cues = cues;
     RefEntity me = {
         .key = ps->entity, .kind = EntityFighter, .model = [self refModel:ps->model],
         .origin = ps->move.origin, .orientation = ps->move.orientation, .scale = 1,
@@ -394,7 +412,7 @@ typedef struct {
 /// Everything here is smoothed over time so the view never moves abruptly:
 /// - Free-look (hat) and the chase camera's orientation lag behind the ship using
 ///   exponential easing, `1 - exp(-k*dt)`, which doesn't depend on frame rate.
-/// - Boost effects (pull-back, FOV, motion blur) are scaled by `_boostFx`, which
+/// - Boost effects (pull-back, FOV, motion blur) are scaled by `_chase.boost`, which
 ///   eases in and out instead of snapping between 0 and 1.
 /// - Shake is a deterministic sum of sines, not per-frame random noise. Random
 ///   noise jumps to a new spot every frame, so it shows up as jitter (worse at
@@ -409,33 +427,34 @@ typedef struct {
         targetPitch = cosf(a) * 0.7f;
         if (c.hat == 4) { targetYaw = (float)M_PI * 0.95f; targetPitch = 0.1f; }
     }
-    _lookYaw += (targetYaw - _lookYaw) * (1.0f - expf(-6.0f * dt));
-    _lookPitch += (targetPitch - _lookPitch) * (1.0f - expf(-6.0f * dt));
-    simd_quatf look = simd_mul(simd_quaternion(-_lookYaw, simd_make_float3(0, 1, 0)),
-                               simd_quaternion(_lookPitch, simd_make_float3(1, 0, 0)));
+    ChaseCam chase = _chase;
+    chase.lookYaw = Ease(chase.lookYaw, targetYaw, 6, dt);
+    chase.lookPitch = Ease(chase.lookPitch, targetPitch, 6, dt);
+    simd_quatf look = simd_mul(simd_quaternion(-chase.lookYaw, simd_make_float3(0, 1, 0)),
+                               simd_quaternion(chase.lookPitch, simd_make_float3(1, 0, 0)));
 
     simd_quatf shipQ = ps->move.orientation;
-    if (!_hadPlayer || simd_length(_camOrientation.vector) < 0.5f) _camOrientation = shipQ;
-    _camOrientation = simd_slerp(_camOrientation, shipQ, 1.0f - expf(-(_cockpit ? 30.0f : 7.0f) * dt));
-    simd_quatf q = simd_mul(_cockpit ? shipQ : _camOrientation, look);
+    if (!_hadPlayer || simd_length(chase.orientation.vector) < 0.5f) chase.orientation = shipQ;
+    chase.orientation = simd_slerp(chase.orientation, shipQ, 1.0f - expf(-(_cockpit ? 30.0f : 7.0f) * dt));
+    simd_quatf q = simd_mul(_cockpit ? shipQ : chase.orientation, look);
 
     float speed = simd_length(ps->move.velocity);
     // Ease boost effects in and out so toggling boost never pops the camera.
-    _boostFx += ((ps->move.boosting ? 1.0f : 0.0f) - _boostFx) * (1.0f - expf(-4.0f * dt));
-    float boostFx = _boostFx;
+    chase.boost = Ease(chase.boost, ps->move.boosting ? 1 : 0, 4, dt);
+    float boostFx = chase.boost;
     simd_float3 offset = _cockpit ? RefCockpitEye
                                   : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
-    simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : _camOrientation, simd_act(look, offset));
+    simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : chase.orientation, simd_act(look, offset));
     if (_cockpit) pos = ps->move.origin + simd_act(shipQ, offset);
 
-    _shake = fmaxf(0, _shake - dt * 1.5f);
+    chase.shake = fmaxf(0, chase.shake - dt * 1.5f);
     // Smooth shake: two sines per axis, ~3-7 Hz, at frequencies with no common
     // pattern so it never visibly loops. The wobble is applied in camera space,
     // so shake stays the same relative to the screen whichever way the camera faces.
-    // _shake (hits, explosions) falls off with a square curve; boost only adds a faint
+    // The shake (hits, explosions) falls off with a square curve; boost only adds a faint
     // rumble. The cockpit eye gets 15% of it all because the interior is centimetres
     // away and any movement makes the whole cockpit swim.
-    float sh = _shake * _shake * 0.6f + boostFx * 0.015f;
+    float sh = chase.shake * chase.shake * 0.6f + boostFx * 0.015f;
     if (_cockpit) sh *= 0.15f;
     float t = (float)_time;
     simd_float3 wobble = simd_make_float3(sinf(t * 23.1f) * 0.6f + sinf(t * 37.7f + 1.3f) * 0.4f,
@@ -443,14 +462,13 @@ typedef struct {
                                           sinf(t * 19.7f + 4.2f) * 0.6f + sinf(t * 33.1f + 3.3f) * 0.4f);
     pos += simd_act(q, wobble) * sh;
 
-    float fov = 68.0f + speed * 0.03f + boostFx * 8.0f;
-    _fov += (fov - _fov) * (1.0f - expf(-3.0f * dt));
-    _camPos = pos;
-    _camQ = q;
-    [_refresh setCamera:(RefCamera){
-        .origin = pos, .orientation = q, .fov = _fov, .zNear = _cockpit ? 0.08f : 0.3f,
+    chase.fov = Ease(chase.fov, 68.0f + speed * 0.03f + boostFx * 8.0f, 3, dt);
+    _chase = chase;
+    _camera = (RefCamera){
+        .origin = pos, .orientation = q, .fov = chase.fov, .zNear = _cockpit ? 0.08f : 0.3f,
         .motionBlur = boostFx * 0.25f, .focus = ps->move.origin, .velocity = ps->move.velocity,
-    }];
+    };
+    [_refresh setCamera:_camera];
 }
 
 #pragma mark - HUD
@@ -459,12 +477,12 @@ typedef struct {
 
 - (void)fillTarget:(HUDTarget *)t at:(simd_float3)pos velocity:(simd_float3)vel radius:(float)radius size:(CGSize)size
             player:(const PlayerState *)ps {
-    simd_float3 camPos = _camPos, me = ps->move.origin;
-    CGPoint mid = CGPointMake(size.width / 2, size.height / 2);
+    simd_float3 camPos = _camera.origin, me = ps->move.origin;
+    CGPoint mid = PointScale(PointFromSize(size), 0.5);
     t->distance = simd_distance(pos, me);
     CGPoint p;
     BOOL front = [self project:pos into:&p];
-    BOOL inside = front && p.x > 20 && p.y > 20 && p.x < size.width - 20 && p.y < size.height - 20;
+    BOOL inside = front && CGRectContainsPoint(CGRectInset(RectWithSize(size), 20, 20), p);
     if (inside) {
         t->onScreen = YES;
         t->point = p;
@@ -478,12 +496,12 @@ typedef struct {
         t->hasLead = t->distance < 1500 && [self project:pos + relV * tHit into:&lp];
         t->lead = lp;
     } else {
-        simd_float3 local = simd_act(simd_inverse(_camQ), pos - camPos);
+        simd_float3 local = simd_act(simd_inverse(_camera.orientation), pos - camPos);
         float ang = atan2f(local.y, local.x);
         float rx = size.width * 0.5f - 40, ry = size.height * 0.5f - 40;
         float cx = cosf(ang), cy = sinf(ang);
         float k = fminf(rx / fmaxf(fabsf(cx), 1e-3f), ry / fmaxf(fabsf(cy), 1e-3f));
-        t->point = CGPointMake(mid.x + cx * k, mid.y + cy * k);
+        t->point = PointAdd(mid, PointScale(CGPointMake(cx, cy), k));
         t->angle = ang;
     }
 }
@@ -535,12 +553,12 @@ typedef struct {
     }
 
     f.deltaTime = dt;
-    simd_float3 camPos = _camPos;
+    simd_float3 camPos = _camera.origin;
     simd_float3 sunDir = _refresh.sunDirection;
     simd_float3 sunPoint = camPos + sunDir * 20000.0f;
     CGPoint sp;
     if ([self project:sunPoint into:&sp]) {
-        float vis = CGRectContainsPoint((CGRect){ .size = size }, sp) ? 1 : 0;
+        float vis = CGRectContainsPoint(RectWithSize(size), sp) ? 1 : 0;
         if (vis > 0 && [_refresh traceOpaqueFrom:camPos to:camPos + sunDir * 5000.0f]) vis = 0;
         f.sun = sp;
         f.sunVisibility = vis;

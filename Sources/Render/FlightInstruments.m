@@ -165,7 +165,8 @@ static NSString *Short(NSString *text, NSUInteger length) {
                 lo = simd_min(lo, p.xy); hi = simd_max(hi, p.xy);
             }
             float aspect = (float)(_preview.size.width / fmax(1, _preview.size.height));
-            float fit = fmaxf(0.05f, fmaxf((hi.y - lo.y) / 2, (hi.x - lo.x) / 2 / aspect)) * 1.12f;
+            simd_float2 half = (hi - lo) / 2;
+            float fit = fmaxf(0.05f, fmaxf(half.y, half.x / aspect)) * 1.12f;
             _fit = _fit > 0 ? _fit + (fit - _fit) * 0.35f : fit;
             simd_float2 centre = (lo + hi) / 2;
             _camera.camera.orthographicScale = _fit;

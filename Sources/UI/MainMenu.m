@@ -402,7 +402,7 @@ static SKShader *MenuArtShader(void) {
     SKNode *row = _rowNodes[_selected];
     if (!row || UIMotionReduced()) return;
     CGPoint home = row.position;
-    row.position = CGPointMake(home.x + 9, home.y);
+    row.position = PointAdd(home, CGPointMake(9, 0));
     [row runAction:UIEased([SKAction moveTo:home duration:0.26], UICurveOutBack)];
     CGRect rect = _rows[_selected];
     SKSpriteNode *glint = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIAmber, 1)

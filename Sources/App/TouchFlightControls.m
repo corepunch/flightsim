@@ -154,12 +154,11 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     for (TouchControl control = 0; control < TouchControlCount; control++) {
         if (_controllerConnected && control != TouchControlPause) continue;
         CGPoint center = _centers[control];
-        CGFloat dx = point.x - center.x, dy = point.y - center.y;
         if (control == TouchControlThrottle) {
-            if (fabs(dx) <= 22 && fabs(dy) <= ThrottleHeight / 2) return control;
+            if (CGRectContainsPoint(CGRectInset((CGRect){ center, CGSizeZero }, -22, -ThrottleHeight / 2), point)) return control;
         } else if (control == TouchControlPause) {
-            if (fabs(dx) <= 46 && fabs(dy) <= 22) return control;
-        } else if (hypot(dx, dy) <= _radii[control]) return control;
+            if (CGRectContainsPoint(CGRectInset((CGRect){ center, CGSizeZero }, -46, -22), point)) return control;
+        } else if (PointDistance(point, center) <= _radii[control]) return control;
     }
     return TouchControlNone;
 }
@@ -189,23 +188,23 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
 }
 
 - (void)updateControl:(TouchControl)control at:(CGPoint)point {
-    CGFloat dy = _centers[control].y - point.y;
+    // The finger's pull from the control's centre; UIKit's y grows downwards, the stick's upwards.
+    CGPoint pull = PointMultiply(PointSub(point, _centers[control]), CGSizeMake(1, -1));
     if (control == TouchControlStick) {
-        CGFloat dx = point.x - _centers[control].x;
-        CGFloat distance = hypot(dx, dy);
-        CGPoint direction = distance > 0 ? CGPointMake(dx / distance, dy / distance) : CGPointZero;
+        CGFloat distance = PointLength(pull);
+        CGPoint direction = PointNormalize(pull);
 
         // The knob resists stretching past the ring, while steering gain keeps rising.
         CGFloat knobGain = StickKnobTravel / StickRadius;
         CGFloat excess = MAX(0, distance - StickRadius) * knobGain;
         CGFloat knobDistance = MIN(distance, StickRadius) * knobGain + StickStretch * excess / (StickStretch + excess);
-        [self displayStick:CGPointMake(direction.x * knobDistance, direction.y * knobDistance) stretched:excess > 0];
+        [self displayStick:PointScale(direction, knobDistance) stretched:excess > 0];
 
         CGFloat travel = MAX(0, MIN(distance, StickTravel) - StickDeadzone) / (StickTravel - StickDeadzone);
         CGFloat strength = pow(travel, 2.5);
-        [_input setTouchStick:CGPointMake(direction.x * strength, direction.y * strength)];
+        [_input setTouchStick:PointScale(direction, strength)];
     } else if (control == TouchControlThrottle) {
-        float value = fminf(1, fmaxf(0, 0.5 + dy / ThrottleTravel));
+        float value = fminf(1, fmaxf(0, 0.5 + pull.y / ThrottleTravel));
         [self displayThrottle:value];
         [_input setTouchThrottle:value];
     }

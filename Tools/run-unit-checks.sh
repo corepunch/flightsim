@@ -18,9 +18,9 @@ print '{ "name": "check", "title": "Check" }' > "$qa/Games/ZCheckMod/Levels/chec
 # The app's Info.plist (FSDefaultGame), embedded as a bare executable's bundle info.
 cp Resources/Info.plist "$qa/Info.plist"
 clang -fobjc-arc -Wall -Wno-unused-function -mmacosx-version-min=13.0 \
-    -ISources/Shared -ISources/Engine/Common -ISources/Engine/Net -ISources/Engine/Mission -ISources/Engine/Story \
-    Tools/UnitChecks.m Sources/Shared/*.m Sources/Shared/*.c Sources/Engine/Common/*.m Sources/Engine/Mission/*.m Sources/Engine/Story/*.m \
-    Sources/Engine/Net/NetMsg.m Sources/Engine/Net/NetProtocol.m \
+    -ISources/Shared -ISources/Common -ISources/Net -ISources/Mission -ISources/Story \
+    Tools/UnitChecks.m Sources/Shared/*.m Sources/Shared/*.c Sources/Common/*.m Sources/Mission/*.m Sources/Story/*.m \
+    Sources/Net/NetMsg.m Sources/Net/NetProtocol.m \
     -framework Foundation -framework QuartzCore \
     -sectcreate __TEXT __info_plist "$qa/Info.plist" -o "$qa/UnitChecks"
 if ! "$qa/UnitChecks"; then
@@ -28,11 +28,11 @@ if ! "$qa/UnitChecks"; then
     exit 1
 fi
 
-# The client draws only through the Refresh facade (Sources/Engine/Refresh/Refresh.h):
+# The client draws only through the Refresh facade (Sources/Refresh/Refresh.h):
 # its files must compile, and pull in no header, without SceneKit.
 print '#import <Cocoa/Cocoa.h>\n#import <SpriteKit/SpriteKit.h>' > "$qa/NoSceneKit.h"
-includes=(-ISources/Shared ${(@)$(print -l Sources/Engine/*/(/) | sed 's/^/-I/')})
-for source in Sources/Engine/Client/*.m; do
+includes=(-ISources/Shared ${(@)$(print -l Sources/*(/) | sed 's/^/-I/')})
+for source in Sources/Client/*.m; do
     flags=(-fobjc-arc -Wall -mmacosx-version-min=13.0 $includes -include "$qa/NoSceneKit.h")
     if ! clang $flags -fsyntax-only "$source"; then
         print -u2 "FAIL: $source does not build without SceneKit"

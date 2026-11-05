@@ -23,7 +23,7 @@ $(IOS_BUILD)/KestrelFrontier: $(IOS_ENGINE_OBJECTS) $(IOS_GAME_OBJECTS) Makefile
 
 $(IOS_BUILD)/engine/%.m.o: %.m Makefile Tools/iOS.mk
 	@mkdir -p "$(@D)"
-	@$(IOS_CC) $(IOS_FLAGS) $(ENGINE_FLAGS) -include Sources/Engine/Prefix.h -MMD -MP -c "$<" -o "$@"
+	@$(IOS_CC) $(IOS_FLAGS) $(ENGINE_FLAGS) -include Sources/Prefix.h -MMD -MP -c "$<" -o "$@"
 
 $(IOS_BUILD)/engine/%.c.o: %.c Makefile Tools/iOS.mk
 	@mkdir -p "$(@D)"

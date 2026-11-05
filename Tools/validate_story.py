@@ -40,7 +40,7 @@ def load_game(game):
     PLAYER = CAST["player"]
     PORTRAITS = {character["portrait"] for character in CAST["characters"].values()}
     ROOMS = json.loads((game / "Story/rooms.json").read_text())["rooms"]
-# The page kinds the engine registers (Sources/Engine/Story/Story.m).
+# The page kinds the engine registers (Sources/Story/Story.m).
 PAGE_KINDS = {"dialogue", "situation", "tactical", "objectives", "intel"}
 
 

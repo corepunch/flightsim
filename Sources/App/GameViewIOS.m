@@ -109,7 +109,7 @@
     }
     if (![touches containsObject:_screenTouch]) return;
     CGPoint point = [_screenTouch locationInView:self];
-    if (!_touchDragged && hypot(point.x - _touchStart.x, point.y - _touchStart.y) < 8) return;
+    if (!_touchDragged && PointDistance(point, _touchStart) < 8) return;
     _touchDragged = YES;
     if (CGRectContainsPoint(self.bounds, _touchStart)) [self push:PointerEventScroll at:_touchStart delta:_touchLast.y - point.y];
     _touchLast = point;

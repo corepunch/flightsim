@@ -49,7 +49,7 @@
             if (kind < 0 || _info.numParts >= MAX_PARTS) continue;
             SCNVector3 lo, hi;
             [copy getBoundingBoxMin:&lo max:&hi];
-            simd_float3 c = simd_make_float3((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, (lo.z + hi.z) / 2);
+            simd_float3 c = (SCNVector3ToFloat3(lo) + SCNVector3ToFloat3(hi)) / 2;
             c = simd_mul(copy.simdTransform, simd_make_float4(c, 1)).xyz;
             _info.parts[_info.numParts].kind = (uint8_t)kind;
             _info.parts[_info.numParts].center = c;

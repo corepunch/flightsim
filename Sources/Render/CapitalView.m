@@ -87,49 +87,91 @@ static PlatformImage *WindowImage(void) {
 //   { "color": [r, g, b], "roughness": 0.35, "metalness": 0.9 }   plain PBR
 //   { "emissive": [r, g, b] | "windows", "intensity": 3.0 }      unlit emitter; "animated": "strobe" or "pulse"
 
-static SKColor *ColorFrom(NSArray *rgb, SKColor *fallback) {
-    return rgb.count >= 3 ? [SKColor colorWithRed:[rgb[0] floatValue] green:[rgb[1] floatValue] blue:[rgb[2] floatValue] alpha:1] : fallback;
+// An [r, g, b] colour, or nil when the key is missing or not one.
+static SKColor *JSONColor(NSDictionary *json, NSString *key) {
+    NSArray *rgb = JSONArray(json, key);
+    return rgb.count >= 3 ? [SKColor colorWithRed:[rgb[0] floatValue] green:[rgb[1] floatValue] blue:[rgb[2] floatValue] alpha:1] : nil;
 }
 
-static float NumberIn(NSDictionary *d, NSString *key, float fallback) {
-    NSNumber *n = d[key];
-    return [n isKindOfClass:NSNumber.class] ? n.floatValue : fallback;
+typedef enum { MaterialTextured, MaterialEmissive, MaterialPlain } MaterialKind;
+typedef enum { MaterialSteady, MaterialStrobe, MaterialPulse } MaterialAnimation;
+
+// One material slot of a style, read once from its JSON spec.
+typedef struct {
+    MaterialKind kind;
+    NSString *textures;             // textured: the tiling PBR set
+    SKColor *tint;                  // textured: over the set's colours
+    SKColor *color;                 // textured: replaces the set's colour map when set; plain: the surface
+    SKColor *emission;              // emissive: the glow, unless it is lit windows
+    bool windows;
+    float normal, roughness;
+    float metalness;                // < 0: the texture set's own
+    float intensity;
+    MaterialAnimation animation;
+} MaterialSpec;
+
+static MaterialSpec MaterialSpecFromJSON(NSDictionary *json) {
+    MaterialKind kind = JSONString(json, @"textures") ? MaterialTextured : json[@"emissive"] ? MaterialEmissive : MaterialPlain;
+    NSDictionary *animations = @{ @"strobe": @(MaterialStrobe), @"pulse": @(MaterialPulse) };
+    NSString *animated = JSONString(json, @"animated");
+    return (MaterialSpec){
+        .kind = kind,
+        .textures = JSONString(json, @"textures"),
+        .tint = JSONColor(json, @"tint") ?: SKColor.whiteColor,
+        .color = JSONColor(json, @"color") ?: (kind == MaterialPlain ? SKColor.grayColor : nil),
+        .emission = JSONColor(json, @"emissive") ?: SKColor.whiteColor,
+        .windows = [JSONString(json, @"emissive") isEqualToString:@"windows"],
+        .normal = JSONFloat(json, @"normal", 1),
+        .roughness = JSONFloat(json, @"roughness", 0.5f),
+        .metalness = JSONFloat(json, @"metalness", kind == MaterialPlain ? 0.5f : -1),
+        .intensity = JSONFloat(json, @"intensity", 1),
+        .animation = animated ? (MaterialAnimation)[animations[animated] intValue] : MaterialSteady,
+    };
 }
 
-// Materials whose intensity the frame animates, with their kind ("strobe", "pulse").
-static NSMutableArray<NSArray *> *gAnimated;
+// A material whose glow the frame animates.
+@interface AnimatedMaterial : NSObject
+@property (nonatomic, strong) SCNMaterial *material;
+@property (nonatomic) MaterialAnimation animation;
+@end
+@implementation AnimatedMaterial
+@end
 
-static SCNMaterial *MaterialFromSpec(NSString *slot, NSDictionary *spec) {
+static NSMutableArray<AnimatedMaterial *> *gAnimated;
+
+static SCNMaterial *MaterialFromSpec(NSString *slot, MaterialSpec spec) {
     SCNMaterial *m;
-    if (spec[@"textures"]) {
-        m = TexturedMaterial(spec[@"textures"], ColorFrom(spec[@"tint"], SKColor.whiteColor), NumberIn(spec, @"normal", 1));
-        if (spec[@"color"]) {   // a tinted surface colour instead of the set's colour map
-            m.diffuse.contents = ColorFrom(spec[@"color"], SKColor.grayColor);
-            m.multiply.contents = nil;
-        }
-        if (spec[@"metalness"]) m.metalness.contents = @(NumberIn(spec, @"metalness", 0.6f));
-    } else if (spec[@"emissive"]) {
-        id emissive = spec[@"emissive"];
-        BOOL windows = [emissive isKindOfClass:NSString.class] && [emissive isEqualToString:@"windows"];
-        m = EmissiveMaterial(windows ? (id)WindowImage() : ColorFrom(emissive, SKColor.whiteColor), NumberIn(spec, @"intensity", 1));
-        if (windows) Repeat(m.emission);
-        NSString *animated = spec[@"animated"];
-        if (animated.length) {
-            if (!gAnimated) gAnimated = [NSMutableArray array];
-            [gAnimated addObject:@[m, animated]];
-        }
-    } else {
-        m = PlainMaterial(ColorFrom(spec[@"color"], SKColor.grayColor), NumberIn(spec, @"roughness", 0.5f), NumberIn(spec, @"metalness", 0.5f));
+    switch (spec.kind) {
+        case MaterialTextured:
+            m = TexturedMaterial(spec.textures, spec.tint, spec.normal);
+            if (spec.color) {   // a tinted surface colour instead of the set's colour map
+                m.diffuse.contents = spec.color;
+                m.multiply.contents = nil;
+            }
+            if (spec.metalness >= 0) m.metalness.contents = @(spec.metalness);
+            break;
+        case MaterialEmissive:
+            m = EmissiveMaterial(spec.windows ? (id)WindowImage() : spec.emission, spec.intensity);
+            if (spec.windows) Repeat(m.emission);
+            if (spec.animation != MaterialSteady) {
+                AnimatedMaterial *animated = [AnimatedMaterial new];
+                animated.material = m;
+                animated.animation = spec.animation;
+                if (!gAnimated) gAnimated = [NSMutableArray array];
+                [gAnimated addObject:animated];
+            }
+            break;
+        case MaterialPlain:
+            m = PlainMaterial(spec.color, spec.roughness, spec.metalness);
+            break;
     }
     m.name = slot;
     return m;
 }
 
 static NSDictionary *StyleFile(NSString *style) {
-    NSURL *url = FSURL(@"Data/Styles", style, @"json");
-    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
-    NSDictionary *d = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
-    return [d isKindOfClass:NSDictionary.class] ? d : nil;
+    id json = FSJSON(FSURL(@"Data/Styles", style, @"json"));
+    return [json isKindOfClass:NSDictionary.class] ? json : nil;
 }
 
 static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) {
@@ -144,8 +186,8 @@ static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) 
         [specs addEntriesFromDictionary:own ?: @{}];
         NSMutableDictionary *m = [NSMutableDictionary dictionary];
         for (NSString *slot in specs) {
-            NSDictionary *spec = specs[slot];
-            if ([spec isKindOfClass:NSDictionary.class]) m[slot] = MaterialFromSpec(slot, spec);
+            NSDictionary *spec = JSONObject(specs, slot);
+            if (spec) m[slot] = MaterialFromSpec(slot, MaterialSpecFromJSON(spec));
         }
         if (!m[@"Hull"]) m[@"Hull"] = PlainMaterial(SKColor.grayColor, 0.5f, 0.5f);   // never leave a hull unlit
         cache[style] = m;
@@ -186,11 +228,13 @@ static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) 
 }
 
 + (void)updateSharedMaterials:(double)t {
-    for (NSArray *entry in gAnimated) {
-        SCNMaterial *m = entry[0];
+    for (AnimatedMaterial *entry in gAnimated) {
         // Strobe: a short flash every 1.2 s. Pulse: a slow breathing glow.
-        if ([entry[1] isEqualToString:@"strobe"]) m.emission.intensity = fmod(t, 1.2) < 0.12 ? 6.0 : 0.6;
-        else if ([entry[1] isEqualToString:@"pulse"]) m.emission.intensity = 2.0 + 0.8 * sin(t * 3.0);
+        switch (entry.animation) {
+            case MaterialStrobe: entry.material.emission.intensity = fmod(t, 1.2) < 0.12 ? 6.0 : 0.6; break;
+            case MaterialPulse: entry.material.emission.intensity = 2.0 + 0.8 * sin(t * 3.0); break;
+            case MaterialSteady: break;
+        }
     }
 }
 

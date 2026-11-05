@@ -229,4 +229,12 @@
 @end
 
 @implementation GClient
+- (void)leaveLevel {
+    _ship = nil;
+    _autopilot = nil;
+    _selected = nil;
+    _aimSubsystem = nil;
+    _inGame = NO;
+    _status = _sentStatus = nil;
+}
 @end

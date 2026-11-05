@@ -186,6 +186,8 @@ typedef NS_ENUM(NSInteger, AIMode) { AIModeAttack, AIModeEvade, AIModeReposition
 @property (nonatomic) double cmdTime, lastBump;     // seconds of commands run
 @property (nonatomic, copy) NSString *status, *sentStatus;
 @property (nonatomic, strong) GPilot *autopilot;    // g_autopilot
+// Out of the world: no ship, target or status, until it spawns again.
+- (void)leaveLevel;
 @end
 
 #pragma mark - World

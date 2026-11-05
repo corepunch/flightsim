@@ -6,12 +6,12 @@ NATIVE := build/Native
 TOOLCHAIN := $(NATIVE)/toolchain
 COMMON_FLAGS := -fobjc-arc -O2 -g -Wall -Wno-unused-function -mmacosx-version-min=13.0
 SHARED := $(wildcard Sources/Shared/*.m Sources/Shared/*.c)
-ENGINE_DIRS := $(wildcard Sources/Engine/*/)
-# Sources/Engine/Mission is the engine's mission runtime for game modules: it
+ENGINE_DIRS := $(filter-out Sources/Shared/,$(wildcard Sources/*/))
+# Sources/Mission is the engine's mission runtime for game modules: it
 # links into every game module and not into the engine binary, so its
 # classes exist once per process.
-MISSION_SOURCES := $(wildcard Sources/Engine/Mission/*.m)
-ENGINE_SOURCES := $(SHARED) $(filter-out $(MISSION_SOURCES),$(wildcard Sources/Engine/*/*.m))
+MISSION_SOURCES := $(wildcard Sources/Mission/*.m)
+ENGINE_SOURCES := $(SHARED) $(filter-out Sources/Shared/% $(MISSION_SOURCES),$(wildcard Sources/*/*.m))
 ENGINE_OBJECTS := $(addprefix $(NATIVE)/engine/,$(addsuffix .o,$(ENGINE_SOURCES)))
 ENGINE_FLAGS := -ISources/Shared $(addprefix -I,$(ENGINE_DIRS))
 ENGINE_PCH := $(NATIVE)/engine.pch
@@ -26,7 +26,7 @@ GAME ?= KestrelFrontier
 game_module_of = $(if $(wildcard Games/$(1)/Game/),$(1),$(shell plutil -extract base raw -o - Games/$(1)/game.json 2>/dev/null))
 game_sources = $(SHARED) $(MISSION_SOURCES) $(wildcard Games/$(1)/Game/*.m)
 game_objects = $(addprefix $(NATIVE)/games/$(1)/,$(addsuffix .o,$(call game_sources,$(1))))
-game_flags = -ISources/Shared -ISources/Engine/Mission -IGames/$(1)/Game -fvisibility=hidden
+game_flags = -ISources/Shared -ISources/Mission -IGames/$(1)/Game -fvisibility=hidden
 GAME_MODULES := $(addprefix $(NATIVE)/,$(addsuffix .dylib,$(GAMES)))
 GAME_PCHS := $(addprefix $(NATIVE)/games/,$(addsuffix .pch,$(GAMES)))
 
@@ -40,7 +40,7 @@ $(TOOLCHAIN): FORCE
 	@if cmp -s "$@.tmp" "$@"; then rm "$@.tmp"; else mv "$@.tmp" "$@"; fi
 
 # Source directories also trigger relinking when a file or directory is removed.
-$(NATIVE)/KestrelFrontier: $(ENGINE_OBJECTS) Sources/Shared Sources/Engine $(ENGINE_DIRS) Makefile
+$(NATIVE)/KestrelFrontier: $(ENGINE_OBJECTS) Sources Sources/Shared $(ENGINE_DIRS) Makefile
 	@printf '  Linking %s\n' '$(@F)'
 	@clang $(COMMON_FLAGS) $(ENGINE_OBJECTS) $(addprefix -framework ,$(ENGINE_FRAMEWORKS)) -o "$@.tmp"
 	@mv "$@.tmp" "$@"
@@ -66,7 +66,7 @@ define compile
 	@mv "$@.tmp" "$@"
 endef
 
-$(ENGINE_PCH): Sources/Engine/Prefix.h Makefile $(TOOLCHAIN)
+$(ENGINE_PCH): Sources/Prefix.h Makefile $(TOOLCHAIN)
 	$(call compile,engine prefix,$(ENGINE_FLAGS) -x objective-c-header)
 
 $(NATIVE)/engine/%.m.o: %.m $(ENGINE_PCH) Makefile $(TOOLCHAIN)
@@ -80,7 +80,7 @@ $(NATIVE)/engine/%.c.o: %.c Makefile $(TOOLCHAIN)
 # The server loads a game's module at runtime (Server/GameLoader.m). Only
 # GetGameAPI is exported.
 define game_module
-$(NATIVE)/$(1).dylib: $(call game_objects,$(1)) Sources/Shared Sources/Engine/Mission Games/$(1)/Game Makefile
+$(NATIVE)/$(1).dylib: $(call game_objects,$(1)) Sources/Shared Sources/Mission Games/$(1)/Game Makefile
 	@printf '  Linking %s\n' '$(1).dylib'
 	@clang $(COMMON_FLAGS) -dynamiclib $(call game_objects,$(1)) -framework Foundation -install_name @rpath/$(1).dylib -o "$$@.tmp"
 	@mv "$$@.tmp" "$$@"

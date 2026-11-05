@@ -485,7 +485,7 @@ typedef struct {
 } LevelField;
 
 // What every objective has; `definition` keeps the type's own fields (see
-// MissionObjective in Sources/Engine/Mission).
+// MissionObjective in Sources/Mission).
 //   { "id", "type", "text", "targets": [], "navs": [], "after": [], "optional", "hidden", … }
 typedef struct {
     NSString *identifier, *type, *text;
@@ -594,7 +594,7 @@ typedef struct {
     // Reliable command to one client, or every client with -1.
     void (*command)(int client, int type, const char *a, const char *b, const char *c);
 
-    // Console variables (engine-owned; see Engine/Common/Common.h). Register
+    // Console variables (engine-owned; see Sources/Common/Common.h). Register
     // in init with CVAR_* flags, then read at use: values can change at any
     // time. cvarString's result is valid until the cvar changes.
     void (*cvarRegister)(const char *name, const char *value, int flags, const char *help);
