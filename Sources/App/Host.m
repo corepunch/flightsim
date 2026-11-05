@@ -89,6 +89,9 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
     // Overlay changes wait for the outgoing screen's exit animation.
     ScreenHost *_screens;
+    // Outgoing screens' covers, once the main thread has swapped the overlay;
+    // removed in the next frame update, where screens change their node trees.
+    NSMutableArray<SKNode *> *_retiredCovers;
 
     Cvar *_testInput, *_cockpit, *_autoStart;
 
@@ -146,7 +149,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             if (host && screen != host->_clientView.hud) [[GameAudio shared] play:@"ui-panel"];
             dispatch_async(dispatch_get_main_queue(), ^{
                 weakSCNView.overlaySKScene = screen;
-                [cover removeFromParent];
+                Host *strong = weakHost;
+                if (strong && cover) @synchronized (strong) {
+                    if (!strong->_retiredCovers) strong->_retiredCovers = [NSMutableArray array];
+                    [strong->_retiredCovers addObject:cover];
+                }
             });
         }];
 #if !TARGET_OS_IOS
@@ -704,9 +711,13 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 
 #if TARGET_OS_IOS
 // SpriteKit overlays participate in UIKit focus on iPad. Run their updates
-// on the main thread instead of SceneKit's render queue.
+// on the main thread instead of SceneKit's render queue, holding SceneKit's
+// lock: the render queue draws the overlay under the same lock, so screens
+// never change their node trees while they are being drawn.
 - (void)displayLinkTick:(CADisplayLink *)link {
+    [SCNTransaction lock];
     [self updateFrameAtTime:link.timestamp];
+    [SCNTransaction unlock];
     if (_booted) [_refresh renderDisplaysWithQueue:_view.commandQueue time:link.timestamp];
 }
 #else
@@ -727,6 +738,9 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     dt = clampf(dt, 0.0005f, 1.0f / 20.0f);
     _time += dt;
     [[GameAudio shared] frame:dt flying:_state == HostStateFlying];
+    NSArray<SKNode *> *covers = nil;
+    @synchronized (self) { covers = _retiredCovers; _retiredCovers = nil; }
+    for (SKNode *cover in covers) [cover removeFromParent];
     [_screens pump:_time];
     [Cmd executeBuffer];
 
