@@ -594,6 +594,25 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
+		"937011A4EF7ADB12D821D115" = {
+			"isa" = "PBXFileReference";
+			"path" = "LensFlare.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"762700A52A57454CC41E3B4C" = {
+			"isa" = "PBXFileReference";
+			"path" = "LensFlare.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"9F07BBA07CAE68982CA8A55E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "762700A52A57454CC41E3B4C";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
+			};
+		};
 		"584A7C91C4D830BCD98004EC" = {
 			"isa" = "PBXFileReference";
 			"path" = "ModelInfo.h";
@@ -679,6 +698,8 @@
 				"C0905C6582FC6E4D7CE93E12",
 				"C9B726265A993CEE8DC0B865",
 				"00AE9593FE447C3B67F24D86",
+				"937011A4EF7ADB12D821D115",
+				"762700A52A57454CC41E3B4C",
 				"584A7C91C4D830BCD98004EC",
 				"E1B800B9DE031FFDBCA644D5",
 				"D9F18179B8599993F0EF67C2",
@@ -777,6 +798,12 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\"";
 			};
 		};
+		"FFD254A8F67061025159DC33" = {
+			"isa" = "PBXFileReference";
+			"path" = "LoadingLocalization.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
 		"C7416FF7A83F4818FD3CEE79" = {
 			"isa" = "PBXFileReference";
 			"path" = "MainMenu.h";
@@ -867,6 +894,7 @@
 				"F1E7F2E93458338C939D87F3",
 				"F8AA5E909FD98BA8A8CE154F",
 				"D17A50858700207A61743937",
+				"FFD254A8F67061025159DC33",
 				"C7416FF7A83F4818FD3CEE79",
 				"C730A0D6699A8EDB589CB230",
 				"DCFE285AC4AD14417D7DADBA",
@@ -1117,6 +1145,7 @@
 				"6B81CCABE62A764E30694187",
 				"388229955C76D198A940F774",
 				"5E540DFC0B549869BE86AA8D",
+				"9F07BBA07CAE68982CA8A55E",
 				"FC4B85DEF6918A420579F4A9",
 				"82A70480BBE2DCB4A2EC7B1B",
 				"8D3AA37C040CB92F9C63B987",

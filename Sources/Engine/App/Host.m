@@ -81,6 +81,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
     // Overlay changes wait for the outgoing screen's exit animation.
     SKScene *_shownOverlay;
+    SKNode *_loadingBackdrop;
     double _exitDeadline;
     void (^_afterExit)(void);
 }
@@ -441,6 +442,13 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 // another change arrives meanwhile, the newest one wins.
 - (void)presentOverlay:(SKScene *)next {
     if (next == _shownOverlay && _exitDeadline == 0) return;
+    if (next == _loading && _shownOverlay && _shownOverlay != next && !_loadingBackdrop) {
+        // The outgoing screen fades/scales its own content. Keep the hangar
+        // opaque underneath it until the actual loading scene is installed.
+        _loadingBackdrop = [_loading backdropWithSize:_shownOverlay.size];
+        _loadingBackdrop.zPosition = -1;
+        [_shownOverlay addChild:_loadingBackdrop];
+    }
     __weak Host *weak = self;
     void (^show)(void) = ^{ [weak showOverlayNow:next]; };
     if (_exitDeadline > 0) { _afterExit = show; return; }
@@ -457,9 +465,14 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 - (void)showOverlayNow:(SKScene *)next {
     _shownOverlay = next;
+    SKNode *backdrop = _loadingBackdrop;
+    _loadingBackdrop = nil;
     if ([next conformsToProtocol:@protocol(UIMotionScene)]) [(id<UIMotionScene>)next motionEnter];
     SCNView *view = _view;
-    dispatch_async(dispatch_get_main_queue(), ^{ view.overlaySKScene = next; });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        view.overlaySKScene = next;
+        [backdrop removeFromParent];
+    });
 }
 
 - (void)pumpOverlay {

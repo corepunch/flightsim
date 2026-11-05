@@ -111,15 +111,11 @@ static NSArray<NSString *> *Tips(void) {
 
 #pragma mark - Layout
 
-- (void)layout {
-    [_root removeAllChildren];
-    [_stars removeAllObjects];
-    CGSize s = self.size;
-    _laidOut = s;
-
+- (SKNode *)backdropWithSize:(CGSize)s {
+    SKNode *backdrop = [SKNode node];
     SKSpriteNode *bg = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBackground, 1) size:s];
     bg.anchorPoint = CGPointZero;
-    [_root addChild:bg];
+    [backdrop addChild:bg];
 
     if (_hangarTexture) {
         SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_hangarTexture];
@@ -127,11 +123,20 @@ static NSArray<NSString *> *Tips(void) {
         CGFloat scale = MAX(s.width / MAX(image.width, 1), s.height / MAX(image.height, 1));
         art.size = CGSizeMake(image.width * scale, image.height * scale);
         art.position = CGPointMake(s.width * 0.5, s.height * 0.5);
-        [_root addChild:art];
+        [backdrop addChild:art];
         SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:0.55] size:s];
         shade.anchorPoint = CGPointZero;
-        [_root addChild:shade];
+        [backdrop addChild:shade];
     }
+    return backdrop;
+}
+
+- (void)layout {
+    [_root removeAllChildren];
+    [_stars removeAllObjects];
+    CGSize s = self.size;
+    _laidOut = s;
+    [_root addChild:[self backdropWithSize:s]];
 
     // A slow parallax star drift: bigger stars are "nearer" and move faster.
     srand48(4242);

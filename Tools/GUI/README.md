@@ -18,3 +18,13 @@ fresh pass message or output file: `open -W` waits for the app to exit but
 doesn't report its exit status. Running `Contents/MacOS/…` directly from a
 sandboxed runner can abort in macOS registration, even for tests that create
 SpriteKit scenes without showing a window.
+
+Run `./Tools/run-flare-checks.sh` for GPU-rendered lens-flare checks at desktop,
+iPhone and iPad sizes. It verifies colour and falloff, border clipping,
+occlusion/offscreen handling, and frame-rate-independent exposure. It also
+composites the transparent overlay through SceneKit onto a checkerboard and
+rejects any darkening of the scenery, including when shaders are unavailable. PNG previews
+and logs remain in the printed `build/flare-checks.*` directory.
+
+The visual references are [Cooke's photographed anamorphic flares](https://cookeoptics.com/news-and-events/an-introduction-to-anamorphic-lenses/)
+and [ShareGrid's Kowa lens tests](https://www.sharegrid.com/learn/lens-sets/kowa-cine-prominar-anamorphic).

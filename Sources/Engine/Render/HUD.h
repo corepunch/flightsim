@@ -9,11 +9,12 @@ typedef struct {
     BOOL boosting;
     int kills, deaths;
     BOOL playerDead;
-    CGPoint sun;            // sun streak center, HUD points
+    CGPoint sun;            // projected light source, HUD points
     float sunVisibility;    // 0..1
+    float deltaTime;        // seconds, for the lens exposure response
     float damageFlash;      // 0..1
     BOOL cockpit;           // gauges are on the cockpit displays instead
-    int torpedoes;
+    int torpedoes, torpedoCapacity; // remaining rounds and mission loadout
     BOOL aimVisible;        // subsystem aim marker on the selected capital
     CGPoint aim;
     __unsafe_unretained NSString *status;   // under the boresight, e.g. "SCANNING 40%"

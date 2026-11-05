@@ -1,5 +1,5 @@
 #import "HUD.h"
-#import "Exhaust.h"
+#import "LensFlare.h"
 #import "UIStyle.h"
 
 #define MAX_TARGETS 64
@@ -8,6 +8,7 @@ static SKColor *HUDColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static SKColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
 static SKColor *FriendColor(CGFloat a) { return UIColorWithOpacity(UIFriendly, a); }
 static SKColor *NeutralColor(CGFloat a) { return UIColorWithOpacity(UIHUDNeutral, a); }
+static SKColor *TargetColor(CGFloat a) { return [SKColor colorWithRed:1 green:0.92 blue:0.18 alpha:a]; }
 static SKColor *KindColor(HUDKind k, CGFloat a) {
     switch (k) {
         case HUDKindEnemy: return EnemyColor(a);
@@ -53,10 +54,13 @@ static SKShapeNode *Bracket(void) {
     NSMutableArray<SKLabelNode *> *_distLabels;
     NSMutableArray<SKShapeNode *> *_navMarks;
     SKShapeNode *_aimMark;
+    SKShapeNode *_selectedOutline, *_selectedLeadOutline, *_selectedLabelBacking;
     SKLabelNode *_statusLabel, *_torpLabel, *_bannerLabel;
     SKNode *_objectivePanel, *_messagePanel;
+    SKNode *_torpedoRack;
+    NSMutableArray<SKShapeNode *> *_torpedoSegments;
     NSMutableArray<SKLabelNode *> *_messages;
-    SKSpriteNode *_sunStreak;
+    LensFlare *_lensFlare;
     CGSize _laidOut;
 #if TARGET_OS_IOS
     UIEdgeInsets _laidOutInsets;
@@ -75,14 +79,8 @@ static SKShapeNode *Bracket(void) {
 }
 
 - (void)build {
-    // A single horizontal streak centered on the visible sky sun.
-    _sunStreak = [SKSpriteNode spriteNodeWithTexture:[SKTexture textureWithImage:[Exhaust streakImage]]
-                                                size:CGSizeMake(1400, 24)];
-    _sunStreak.color = [SKColor colorWithRed:0.6 green:0.75 blue:1 alpha:1];
-    _sunStreak.colorBlendFactor = 1;
-    _sunStreak.blendMode = SKBlendModeAdd;
-    _sunStreak.alpha = 0;
-    [_root addChild:_sunStreak];
+    _lensFlare = [LensFlare new];
+    [_root addChild:_lensFlare];
 
     _damage = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 10, 10)];
     _damage.fillColor = [SKColor colorWithRed:1 green:0.15 blue:0.1 alpha:1];
@@ -193,17 +191,27 @@ static SKShapeNode *Bracket(void) {
     _navMarks = [NSMutableArray array];
     _aimMark = [SKShapeNode node];
     CGMutablePathRef am = CGPathCreateMutable();
-    CGPathMoveToPoint(am, NULL, 0, 9); CGPathAddLineToPoint(am, NULL, 9, 0); CGPathAddLineToPoint(am, NULL, 0, -9); CGPathAddLineToPoint(am, NULL, -9, 0);
+    CGPathMoveToPoint(am, NULL, 0, 12); CGPathAddLineToPoint(am, NULL, 12, 0); CGPathAddLineToPoint(am, NULL, 0, -12); CGPathAddLineToPoint(am, NULL, -12, 0);
     CGPathCloseSubpath(am);
     _aimMark.path = am;
     CGPathRelease(am);
-    _aimMark.strokeColor = [SKColor colorWithRed:1 green:0.75 blue:0.3 alpha:1];
-    _aimMark.lineWidth = 2;
+    _aimMark.strokeColor = TargetColor(1);
+    _aimMark.lineWidth = 2.5;
+    SKShapeNode *aimOutline = [SKShapeNode shapeNodeWithPath:_aimMark.path];
+    aimOutline.strokeColor = [SKColor colorWithWhite:0 alpha:0.9];
+    aimOutline.lineWidth = 5.5;
+    aimOutline.zPosition = -1;
+    [_aimMark addChild:aimOutline];
+    _aimMark.zPosition = 20;
     [_root addChild:_aimMark];
     _statusLabel = Label(13, SKLabelHorizontalAlignmentModeCenter);
     [_root addChild:_statusLabel];
-    _torpLabel = Label(13, SKLabelHorizontalAlignmentModeLeft);
+    _torpLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
+    _torpLabel.fontColor = UIColorWithOpacity(UIAmber, 0.9);
     [_root addChild:_torpLabel];
+    _torpedoRack = [SKNode node];
+    _torpedoSegments = [NSMutableArray array];
+    [_root addChild:_torpedoRack];
     _bannerLabel = Label(30, SKLabelHorizontalAlignmentModeCenter);
     _bannerLabel.fontName = UIMonoBoldFont;
     _bannerLabel.alpha = 0;
@@ -213,6 +221,34 @@ static SKShapeNode *Bracket(void) {
     _messagePanel = [SKNode node];
     [_root addChild:_messagePanel];
     _messages = [NSMutableArray array];
+
+    // One selected contact: dark outlines retain contrast against both the
+    // starfield and bright hulls/bloom, without making every contact louder.
+    _selectedOutline = [SKShapeNode node];
+    _selectedLeadOutline = [SKShapeNode node];
+    for (SKShapeNode *outline in @[_selectedOutline, _selectedLeadOutline]) {
+        outline.strokeColor = [SKColor colorWithWhite:0 alpha:0.9];
+        outline.lineWidth = 6;
+        outline.zPosition = 19;
+        outline.hidden = YES;
+        [_root addChild:outline];
+    }
+    CGMutablePathRef leadOutline = CGPathCreateMutable();
+    CGPathAddEllipseInRect(leadOutline, NULL, CGRectMake(-5, -5, 10, 10));
+    for (int i = 0; i < 4; i++) {
+        CGFloat a = i * M_PI_2;
+        CGPathMoveToPoint(leadOutline, NULL, cos(a) * 5, sin(a) * 5);
+        CGPathAddLineToPoint(leadOutline, NULL, cos(a) * 9, sin(a) * 9);
+    }
+    _selectedLeadOutline.path = leadOutline;
+    CGPathRelease(leadOutline);
+    _selectedLabelBacking = [SKShapeNode node];
+    _selectedLabelBacking.fillColor = [SKColor colorWithWhite:0.015 alpha:0.85];
+    _selectedLabelBacking.strokeColor = TargetColor(0.35);
+    _selectedLabelBacking.lineWidth = 0.75;
+    _selectedLabelBacking.zPosition = 21;
+    _selectedLabelBacking.hidden = YES;
+    [_root addChild:_selectedLabelBacking];
 
     _brackets = [NSMutableArray array];
     _arrows = [NSMutableArray array];
@@ -288,7 +324,6 @@ static SKShapeNode *Bracket(void) {
     _objectivePanel.position = CGPointMake(40, s.height - 40);
     _messagePanel.position = CGPointMake(s.width / 2, s.height - 110);
     _bannerLabel.position = CGPointMake(s.width / 2, s.height * 0.68);
-    _torpLabel.position = CGPointMake(66, 130);
 #if TARGET_OS_IOS
     // The bottom corners belong to the stick and weapon controls. Keep
     // telemetry in the open space above them and inside the safe area.
@@ -300,7 +335,6 @@ static SKShapeNode *Bracket(void) {
     _throttleLabel.position = CGPointMake(leftStats, stats + 36);
     _speedLabel.position = CGPointMake(leftStats, stats + 17);
     _speedLabel.fontSize = 16;
-    _torpLabel.position = CGPointMake(leftStats, stats);
     _hullLabel.position = CGPointMake(rightStats - 88, stats + 24);
     _shieldLabel.position = CGPointMake(rightStats - 88, stats + 40);
     _hullFill.position = CGPointMake(rightStats - 80, stats + 21);
@@ -309,10 +343,48 @@ static SKShapeNode *Bracket(void) {
     _inputLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
     _inputLabel.position = CGPointMake(right, top - 44);
 #endif
+    _torpLabel.position = CGPointMake(_shieldLabel.position.x, _shieldLabel.position.y + 18);
+    _torpedoRack.position = CGPointMake(_shieldFill.position.x, _shieldFill.position.y + 18);
+    [self layoutTorpedoes];
     CGPathRef dp = CGPathCreateWithRect(CGRectMake(0, 0, s.width, s.height), NULL);
     _damage.path = dp;
     CGPathRelease(dp);
     _ring.position = _cursor.position = CGPointMake(s.width / 2, s.height / 2);
+}
+
+- (void)layoutTorpedoes {
+    NSUInteger count = _torpedoSegments.count;
+    if (!count) return;
+    CGFloat width = TARGET_OS_IOS ? 80 : 200;
+    CGFloat gap = MIN(4, width / (count * 4));
+    CGFloat segmentWidth = (width - gap * (count - 1)) / count;
+    for (NSUInteger i = 0; i < count; i++) {
+        SKShapeNode *segment = _torpedoSegments[i];
+        segment.position = CGPointMake(i * (segmentWidth + gap), 0);
+        UISetSkewedBar(segment, segmentWidth, 6);
+    }
+}
+
+- (void)updateTorpedoes:(int)remaining capacity:(int)capacity {
+    capacity = MAX(0, MAX(capacity, remaining));
+    remaining = MAX(0, remaining);
+    if (_torpedoSegments.count != (NSUInteger)capacity) {
+        [_torpedoRack removeAllChildren];
+        [_torpedoSegments removeAllObjects];
+        for (int i = 0; i < capacity; i++) {
+            SKShapeNode *segment = [SKShapeNode node];
+            segment.lineWidth = 0.75;
+            [_torpedoRack addChild:segment];
+            [_torpedoSegments addObject:segment];
+        }
+        [self layoutTorpedoes];
+    }
+    for (NSUInteger i = 0; i < _torpedoSegments.count; i++) {
+        BOOL loaded = i < (NSUInteger)remaining;
+        _torpedoSegments[i].fillColor = UIColorWithOpacity(UIAmber, loaded ? 0.9 : 0.04);
+        _torpedoSegments[i].strokeColor = UIColorWithOpacity(UIAmber, loaded ? 0.95 : 0.4);
+    }
+    _torpLabel.text = @"TORPEDO";
 }
 
 - (void)setInputText:(NSString *)text { _inputLabel.text = text; }
@@ -403,13 +475,13 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     UISetSkewedBar(_shieldFill, conditionWidth * f.shield, 6);
     _hullFill.fillColor = f.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8);
     _scoreLabel.text = [NSString stringWithFormat:@"KILLS %d   DEATHS %d", f.kills, f.deaths];
-    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _torpLabel])
+    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _hullFill, _shieldFill, _hullLabel, _shieldLabel, _scoreLabel, _torpLabel, _torpedoRack])
         n.hidden = f.cockpit;
     _scoreLabel.hidden = YES;
 #if TARGET_OS_IOS
     _throttleFrame.hidden = YES;
 #endif
-    _torpLabel.text = [NSString stringWithFormat:@"TORP %d", f.torpedoes];
+    [self updateTorpedoes:f.torpedoes capacity:f.torpedoCapacity];
     _aimMark.hidden = !f.aimVisible || f.playerDead;
     _aimMark.position = f.aim;
     _aimMark.zRotation = 0.0;
@@ -418,15 +490,15 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     _deadLabel.hidden = !f.playerDead;
     _damage.alpha = f.damageFlash * 0.35;
 
-    _sunStreak.position = f.sun;
-    _sunStreak.alpha = 0.45 * f.sunVisibility;
+    [_lensFlare updateSource:f.sun visibility:f.sunVisibility viewport:s deltaTime:f.deltaTime];
 
+    _selectedOutline.hidden = _selectedLeadOutline.hidden = _selectedLabelBacking.hidden = YES;
     for (NSUInteger i = 0; i < MAX_TARGETS; i++) {
         SKShapeNode *b = _brackets[i], *a = _arrows[i], *l = _leads[i];
         SKLabelNode *d = _distLabels[i];
         if (i >= count || f.playerDead) { b.hidden = a.hidden = l.hidden = d.hidden = YES; continue; }
         HUDTarget t = targets[i];
-        SKColor *c = KindColor(t.kind, 0.9);
+        SKColor *c = t.selected ? TargetColor(1) : KindColor(t.kind, 0.9);
         BOOL nav = t.kind == HUDKindNav;
         b.hidden = !t.onScreen;
         d.hidden = !t.onScreen;
@@ -434,9 +506,25 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
         a.hidden = t.onScreen || !(t.selected || nav || (t.kind == HUDKindEnemy && !t.capital));
         l.hidden = !(t.onScreen && t.hasLead && (t.selected || (t.kind == HUDKindEnemy && !t.capital)));
         b.strokeColor = c;
-        b.lineWidth = t.selected ? 2.5 : 1.5;
-        a.fillColor = KindColor(t.kind, t.selected ? 1.0 : 0.7);
+        b.lineWidth = t.selected ? 3 : 1.5;
+        b.zPosition = a.zPosition = l.zPosition = t.selected ? 20 : 0;
+        a.fillColor = t.selected ? c : KindColor(t.kind, 0.7);
+        a.strokeColor = t.selected ? [SKColor colorWithWhite:0 alpha:0.9] : SKColor.clearColor;
+        a.lineWidth = t.selected ? 2 : 0;
+        [a setScale:t.selected ? 1.4 : 1];
+        l.strokeColor = t.selected ? c : EnemyColor(0.8);
+        l.lineWidth = t.selected ? 2.25 : 1.5;
+        [l setScale:t.selected ? 1.35 : 1];
+        for (SKShapeNode *tick in l.children) {
+            tick.strokeColor = l.strokeColor;
+            tick.lineWidth = l.lineWidth;
+        }
         d.fontColor = c;
+        d.fontName = t.selected ? UIMonoBoldFont : UIMonoFont;
+        d.fontSize = t.selected ? 14 : 11;
+        d.zPosition = t.selected ? 22 : 0;
+        d.numberOfLines = t.selected ? 2 : 1;
+        d.preferredMaxLayoutWidth = t.selected ? MIN(320, s.width - 24) : 0;
         if (t.onScreen) {
             b.position = t.point;
             CGPathRef bp;
@@ -447,7 +535,7 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
                 CGPathCloseSubpath(np);
                 bp = np;
             } else {
-                bp = BracketPath(roundf(t.size));
+                bp = BracketPath(roundf(t.selected ? MAX(44, t.size) : t.size));
             }
             b.path = bp;
             CGPathRelease(bp);
@@ -455,8 +543,29 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
                                                 : [NSString stringWithFormat:@"%dm", (int)t.distance];
             BOOL named = t.label && (t.selected || t.capital || nav);
             d.text = named ? [NSString stringWithFormat:@"%@ %@", t.label, dist] : dist;
-            CGFloat half = nav ? 12 : t.size * 0.5;
-            d.position = CGPointMake(t.point.x + half + 4, t.point.y + half - 4);
+            if (t.selected) d.text = [@"TARGET / " stringByAppendingString:d.text];
+            CGFloat half = nav ? 12 : (t.selected ? MAX(44, t.size) : t.size) * 0.5;
+            d.position = CGPointMake(t.point.x + half + 6, t.point.y + half + (t.selected ? 10 : -4));
+            if (t.selected) {
+                CGRect text = d.frame;
+                // Keep the larger label below the contact, away from the
+                // forward lead marker. Flip above near the bottom edge.
+                CGFloat labelY = t.point.y - half - 12 - text.size.height / 2;
+                if (labelY - text.size.height / 2 < 12)
+                    labelY = t.point.y + half + 12 + text.size.height / 2;
+                d.position = CGPointMake(MAX(12, MIN(t.point.x - text.size.width / 2, s.width - text.size.width - 12)),
+                                         MAX(text.size.height / 2 + 12, MIN(labelY, s.height - text.size.height / 2 - 12)));
+                CGPathRef plate = CGPathCreateWithRoundedRect(CGRectInset(d.frame, -6, -4), 3, 3, NULL);
+                _selectedLabelBacking.path = plate;
+                CGPathRelease(plate);
+                _selectedLabelBacking.hidden = NO;
+                _selectedOutline.path = b.path;
+                _selectedOutline.position = b.position;
+                _selectedOutline.hidden = NO;
+                _selectedLeadOutline.position = t.lead;
+                [_selectedLeadOutline setScale:l.xScale];
+                _selectedLeadOutline.hidden = l.hidden;
+            }
             l.position = t.lead;
         } else {
             a.position = t.point;

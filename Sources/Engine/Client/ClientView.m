@@ -480,7 +480,7 @@ typedef struct {
     [_sunLight simdLookAt:ps->move.origin];
     [_sky updateDust:_dust cameraPosition:_cameraNode.simdPosition velocity:ps->move.velocity];
     _damageFlash = fmaxf(0, _damageFlash - dt * 2.5f);
-    [self updateHUD:ps controls:controls];
+    [self updateHUD:ps controls:controls dt:dt];
 }
 
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time {
@@ -612,7 +612,7 @@ typedef struct {
     return YES;
 }
 
-- (void)updateHUD:(const PlayerState *)ps controls:(ControlState)c {
+- (void)updateHUD:(const PlayerState *)ps controls:(ControlState)c dt:(float)dt {
     simd_float3 me = ps->move.origin, fwd = QuatForward(ps->move.orientation);
     uint16_t selected = (uint16_t)ps->stats[STAT_TARGET];
     EntityView *target = [self viewFor:selected];
@@ -634,6 +634,7 @@ typedef struct {
     f.damageFlash = _damageFlash;
     f.cockpit = _cockpit;
     f.torpedoes = ps->stats[STAT_TORPEDOES];
+    f.torpedoCapacity = [CampaignMission((NSUInteger)[self cs:CS_MISSION].integerValue)[@"loadout"][@"torpedoes"] intValue];
     f.status = _status;
     int aim = ps->stats[STAT_AIM_PART] - 1;
     if (target.capital && aim >= 0 && aim < target.capital.info.info->numParts) {
@@ -642,23 +643,26 @@ typedef struct {
         f.aimVisible = [self project:p into:&f.aim];
     }
 
+    f.deltaTime = dt;
     simd_float3 camPos = _cameraNode.simdPosition;
     simd_float3 sunPoint = camPos + _sky.sunDirection * 20000.0f;
     CGPoint sp;
     if ([self project:sunPoint into:&sp]) {
-        float edge = fminf(fminf(sp.x, size.width - sp.x), fminf(sp.y, size.height - sp.y));
-        float vis = clampf(edge / 100.0f, 0, 1);
+        float vis = CGRectContainsPoint((CGRect){ .size = size }, sp) ? 1 : 0;
         if (vis > 0) {
             NSArray *hits = [_scene.rootNode hitTestWithSegmentFromPoint:SCNVector3Make(camPos.x, camPos.y, camPos.z)
                                                                  toPoint:SCNVector3Make(camPos.x + _sky.sunDirection.x * 5000,
                                                                                         camPos.y + _sky.sunDirection.y * 5000,
                                                                                         camPos.z + _sky.sunDirection.z * 5000)
-                                                                 options:@{ SCNHitTestOptionFirstFoundOnly : @YES,
+                                                                 options:@{ SCNHitTestOptionSearchMode : @(SCNHitTestSearchModeAll),
                                                                             SCNHitTestBackFaceCullingKey : @YES,
                                                                             SCNHitTestIgnoreHiddenNodesKey : @YES }];
             for (SCNHitTestResult *h in hits) {
-                if (!h.node.geometry || h.node.particleSystems || h.node == _dust) continue;
-                if (_cockpit && [h.node.parentNode isEqual:_cockpitModel.node]) continue;
+                // Ignore additive effects and transparent canopy glass, but
+                // keep searching: a hull behind them can still block the sun.
+                SCNMaterial *material = h.node.geometry.firstMaterial;
+                if (!material || h.node.particleSystems || h.node == _dust ||
+                    material.blendMode != SCNBlendModeReplace || material.transparency < 0.95) continue;
                 vis = 0;
                 break;
             }
