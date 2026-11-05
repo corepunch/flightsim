@@ -5,6 +5,7 @@
 #import "UIStyle.h"
 #import "UIMotion.h"
 #import "GameAudio.h"
+#import "Localization.h"
 #import <ImageIO/ImageIO.h>
 
 static NSValue *BoxPoint(CGPoint point) { return [NSValue value:&point withObjCType:@encode(CGPoint)]; }
@@ -365,11 +366,11 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     BOOL compact = s.height < 550;
     SKLabelNode *title = Text(compact ? 23 : 34, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft);
     title.fontName = UIInterfaceBoldFont;
-    title.text = @"MISSION SELECT";
+    title.text = L10n(@"missions.title");
     title.position = CGPointMake(left + 4, top - 10);
     [_root addChild:title];
     SKLabelNode *sub = Text(compact ? 11 : 13, UIColorWithOpacity(UIInk, 0.65), SKLabelHorizontalAlignmentModeLeft);
-    sub.text = @"KESTREL FRONTIER  /  CNS BASTION";
+    sub.text = L10n(@"missions.kicker");
     sub.position = CGPointMake(left + 4, top - (compact ? 38 : 46));
     [_root addChild:sub];
 
@@ -403,7 +404,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         number.position = CGPointMake(x + inset, y + tileH - 12);
         [content addChild:number];
         SKLabelNode *status = Text(10, ink, SKLabelHorizontalAlignmentModeLeft);
-        status.text = !open ? @"LOCKED" : stars ? @"COMPLETED" : @"READY TO FLY";
+        status.text = L10n(!open ? @"missions.locked" : stars ? @"missions.completed" : @"missions.ready");
         status.position = CGPointMake(x + inset, y + 10 + status.frame.size.height);
         [content addChild:status];
         SKLabelNode *rating = Text(18, UIColorWithOpacity(stars ? UIAmber : UIInk, stars ? 1 : 0.25), SKLabelHorizontalAlignmentModeLeft);
@@ -412,7 +413,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         [content addChild:rating];
         SKLabelNode *name = Para(12, ink, tileW - 2 * inset);
         name.fontName = UIInterfaceBoldFont;
-        name.text = open ? [missions[i][@"title"] uppercaseString] : @"CLASSIFIED";
+        name.text = open ? [missions[i][@"title"] uppercaseString] : L10n(@"missions.classified");
         name.numberOfLines = 2;
         CGFloat nameTop = CGRectGetMinY(number.frame) - spacing;
         if (nameTop - name.frame.size.height < CGRectGetMaxY(rating.frame) + spacing) name.numberOfLines = 1;   // compact tiles
@@ -429,8 +430,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         if (CGRectGetMaxY(selected) + _scrollOffset > CGRectGetMaxY(_missionRows))
             [self scrollBy:CGRectGetMaxY(_missionRows) - CGRectGetMaxY(selected) - _scrollOffset];
     }
-    NSString *hint = TARGET_OS_IOS ? @"SWIPE TO BROWSE  /  TAP A MISSION" : @"ARROWS SELECT  /  SCROLL TO BROWSE";
-    [self footer:hint action:_index < unlocked ? @"BRIEFING" : nil];
+    NSString *hint = L10n(TARGET_OS_IOS ? @"missions.hint_touch" : @"missions.hint");
+    [self footer:hint action:_index < unlocked ? L10n(@"missions.briefing") : nil];
     _shownIndex = _index;
 }
 
@@ -481,7 +482,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
         CGFloat left = safe.left + 24, right = self.size.width - safe.right - 24, bottom = safe.bottom + 16;
         CGFloat buttonW = MIN(150, (right - left - 12) / 2);
         _backRect = CGRectMake(left, bottom, buttonW, 44);
-        [self footerButton:_backRect title:@"‹ MAIN MENU" accent:UIInk];
+        [self footerButton:_backRect title:L10n(@"missions.back_compact") accent:UIInk];
         if (action) {
             _confirmRect = CGRectMake(right - buttonW, bottom, buttonW, 44);
             [self footerButton:_confirmRect title:action accent:UIAmber];
@@ -496,7 +497,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     if ([self compactStoryLayout]) {
         CGFloat bottom = 16, height = 44;
         _backRect = CGRectMake(inset, bottom, 84, height);
-        [self footerButton:_backRect title:@"MISSIONS" accent:UIAmber];
+        [self footerButton:_backRect title:L10n(@"story.missions") accent:UIAmber];
         BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
         if (hasPrevious) {
             _previousRect = CGRectMake(CGRectGetMaxX(_backRect) + 8, bottom, 44, height);
@@ -513,7 +514,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat hintLeft = inset + 8;
     if (_mode == ModeList) {
         _backRect = CGRectMake(inset, 20, 140, 40);
-        [self footerButton:_backRect title:@"‹  MAIN MENU" accent:UIInk];
+        [self footerButton:_backRect title:L10n(@"missions.back") accent:UIInk];
         hintLeft = CGRectGetMaxX(_backRect) + 18;
     }
     SKLabelNode *hint = Para(12, UIColorWithOpacity(UIInk, console ? 0.9 : 0.65),
@@ -537,12 +538,12 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     NSDictionary *mission = CampaignMission(_index);
     NSDictionary *brief = mission[@"briefing"];
     _dialogueScene = brief[@"dialogue"];
-    NSString *speaker = brief[@"speaker"] ?: @"Bastion Control";
+    NSString *speaker = brief[@"speaker"] ?: L10n(@"briefing.default_speaker");
     NSString *portrait = [speaker containsString:@"Okafor"] ? @"Okafor" : @"Varn";
     NSMutableArray<NSDictionary *> *pages = [NSMutableArray array];
     for (NSDictionary *line in _dialogueScene[@"lines"]) {
         NSMutableDictionary *page = [line mutableCopy];
-        page[@"channel"] = line[@"channel"] ?: @"MISSION BRIEFING";
+        page[@"channel"] = line[@"channel"] ?: L10n(@"briefing.channel_briefing");
         page[@"dialogue"] = @YES;
         [pages addObject:page];
     }
@@ -551,28 +552,28 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     // cue and each readout gets its own beat on the same wall monitor.
     for (NSString *text in brief[@"text"]) {
         [pages addObject:@{ @"speaker": speaker, @"portrait": portrait,
-                            @"text": text, @"channel": @"SITUATION" }];
+                            @"text": text, @"channel": L10n(@"briefing.channel_situation") }];
     }
     for (NSDictionary *step in brief[@"steps"]) {
         [pages addObject:@{ @"speaker": speaker, @"portrait": portrait, @"tactical": step,
                             @"text": step[@"caption"] ?: @"",
-                            @"channel": step[@"schematic"] ? @"TARGET SCHEMATIC" : @"FLIGHT PLAN" }];
+                            @"channel": L10n(step[@"schematic"] ? @"briefing.channel_schematic" : @"briefing.channel_flight_plan") }];
     }
 
     NSMutableArray<NSString *> *orders = [NSMutableArray array];
     for (NSDictionary *objective in mission[@"objectives"]) {
         [orders addObject:[NSString stringWithFormat:@"%@%@", objective[@"text"],
-                           [objective[@"optional"] boolValue] ? @" (optional)" : @""]];
+                           [objective[@"optional"] boolValue] ? L10n(@"briefing.optional_suffix") : @""]];
     }
     if (orders.count) {
         [pages addObject:@{ @"speaker": speaker, @"portrait": portrait, @"readout": orders,
-                            @"text": @"Your orders are on the board, Lancer.", @"channel": @"OBJECTIVES" }];
+                            @"text": L10n(@"briefing.orders_line"), @"channel": L10n(@"briefing.channel_objectives") }];
     }
     int torpedoes = [mission[@"loadout"][@"torpedoes"] intValue];
-    NSString *loadout = [NSString stringWithFormat:@"Loadout: twin lasers, %d torpedo%@", torpedoes, torpedoes == 1 ? @"" : @"es"];
+    NSString *loadout = L10nFormat(torpedoes == 1 ? @"briefing.loadout_one" : @"briefing.loadout_many", torpedoes);
     NSArray *intel = [(brief[@"intel"] ?: @[]) arrayByAddingObject:loadout];
     [pages addObject:@{ @"speaker": speaker, @"portrait": portrait, @"readout": intel,
-                        @"text": @"Check the intel and your loadout. Launch when ready.", @"channel": @"INTEL / LOADOUT" }];
+                        @"text": L10n(@"briefing.intel_line"), @"channel": L10n(@"briefing.channel_intel") }];
     _pages = pages;
     _page = MIN(startPage, pages.count - 1);
     _mode = ModeBriefing;
@@ -851,8 +852,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
     [self addCaption:page inRect:CGRectMake(CGRectGetMinX(screen), captionBottom, captionWidth, captionHeight)
              fontSize:textSize speakerOnRight:playerSpeaking];
-    [self footer:@"Click or ← / →  Browse briefing     Esc  Missions"
-           action:[self hasNextBriefingPage] ? @"SKIP" : @"↵  LAUNCH"];
+    [self footer:L10n(@"briefing.hint")
+           action:L10n([self hasNextBriefingPage] ? @"briefing.skip" : @"briefing.launch")];
 }
 
 - (void)buildMonitor:(CGRect)screen mission:(NSDictionary *)mission page:(NSDictionary *)page {
@@ -908,12 +909,12 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     CGFloat titleSize = MIN(21, MAX(12, width / 29));
     SKLabelNode *title = Para(titleSize, UIColorWithOpacity(UIInk, 1), width);
     title.fontName = UIInterfaceBoldFont;
-    title.text = [NSString stringWithFormat:@"%02lu  /  %@", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]];
+    title.text = L10nFormat(@"briefing.title", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]);
     title.position = CGPointMake(left, top);
     [display addChild:title];
 
     SKLabelNode *location = Para(MIN(13, MAX(9, width / 45)), UIColorWithOpacity(UIInk, 0.75), width);
-    location.text = [NSString stringWithFormat:@"%@  /  SD %@", brief[@"location"], brief[@"stardate"]];
+    location.text = L10nFormat(@"briefing.location", brief[@"location"], brief[@"stardate"]);
     location.position = CGPointMake(left, CGRectGetMinY(title.frame) - 4);
     [display addChild:location];
 
@@ -981,9 +982,9 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
             schematic.position = CGPointMake((left + right) / 2, bottom + 14 + height / 2);
             [group addChild:schematic];
             SKLabelNode *legend = Text(10, UIColorWithOpacity(UIRed, 1), SKLabelHorizontalAlignmentModeLeft);
-            NSDictionary *subsystems = @{ @"Core": @"REACTOR CORE", @"Engine": @"ENGINES",
-                                          @"Shield": @"SHIELD GENERATORS", @"Turret": @"TURRETS" };
-            legend.text = [NSString stringWithFormat:@"TARGET  /  %@", subsystems[schematicKind] ?: schematicKind.uppercaseString];
+            NSString *subsystemKey = [@"briefing.subsystem." stringByAppendingString:schematicKind.lowercaseString];
+            NSString *subsystem = L10n(subsystemKey);
+            legend.text = L10nFormat(@"briefing.target", [subsystem isEqualToString:subsystemKey] ? schematicKind.uppercaseString : subsystem);
             legend.position = CGPointMake(left, bottom + 12);
             [group addChild:legend];
             *kind = key;
@@ -1021,7 +1022,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
 
     // Gather everything with a position, then fit the x/z plane into the map.
     NSMutableArray<NSDictionary *> *things = [NSMutableArray array];
-    [things addObject:@{ @"id": @"start", @"pos": m[@"player"][@"pos"], @"kind": @"player", @"label": @"LANCER 1" }];
+    [things addObject:@{ @"id": @"start", @"pos": m[@"player"][@"pos"], @"kind": @"player", @"label": L10n(@"briefing.map_player") }];
     for (NSDictionary *e in m[@"entities"]) {
         NSString *team = e[@"team"];
         [things addObject:@{ @"id": e[@"id"], @"pos": e[@"pos"], @"kind": @"capital", @"team": team, @"label": e[@"name"] ?: e[@"asset"],
@@ -1030,12 +1031,12 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     for (NSDictionary *n in m[@"navs"]) [things addObject:@{ @"id": n[@"id"], @"pos": n[@"pos"], @"kind": @"nav", @"label": n[@"name"] }];
     for (NSDictionary *w in m[@"waves"]) {
         const ShipDef *ship = ShipDefNamed(w[@"ship"]);
-        NSString *label = w[@"name"] ?: [NSString stringWithFormat:@"%@x %@", w[@"count"], ship ? @(ship->displayName) : w[@"ship"]];
+        NSString *label = w[@"name"] ?: L10nFormat(@"briefing.map_wave", w[@"count"], ship ? @(ship->displayName) : w[@"ship"]);
         [things addObject:@{ @"id": w[@"id"], @"pos": w[@"pos"], @"kind": @"wave", @"team": w[@"team"], @"label": label }];
     }
     for (NSDictionary *f in m[@"fields"]) {
         if ([f[@"type"] isEqualToString:@"mines"])
-            [things addObject:@{ @"id": f[@"group"], @"pos": f[@"center"], @"kind": @"field", @"team": @"enemy", @"label": @"MINEFIELD", @"size": f[@"size"] }];
+            [things addObject:@{ @"id": f[@"group"], @"pos": f[@"center"], @"kind": @"field", @"team": @"enemy", @"label": L10n(@"briefing.map_minefield"), @"size": f[@"size"] }];
         if ([f[@"type"] isEqualToString:@"asteroids"])
             [things addObject:@{ @"id": @"_rocks", @"pos": f[@"center"], @"kind": @"rocks", @"radius": f[@"radius"], @"label": @"" }];
     }
@@ -1075,7 +1076,7 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     sb.name = @"scale";
     [_mapLayer addChild:sb];
     SKLabelNode *sl = Text(11, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeLeft);
-    sl.text = [NSString stringWithFormat:@"%.0f KM", bar / 1000];
+    sl.text = L10nFormat(@"units.km0", bar / 1000);
     sl.position = CGPointMake(_mapRect.origin.x + 16, _mapRect.origin.y + 36);
     sl.name = @"scale-label";
     [_mapLayer addChild:sl];
@@ -1412,7 +1413,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     CGFloat width = MAX(1, s.width - 2 * inset);
     CGFloat fontSize = MIN(23, MAX(15, s.width / 58));
     BOOL more = _success && _index + 1 < CampaignMissions().count;
-    NSString *next = more ? @"↵  NEXT MISSION" : @"↵  MISSIONS";
+    NSString *next = L10n(more ? @"debrief.next_mission" : @"debrief.missions");
 
     if (_debriefBeat > 0 && _debriefBeat <= conversation.count) {
         NSDictionary *line = conversation[_debriefBeat - 1];
@@ -1427,8 +1428,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         CGFloat captionBottom = MAX(compact ? 64 : 70, floor - CaptionDrop);
         [self addCaption:line inRect:CGRectMake(inset, captionBottom, width, captionHeight)
                  fontSize:fontSize speakerOnRight:playerSpeaking];
-        [self footer:@"← / →  Conversation     Esc  Missions"
-               action:_debriefBeat == conversation.count ? next : @"↵  CONTINUE"];
+        [self footer:L10n(@"debrief.conversation_hint")
+               action:_debriefBeat == conversation.count ? next : L10n(@"debrief.continue")];
         return;
     }
 
@@ -1437,13 +1438,12 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
                               _success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1),
                               SKLabelHorizontalAlignmentModeCenter);
     title.fontName = UIInterfaceBoldFont;
-    title.text = _success ? @"MISSION COMPLETE" : @"MISSION FAILED";
+    title.text = L10n(_success ? @"debrief.complete" : @"debrief.failed");
     title.position = CGPointMake(s.width / 2, top);
     [_root addChild:title];
     SKLabelNode *name = Para(16, UIColorWithOpacity(UIAmber, 0.9), width);
     name.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeCenter;
-    name.text = [NSString stringWithFormat:@"MISSION %02lu  /  %@", (unsigned long)_index + 1,
-                 [mission[@"title"] uppercaseString]];
+    name.text = L10nFormat(@"menu.mission_line", (unsigned long)_index + 1, [mission[@"title"] uppercaseString]);
     name.position = CGPointMake(s.width / 2, CGRectGetMinY(title.frame) - 10);
     [_root addChild:name];
     SKNode *report = [SKNode node];
@@ -1454,7 +1454,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     summary.position = CGPointMake(inset, reportTop);
     [report addChild:summary];
     SKLabelNode *results = Para(16, UIColorWithOpacity(UIInk, 0.75), MAX(1, width - ScrollGutter));
-    results.text = [@"OBJECTIVES\n" stringByAppendingString:[_results componentsJoinedByString:@"\n"] ?: @""];
+    results.text = [[L10n(@"debrief.objectives") stringByAppendingString:@"\n"] stringByAppendingString:[_results componentsJoinedByString:@"\n"] ?: @""];
     results.position = CGPointMake(inset, CGRectGetMinY(summary.frame) - 20);
     [report addChild:results];
     [_root addChild:[self textViewport:CGRectMake(inset, reportBottom, width, MAX(0, reportTop - reportBottom))
@@ -1479,8 +1479,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
         NSTimeInterval typed = UIMotionTypeOn(summary, 0.5, 160);
         UIMotionTypeOn(results, MAX(0.7, typed - 0.2), 200);
     }
-    [self footer:@"R  Fly again     Esc  Missions"
-           action:conversation.count ? @"↵  CONTINUE STORY" : (_success ? next : @"↵  RETRY")];
+    [self footer:L10n(@"debrief.hint")
+           action:conversation.count ? L10n(@"debrief.continue_story") : (_success ? next : L10n(@"debrief.retry"))];
 }
 
 #pragma mark - Input & animation

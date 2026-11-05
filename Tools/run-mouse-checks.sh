@@ -8,6 +8,7 @@ contents="$app/Contents"
 mkdir -p "$contents/MacOS" "$contents/Resources/Shaders"
 cp Resources/Info.plist "$contents/Info.plist"
 cp Resources/Shaders/*.fsh "$contents/Resources/Shaders/"
+for directory in Strings UI; do ln -s "$PWD/Resources/$directory" "$contents/Resources/$directory"; done
 /usr/libexec/PlistBuddy -c 'Set CFBundleExecutable MouseChecks' \
     -c 'Set CFBundleIdentifier com.igor.spacefight.mousechecks' \
     -c 'Set CFBundleName Mouse Checks' -c 'Add LSUIElement bool true' "$contents/Info.plist"

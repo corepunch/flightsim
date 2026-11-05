@@ -1,0 +1,16 @@
+{
+  "name": "Español",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Cargando misión…",
+    "loading.preparing_ship": "Preparando la nave…",
+    "loading.mission_ready": "Misión lista",
+    "loading.continue_prompt": "Toca en cualquier lugar para iniciar la misión",
+    "loading.charting_starfield": "Trazando el campo estelar…",
+    "loading.plotting_capital_ships": "Situando las naves capitales…",
+    "loading.scrambling_fighter_wings": "Movilizando los escuadrones de cazas…",
+    "loading.uploading_assets": "Cargando geometría y texturas…",
+    "loading.compiling_shaders": "Compilando sombreadores…",
+    "loading.mission_tip": "Revisa los objetivos de la misión antes de despegar."
+  }
+}

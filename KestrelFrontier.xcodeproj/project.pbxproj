@@ -57,6 +57,7 @@
 		832F120F0E272AF745DEBFC4 /* PauseMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = F823012616B291C3E4500451 /* PauseMenu.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		85C6C6216609A72F8E53538C /* NetMsg.m in Sources */ = {isa = PBXBuildFile; fileRef = 1DF4000571D64B268F825346 /* NetMsg.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		866AD1EB6957FE6E0FCB7AB6 /* GameAudio.m in Sources */ = {isa = PBXBuildFile; fileRef = 54A6625D3399BA37902C0C94 /* GameAudio.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		87E73A1EDCBF2DCC55778A26 /* Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 1388D38CB625F13520E5E2FA /* Localization.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		8AB6C4ED28436909A1E1C6C6 /* Effects.m in Sources */ = {isa = PBXBuildFile; fileRef = 2E015069601436664CDEE7EE /* Effects.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		9089BB3D562ACA6D16B3443A /* SceneKitRefresh.m in Sources */ = {isa = PBXBuildFile; fileRef = D4B848A51D4C6F1EB9CBD19F /* SceneKitRefresh.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		9495FF4E9C860E878390086B /* Server.m in Sources */ = {isa = PBXBuildFile; fileRef = 47C411751EC74E7AE3101743 /* Server.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
@@ -70,6 +71,7 @@
 		9C98CF9FBBB4F3E870A72407 /* NetChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CFDA83224EBC24B2A01D9D7 /* NetChannel.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		9DD3E038506807F0BED669EB /* NetChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CFDA83224EBC24B2A01D9D7 /* NetChannel.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		A47B25B97C64F8D1E1EE39B6 /* Client.m in Sources */ = {isa = PBXBuildFile; fileRef = FA0ADB7A3655C360ED99B8DC /* Client.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		A741547534C73A721F83CF72 /* UITheme.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BCB8FB895967539AF73F765 /* UITheme.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		AC71D88E0BE45410B0E6DE92 /* MainMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = C730A0D6699A8EDB589CB230 /* MainMenu.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		ACAFD3B172FD2B8F88AB3935 /* ClientView.m in Sources */ = {isa = PBXBuildFile; fileRef = 636DAF786E099300451F6AF5 /* ClientView.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		B0794638163672476DFD5ADB /* GMission.m in Sources */ = {isa = PBXBuildFile; fileRef = 3501BF6AFF60E66D76687CFE /* GMission.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
@@ -78,9 +80,11 @@
 		BA58EC1473DF9BBA54898BA9 /* NetTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = 0192E71202C149913DD460B1 /* NetTransport.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		BA8C59901424ADB48705ADB1 /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F59E4C1FBE609FAC2DF50AE /* Resources/Assets.xcassets */; };
 		BAF55C743B3299C6DFF2F2B3 /* NetTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = 0192E71202C149913DD460B1 /* NetTransport.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
+		BB4DBBFEE8AC5260CA7F9E1E /* Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 1388D38CB625F13520E5E2FA /* Localization.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		C34C5676FE59C72E803DBA44 /* ServerBrowser.m in Sources */ = {isa = PBXBuildFile; fileRef = FED89264205E9FCA0283B4D4 /* ServerBrowser.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		C4E744D75FB3FCECD20033C0 /* ModelInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E1B800B9DE031FFDBCA644D5 /* ModelInfo.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		C5EB970F6F9D6A01AA21691D /* Assets.m in Sources */ = {isa = PBXBuildFile; fileRef = 40F193704F3D6B4273923770 /* Assets.m */; };
+		C9C3D5C89DD08094D46213CE /* UITheme.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BCB8FB895967539AF73F765 /* UITheme.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		C9EC08DF6A8741972FDDC954 /* LensFlare.m in Sources */ = {isa = PBXBuildFile; fileRef = 762700A52A57454CC41E3B4C /* LensFlare.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		D0D85B5738A0076C32873336 /* GameLoader.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D7AD44D2CBAB40BBEFA00C3 /* GameLoader.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Engine/Prefix.h\""; }; };
 		D0E9677E0FE8B984E41EBC6C /* GTargeting.m in Sources */ = {isa = PBXBuildFile; fileRef = 697C2B4A8D05526206A00D47 /* GTargeting.m */; settings = {COMPILER_FLAGS = "-include \"$(SRCROOT)/Sources/Game/Prefix.h\""; }; };
@@ -135,6 +139,7 @@
 		05FD554367B7927FD082EE17 /* Exhaust.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Exhaust.h; sourceTree = "<group>"; };
 		0800EFD946EE779D7780ECB7 /* UIMotion.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UIMotion.h; sourceTree = "<group>"; };
 		0B3F4FF4580F51FE60D63D12 /* CvarFlags.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CvarFlags.h; sourceTree = "<group>"; };
+		1388D38CB625F13520E5E2FA /* Localization.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Localization.m; sourceTree = "<group>"; };
 		14A3FD612336DF5C08639DD4 /* Protocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Protocol.h; sourceTree = "<group>"; };
 		151E73B5908ED0B7CAA902EE /* NetProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetProtocol.h; sourceTree = "<group>"; };
 		1633E1957F7C4AB02AF3A827 /* Prefix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Prefix.h; sourceTree = "<group>"; };
@@ -144,9 +149,11 @@
 		27B534DF06E0F6E626965F2A /* Client.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Client.h; sourceTree = "<group>"; };
 		2ACB1B6BE7DACE217AF29CB6 /* ShipMove.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ShipMove.c; sourceTree = "<group>"; };
 		2B9EE21F63A70C7A03D68CF1 /* GMain.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GMain.m; sourceTree = "<group>"; };
+		2BCB8FB895967539AF73F765 /* UITheme.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = UITheme.m; sourceTree = "<group>"; };
 		2E015069601436664CDEE7EE /* Effects.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Effects.m; sourceTree = "<group>"; };
 		2F59E4C1FBE609FAC2DF50AE /* Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
 		2F65CF19DDD6E64F52390E71 /* ShipView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ShipView.m; sourceTree = "<group>"; };
+		30FE005D4D903B8D79F8BA02 /* UITheme.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UITheme.h; sourceTree = "<group>"; };
 		349A02879EAA7FD6DE844BB0 /* GameAPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameAPI.h; sourceTree = "<group>"; };
 		3501BF6AFF60E66D76687CFE /* GMission.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GMission.m; sourceTree = "<group>"; };
 		364505059E18631CF1A12ED1 /* Progress.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Progress.m; sourceTree = "<group>"; };
@@ -180,6 +187,7 @@
 		762700A52A57454CC41E3B4C /* LensFlare.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LensFlare.m; sourceTree = "<group>"; };
 		789A261685BB7D198FD844AB /* UDPTransport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UDPTransport.h; sourceTree = "<group>"; };
 		78EFC49A0D9351DC6561B614 /* InputIOS.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InputIOS.m; sourceTree = "<group>"; };
+		7BED40911B36133DCDA840CF /* Localization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Localization.h; sourceTree = "<group>"; };
 		7C32390EA8CBB06D4BCFE81E /* UIMotion.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = UIMotion.m; sourceTree = "<group>"; };
 		7D33C3D3B94813A0376410D8 /* GWeapons.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GWeapons.m; sourceTree = "<group>"; };
 		7D9D66CE55ECFF849E8F5A18 /* Cockpit.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Cockpit.m; sourceTree = "<group>"; };
@@ -234,7 +242,6 @@
 		F9632954BE94324DE06F9844 /* PauseMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PauseMenu.h; sourceTree = "<group>"; };
 		FA0ADB7A3655C360ED99B8DC /* Client.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Client.m; sourceTree = "<group>"; };
 		FED89264205E9FCA0283B4D4 /* ServerBrowser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ServerBrowser.m; sourceTree = "<group>"; };
-		FFD254A8F67061025159DC33 /* LoadingLocalization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LoadingLocalization.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -265,7 +272,6 @@
 				F1E7F2E93458338C939D87F3 /* Briefing.m */,
 				F8AA5E909FD98BA8A8CE154F /* Loading.h */,
 				D17A50858700207A61743937 /* Loading.m */,
-				FFD254A8F67061025159DC33 /* LoadingLocalization.h */,
 				C7416FF7A83F4818FD3CEE79 /* MainMenu.h */,
 				C730A0D6699A8EDB589CB230 /* MainMenu.m */,
 				1EE48ABFA006EA41A782521B /* MonitorSignal.h */,
@@ -279,6 +285,8 @@
 				0800EFD946EE779D7780ECB7 /* UIMotion.h */,
 				7C32390EA8CBB06D4BCFE81E /* UIMotion.m */,
 				0121C9D1523A192D5381DADD /* UIStyle.h */,
+				30FE005D4D903B8D79F8BA02 /* UITheme.h */,
+				2BCB8FB895967539AF73F765 /* UITheme.m */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -367,6 +375,8 @@
 				714E0A7A2433FFA546F7B620 /* Cmd.m */,
 				B68EBE50E2DA3CF7C21EDDE6 /* Cvar.h */,
 				E947095C9A2A14660C2A02D6 /* Cvar.m */,
+				7BED40911B36133DCDA840CF /* Localization.h */,
+				1388D38CB625F13520E5E2FA /* Localization.m */,
 			);
 			path = Common;
 			sourceTree = "<group>";
@@ -596,6 +606,7 @@
 				7B6CA22EC859815F5E523DF1 /* GameView.m in Sources */,
 				328D247AE9EE8EC7C7745FB9 /* Host.m in Sources */,
 				D32BA9B6FE6986CFC5F90765 /* Input.m in Sources */,
+				BB4DBBFEE8AC5260CA7F9E1E /* Localization.m in Sources */,
 				291D6E6909C1E85A7B4F9EB2 /* SceneKitRefresh.m in Sources */,
 				D1CA0A86324D7C64EFF5A26D /* main.m in Sources */,
 				17ECBDED95F68A3CB030196B /* Client.m in Sources */,
@@ -631,6 +642,7 @@
 				4DF56D7F0E3ED68149B736B8 /* UIMotion.m in Sources */,
 				975B61AC13A2C20C93310039 /* Assets.m in Sources */,
 				DDC0D67AAAA5499A4BEA641A /* ShipMove.c in Sources */,
+				A741547534C73A721F83CF72 /* UITheme.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -642,6 +654,7 @@
 				1B274F62EA705156334CA43E /* GameViewIOS.m in Sources */,
 				21B0FC682C3B59BC5561C1F4 /* Host.m in Sources */,
 				08CD45E734764309FC770345 /* InputIOS.m in Sources */,
+				87E73A1EDCBF2DCC55778A26 /* Localization.m in Sources */,
 				9089BB3D562ACA6D16B3443A /* SceneKitRefresh.m in Sources */,
 				9899D958E348C7E74DE15FA0 /* TouchFlightControls.m in Sources */,
 				48F4276C4C5609F253933B13 /* mainIOS.m in Sources */,
@@ -683,6 +696,7 @@
 				2A59CF3E29DCE1823974B5A2 /* GWeapons.m in Sources */,
 				C5EB970F6F9D6A01AA21691D /* Assets.m in Sources */,
 				419640121AD728914FAEB565 /* ShipMove.c in Sources */,
+				C9C3D5C89DD08094D46213CE /* UITheme.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,0 +1,16 @@
+{
+  "name": "Polski",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Wczytywanie misji…",
+    "loading.preparing_ship": "Przygotowywanie statku…",
+    "loading.mission_ready": "Misja gotowa",
+    "loading.continue_prompt": "Dotknij dowolnego miejsca, aby rozpocząć misję",
+    "loading.charting_starfield": "Tworzenie mapy gwiazd…",
+    "loading.plotting_capital_ships": "Rozmieszczanie okrętów liniowych…",
+    "loading.scrambling_fighter_wings": "Mobilizowanie eskadr myśliwców…",
+    "loading.uploading_assets": "Przesyłanie geometrii i tekstur…",
+    "loading.compiling_shaders": "Kompilowanie shaderów…",
+    "loading.mission_tip": "Sprawdź cele misji przed startem."
+  }
+}

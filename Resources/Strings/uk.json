@@ -1,0 +1,16 @@
+{
+  "name": "Українська",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Завантаження місії…",
+    "loading.preparing_ship": "Підготовка корабля…",
+    "loading.mission_ready": "Місія готова",
+    "loading.continue_prompt": "Торкніться екрана будь-де, щоб почати місію",
+    "loading.charting_starfield": "Побудова зоряної карти…",
+    "loading.plotting_capital_ships": "Розміщення великих кораблів…",
+    "loading.scrambling_fighter_wings": "Підготовка ескадрилей винищувачів…",
+    "loading.uploading_assets": "Завантаження геометрії та текстур…",
+    "loading.compiling_shaders": "Компіляція шейдерів…",
+    "loading.mission_tip": "Перегляньте цілі місії перед вильотом."
+  }
+}

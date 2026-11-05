@@ -1,0 +1,16 @@
+{
+  "name": "Tiếng Việt",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Đang tải nhiệm vụ…",
+    "loading.preparing_ship": "Đang chuẩn bị tàu vũ trụ…",
+    "loading.mission_ready": "Nhiệm vụ đã sẵn sàng",
+    "loading.continue_prompt": "Chạm vào vị trí bất kỳ để bắt đầu nhiệm vụ",
+    "loading.charting_starfield": "Đang lập bản đồ sao…",
+    "loading.plotting_capital_ships": "Đang bố trí chiến hạm chủ lực…",
+    "loading.scrambling_fighter_wings": "Đang chuẩn bị các phi đội tiêm kích…",
+    "loading.uploading_assets": "Đang tải hình học và kết cấu…",
+    "loading.compiling_shaders": "Đang biên dịch shader…",
+    "loading.mission_tip": "Xem lại mục tiêu nhiệm vụ trước khi cất cánh."
+  }
+}

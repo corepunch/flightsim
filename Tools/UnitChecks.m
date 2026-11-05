@@ -10,6 +10,7 @@
 #import "Cvar.h"
 #import "Cmd.h"
 #import "NetProtocol.h"
+#import "Localization.h"
 
 static int failures;
 
@@ -319,6 +320,21 @@ static void CheckDefinitions(void) {
     CHECK(ProjectileDefForModel(ProjectileModelName(@"torpedo")) == torpedo && ProjectileDefForModel(@"ship:wasp") == NULL);
 }
 
+// The catalog lookups the UI relies on: English text, lists, formats, and the
+// key itself when nothing has it. (Tools/validate_strings.py checks the files.)
+static void CheckLocalization(void) {
+    CHECK(L10nCatalogs()[@"en"] != nil && L10nCatalogs().count >= 2);
+    CHECK(L10nLocale().length > 0);
+    CHECK([L10n(@"no.such.key") isEqualToString:@"no.such.key"]);
+    CHECK(L10nList(@"no.such.key").count == 0);
+    CHECK(L10n(@"menu.quit").length > 0 && ![L10n(@"menu.quit") isEqualToString:@"menu.quit"]);
+    CHECK(L10nList(@"hud.help").count > 1 && L10nList(@"menu.quit").count == 1);
+    NSDictionary *en = L10nCatalogs()[@"en"][@"strings"];
+    NSString *expected = [NSString stringWithFormat:en[@"hud.score"], 3, 1];
+    if ([L10nLocale() isEqualToString:@"en"]) CHECK([L10nFormat(@"hud.score", 3, 1) isEqualToString:expected]);
+    CHECK([expected containsString:@"3"] && [expected containsString:@"1"]);
+}
+
 int main(void) {
     @autoreleasepool {
         CheckShipMove();
@@ -328,11 +344,12 @@ int main(void) {
         CheckConsole();
         CheckCampaign();
         CheckDefinitions();
+        CheckLocalization();
         if (failures) {
             fprintf(stderr, "%d check(s) failed\n", failures);
             return 1;
         }
-        printf("PASS: flight model, wire format, console, campaign and definition data\n");
+        printf("PASS: flight model, wire format, console, campaign, definition data and localization\n");
     }
     return 0;
 }

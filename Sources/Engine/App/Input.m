@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_OSX
 #import "Input.h"
+#import "Localization.h"
 #import "Cvar.h"
 #import <Carbon/Carbon.h>
 #import <IOKit/hid/IOHIDManager.h>
@@ -171,7 +172,7 @@ static float Normalise(IOHIDElementRef el, CFIndex raw) {
     os_unfair_lock_unlock(&_lock);
 
     NSString *name = (__bridge NSString *)IOHIDDeviceGetProperty(device, CFSTR(kIOHIDProductKey));
-    self.joystickName = name ?: @"Joystick";
+    self.joystickName = name ?: L10n(@"input.joystick");
     [self updateAxisDescription];
     NSLog(@"Input: joystick attached: %@ (%d axes) %@", self.joystickName, _axisCount, self.axisDescription);
 }

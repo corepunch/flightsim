@@ -1,38 +1,36 @@
 #import <SpriteKit/SpriteKit.h>
 
-typedef struct { CGFloat r, g, b; } UIRGB;
+#import "UITheme.h"
 
-// Phosphor for interface text and outlines, amber for emphasis, red for danger.
-static const UIRGB UIInk = { 0.55, 0.95, 0.85 };
-static const UIRGB UIAmber = { 1.0, 0.72, 0.30 };
-static const UIRGB UIRed = { 1.0, 0.42, 0.32 };
-static const UIRGB UIBlue = { 0.45, 0.75, 1.0 };
-static const UIRGB UIFriendly = { 0.40, 0.95, 0.50 };
-static const UIRGB UIHUDNeutral = { 0.95, 0.88, 0.45 };
-static const UIRGB UIShield = { 0.40, 0.70, 1.0 };
-static const UIRGB UIBoost = { 1.0, 0.75, 0.30 };
-static const UIRGB UIYellow = { 0.95, 0.90, 0.45 };
-static const UIRGB UIBackground = { 0.012, 0.018, 0.028 };
-static const UIRGB UIPanel = { 0.018, 0.065, 0.085 };
-static const UIRGB UIMap = { 0, 0.06, 0.06 };
-static const UIRGB UIBlack = { 0, 0, 0 };
-static const UIRGB UIWhite = { 1, 1, 1 };
-static const UIRGB UIField = { 0.55, 0.55, 0.55 };
-// The Bastion console variant adds dark steel, copper edging, and glass.
-static const UIRGB UIConsoleSteel = { 0.055, 0.047, 0.041 };
-static const UIRGB UIConsoleEdge = { 0.51, 0.31, 0.17 };
-static const UIRGB UIConsoleGlass = { 0.014, 0.055, 0.058 };
-
-// Fixed-width cockpit telemetry; proportional Oxanium for the front end.
-static NSString * const UIMonoFont = @"Menlo";
-static NSString * const UIMonoBoldFont = @"Menlo-Bold";
-static NSString * const UIInterfaceFont = @"Oxanium-Regular";
-static NSString * const UIInterfaceBoldFont = @"Oxanium-Bold";
-static NSString * const UIBodyFont = @"Oxanium-Regular";
-static NSString * const UIBodyMediumFont = @"Oxanium-Medium";
-
-static const CGFloat UISlant = 0.36;
-static const CGFloat UIReadoutChamfer = 9;
+// The palette, fonts and metrics, from Resources/UI/theme.json (see UITheme.h).
+#define UIInk UIThemeColor(@"ink")
+#define UIAmber UIThemeColor(@"amber")
+#define UIRed UIThemeColor(@"red")
+#define UIBlue UIThemeColor(@"blue")
+#define UIFriendly UIThemeColor(@"friendly")
+#define UIHUDNeutral UIThemeColor(@"hudNeutral")
+#define UIShield UIThemeColor(@"shield")
+#define UIBoost UIThemeColor(@"boost")
+#define UIYellow UIThemeColor(@"yellow")
+#define UIBackground UIThemeColor(@"background")
+#define UIPanel UIThemeColor(@"panel")
+#define UIMap UIThemeColor(@"map")
+#define UIBlack UIThemeColor(@"black")
+#define UIWhite UIThemeColor(@"white")
+#define UIField UIThemeColor(@"field")
+#define UIConsoleSteel UIThemeColor(@"consoleSteel")
+#define UIConsoleEdge UIThemeColor(@"consoleEdge")
+#define UIConsoleGlass UIThemeColor(@"consoleGlass")
+#define UIMenuNight UIThemeColor(@"menuNight")
+#define UIMenuTitle UIThemeColor(@"menuTitle")
+#define UIMonoFont UIThemeFont(@"mono")
+#define UIMonoBoldFont UIThemeFont(@"monoBold")
+#define UIInterfaceFont UIThemeFont(@"interface")
+#define UIInterfaceBoldFont UIThemeFont(@"interfaceBold")
+#define UIBodyFont UIThemeFont(@"body")
+#define UIBodyMediumFont UIThemeFont(@"bodyMedium")
+#define UISlant UIThemeMetric(@"slant")
+#define UIReadoutChamfer UIThemeMetric(@"readoutChamfer")
 
 static inline SKColor *UIColorWithOpacity(UIRGB color, CGFloat opacity) {
     return [SKColor colorWithRed:color.r green:color.g blue:color.b alpha:opacity];

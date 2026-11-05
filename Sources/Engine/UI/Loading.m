@@ -1,7 +1,7 @@
 #import "Loading.h"
 #import "GameAudio.h"
 #import "UIStyle.h"
-#import "LoadingLocalization.h"
+#import "Localization.h"
 #import "PlatformImage.h"
 #import <stdatomic.h>
 
@@ -9,22 +9,9 @@ static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMod
     return UIInterfaceLabel(size, c, h, SKLabelVerticalAlignmentModeBaseline);
 }
 
+// Gameplay tips where the locale has them; otherwise one generic line.
 static NSArray<NSString *> *Tips(void) {
-    if (![LoadingLocale() isEqualToString:@"en"])
-        return @[LoadingText(@"mission_tip", @"Review your mission objectives before launch.")];
-    return @[
-        @"Hold SHIFT or TAB to boost. Boost energy recharges while you cruise.",
-        @"T cycles targets. The lead marker shows where to shoot, not where the target is.",
-        @"G launches a torpedo at the selected target. Aim at a subsystem to cripple a capital ship.",
-        @"Knock out shield generators first: a shielded capital ship shrugs off torpedoes.",
-        @"Z sets full throttle, X cuts it. Slow down to turn tighter in a dogfight.",
-        @"C switches between the cockpit and the chase camera.",
-        @"Click to capture the mouse; click the wheel to recentre the virtual stick.",
-        @"Hold the right mouse button and move sideways to roll. Q and E also roll.",
-        @"Scroll the wheel forward to increase thrust, or backward to slow down.",
-        @"R restarts the mission. H or F1 shows the controls at any time.",
-        @"Mines drift toward anything that comes close. Shoot them from range.",
-    ];
+    return L10nHasOwn(@"loading.tips") ? L10nList(@"loading.tips") : L10nList(@"loading.mission_tip");
 }
 
 @implementation Loading {
@@ -54,7 +41,7 @@ static NSArray<NSString *> *Tips(void) {
         _stars = [NSMutableArray array];
         _tip = arc4random_uniform((uint32_t)Tips().count);
         _title = _kicker = _detail = @"";
-        _status = LoadingText(@"loading_mission", @"Loading mission…");
+        _status = L10n(@"loading.loading_mission");
         NSURL *hangar = [NSBundle.mainBundle URLForResource:@"Hangar" withExtension:@"png" subdirectory:@"Menu"];
         PlatformImage *image = hangar ? [[PlatformImage alloc] initWithContentsOfFile:hangar.path] : nil;
         if (image) _hangarTexture = [SKTexture textureWithImage:image];
@@ -66,7 +53,7 @@ static NSArray<NSString *> *Tips(void) {
     _title = [title.uppercaseString copy] ?: @"";
     _kicker = [kicker copy] ?: @"";
     _detail = [detail copy] ?: @"";
-    _status = LoadingText(@"loading_mission", @"Loading mission…");
+    _status = L10n(@"loading.loading_mission");
     self.readyToStart = NO;
     _target = _shown = 0;
     _fadeRequested = NO;
@@ -217,7 +204,7 @@ static NSArray<NSString *> *Tips(void) {
     _statusLabel.fontName = UIBodyFont;
     _statusLabel.numberOfLines = 2;
     _statusLabel.preferredMaxLayoutWidth = MAX(1, _barWidth - 64);
-    if (LoadingIsRTL()) {
+    if (L10nIsRightToLeft()) {
         _statusLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
         _statusLabel.position = CGPointMake(x + _barWidth - 64, barY + 20);
     }
@@ -233,7 +220,7 @@ static NSArray<NSString *> *Tips(void) {
     _tipLabel.position = CGPointMake(x, barY - 22);
     _tipLabel.fontName = UIBodyFont;
     _tipLabel.text = Tips()[_tip];
-    if (LoadingIsRTL()) {
+    if (L10nIsRightToLeft()) {
         _tipLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
         _tipLabel.position = CGPointMake(x + _barWidth, barY - 22);
     }
@@ -244,7 +231,7 @@ static NSArray<NSString *> *Tips(void) {
     _startLabel.numberOfLines = 0;
     _startLabel.preferredMaxLayoutWidth = MAX(1, s.width - 2 * x);
     _startLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeBottom;
-    _startLabel.text = LoadingText(@"continue_prompt", @"Tap anywhere to start mission");
+    _startLabel.text = L10n(@"loading.continue_prompt");
     _startLabel.position = CGPointMake(s.width * 0.5, 172);
     _startLabel.hidden = !self.readyToStart;
     [_root addChild:_startLabel];

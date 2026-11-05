@@ -8,7 +8,7 @@
 #import "MainMenu.h"
 #import "PauseMenu.h"
 #import "Loading.h"
-#import "LoadingLocalization.h"
+#import "Localization.h"
 #import "Progress.h"
 #import "NetTransport.h"
 #import "UDPTransport.h"
@@ -29,9 +29,9 @@
 
 static NSString *PilotName(void) {
 #if TARGET_OS_IOS
-    return @"Pilot";
+    return L10n(@"net.default_pilot");
 #else
-    return NSFullUserName() ?: @"Pilot";
+    return NSFullUserName() ?: L10n(@"net.default_pilot");
 #endif
 }
 
@@ -44,16 +44,16 @@ typedef NS_ENUM(int, LoadStage) {
 };
 static NSString *LoadStatus(LoadStage s) {
     switch (s) {
-        case LoadStageStart: return LoadingText(@"loading_mission", @"Loading mission…");
-        case LoadStageSky: return LoadingText(@"charting_starfield", @"Charting starfield…");
-        case LoadStageCockpit: return LoadingText(@"preparing_ship", @"Preparing spacecraft…");
-        case LoadStageFleet: return LoadingText(@"plotting_capital_ships", @"Plotting capital ships…");
-        case LoadStageWings: return LoadingText(@"scrambling_fighter_wings", @"Scrambling fighter wings…");
-        case LoadStageUpload: return LoadingText(@"uploading_assets", @"Uploading geometry and textures…");
-        case LoadStageShaders: return LoadingText(@"compiling_shaders", @"Compiling shaders…");
-        case LoadStageReady: return LoadingText(@"mission_ready", @"Mission ready");
+        case LoadStageStart: return L10n(@"loading.loading_mission");
+        case LoadStageSky: return L10n(@"loading.charting_starfield");
+        case LoadStageCockpit: return L10n(@"loading.preparing_ship");
+        case LoadStageFleet: return L10n(@"loading.plotting_capital_ships");
+        case LoadStageWings: return L10n(@"loading.scrambling_fighter_wings");
+        case LoadStageUpload: return L10n(@"loading.uploading_assets");
+        case LoadStageShaders: return L10n(@"loading.compiling_shaders");
+        case LoadStageReady: return L10n(@"loading.mission_ready");
     }
-    return LoadingText(@"loading_mission", @"Loading mission…");
+    return L10n(@"loading.loading_mission");
 }
 
 static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the title card
@@ -108,8 +108,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _mainMenu = [[MainMenu alloc] initWithSize:view.bounds.size];
         _pauseMenu = [[PauseMenu alloc] initWithSize:view.bounds.size];
         _loading = [[Loading alloc] initWithSize:view.bounds.size];
-        [_loading showTitle:@"Kestrel Frontier" kicker:@"SPACE FIGHT"
-                     detail:@"CNS BASTION  /  LANCER FLIGHT"];
+        [_loading showTitle:L10n(@"game.title") kicker:L10n(@"game.kicker") detail:L10n(@"game.unit")];
         _refresh = [[SceneKitRefresh alloc] initWithRenderer:view size:view.bounds.size];
         _clientView = [[ClientView alloc] initWithRefresh:_refresh input:input];
         _clientView.cockpit = _cockpit.boolValue;
@@ -122,7 +121,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _client.disconnectHandler = ^(NSString *reason) { [weakSelf disconnected:reason]; };
         // The local server: this player reaches it over loopback, with the
         // same packets a remote player would send.
-        _server = [[Server alloc] initWithName:[NSString stringWithFormat:@"%@'s game", PilotName()]];
+        _server = [[Server alloc] initWithName:L10nFormat(@"net.server_name", PilotName())];
         [_server addTransport:[LoopbackTransport side:1]];
         int port = [Cvar get:@"net_port" defaultValue:[NSString stringWithFormat:@"%d", PORT_SERVER] flags:CVAR_NOSET
                         help:@"UDP port the local server listens on; 0 turns hosting off"].integer;
@@ -131,8 +130,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             if (_serverUDP) [_server addTransport:_serverUDP];
         }
         _browser = [[ServerBrowser alloc] initWithSize:view.bounds.size];
-        _browser.hostLine = _serverUDP ? [NSString stringWithFormat:@"Your missions are open to this network on UDP port %d", _serverUDP.port]
-                                       : @"Hosting is off (no UDP port)";
+        _browser.hostLine = _serverUDP ? L10nFormat(@"browser.hosting_on", _serverUDP.port)
+                                       : L10n(@"browser.hosting_off");
         [self connectLocal];
 
         // Show the loading card over an empty scene right away; the real scene
@@ -265,14 +264,14 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     if (!_clientUDP) _clientUDP = [[UDPTransport alloc] initWithPort:0 attempts:1];
     NSLog(@"Host: joining %@", address);
     [_client connectTo:address transport:_clientUDP name:PilotName()];
-    [_browser setStatus:[NSString stringWithFormat:@"Connecting to %@... waiting for the host to launch a mission", address]];
+    [_browser setStatus:L10nFormat(@"browser.connecting", address)];
 }
 
 - (void)showBrowser {
     _browserReturnState = _state;
     _state = HostStateBrowser;
     if (!_lan) _lan = [LANBrowser new];
-    [_browser setStatus:self.remote ? [NSString stringWithFormat:@"Connected to %@", _client.serverAddress] : @""];
+    [_browser setStatus:self.remote ? L10nFormat(@"browser.connected", _client.serverAddress) : @""];
     if (!_revealing) [self presentOverlay:_browser];
 }
 
@@ -436,9 +435,9 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     NSDictionary *mission = CampaignMission(index);
 
     NSDictionary *b = mission[@"briefing"];
-    NSString *detail = b[@"stardate"] ? [NSString stringWithFormat:@"%@   /   SD %@", b[@"location"] ?: @"", b[@"stardate"]] : b[@"location"];
+    NSString *detail = b[@"stardate"] ? L10nFormat(@"loading.location_stardate", b[@"location"] ?: @"", b[@"stardate"]) : b[@"location"];
     [_loading showTitle:mission[@"title"]
-                 kicker:[NSString stringWithFormat:@"KESTREL FRONTIER  /  MISSION %02lu", (unsigned long)index + 1]
+                 kicker:L10nFormat(@"loading.mission_kicker", (unsigned long)index + 1)
                  detail:detail];
     [self reportStage:LoadStageStart progress:0];
     atomic_store(&_loadDone, false);

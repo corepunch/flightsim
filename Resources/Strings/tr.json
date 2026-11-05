@@ -1,0 +1,16 @@
+{
+  "name": "Türkçe",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Görev yükleniyor…",
+    "loading.preparing_ship": "Uzay aracı hazırlanıyor…",
+    "loading.mission_ready": "Görev hazır",
+    "loading.continue_prompt": "Görevi başlatmak için herhangi bir yere dokunun",
+    "loading.charting_starfield": "Yıldız haritası çiziliyor…",
+    "loading.plotting_capital_ships": "Ana gemiler yerleştiriliyor…",
+    "loading.scrambling_fighter_wings": "Avcı filoları hazırlanıyor…",
+    "loading.uploading_assets": "Geometri ve dokular yükleniyor…",
+    "loading.compiling_shaders": "Gölgelendiriciler derleniyor…",
+    "loading.mission_tip": "Kalkıştan önce görev hedeflerini gözden geçirin."
+  }
+}

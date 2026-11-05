@@ -1,0 +1,16 @@
+{
+  "name": "Русский",
+  "direction": "ltr",
+  "strings": {
+    "loading.loading_mission": "Загрузка миссии…",
+    "loading.preparing_ship": "Подготовка корабля…",
+    "loading.mission_ready": "Миссия готова",
+    "loading.continue_prompt": "Коснитесь экрана в любом месте, чтобы начать миссию",
+    "loading.charting_starfield": "Построение звёздной карты…",
+    "loading.plotting_capital_ships": "Размещение крупных кораблей…",
+    "loading.scrambling_fighter_wings": "Подготовка истребительных эскадрилий…",
+    "loading.uploading_assets": "Загрузка геометрии и текстур…",
+    "loading.compiling_shaders": "Компиляция шейдеров…",
+    "loading.mission_tip": "Изучите цели миссии перед вылетом."
+  }
+}

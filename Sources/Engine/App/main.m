@@ -11,13 +11,14 @@
 #import "Assets.h"
 #import "Cvar.h"
 #import "Cmd.h"
+#import "Localization.h"
 #import <QuartzCore/QuartzCore.h>
 
 // Headless server: SpaceFight --dedicated [mission]. Flies the campaign from
 // that mission on, moving to the next one ten seconds after each debrief.
 // +map <n> on the command line (or from a cfg) changes the mission.
 static int RunDedicated(int mission) {
-    Server *server = [[Server alloc] initWithName:[NSString stringWithFormat:@"%@ (dedicated)", NSHost.currentHost.localizedName ?: @"Server"]];
+    Server *server = [[Server alloc] initWithName:L10nFormat(@"net.dedicated_name", NSHost.currentHost.localizedName ?: L10n(@"net.default_server"))];
     int port = [Cvar get:@"net_port" defaultValue:[NSString stringWithFormat:@"%d", PORT_SERVER] flags:CVAR_NOSET
                     help:@"UDP port the server listens on"].integer;
     UDPTransport *udp = [[UDPTransport alloc] initWithPort:port > 0 ? port : PORT_SERVER attempts:4];
@@ -70,9 +71,9 @@ static int RunDedicated(int mission) {
     NSMenuItem *appItem = [NSMenuItem new];
     [bar addItem:appItem];
     NSMenu *appMenu = [NSMenu new];
-    [appMenu addItemWithTitle:@"Toggle Full Screen" action:@selector(toggleFullScreen:) keyEquivalent:@"f"];
+    [appMenu addItemWithTitle:L10n(@"app.full_screen") action:@selector(toggleFullScreen:) keyEquivalent:@"f"];
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Quit Kestrel Frontier" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenu addItemWithTitle:L10nFormat(@"app.quit", L10n(@"game.title")) action:@selector(terminate:) keyEquivalent:@"q"];
     appItem.submenu = appMenu;
     NSApp.mainMenu = bar;
 }
@@ -84,7 +85,7 @@ static int RunDedicated(int mission) {
                                               styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                                                         NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                                                 backing:NSBackingStoreBuffered defer:NO];
-    self.window.title = @"Kestrel Frontier";
+    self.window.title = L10n(@"game.title");
     self.window.contentMinSize = NSMakeSize(640, 360);
     self.window.collectionBehavior = NSWindowCollectionBehaviorFullScreenPrimary;
     [self.window center];
@@ -120,7 +121,7 @@ int main(int argc, const char *argv[]) {
         // AppKit can abort during startup if the launcher cannot reach WindowServer.
         CFDictionaryRef session = CGSessionCopyCurrentDictionary();
         if (!session) {
-            fputs("Kestrel Frontier requires access to the macOS desktop. Open SpaceFight.app from Finder.\n", stderr);
+            fprintf(stderr, "%s\n", L10nFormat(@"app.needs_desktop", L10n(@"game.title")).UTF8String);
             return EXIT_FAILURE;
         }
         CFRelease(session);

@@ -1,0 +1,16 @@
+{
+  "name": "العربية",
+  "direction": "rtl",
+  "strings": {
+    "loading.loading_mission": "جارٍ تحميل المهمة…",
+    "loading.preparing_ship": "جارٍ تجهيز المركبة الفضائية…",
+    "loading.mission_ready": "المهمة جاهزة",
+    "loading.continue_prompt": "انقر في أي مكان لبدء المهمة",
+    "loading.charting_starfield": "جارٍ رسم خريطة النجوم…",
+    "loading.plotting_capital_ships": "جارٍ تحديد مواقع السفن الرئيسية…",
+    "loading.scrambling_fighter_wings": "جارٍ تجهيز أسراب المقاتلات…",
+    "loading.uploading_assets": "جارٍ تحميل المجسمات والخامات…",
+    "loading.compiling_shaders": "جارٍ تجميع برامج التظليل…",
+    "loading.mission_tip": "راجع أهداف المهمة قبل الانطلاق."
+  }
+}
