@@ -94,12 +94,15 @@ static int CheckScrolling(void) {
     return EXIT_SUCCESS;
 }
 
+#include "CampaignSafeAreaChecks.h"
+
 int main(void) {
     @autoreleasepool {
         [NSApplication sharedApplication];
         NSUInteger count = CampaignMissions().count;
         CHECK(count > 0);
         if (CheckScrolling() != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (CheckCampaignSafeAreas() != EXIT_SUCCESS) return EXIT_FAILURE;
 
         for (NSValue *value in @[[NSValue valueWithSize:NSMakeSize(1600, 900)],
                                  [NSValue valueWithSize:NSMakeSize(640, 660)],
@@ -188,3 +191,4 @@ int main(void) {
     }
     return EXIT_SUCCESS;
 }
+
