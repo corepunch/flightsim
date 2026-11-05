@@ -25,6 +25,17 @@ static NSString * const CaretName = @"motion.caret";
 @end
 
 BOOL UIMotionReduced(void) {
+    // ui_reduceMotion overrides the system setting: 0 or 1 forces it, empty
+    // follows the system. Checks and scripted runs set it so they see the
+    // same motion on every machine.
+    static Cvar *c;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        c = [Cvar get:@"ui_reduceMotion" defaultValue:@"" flags:0
+                 help:@"Reduce front-end motion: 0 off, 1 on, empty follows the system setting"];
+    });
+    NSString *override = c.string;
+    if (override.length) return c.boolValue;
 #if TARGET_OS_IOS
     return UIAccessibilityIsReduceMotionEnabled();
 #else
