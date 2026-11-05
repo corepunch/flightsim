@@ -176,9 +176,11 @@ void WritePlayerState(MsgWriter *w, const PlayerState *ps) {
     [w f32:m->throttle];
     [w f32:m->boostEnergy];
     [w u8:(uint8_t)(m->boosting | (m->boostDepleted << 1) | (ps->alive << 2))];
-    [w f32:ps->params.maxSpeed];
-    [w f32:ps->params.turnRate];
+    const float *params = (const float *)&ps->params;
+    for (size_t i = 0; i < sizeof(ShipParams) / sizeof(float); i++) [w f32:params[i]];
     [w u16:ps->entity];
+    [w u16:ps->model];
+    [w u8:ps->team];
     [w f32:ps->hull];
     [w f32:ps->shield];
     [w f32:ps->missionTime];
@@ -199,9 +201,11 @@ void ReadPlayerState(MsgReader *r, PlayerState *ps) {
     m->boosting = b & 1;
     m->boostDepleted = (b >> 1) & 1;
     ps->alive = (b >> 2) & 1;
-    ps->params.maxSpeed = [r f32];
-    ps->params.turnRate = [r f32];
+    float *params = (float *)&ps->params;
+    for (size_t i = 0; i < sizeof(ShipParams) / sizeof(float); i++) params[i] = [r f32];
     ps->entity = [r u16];
+    ps->model = [r u16];
+    ps->team = [r u8];
     ps->hull = [r f32];
     ps->shield = [r f32];
     ps->missionTime = [r f32];
@@ -226,7 +230,7 @@ void WriteEvents(MsgWriter *w, const GameEvent *events, NSUInteger count) {
         [w vec3:e->pos];
         // Only some events use these; skip them for the rest.
         BOOL motion = e->type == EV_BOLT || e->type == EV_EXPLOSION;
-        BOOL sized = e->type == EV_EXPLOSION || e->type == EV_DAMAGE || e->type == EV_JUMP;
+        BOOL sized = e->type == EV_EXPLOSION || e->type == EV_DAMAGE || e->type == EV_JUMP || e->type == EV_BOLT;
         if (motion) [w vec3:e->vel];
         if (sized) { [w f32:e->scale]; [w f32:e->radius]; }
     }
@@ -245,7 +249,7 @@ NSData *ReadEvents(MsgReader *r) {
         e.model = [r u16];
         e.pos = [r vec3];
         if (e.type == EV_BOLT || e.type == EV_EXPLOSION) e.vel = [r vec3];
-        if (e.type == EV_EXPLOSION || e.type == EV_DAMAGE || e.type == EV_JUMP) { e.scale = [r f32]; e.radius = [r f32]; }
+        if (e.type == EV_EXPLOSION || e.type == EV_DAMAGE || e.type == EV_JUMP || e.type == EV_BOLT) { e.scale = [r f32]; e.radius = [r f32]; }
         [out appendBytes:&e length:sizeof e];
     }
     return out;

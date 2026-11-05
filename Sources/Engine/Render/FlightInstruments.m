@@ -5,8 +5,8 @@
 #import "PlatformImage.h"
 #import <Metal/Metal.h>
 
-static SKColor *ContactInk(Team team) {
-    return UIColorWithOpacity(team == TeamEnemy ? UIRed : team == TeamFriend ? UIFriendly : UIHUDNeutral, 1);
+static SKColor *ContactInk(TeamRelation relation) {
+    return UIColorWithOpacity(relation == RelationHostile ? UIRed : relation == RelationFriendly ? UIFriendly : UIHUDNeutral, 1);
 }
 static SKLabelNode *Readout(SKNode *parent, NSString *text, CGFloat x, CGFloat y, CGFloat size, SKLabelHorizontalAlignmentMode align) {
     SKLabelNode *label = UIMonoLabel(size, UIColorWithOpacity(UIInk, 1), align, SKLabelVerticalAlignmentModeCenter);
@@ -93,8 +93,8 @@ static NSString *Short(NSString *text, NSUInteger length) {
     _info.hidden = !has; _empty.hidden = has;
     if (!has) return;
     CockpitContact c = contacts[f.target];
-    _name.text = Short(c.name, 31); _name.fontColor = ContactInk(c.team);
-    _kind.text = [NSString stringWithFormat:@"%@ / %@", c.team == TeamEnemy ? @"HOSTILE" : c.team == TeamFriend ? @"FRIENDLY" : @"NEUTRAL", Short(c.className, 25)];
+    _name.text = Short(c.name, 31); _name.fontColor = ContactInk(c.relation);
+    _kind.text = [NSString stringWithFormat:@"%@ / %@", c.relation == RelationHostile ? @"HOSTILE" : c.relation == RelationFriendly ? @"FRIENDLY" : @"NEUTRAL", Short(c.className, 25)];
     _shield.text = [NSString stringWithFormat:@"SHD %3d%%", (int)lroundf(c.shield * 100)];
     _hull.text = [NSString stringWithFormat:@"HUL %3d%%", (int)lroundf(c.hull * 100)];
     _hull.fontColor = UIColorWithOpacity(c.hull < 0.3 ? UIRed : UIInk, 1);
@@ -117,7 +117,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
             }
             _mesh.eulerAngles = SCNVector3Make(0, fabsf(c.holoScale - 0.0075f) < 1e-5 ? M_PI : 0, 0);
         }
-        _material.diffuse.contents = ContactInk(c.team);
+        _material.diffuse.contents = ContactInk(c.relation);
         // Look along the player-to-target line, using the player's up as the
         // horizon. Transform the target into that view, not merely into the
         // player's forward-facing coordinate system.
@@ -192,7 +192,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
         // Rear scope is the view looking aft: port/starboard is mirrored.
         CGPoint p = planar < 0.001 ? CGPointZero : CGPointMake((_rear ? -1 : 1) * c.local.x / planar * radial, c.local.y / planar * radial);
         blip.position = p; blip.hidden = NO;
-        blip.strokeColor = blip.fillColor = ContactInk(c.team);
+        blip.strokeColor = blip.fillColor = ContactInk(c.relation);
         [blip setScale:c.capital ? 1.5 : 1];
         blip.alpha = c.attacking && fmod(f.time * 3, 1) > 0.5 ? 0.4 : 1;
         if ((int)i == f.target) { _selected.hidden = NO; _selected.position = p; }

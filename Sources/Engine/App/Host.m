@@ -1,4 +1,5 @@
 #import "Host.h"
+#import "GameView.h"
 #import "Server.h"
 #import "Client.h"
 #import "ClientView.h"
@@ -91,7 +92,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     double _exitDeadline;
     void (^_afterExit)(void);
 
-    Cvar *_testInput, *_cockpit;
+    Cvar *_testInput, *_cockpit, *_autoStart;
 }
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
@@ -167,6 +168,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _testInput = [Cvar get:@"cl_testInput" defaultValue:@"0" flags:CVAR_CHEAT
                       help:@"A pilot who weaves and fires, for testing prediction"];
     _cockpit = [Cvar get:@"cl_cockpit" defaultValue:@"0" flags:CVAR_ARCHIVE help:@"Fly from the cockpit instead of the chase camera"];
+    _autoStart = [Cvar get:@"cl_autoStart" defaultValue:@"0" flags:0 help:@"Skip the loading card's start prompt (scripted runs)"];
     __weak Host *weak = self;
     [Cmd add:@"map" help:@"map <mission number>: flies that mission" handler:^(NSArray<NSString *> *a) {
         NSUInteger count = CampaignMissions().count;
@@ -383,7 +385,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [_loading tick:_time];
     double minimum = _booted ? kMinMissionLoadSeconds : 0;
     if (atomic_load(&_loadDone) && _loading.barFull && _time - _loadStartedAt >= minimum) {
-        if (_booted) {
+        if (_booted && !_autoStart.boolValue) {
             if (!_loading.readyToStart) {
                 _loading.readyToStart = YES;
                 return; // Discard actions from before the ready prompt appeared.
@@ -482,6 +484,9 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (void)finishMission {
     _precaching = NO;
     [_clientView attachMission];
+#if TARGET_OS_IOS
+    if ([_view isKindOfClass:GameView.class]) [(GameView *)_view setSecondaryLabel:_client.configStrings[CS_SECONDARY_SHORT]];
+#endif
     [_client begin];
     if (!self.remote) ProgressMarkStarted();
     _state = HostStateFlying;

@@ -9,13 +9,13 @@ static Team TeamNamed(NSString *s) {
     return TeamFriend;
 }
 
-static ShipClass ClassNamed(NSString *s) {
-    if ([s isEqualToString:@"Talon"]) return ShipClassInsurgent;
-    if ([s isEqualToString:@"Executioner"]) return ShipClassExecutioner;
-    return ShipClassSpitfire;
-}
-
 static NSString *const kRed = @"red";
+static NSString *const kDefaultPlayerShip = @"executioner";
+
+// What the cockpit calls a fighter of each side.
+static NSString *FighterClassName(Team t) {
+    return t == TeamFriend ? @"Concord fighter" : (t == TeamEnemy ? @"Skarn fighter" : @"Fighter");
+}
 
 @implementation GWorld (Mission)
 
@@ -64,7 +64,12 @@ static NSString *const kRed = @"red";
     gi.configString(CS_MISSION, [NSString stringWithFormat:@"%lu", (unsigned long)index].UTF8String);
     uint32_t seed = 1337 + (uint32_t)[mission[@"id"] intValue] * 7919;
     gi.configString(CS_SKY, [NSString stringWithFormat:@"%u", seed].UTF8String);
+    gi.configString(CS_GAME, "spacefight 1");
+    gi.configString(CS_TEAMS, GTeamRelations().UTF8String);
+    gi.configString(CS_SECONDARY_NAME, "TORPEDO");
+    gi.configString(CS_SECONDARY_SHORT, "TORP");
     for (int i = 0; i < MAX_NAVS; i++) gi.configString(CS_NAVS + i, "");
+    for (int t = 0; t < TeamCount; t++) _fighterClassNames[t] = gi.stringIndex(FighterClassName((Team)t).UTF8String);
 
     _missionTime = 0;
     _endAt = 0;
@@ -100,7 +105,7 @@ static NSString *const kRed = @"red";
     _pendingMessages = [mission[@"messages"] mutableCopy] ?: [NSMutableArray array];
     _pendingCasualty = mission[@"casualty"];
 
-    gi.modelIndex(FighterModelName(ShipClassExecutioner).UTF8String);
+    gi.modelIndex(ShipModelName(mission[@"player"][@"ship"] ?: kDefaultPlayerShip).UTF8String);
     for (NSDictionary *e in mission[@"entities"]) {
         if (e[@"at"] || e[@"after"] || e[@"nav"]) {
             [_pendingEntities addObject:e];
@@ -113,7 +118,7 @@ static NSString *const kRed = @"red";
     for (NSDictionary *w in mission[@"waves"]) {
         if (w[@"at"] || w[@"after"] || w[@"nav"]) {
             [_pendingWaves addObject:w];
-            gi.modelIndex(FighterModelName(ClassNamed(w[@"ship"])).UTF8String);
+            if (ShipDefNamed(w[@"ship"])) gi.modelIndex(ShipModelName(w[@"ship"]).UTF8String);   // precache
         } else {
             [self spawnWave:w jump:NO];
         }
@@ -130,11 +135,10 @@ static NSString *const kRed = @"red";
     simd_quatf q = LookRotation(facing, simd_make_float3(0, 1, 0));
     // Wingmen form up to the right of the start point.
     simd_float3 pos = Vec3(pl[@"pos"]) + QuatRight(q) * 30.0f * cl.index;
-    GFighter *s = [GFighter fighterWithClass:ShipClassExecutioner];
+    GFighter *s = [GFighter fighterWithShip:pl[@"ship"] ?: kDefaultPlayerShip ai:NO] ?: [GFighter fighterWithShip:kDefaultPlayerShip ai:NO];
     s.number = [self allocEntity];
     s.team = TeamFriend;
     s.client = cl;
-    s->params.maxSpeed = 160;
     [s resetAt:pos facing:q];
     s->move.throttle = 0.5f;
     cl.ship = s;
@@ -194,7 +198,6 @@ static NSString *const kRed = @"red";
 - (void)spawnWave:(NSDictionary *)w jump:(BOOL)jump {
     int count = [w[@"count"] intValue] ?: 1;
     Team team = TeamNamed(w[@"team"]);
-    ShipClass cls = ClassNamed(w[@"ship"]);
     simd_float3 centre = Vec3(w[@"pos"]);
     float spread = w[@"spread"] ? [w[@"spread"] floatValue] : 80;
     NSString *order = w[@"order"] ?: @"attack";
@@ -203,11 +206,11 @@ static NSString *const kRed = @"red";
     simd_float3 ref = [self referencePosition];
     for (int i = 0; i < count; i++) {
         GPilot *p = [GPilot new];
-        GFighter *s = [GFighter fighterWithClass:cls];
+        GFighter *s = [GFighter fighterWithShip:w[@"ship"] ai:YES];
+        if (!s) break;
         s.number = [self allocEntity];
         s.team = team;
-        s->params.maxSpeed = cls == ShipClassInsurgent ? 120 : (cls == ShipClassExecutioner ? 150 : 140 + 8 * (i % 3));
-        s->params.turnRate = cls == ShipClassInsurgent ? 0.6f : 0.8f;
+        s->params.maxSpeed += s.definition->aiSpeedSpread * (i % 3);   // a little variety within a wave
         simd_float3 pos = centre + randomUnit() * spread * (i == 0 ? 0.2f : 1.0f);
         simd_float3 toward = simd_length(ref - pos) > 1 ? simd_normalize(ref - pos) : simd_make_float3(0, 0, -1);
         if (team == TeamFriend) toward = [self referenceForward];
@@ -412,7 +415,7 @@ static NSString *const kRed = @"red";
         NSString *mark = o.state == ObjectiveComplete ? @"+" : (o.state == ObjectiveFailed ? @"x" : @"-");
         [results addObject:[NSString stringWithFormat:@"%@ %@%@", mark, o.text, o.optional ? @" (optional)" : @""]];
     }
-    GCommand(nil, SVC_MISSION_END, _success ? @"1" : @"0", [results componentsJoinedByString:@"\n"], nil);
+    GCommand(nil, SVC_LEVEL_END, _success ? @"1" : @"0", [results componentsJoinedByString:@"\n"], nil);
 }
 
 - (void)setObjective:(GObjective *)o state:(ObjectiveState)state {

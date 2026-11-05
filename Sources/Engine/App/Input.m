@@ -218,7 +218,7 @@ static NSString *AxisName(uint32_t key) {
         BOOL down = raw != 0;
         if (down && !(_buttons & bit) && usage == 3) _actions |= InputActionToggleCamera;
         if (down && !(_buttons & bit) && usage == 1) _actions |= InputActionConfirm;
-        if (down && !(_buttons & bit) && usage == 5) _actions |= InputActionTorpedo;
+        if (down && !(_buttons & bit) && usage == 5) _actions |= InputActionSecondary;
         if (down && !(_buttons & bit) && usage == 6) _actions |= InputActionTarget;
         _buttons = down ? (_buttons | bit) : (_buttons & ~bit);
     } else if (page == kHIDPage_GenericDesktop && usage == kHIDUsage_GD_Hatswitch) {
@@ -261,7 +261,7 @@ static NSString *AxisName(uint32_t key) {
             case kVK_Return: case kVK_ANSI_KeypadEnter: _actions |= InputActionConfirm; break;
             case kVK_Escape: case kVK_ANSI_M: case kVK_Delete: _actions |= InputActionBack; break;
             case kVK_ANSI_T: _actions |= InputActionTarget; break;
-            case kVK_ANSI_G: _actions |= InputActionTorpedo; break;
+            case kVK_ANSI_G: _actions |= InputActionSecondary; break;
             case kVK_ANSI_N: _actions |= InputActionMultiplayer; break;
         }
     }

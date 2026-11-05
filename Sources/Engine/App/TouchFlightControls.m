@@ -5,7 +5,7 @@
 typedef NS_ENUM(NSInteger, TouchControl) {
     TouchControlNone = -1,
     TouchControlStick, TouchControlThrottle, TouchControlFire,
-    TouchControlTorpedo, TouchControlTarget, TouchControlPause, TouchControlCount
+    TouchControlSecondary, TouchControlTarget, TouchControlPause, TouchControlCount
 };
 
 static const CGFloat ThrottleHeight = 136, ThrottleTravel = 112;
@@ -41,6 +41,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     CGFloat _radii[TouchControlCount];
     UITouch *_touches[TouchControlCount];
     BOOL _controllerConnected;
+    SKLabelNode *_secondaryLabel;
 }
 
 - (instancetype)initWithInput:(Input *)input {
@@ -61,9 +62,15 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     _radii[control] = radius;
     SKShapeNode *face = Circle(radius, accent, 0.83, 0.8);
     [face addChild:Circle(radius - 5, accent, 0.23, 0)];
-    [face addChild:ControlLabel(title, control == TouchControlFire ? 14 : 11, accent)];
+    SKLabelNode *label = ControlLabel(title, control == TouchControlFire ? 14 : 11, accent);
+    [face addChild:label];
+    if (control == TouchControlSecondary) _secondaryLabel = label;
     _faces[control] = face;
     [_art addChild:face];
+}
+
+- (void)setSecondaryLabel:(NSString *)label {
+    dispatch_async(dispatch_get_main_queue(), ^{ self->_secondaryLabel.text = label.length ? label : @"FIRE 2"; });
 }
 
 - (void)buildArt {
@@ -105,7 +112,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     [_art addChild:throttle];
 
     [self addButton:TouchControlFire title:@"FIRE" radius:35 accent:UIInk];
-    [self addButton:TouchControlTorpedo title:@"TORP" radius:28 accent:UIAmber];
+    [self addButton:TouchControlSecondary title:@"FIRE 2" radius:28 accent:UIAmber];
     [self addButton:TouchControlTarget title:@"TARGET" radius:28 accent:UIInk];
     _faces[TouchControlPause] = UIActionButton(CGRectMake(-46, -22, 92, 44), @"PAUSE", UIInk);
     [_art addChild:_faces[TouchControlPause]];
@@ -130,7 +137,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
     _centers[TouchControlStick] = CGPointMake(stickX, centerY);
     _centers[TouchControlThrottle] = CGPointMake(right - 147, centerY);
     _centers[TouchControlFire] = CGPointMake(right - 35, centerY);
-    _centers[TouchControlTorpedo] = CGPointMake(right - 85, centerY - 53);
+    _centers[TouchControlSecondary] = CGPointMake(right - 85, centerY - 53);
     _centers[TouchControlTarget] = CGPointMake(right - 85, centerY + 53);
     // Keep the pause button beside the rear scanner, which occupies the
     // upper-right corner at the same height as the forward scanner.
@@ -204,7 +211,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
 }
 
 - (void)setPressed:(BOOL)pressed control:(TouchControl)control {
-    UIRGB accent = control == TouchControlTorpedo ? UIAmber : UIInk;
+    UIRGB accent = control == TouchControlSecondary ? UIAmber : UIInk;
     SKShapeNode *face = _faces[control];
     face.fillColor = pressed ? UIColorWithOpacity(accent, 0.34) : UIColorWithOpacity(UIPanel, 0.8);
 }
@@ -243,7 +250,7 @@ static SKLabelNode *ControlLabel(NSString *text, CGFloat size, UIRGB accent) {
             [self setPressed:NO control:control];
             if (control == TouchControlFire) [_input setTouchFire:NO];
             else if (activate && [self controlAt:[touch locationInView:self]] == control) {
-                InputAction action = control == TouchControlTorpedo ? InputActionTorpedo :
+                InputAction action = control == TouchControlSecondary ? InputActionSecondary :
                                      control == TouchControlTarget ? InputActionTarget : InputActionBack;
                 [_input queueTouchAction:action];
             }

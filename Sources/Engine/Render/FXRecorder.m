@@ -107,8 +107,10 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
     ShipView *ship = nil;
     SCNNode *bolt = nil;
     void (^tick)(double t, int frame) = nil;
+    // Any ship will do for a preview: the first definition in the bundle.
+    const ShipDef *anyShip = ShipDefNamed(ShipDefNames().firstObject);
     if ([effect isEqualToString:@"explosion"]) {
-        ship = [ShipView shipWithClass:ShipClassSpitfire smoke:NO];
+        ship = [ShipView shipWithDefinition:anyShip smoke:NO];
         [scene.rootNode addChildNode:ship.node];
         ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.6f, simd_make_float3(0, 1, 0));
         __block BOOL done = NO;
@@ -128,7 +130,7 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             }
         };
     } else if ([effect isEqualToString:@"shield"]) {
-        ship = [ShipView shipWithClass:ShipClassExecutioner smoke:NO];
+        ship = [ShipView shipWithDefinition:anyShip smoke:NO];
         [scene.rootNode addChildNode:ship.node];
         ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.75f, simd_make_float3(0, 1, 0));
         camera.simdPosition = simd_make_float3(0, 5, 22);
@@ -155,7 +157,7 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             bolt2.simdPosition = simd_make_float3(-x, -3, x * 0.3f);
         };
     } else if ([effect isEqualToString:@"exhaust"]) {
-        ship = [ShipView shipWithClass:ShipClassExecutioner smoke:YES];
+        ship = [ShipView shipWithDefinition:anyShip smoke:YES];
         [scene.rootNode addChildNode:ship.node];
         // Side-on, nose pointing left, so the flames trail to the right.
         ship.node.simdOrientation = simd_quaternion((float)M_PI * 0.5f, simd_make_float3(0, 1, 0));

@@ -1,41 +1,4 @@
 #import "ShipView.h"
-#import "Assets.h"
-
-typedef struct {
-    NSString *mesh;
-    NSString *texture;
-    float radius;
-    int nozzleCount;
-    simd_float4 nozzles[6];  // in OBJ space: +Z is the nose
-    simd_float3 exhaustColor;
-} ShipSpec;
-
-// Nozzle spots measured from the meshes (rear-facing vertex clusters) and
-// cross-checked with the exhaust placements of the Godot port of the pack.
-static ShipSpec SpecFor(ShipClass c) {
-    switch (c) {
-        case ShipClassExecutioner:
-            return (ShipSpec){ @"Executioner", @"Executioner_Blue", 5.0f, 4,
-                { {0.937f, -0.155f, -2.85f, 0.42f}, {-0.937f, -0.155f, -2.85f, 0.42f},
-                  {4.379f, 0.161f, -3.0f, 0.55f}, {-4.379f, 0.161f, -3.0f, 0.55f} },
-                {0.25f, 0.55f, 1.0f} };
-        case ShipClassSpitfire:
-            return (ShipSpec){ @"Spitfire", @"Spitfire_Red", 5.0f, 4,
-                { {4.506f, 0.135f, -2.2f, 0.6f}, {-4.506f, 0.135f, -2.2f, 0.6f},
-                  {4.506f, -1.27f, -2.2f, 0.6f}, {-4.506f, -1.27f, -2.2f, 0.6f} },
-                {1.0f, 0.38f, 0.18f} };
-        case ShipClassInsurgent:
-        default:
-            return (ShipSpec){ @"Insurgent", @"Insurgent_Red", 4.5f, 6,
-                { {0.758f, 0.273f, -3.2f, 0.5f}, {-0.758f, 0.273f, -3.2f, 0.5f},
-                  {2.37f, -0.17f, -2.9f, 0.2f}, {-2.37f, -0.17f, -2.9f, 0.2f},
-                  {1.686f, 0.699f, -3.0f, 0.16f}, {-1.686f, 0.699f, -3.0f, 0.16f} },
-                {1.0f, 0.3f, 0.55f} };
-    }
-}
-
-// OBJ space (+Z nose) -> ship space (-Z nose): rotate 180 degrees about Y.
-static simd_float3 ToShip(simd_float3 p) { return simd_make_float3(-p.x, p.y, -p.z); }
 
 // Shield bubble: fresnel rim with a scrolling hex-ish ripple, additive.
 static NSString *const kShieldFragment =
@@ -68,7 +31,6 @@ void ApplyHullRolloff(SCNMaterial *m) {
 }
 
 @implementation ShipView {
-    ShipSpec _spec;
     SCNNode *_shieldNode;
     SCNMaterial *_shieldMaterial;
     float _shieldFlash;
@@ -77,63 +39,60 @@ void ApplyHullRolloff(SCNMaterial *m) {
     SCNParticleSystem *_damageFire, *_damageSmoke;
 }
 
-+ (SCNGeometry *)geometryForSpec:(ShipSpec)spec {
+// One geometry per definition, shared by every view of it. The load queue
+// and the render thread can both ask, so the cache is locked.
++ (SCNGeometry *)geometryForDefinition:(const ShipDef *)def {
     static NSMutableDictionary<NSString *, SCNGeometry *> *cache;
-    if (!cache) cache = [NSMutableDictionary dictionary];
-    SCNGeometry *g = cache[spec.texture];
-    if (g) return g;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
+    if (!def) return nil;
+    NSString *key = @(def->name);
+    @synchronized (cache) {
+        SCNGeometry *g = cache[key];
+        if (g) return g;
 
-    NSURL *url = [[NSBundle mainBundle] URLForResource:spec.mesh withExtension:@"scn" subdirectory:@"Models"];   // baked by build.sh
-    SCNScene *scene = [SCNScene sceneWithURL:url options:nil error:nil];
-    __block SCNGeometry *found = nil;
-    [scene.rootNode enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
-        if (child.geometry) { found = child.geometry; *stop = YES; }
-    }];
-    g = [found copy] ?: [SCNBox boxWithWidth:4 height:1 length:6 chamferRadius:0];
+        NSURL *url = [[NSBundle mainBundle] URLForResource:@(def->mesh) withExtension:@"scn" subdirectory:@"Models"];   // baked by build.sh
+        SCNScene *scene = url ? [SCNScene sceneWithURL:url options:nil error:nil] : nil;
+        __block SCNGeometry *found = nil;
+        [scene.rootNode enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
+            if (child.geometry) { found = child.geometry; *stop = YES; }
+        }];
+        g = [found copy] ?: [SCNBox boxWithWidth:4 height:1 length:6 chamferRadius:0];
 
-    SCNMaterial *m = [SCNMaterial material];
-    m.lightingModelName = SCNLightingModelPhysicallyBased;
-    m.diffuse.contents = [[NSBundle mainBundle] URLForResource:spec.texture withExtension:@"png" subdirectory:@"Models"];
-    m.diffuse.mipFilter = SCNFilterModeLinear;
-    m.diffuse.maxAnisotropy = 8;
-    m.metalness.contents = @0.55;
-    m.roughness.contents = @0.42;
-    ApplyHullRolloff(m);
-    g.materials = @[m];
-    cache[spec.texture] = g;
-    return g;
+        SCNMaterial *m = [SCNMaterial material];
+        m.lightingModelName = SCNLightingModelPhysicallyBased;
+        m.diffuse.contents = [[NSBundle mainBundle] URLForResource:@(def->texture) withExtension:@"png" subdirectory:@"Models"];
+        m.diffuse.mipFilter = SCNFilterModeLinear;
+        m.diffuse.maxAnisotropy = 8;
+        m.metalness.contents = @0.55;
+        m.roughness.contents = @0.42;
+        ApplyHullRolloff(m);
+        g.materials = @[m];
+        cache[key] = g;
+        return g;
+    }
 }
 
-+ (SCNGeometry *)geometryForClass:(ShipClass)shipClass {
-    return [self geometryForSpec:SpecFor(shipClass)];
-}
-
-+ (instancetype)shipWithClass:(ShipClass)shipClass smoke:(BOOL)smoke {
-    return [[self alloc] initWithClass:shipClass smoke:smoke];
++ (instancetype)shipWithDefinition:(const ShipDef *)definition smoke:(BOOL)smoke {
+    return definition ? [[self alloc] initWithDefinition:definition smoke:smoke] : nil;
 }
 
 + (instancetype)viewWithModel:(NSString *)model {
-    if (![model hasPrefix:@"ship:"]) return nil;
-    int c = FighterClassForMesh([model substringFromIndex:5]);
-    return c < 0 ? nil : [self shipWithClass:(ShipClass)c smoke:YES];
+    return [self shipWithDefinition:ShipDefForModel(model) smoke:YES];
 }
 
-- (instancetype)initWithClass:(ShipClass)shipClass smoke:(BOOL)smoke {
+- (instancetype)initWithDefinition:(const ShipDef *)def smoke:(BOOL)smoke {
     if ((self = [super init])) {
-        _shipClass = shipClass;
-        _spec = SpecFor(shipClass);
-        _radius = _spec.radius;
+        _definition = def;
+        _radius = def->radius;
         _node = [SCNNode node];
-        _model = [SCNNode nodeWithGeometry:[ShipView geometryForSpec:_spec]];
-        _model.eulerAngles = SCNVector3Make(0, M_PI, 0);
+        _model = [SCNNode nodeWithGeometry:[ShipView geometryForDefinition:def]];
+        _model.eulerAngles = SCNVector3Make(0, M_PI, 0);   // OBJ +Z nose -> ship -Z nose
         _model.castsShadow = YES;
         [_node addChildNode:_model];
 
-        simd_float4 nz[6];
-        for (int i = 0; i < _spec.nozzleCount; i++)
-            nz[i] = simd_make_float4(ToShip(_spec.nozzles[i].xyz), _spec.nozzles[i].w);
-        _exhaust = [[Exhaust alloc] initWithNozzles:nz count:_spec.nozzleCount
-                                              color:_spec.exhaustColor parent:_node smoke:smoke];
+        _exhaust = [[Exhaust alloc] initWithNozzles:def->nozzles count:(NSUInteger)def->nozzleCount
+                                              color:def->exhaustColor parent:_node smoke:smoke];
         [self buildShield];
         [self buildDamageFx];
         _hull = 1;

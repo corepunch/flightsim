@@ -85,7 +85,7 @@ static float Deadzone(float value) {
     _throttleRate = (float)pad.rightShoulder.isPressed - (float)pad.leftShoulder.isPressed;
     if (_active && [element isKindOfClass:GCControllerButtonInput.class] && ((GCControllerButtonInput *)element).isPressed) {
         if (element == pad.buttonA) _controllerActions |= InputActionConfirm;
-        else if (element == pad.buttonB) _controllerActions |= _flying ? InputActionTorpedo : InputActionBack;
+        else if (element == pad.buttonB) _controllerActions |= _flying ? InputActionSecondary : InputActionBack;
         else if (element == pad.buttonX && _flying) _controllerActions |= InputActionToggleCamera;
         else if (element == pad.buttonY && _flying) _controllerActions |= InputActionTarget;
         else if (element == pad.buttonMenu) _controllerActions |= InputActionBack;
@@ -177,12 +177,12 @@ static float Deadzone(float value) {
 
 - (InputAction)consumeActions {
     os_unfair_lock_lock(&_lock);
-    InputAction actions = _menuActions | (_controllerActions & ~(InputActionTarget | InputActionTorpedo));
+    InputAction actions = _menuActions | (_controllerActions & ~(InputActionTarget | InputActionSecondary));
     _menuActions = 0;
-    _controllerActions &= InputActionTarget | InputActionTorpedo;
+    _controllerActions &= InputActionTarget | InputActionSecondary;
     // A target and a launch pressed in the same frame need separate commands.
     InputAction weapons = _controllerActions | _touchActions;
-    InputAction next = (weapons & InputActionTarget) ? InputActionTarget : (weapons & InputActionTorpedo);
+    InputAction next = (weapons & InputActionTarget) ? InputActionTarget : (weapons & InputActionSecondary);
     actions |= next;
     _controllerActions &= ~next;
     _touchActions &= ~next;

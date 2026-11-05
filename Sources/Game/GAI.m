@@ -1,6 +1,9 @@
 // AI fighters, capital ship turrets and mines.
 #import "GLocal.h"
 
+// Capital ship turret rounds.
+static const float kTurretBoltSpeed = 700, kTurretBoltLife = 1.6f;
+
 @implementation GWorld (AI)
 
 - (BOOL)isPlayerShip:(GFighter *)f { return f.client != nil; }
@@ -74,7 +77,7 @@
             p.mode = AIModeAttack;
         }
         if (p.mode == AIModeAttack) {
-            float tLead = dist / BOLT_SPEED;
+            float tLead = dist / s.gun.speed;
             simd_float3 wobble = simd_make_float3(sinf(_time * 1.3f + s.radius), cosf(_time * 0.9f), sinf(_time * 0.7f)) * p.aimError * 6.0f;
             aimPoint = tp + BodyVelocity(target) * tLead + (capital ? 0 : wobble);
             float facing = simd_dot(s.forward, toT / fmaxf(dist, 1));
@@ -118,13 +121,11 @@
     if (target && p.mode == AIModeAttack && dist < range) {
         simd_float3 leadDir = simd_normalize(aimPoint - s.position);
         float cone = capital ? 0.97f : 0.985f;
-        double gap = s.shipClass == ShipClassInsurgent ? 0.35 : 0.22;
-        if (simd_dot(s.forward, leadDir) > cone && _time - s.lastShot > gap + frand() * 0.25) {
+        ShipGun gun = s.gun;
+        if (simd_dot(s.forward, leadDir) > cone && _time - s.lastShot > gun.interval + frand() * 0.25) {
             s.lastShot = _time;
-            BOOL friend = s.team == TeamFriend;
-            float capDamage = s.shipClass == ShipClassInsurgent ? 0.18f : (friend ? 0.1f : 0.05f);
             [self fireFrom:[s nextGunWorldPosition] velocity:s.velocity direction:simd_normalize(s.forward + randomUnit() * 0.008f)
-                     speed:BOLT_SPEED team:s.team damage:friend ? 0.09f : 0.07f capDamage:capDamage owner:s.client];
+                     speed:gun.speed life:gun.life team:s.team damage:gun.damage capDamage:gun.capitalDamage owner:s.client];
             [self muzzleFlash:s];
         }
     }
@@ -155,11 +156,11 @@
         if (!best) continue;
         t.lastShot = _time;
         simd_float3 tp = BodyPosition(best), tv = BodyVelocity(best);
-        float tHit = simd_distance(tp, pos) / TURRET_BOLT_SPEED;
+        float tHit = simd_distance(tp, pos) / kTurretBoltSpeed;
         simd_float3 aim = tp + (tv - c.velocity) * tHit;
         simd_float3 dir = simd_normalize(simd_normalize(aim - pos) + randomUnit() * 0.015f);
         BOOL vsCap = [best isKindOfClass:[GCapital class]];
-        [self fireFrom:pos + out * 4 velocity:c.velocity direction:dir speed:TURRET_BOLT_SPEED team:c.team
+        [self fireFrom:pos + out * 4 velocity:c.velocity direction:dir speed:kTurretBoltSpeed life:kTurretBoltLife team:c.team
                 damage:0.05f capDamage:vsCap ? 0.18f : 0.1f owner:nil];
     }
 }

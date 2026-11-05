@@ -1,33 +1,118 @@
 #import "Assets.h"
 
-// OBJ space (+Z nose) -> ship space (-Z nose): rotate 180 degrees about Y.
-static simd_float3 ToShip(simd_float3 p) { return simd_make_float3(-p.x, p.y, -p.z); }
+#pragma mark - Ship definitions
 
-FighterSpec FighterSpecFor(ShipClass c) {
-    FighterSpec s;
-    switch (c) {
-        case ShipClassExecutioner:
-            s = (FighterSpec){ "Executioner", "Executioner", 5.0f, 2, { {4.38f, 0.1f, 2.5f}, {-4.38f, 0.1f, 2.5f} } };
-            break;
-        case ShipClassSpitfire:
-            s = (FighterSpec){ "Spitfire", "Wasp", 5.0f, 2, { {1.2f, -0.2f, 3.5f}, {-1.2f, -0.2f, 3.5f} } };
-            break;
-        case ShipClassInsurgent:
-        default:
-            s = (FighterSpec){ "Insurgent", "Talon", 4.5f, 2, { {2.4f, -0.2f, 3.0f}, {-2.4f, -0.2f, 3.0f} } };
-            break;
+static void CopyName(char *out, NSString *s) {
+    strlcpy(out, s.UTF8String ?: "", SHIP_NAME_LENGTH);
+}
+
+static float Number(NSDictionary *d, NSString *key, float fallback) {
+    NSNumber *n = d[key];
+    return [n isKindOfClass:NSNumber.class] ? n.floatValue : fallback;
+}
+
+static ShipParams ParamsFrom(NSDictionary *d, ShipParams base) {
+    ShipParams p = base;
+    p.maxSpeed = Number(d, @"maxSpeed", p.maxSpeed);
+    p.turnRate = Number(d, @"turnRate", p.turnRate);
+    p.pitchRate = Number(d, @"pitchRate", p.pitchRate);
+    p.yawRate = Number(d, @"yawRate", p.yawRate);
+    p.rollRate = Number(d, @"rollRate", p.rollRate);
+    p.agility = Number(d, @"agility", p.agility);
+    p.grip = Number(d, @"grip", p.grip);
+    p.boostSpeed = Number(d, @"boostSpeed", p.boostSpeed);
+    p.boostGrip = Number(d, @"boostGrip", p.boostGrip);
+    p.boostTurn = Number(d, @"boostTurn", p.boostTurn);
+    p.boostDrain = Number(d, @"boostDrain", p.boostDrain);
+    p.boostRecharge = Number(d, @"boostRecharge", p.boostRecharge);
+    return p;
+}
+
+static ShipGun GunFrom(NSDictionary *d, ShipGun base) {
+    ShipGun g = base;
+    g.speed = Number(d, @"speed", g.speed);
+    g.life = Number(d, @"life", g.life);
+    g.energy = Number(d, @"energy", g.energy);
+    g.recharge = Number(d, @"recharge", g.recharge);
+    g.interval = Number(d, @"interval", g.interval);
+    g.damage = Number(d, @"damage", g.damage);
+    g.capitalDamage = Number(d, @"capitalDamage", g.capitalDamage);
+    return g;
+}
+
+static ShipDef *LoadShipDef(NSString *name) {
+    NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:@"Ships"];
+    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
+    NSError *error = nil;
+    NSDictionary *d = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:&error] : nil;
+    if (![d isKindOfClass:NSDictionary.class]) {
+        if (url) NSLog(@"Ships: cannot read %@.json: %@", name, error.localizedDescription);
+        return NULL;
     }
-    for (int i = 0; i < s.gunCount; i++) s.guns[i] = ToShip(s.guns[i]);
+    ShipDef *s = calloc(1, sizeof *s);
+    CopyName(s->name, name);
+    CopyName(s->displayName, d[@"displayName"] ?: name);
+    CopyName(s->mesh, d[@"mesh"] ?: name);
+    CopyName(s->texture, d[@"texture"] ?: d[@"mesh"] ?: name);
+    s->radius = Number(d, @"radius", 5);
+    for (NSArray *g in d[@"guns"]) {
+        if (s->gunCount >= SHIP_MAX_GUNS) break;
+        s->guns[s->gunCount++] = Vec3(g);
+    }
+    // Sensible defaults so a sparse definition still flies and shoots.
+    ShipGun gun = { .speed = 900, .life = 1.6f, .energy = 0.035f, .recharge = 0.22f, .interval = 0.11f, .damage = 0.1f, .capitalDamage = 0.1f };
+    s->gun = GunFrom(d[@"gun"], gun);
+    s->aiGun = GunFrom(d[@"aiGun"], s->gun);
+    for (NSArray *n in d[@"nozzles"]) {
+        if (s->nozzleCount >= SHIP_MAX_NOZZLES) break;
+        s->nozzles[s->nozzleCount++] = simd_make_float4(Vec3(n), n.count >= 4 ? [n[3] floatValue] : 0.5f);
+    }
+    NSArray *color = d[@"exhaustColor"];
+    s->exhaustColor = color.count >= 3 ? Vec3(color) : simd_make_float3(1, 0.5f, 0.2f);
+    ShipParams params = { .maxSpeed = 150, .turnRate = 1, .pitchRate = 1.45f, .yawRate = 0.85f, .rollRate = 2.6f, .agility = 5.5f,
+                          .grip = 1.4f, .boostSpeed = 0.9f, .boostGrip = 2.2f, .boostTurn = 0.7f, .boostDrain = 0.28f, .boostRecharge = 0.12f };
+    s->params = ParamsFrom(d[@"params"], params);
+    s->aiParams = ParamsFrom(d[@"ai"], s->params);
+    s->aiSpeedSpread = Number(d[@"ai"], @"speedSpread", 0);
+    s->hologramScale = Number(d, @"hologramScale", 0.0075f);
     return s;
 }
 
-int FighterClassForMesh(NSString *mesh) {
-    for (int c = ShipClassExecutioner; c <= ShipClassInsurgent; c++)
-        if ([mesh isEqualToString:@(FighterSpecFor((ShipClass)c).mesh)]) return c;
-    return -1;
+static NSMutableDictionary<NSString *, NSValue *> *gShipDefs;
+
+const ShipDef *ShipDefNamed(NSString *name) {
+    if (!name.length) return NULL;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ gShipDefs = [NSMutableDictionary dictionary]; });
+    @synchronized (gShipDefs) {
+        NSValue *v = gShipDefs[name];
+        if (!v) {
+            v = [NSValue valueWithPointer:LoadShipDef(name)];
+            gShipDefs[name] = v;
+        }
+        return v.pointerValue;
+    }
 }
 
-NSString *FighterModelName(ShipClass c) { return [@"ship:" stringByAppendingString:@(FighterSpecFor(c).mesh)]; }
+NSArray<NSString *> *ShipDefNames(void) {
+    static NSArray *names;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSMutableArray *found = [NSMutableArray array];
+        for (NSURL *url in [NSBundle.mainBundle URLsForResourcesWithExtension:@"json" subdirectory:@"Ships"])
+            [found addObject:url.lastPathComponent.stringByDeletingPathExtension];
+        names = [found sortedArrayUsingSelector:@selector(compare:)];
+    });
+    return names;
+}
+
+NSString *ShipModelName(NSString *name) { return [@"ship:" stringByAppendingString:name]; }
+
+const ShipDef *ShipDefForModel(NSString *model) {
+    return [model hasPrefix:@"ship:"] ? ShipDefNamed([model substringFromIndex:5]) : NULL;
+}
+
+#pragma mark - Capital assets
 
 NSString *CapitalModelName(NSString *asset, NSString *style) {
     return [NSString stringWithFormat:@"cap:%@:%@", asset, style ?: AssetInfo(asset)[@"style"] ?: @"concord"];
@@ -71,6 +156,8 @@ NSDictionary *AssetInfo(NSString *asset) {
     });
     return t[asset];
 }
+
+#pragma mark - Campaign
 
 NSArray<NSDictionary *> *CampaignMissions(void) {
     static NSArray *missions;

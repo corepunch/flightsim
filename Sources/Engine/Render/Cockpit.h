@@ -8,7 +8,7 @@ typedef struct CockpitContact {
     simd_float3 local;          // position in player ship space (-Z forward), metres
     simd_quatf orientation;     // relative to the player ship
     float hull, shield, systems; // systems: surviving fitted subsystems; -1 when not fitted
-    Team team;
+    TeamRelation relation;      // to the player's team
     BOOL capital;               // a big ship or station (bigger scanner blip)
     BOOL shielded;              // capital with its shield generators up
     BOOL attacking;             // in an attack run on the player
@@ -18,7 +18,8 @@ typedef struct CockpitContact {
 } CockpitContact;
 
 typedef struct CockpitFrame {
-    float throttle, speed, maxSpeed, boostEnergy, hull, shield, laserEnergy;
+    float throttle, speed, maxSpeed, boostEnergy, hull, shield;
+    float weaponEnergy, weaponShotEnergy;   // primary weapon capacitor and what one shot costs, 0..1
     float damageFlash;          // 0..1, decays after a hit
     BOOL boosting, firing, alive;
     float pitch, yaw, roll;     // stick deflection, -1..1
@@ -29,7 +30,8 @@ typedef struct CockpitFrame {
     BOOL lock;                  // lead marker under the boresight
     BOOL six;                   // someone attacking from behind
     float nearest;              // distance to the closest hostile, metres
-    int torpedoes;
+    int secondary;              // secondary weapon rounds left
+    __unsafe_unretained NSString *secondaryName;  // short name from the game ("TORP")
     __unsafe_unretained NSString *objective;     // current objective, for the status display
 } CockpitFrame;
 
@@ -45,5 +47,7 @@ typedef struct CockpitFrame {
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time;
 
 - (void)updateFrame:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count;
+// The player's own ship, for the status display's hologram (OBJ space, +Z nose).
+- (void)setSelfGeometry:(SCNGeometry *)geometry;
 
 @end

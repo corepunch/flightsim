@@ -15,6 +15,6 @@ typedef NS_OPTIONS(NSUInteger, InputAction) {
     InputActionConfirm      = 1 << 10,  // Return / Enter / stick button 1
     InputActionBack         = 1 << 11,  // Esc (mouse free) / M / Backspace
     InputActionTarget       = 1 << 12,  // T / stick button 6: next target
-    InputActionTorpedo      = 1 << 13,  // G / stick button 5
+    InputActionSecondary    = 1 << 13,  // G / stick button 5: launch the secondary weapon
     InputActionMultiplayer  = 1 << 14,  // N: the LAN game browser
 };

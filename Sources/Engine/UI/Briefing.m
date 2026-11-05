@@ -1029,7 +1029,8 @@ typedef NS_ENUM(NSInteger, CueStyle) { CueStyleStill, CueStyleIntro, CueStyleFre
     }
     for (NSDictionary *n in m[@"navs"]) [things addObject:@{ @"id": n[@"id"], @"pos": n[@"pos"], @"kind": @"nav", @"label": n[@"name"] }];
     for (NSDictionary *w in m[@"waves"]) {
-        NSString *label = w[@"name"] ?: [NSString stringWithFormat:@"%@x %@", w[@"count"], w[@"ship"]];
+        const ShipDef *ship = ShipDefNamed(w[@"ship"]);
+        NSString *label = w[@"name"] ?: [NSString stringWithFormat:@"%@x %@", w[@"count"], ship ? @(ship->displayName) : w[@"ship"]];
         [things addObject:@{ @"id": w[@"id"], @"pos": w[@"pos"], @"kind": @"wave", @"team": w[@"team"], @"label": label }];
     }
     for (NSDictionary *f in m[@"fields"]) {
