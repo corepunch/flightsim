@@ -35,6 +35,21 @@ jobs:
       - name: Unit checks
         run: ./Tools/run-unit-checks.sh
 
+  network-checks:
+    name: Deterministic two-client network checks
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Server and two clients (simulated transport)
+        run: ./Tools/run-network-checks.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: network-checks
+          path: build/network-checks.*/results.log
+          if-no-files-found: ignore
+
   gui-checks:
     # Each suite builds what it needs and opens its own bundle with
     # `open -W`, so the suites run in parallel on their own runners.

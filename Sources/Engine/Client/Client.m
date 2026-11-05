@@ -187,6 +187,11 @@ static const double kNetInterpDelay = TICK_DT * 3;
             case svc_gamestate_done:
                 if ([r u32] != _spawnCount) break;
                 _view.configStrings = _cs;
+                if (![_cs[CS_GAME] isEqualToString:ShipDataIdentity()]) {
+                    [self disconnect]; // release the server slot, too
+                    [self dropWithReason:@"Incompatible game or ship data"];
+                    return;
+                }
                 if (_gamestateHandler) _gamestateHandler();
                 break;
             case svc_command: {
