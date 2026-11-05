@@ -64,7 +64,7 @@ static NSString *FighterClassName(Team t) {
     gi.configString(CS_MISSION, [NSString stringWithFormat:@"%lu", (unsigned long)index].UTF8String);
     uint32_t seed = 1337 + (uint32_t)[mission[@"id"] intValue] * 7919;
     gi.configString(CS_SKY, [NSString stringWithFormat:@"%u", seed].UTF8String);
-    gi.configString(CS_GAME, "spacefight 1");
+    gi.configString(CS_GAME, ShipDataIdentity().UTF8String);
     gi.configString(CS_TEAMS, GTeamRelations().UTF8String);
     gi.configString(CS_SECONDARY_NAME, "TORPEDO");
     gi.configString(CS_SECONDARY_SHORT, "TORP");

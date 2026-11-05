@@ -222,3 +222,32 @@ NSDictionary *CampaignMission(NSUInteger i) {
     NSArray *all = CampaignMissions();
     return i < all.count ? all[i] : nil;
 }
+
+// Cache alongside the definitions: resources are immutable for a process.
+#import <CommonCrypto/CommonDigest.h>
+NSString *ShipDataIdentity(void) {
+    static NSString *identity;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        CC_SHA256_CTX ctx;
+        CC_SHA256_Init(&ctx);
+        for (NSString *name in ShipDefNames()) {
+            NSURL *url = [NSBundle.mainBundle URLForResource:name withExtension:@"json" subdirectory:@"Ships"];
+            NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
+            if (!data) { identity = @"invalid ship data"; return; }
+            NSData *label = [name dataUsingEncoding:NSUTF8StringEncoding];
+            // Length delimiters prevent ambiguous concatenations.
+            NSString *header = [NSString stringWithFormat:@"%lu:%@:%lu:",
+                (unsigned long)label.length, name, (unsigned long)data.length];
+            NSData *h = [header dataUsingEncoding:NSUTF8StringEncoding];
+            CC_SHA256_Update(&ctx, h.bytes, (CC_LONG)h.length);
+            CC_SHA256_Update(&ctx, data.bytes, (CC_LONG)data.length);
+        }
+        unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+        CC_SHA256_Final(digest, &ctx);
+        NSMutableString *hex = [NSMutableString string];
+        for (int i = 0; i < CC_SHA256_DIGEST_LENGTH; i++) [hex appendFormat:@"%02x", digest[i]];
+        identity = [@"spacefight 1 ships-sha256:" stringByAppendingString:hex];
+    });
+    return identity;
+}

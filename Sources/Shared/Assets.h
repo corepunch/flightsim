@@ -106,3 +106,6 @@ NSDictionary *CampaignMission(NSUInteger index);
 static inline simd_float3 Vec3(NSArray *a) {
     return a.count >= 3 ? simd_make_float3([a[0] floatValue], [a[1] floatValue], [a[2] floatValue]) : simd_make_float3(0, 0, 0);
 }
+
+// Exact ship JSON bytes, sorted by filename; changes require matching client data.
+NSString *ShipDataIdentity(void);
