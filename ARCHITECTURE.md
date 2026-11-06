@@ -147,6 +147,12 @@ versioned (`PROTOCOL_VERSION`); clients check the game data identity (`CS_GAME`,
 a hash of the ship definitions) before entering. [Tools/NETWORK.md](Tools/NETWORK.md)
 describes the network regression checks.
 
+Campaign flights are private. The LAN front end explicitly opens a listen
+server, advertises `_kestrel._udp` through Bonjour, shows connected pilots and
+lets the host start a dogfight. The game module's typed `LevelRules` select
+deathmatch scoring, opposing player teams, respawns and match limits; `CS_MODE`
+keeps these results separate from campaign progress. UDP gameplay is unicast.
+
 ## Console
 
 Configuration is cvars and commands, Quake 2 style: from the command line
