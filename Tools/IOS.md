@@ -6,6 +6,9 @@ Both schemes support Debug, Release, and Archive. The Mac target builds and
 embeds the game module (`KestrelFrontier.dylib`, from `Games/KestrelFrontier/Game`) automatically;
 the iOS target compiles that game into the app and ships only its `Games/` folder.
 
+For App Store listing text, screenshots, build uploads and review submission
+from the command line, see [APPSTORE.md](APPSTORE.md).
+
 For iOS, select an iPhone or iPad simulator to build and run. For a physical device,
 choose your development team under Signing & Capabilities. Xcode compiles
 the game directly and bakes its SceneKit models in DerivedData. Xcode-built

@@ -1,0 +1,139 @@
+require File.expand_path("store", FastlaneCore::FastlaneFolder.path)
+
+default_platform(:ios)
+
+platform :ios do
+  private_lane :connect do
+    credentials = Store.credentials
+    app_store_connect_api_key(
+      key_id: credentials.fetch("key_id"),
+      issuer_id: credentials.fetch("issuer_id"),
+      key_filepath: credentials.fetch("key_filepath"),
+      in_house: false
+    )
+  end
+
+  private_lane :app do
+    found = Spaceship::ConnectAPI::App.get(app_id: Store::APP_ID)
+    UI.user_error!("App Store bundle identifier differs from #{Store::BUNDLE_ID}.") unless found.bundle_id == Store::BUNDLE_ID
+    found
+  end
+
+  private_lane :validate_metadata do
+    problems = Store.metadata_problems
+    UI.user_error!(problems.join("\n")) unless problems.empty?
+  end
+
+  private_lane :validate_version do
+    version = app.get_edit_app_store_version(platform: "IOS")
+    UI.user_error!("The editable App Store version must match fastlane/version.txt (#{Store.version}).") unless version && version.version_string == Store.version
+  end
+
+  desc "Check local setup and report missing listing fields; no network access"
+  lane :check do |options|
+    Store.credentials
+    UI.message("iOS: #{Store::BUNDLE_ID}; App Store version #{Store.version}")
+    problems = Store.metadata_problems
+    problems.each { |problem| UI.important(problem) }
+    UI.user_error!("Listing files are incomplete.") if options[:strict] && !problems.empty?
+    UI.success("Fastlane is configured. Use ios status to verify Apple account access.")
+  end
+
+  desc "Read the current App Store version and recent builds"
+  lane :status do
+    connect
+    current_app = app
+    version = current_app.get_edit_app_store_version(platform: "IOS")
+    UI.message("#{current_app.name} (#{current_app.bundle_id})")
+    UI.message(version ? "Version #{version.version_string}: #{version.app_store_state}" : "No editable iOS version.")
+    current_app.get_builds(limit: 5, sort: "-uploadedDate").first(5).each do |build|
+      UI.message("Build #{build.version}: #{build.processing_state}")
+    end
+  end
+
+  desc "Download saved store text; replaces local metadata, leaves Apple unchanged"
+  lane :pull do
+    connect
+    current_app = app
+    version = current_app.get_edit_app_store_version(platform: "IOS")
+    UI.user_error!("No editable iOS version to download.") unless version
+    require "deliver/setup"
+    import = File.join(Store::PRIVATE, "import")
+    FileUtils.mkdir_p(import, mode: 0700)
+    Deliver::Setup.new.generate_metadata_files(current_app, version, import, { use_live_version: false })
+    FileUtils.mkdir_p(Store::METADATA)
+    Dir.children(import).reject { |name| name == "review_information" }.each do |name|
+      FileUtils.cp_r(File.join(import, name), Store::METADATA)
+    end
+    review = Dir.glob(File.join(import, "review_information", "*.txt")).to_h do |path|
+      [File.basename(path, ".txt"), File.read(path).strip]
+    end
+    File.write(File.join(Store::PRIVATE, "review_information.json"), JSON.pretty_generate(review) + "\n", perm: 0600)
+    File.write(File.join(Store::DIRECTORY, "version.txt"), version.version_string + "\n")
+    UI.success("Downloaded store text. Reviewer contact details are in fastlane/private/.")
+  end
+
+  desc "Upload listing text and review information; no build upload or review submission"
+  lane :prepare do
+    validate_metadata
+    key = connect
+    validate_version
+    upload_to_app_store(
+      api_key: key,
+      app_review_information: Store.review_information,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_app_version_update: true,
+      submit_for_review: false
+    )
+  end
+
+  desc "Upload screenshots only from fastlane/screenshots/<locale>/"
+  lane :screenshots do
+    images = Dir.glob(File.join(Store::SCREENSHOTS, "*", "*.{png,jpg,jpeg}"))
+    UI.user_error!("Add screenshots under fastlane/screenshots/en-US/ first.") if images.empty?
+    key = connect
+    validate_version
+    upload_to_app_store(
+      api_key: key,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_app_version_update: true,
+      skip_screenshots: false,
+      overwrite_screenshots: false,
+      run_precheck_before_submit: false,
+      submit_for_review: false
+    )
+  end
+
+  desc "Upload an existing signed IPA: ios upload ipa:/absolute/path/App.ipa"
+  lane :upload do |options|
+    ipa = File.expand_path(options[:ipa].to_s, Store::ROOT)
+    UI.user_error!("Pass ipa:/absolute/path/App.ipa for an existing signed IPA.") unless File.file?(ipa) && File.extname(ipa).downcase == ".ipa"
+    require "fastlane_core/ipa_file_analyser"
+    UI.user_error!("The IPA belongs to a different app.") unless FastlaneCore::IpaFileAnalyser.fetch_app_identifier(ipa) == Store::BUNDLE_ID
+    UI.user_error!("The IPA version must match fastlane/version.txt (#{Store.version}).") unless FastlaneCore::IpaFileAnalyser.fetch_app_version(ipa) == Store.version
+    upload_to_testflight(api_key: connect, app_identifier: Store::BUNDLE_ID,
+                         ipa: ipa, skip_waiting_for_build_processing: true,
+                         distribute_external: false)
+  end
+
+  desc "Submit a specific uploaded build: ios submit build:123; release remains manual"
+  lane :submit do |options|
+    number = options[:build].to_s.strip
+    UI.user_error!("Pass the exact uploaded build number, e.g. ios submit build:123.") if number.empty?
+    key = connect
+    validate_version
+    upload_to_app_store(
+      api_key: key,
+      build_number: number,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      skip_app_version_update: true,
+      submit_for_review: true,
+      automatic_release: false,
+      force: true
+    )
+  end
+end

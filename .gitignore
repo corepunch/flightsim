@@ -7,3 +7,13 @@ Games/*/Art/kit/*.blend
 # Xcode user settings (the generated project and shared scheme are tracked).
 xcuserdata/
 *.xcuserstate
+
+# Fastlane dependencies, account credentials and generated reports.
+.bundle/
+vendor/bundle/
+fastlane/private/
+fastlane/report.xml
+fastlane/README.md
+fastlane/Preview.html
+fastlane/screenshots/*/
+*.p8

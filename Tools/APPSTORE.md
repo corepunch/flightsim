@@ -1,0 +1,164 @@
+# App Store submission with Fastlane
+
+The iPhone/iPad listing is Kestrel Frontier, App Store ID `6831063163`, bundle
+identifier `com.corepunch.spacefight`, development team `BM2R8F5YHC`. This setup
+targets iOS; the Mac target uses a different bundle identifier and needs its own
+store configuration.
+
+Fastlane and its dependencies are pinned by `Gemfile` and `Gemfile.lock`.
+`Tools/fastlane.sh` selects Homebrew's Ruby and reuses Homebrew's installed gems,
+so it does not change Apple's system Ruby or install a second copy of Fastlane.
+Commands below run from the repository root.
+
+## Installation
+
+On this Mac, Fastlane is already installed. On another Mac:
+
+```sh
+HOMEBREW_NO_AUTO_UPDATE=1 brew install fastlane
+./Tools/fastlane.sh lanes
+```
+
+If a later Homebrew update no longer provides the locked gems, use a modern Ruby
+and Bundler to install the versions in the lockfile, then run `bundle exec fastlane`
+instead. To intentionally update the pinned version, change `Gemfile` and run
+`bundle update fastlane` using that Ruby. Commit the updated lockfile with it.
+
+## Account access
+
+The team key named **Kestrel Frontier Fastlane** has the **App Manager** role.
+Apple team keys apply across the team's apps. Its local configuration is
+`fastlane/private/api_key.json`, with the key itself alongside it. Both are
+excluded from Git. Keep a secure backup: Apple allows each private key to be
+downloaded once. The original download remains in Downloads on this Mac.
+
+On a new machine, copy `fastlane/api_key.example.json` to
+`fastlane/private/api_key.json`, fill in the key ID and issuer ID, and put the
+downloaded `.p8` file in that directory. A relative `key_filepath` is resolved
+against `fastlane/private/`. Restrict the directory to your user:
+
+```sh
+chmod 700 fastlane/private
+chmod 600 fastlane/private/*.json fastlane/private/*.p8
+./Tools/fastlane.sh ios status
+```
+
+The key uses Apple's documented API; these commands do not require an Apple ID
+password or repeated browser login. Revoke a lost key in App Store Connect's
+Users and Access → Integrations → App Store Connect API.
+
+## Editing the listing
+
+```sh
+./Tools/fastlane.sh ios check
+./Tools/fastlane.sh ios status
+./Tools/fastlane.sh ios pull
+```
+
+`check` works offline and reports missing listing fields. `check strict:true`
+exits with an error when fields are missing. This checks local text lengths and
+URL syntax, not complete Apple submission readiness or whether URLs are live.
+`status` reads the editable version and recent builds from Apple.
+
+`pull` downloads the editable version's saved metadata. It **overwrites local
+listing text**, so preserve local edits before running it again. Public text
+goes in `fastlane/metadata/`; private review contact information goes in
+`fastlane/private/review_information.json`. The complete raw download remains
+in `fastlane/private/import/`. No Apple data is changed.
+
+Edit these files in any text editor:
+
+| File | Contents |
+|---|---|
+| `fastlane/version.txt` | Version to edit and submit; must match the editable Apple version |
+| `fastlane/metadata/en-US/name.txt` | Store name |
+| `fastlane/metadata/en-US/subtitle.txt` | Subtitle |
+| `fastlane/metadata/en-US/description.txt` | Description |
+| `fastlane/metadata/en-US/keywords.txt` | Comma-separated keywords |
+| `fastlane/metadata/en-US/promotional_text.txt` | Promotional text |
+| `fastlane/metadata/en-US/support_url.txt` | Published support page URL |
+| `fastlane/metadata/en-US/privacy_url.txt` | Published privacy policy URL |
+| `fastlane/metadata/en-US/release_notes.txt` | What's New for updates |
+| `fastlane/metadata/copyright.txt` | Copyright holder and year |
+| `fastlane/private/review_information.json` | Review contact, notes and optional demo credentials |
+
+Fastlane also downloads category files. Additional locales use sibling folders
+such as `fastlane/metadata/de-DE/`. The local checker covers English (U.S.);
+Apple validates all uploaded locales.
+
+Upload your text with:
+
+```sh
+./Tools/fastlane.sh ios prepare
+```
+
+This edits the existing version's metadata and review information. It does not
+upload a binary, upload screenshots or submit for review. Fastlane displays an
+HTML preview for verification. The local check requires support and privacy
+URLs before this command proceeds; publish the pages first.
+
+## Screenshots and builds
+
+Put final App Store screenshots in `fastlane/screenshots/en-US/`, then run:
+
+```sh
+./Tools/fastlane.sh ios screenshots
+./Tools/fastlane.sh ios upload ipa:/absolute/path/KestrelFrontier.ipa
+```
+
+The screenshots command uploads images only and does not clear the existing
+screenshots first. Repeated uploads can add duplicates. Use actual supported
+device resolutions from [Apple's screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/).
+The screenshots themselves are excluded from Git.
+
+The upload command takes an already signed App Store IPA, checks its bundle ID
+and marketing version, and sends it to TestFlight without inviting external
+testers. Use Xcode's existing `KestrelFrontier-iOS` scheme to archive and export
+the IPA. This setup does not build an archive automatically. The source plist
+currently declares version `0.1`; align it with the store version in
+`fastlane/version.txt` before creating a new distribution build, and choose an
+unused build number. Signing uses your existing Xcode configuration.
+
+## Submitting for review
+
+After the metadata, screenshots, required declarations and build are ready:
+
+```sh
+./Tools/fastlane.sh ios submit build:39
+```
+
+Replace `39` with the exact processed build you intend to submit. The command
+checks the editable version, selects that build and submits it for review.
+It does not re-upload the local listing or screenshots. Release after approval
+is manual (`automatic_release: false`). Merely installing or running `check`,
+`status` or `pull` never submits the app.
+
+## Other submission forms
+
+The public API does not cover every form. Privacy nutrition labels use a
+separate Fastlane action with Apple ID login and potentially 2FA. To answer its
+questionnaire and save answers locally without uploading them:
+
+```sh
+./Tools/fastlane.sh run upload_app_privacy_details_to_app_store \
+  username:YOUR_APPLE_ID app_identifier:com.corepunch.spacefight \
+  output_json_path:app_privacy_details.json skip_upload:true
+```
+
+After checking the generated answers, upload them explicitly:
+
+```sh
+./Tools/fastlane.sh run upload_app_privacy_details_to_app_store \
+  username:YOUR_APPLE_ID app_identifier:com.corepunch.spacefight \
+  json_path:app_privacy_details.json
+```
+
+Age ratings, pricing, availability, accessibility declarations, export
+compliance, and account agreements are not changed by these lanes. Apple may
+still require those before submission. Do not invent questionnaire answers to
+make a readiness check pass.
+
+References: [Fastlane setup](https://docs.fastlane.tools/getting-started/ios/setup/),
+[deliver](https://docs.fastlane.tools/actions/deliver/),
+[API authentication](https://docs.fastlane.tools/app-store-connect-api/), and
+[privacy details](https://docs.fastlane.tools/uploading-app-privacy-details/).

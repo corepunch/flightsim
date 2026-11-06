@@ -1,0 +1,4 @@
+require File.expand_path("store", FastlaneCore::FastlaneFolder.path)
+
+app_identifier(Store::BUNDLE_ID)
+team_id(Store::TEAM_ID)

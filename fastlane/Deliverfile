@@ -1,0 +1,12 @@
+require File.expand_path("store", FastlaneCore::FastlaneFolder.path)
+
+app_identifier(Store::BUNDLE_ID)
+app_version(Store.version)
+platform("ios")
+metadata_path(Store::METADATA)
+screenshots_path(Store::SCREENSHOTS)
+skip_binary_upload(true)
+skip_screenshots(true)
+submit_for_review(false)
+automatic_release(false)
+precheck_include_in_app_purchases(false)
