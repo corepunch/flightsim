@@ -15,17 +15,23 @@
 #import <ImageIO/ImageIO.h>
 #import <objc/runtime.h>
 #endif
-#if TARGET_OS_IOS
 #include <ifaddrs.h>
 #include <netdb.h>
-#endif
 
 static NSString *PilotName(void) {
+    static Cvar *name;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
 #if TARGET_OS_IOS
-    return L10n(@"net.default_pilot");
+        NSString *suffix = [NSUUID.UUID.UUIDString substringToIndex:4];
+        NSString *fallback = [NSString stringWithFormat:@"%@ %@", L10n(@"net.default_pilot"), suffix];
 #else
-    return NSFullUserName() ?: L10n(@"net.default_pilot");
+        NSString *fallback = NSFullUserName() ?: L10n(@"net.default_pilot");
 #endif
+        name = [Cvar get:@"name" defaultValue:@"" flags:CVAR_ARCHIVE help:@"Pilot name shown in LAN games"];
+        if (!name.string.length) [name setString:fallback];
+    });
+    return name.string.length ? name.string : L10n(@"net.default_pilot");
 }
 
 // The engine's states. Which menu screen shows is the front end's business.
@@ -82,10 +88,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _Atomic bool _loadDone;
     double _loadStartedAt;
     BOOL _booted, _revealing, _precaching;
+    NSString *_loadDisconnectReason;
 
-    // Multiplayer: our server also listens on UDP, so others on the LAN can
-    // join whatever we fly; or we join theirs.
+    // The UDP socket accepts peers only during an explicit hosted session.
     UDPTransport *_serverUDP, *_clientUDP;
+    LANAdvertisement *_advertisement;
 
     // Overlay changes wait for the outgoing screen's exit animation.
     ScreenHost *_screens;
@@ -132,7 +139,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             _serverUDP = [[UDPTransport alloc] initWithPort:port attempts:4];
             if (_serverUDP) [_server addTransport:_serverUDP];
         }
-        [_frontEnd setHostLine:_serverUDP ? L10nFormat(@"browser.hosting_on", _serverUDP.port) : L10n(@"browser.hosting_off")];
+        [_frontEnd setHostLine:L10n(@"browser.private")];
         [self connectLocal];
 
         // Show the loading card over an empty scene right away; the real scene
@@ -414,9 +421,10 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 // sends (now, or when it starts a mission) takes us through loading.
 - (void)joinServer:(NetAddress *)address {
     if (!address) return;
-    [_server stop];
+    [self closeLANGame];
     [_clientView clearMission];
     if (!_clientUDP) _clientUDP = [[UDPTransport alloc] initWithPort:0 attempts:1];
+    if (!_clientUDP) { [_frontEnd setBrowserStatus:L10n(@"browser.host_failed")]; return; }
     NSLog(@"Host: joining %@", address);
     [_client connectTo:address transport:_clientUDP name:PilotName()];
     [_frontEnd setBrowserStatus:L10nFormat(@"browser.connecting", address)];
@@ -424,6 +432,48 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 
 - (void)cancelJoin {
     if (self.remote && _client.state != ClientActive) { [_client disconnect]; [self connectLocal]; }
+}
+
+- (NSArray<NSString *> *)hostedPilots { return _server.clientNames; }
+- (BOOL)hostingFailed { return _advertisement.failed; }
+
+- (BOOL)createLANGame {
+    if (!_serverUDP) return NO;
+    [self cancelJoin];
+    [_server stop];
+    _server.publicHosting = YES;
+    _advertisement = [[LANAdvertisement alloc] initWithName:_server.name port:_serverUDP.port];
+    [_frontEnd setHostLine:L10nFormat(@"browser.hosting_on", _serverUDP.port)];
+    return YES;
+}
+
+- (void)closeLANGame {
+    [_advertisement stop];
+    _advertisement = nil;
+    [_server closeSession];
+    if (self.remote) { [_client disconnect]; [self connectLocal]; }
+    [_frontEnd setHostLine:L10n(@"browser.private")];
+}
+
+- (void)startLANMatch {
+    if (!_server.publicHosting || _server.clientCount < 2 || _state == HostStateLoading) return;
+    NSString *name;
+    for (NSString *candidate in LevelNames()) if (LevelNamed(candidate)->rules.deathmatch) { name = candidate; break; }
+    if (!name) { [self closeLANGame]; [_frontEnd showBrowser]; [_frontEnd setBrowserStatus:L10n(@"browser.host_failed")]; return; }
+    [_server stop]; [_client leaveGame]; [_clientView clearMission];
+    [self showLoadingCard:0];
+    [self showLANLoadingTitle];
+    _server.loading = YES;
+    dispatch_async(_loadQueue, ^{
+        [self->_server spawnLevel:name];
+        self->_server.loading = NO;
+    });
+}
+
+- (BOOL)deathmatch { return [_client.configStrings[CS_MODE] isEqualToString:@"deathmatch"]; }
+
+- (void)showLANLoadingTitle {
+    [_loading showTitle:L10n(@"browser.dogfight") kicker:L10n(@"browser.kicker") detail:L10n(@"browser.rules")];
 }
 
 - (double)time { return _time; }
@@ -453,10 +503,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 
 // Our own listen server answers our broadcast too; leave it off the list.
 - (BOOL)isOwnAddress:(NetAddress *)a {
-    static NSSet *own;
-    if (!own) {
         NSMutableSet *s = [NSMutableSet set];
-#if TARGET_OS_IOS
         struct ifaddrs *interfaces = NULL;
         if (getifaddrs(&interfaces) == 0) {
             for (struct ifaddrs *i = interfaces; i; i = i->ifa_next) {
@@ -467,14 +514,9 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
             }
             freeifaddrs(interfaces);
         }
-#else
-        for (NSString *ip in NSHost.currentHost.addresses) [s addObject:ip];
-#endif
         [s addObject:@"127.0.0.1"];
-        own = s;
-    }
     NSString *ip = [a.string componentsSeparatedByString:@":"].firstObject;
-    return [own containsObject:ip];
+    return [s containsObject:ip];
 }
 
 #pragma mark - Loading
@@ -528,11 +570,25 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 }
 
 - (void)updateLoading:(InputAction)actions {
+    if (_loadDisconnectReason && atomic_load(&_loadDone)) {
+        // Registration owns the renderer on the load queue. Let it finish
+        // before clearing its assets or returning to a rendered menu.
+        NSString *reason = _loadDisconnectReason;
+        _loadDisconnectReason = nil;
+        _precaching = NO;
+        atomic_store(&_loadDone, false);
+        _state = HostStateMenus;
+        _revealing = NO;
+        [_clientView clearMission];
+        [_frontEnd showBrowser];
+        [_frontEnd setBrowserStatus:reason];
+        return;
+    }
     [_loading setProgress:atomic_load(&_loadProgress) status:LoadStatus((LoadStage)atomic_load(&_loadStage))];
     [_loading tick:_time];
     double minimum = _booted ? kMinMissionLoadSeconds : 0;
     if (atomic_load(&_loadDone) && _loading.barFull && _time - _loadStartedAt >= minimum) {
-        if (_booted && !_autoStart.boolValue) {
+        if (_booted && !_autoStart.boolValue && !self.remote && !_server.publicHosting) {
             if (!_loading.readyToStart) {
                 _loading.readyToStart = YES;
                 return; // Discard actions from before the ready prompt appeared.
@@ -553,7 +609,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     if (!_loading.faded) return;
     _revealing = NO;
     SKScene *next = _state == HostStateFlying ? _clientView.hud : _frontEnd.currentScreen;
-    if (_state == HostStateFlying) [_clientView.hud showBanner:[_frontEnd bannerForLevel:_missionIndex] color:nil];
+    if (_state == HostStateFlying) [_clientView.hud showBanner:self.deathmatch ? L10n(@"browser.dogfight") : [_frontEnd bannerForLevel:_missionIndex] color:nil];
     [self presentOverlay:next];
 }
 
@@ -562,6 +618,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 // Render thread: put up the loading card and build the mission off-thread.
 - (void)startLevel:(NSUInteger)index {
     if (_state == HostStateLoading) return;
+    [self closeLANGame];
     _client.inputSuspended = NO;
     if (self.remote) { [_client disconnect]; [self connectLocal]; }   // flying our own mission now
     [_server stop];
@@ -603,6 +660,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
         [_clientView clearMission];
         [self showLoadingCard:index];
     }
+    if (self.deathmatch) [self showLANLoadingTitle];
     _precaching = YES;
     [self reportStage:LoadStageSky progress:0.2f];
     dispatch_async(_loadQueue, ^{ [self precacheInBackground]; });
@@ -629,7 +687,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     if ([_view isKindOfClass:GameView.class]) [(GameView *)_view setSecondaryLabel:_client.configStrings[CS_SECONDARY_SHORT]];
 #endif
     [_client begin];
-    [_frontEnd levelStarted:_missionIndex remote:self.remote];
+    if (!self.deathmatch) [_frontEnd levelStarted:_missionIndex remote:self.remote];
     _state = HostStateFlying;
     [self reveal:0.6];
 }
@@ -637,15 +695,21 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 - (void)disconnected:(NSString *)reason {
     _client.inputSuspended = NO;
     _loading.readyToStart = NO;
+    if (_precaching && _state == HostStateLoading) {
+        _loadDisconnectReason = L10nExpand(reason);
+        [self closeLANGame];
+        [self connectLocal];
+        return;
+    }
     _precaching = NO;
-    [_frontEnd setBrowserStatus:reason];
     if ([self inLevel] || (_state == HostStateLoading && _booted)) {
         _state = HostStateMenus;
         _revealing = NO;
         [_clientView clearMission];
-        [_frontEnd levelLeft:_missionIndex];
     }
     [self connectLocal];   // back to our own server
+    [_frontEnd showBrowser];
+    [_frontEnd setBrowserStatus:L10nExpand(reason)];
 }
 
 - (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
@@ -655,7 +719,8 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     _state = HostStateMenus;
     if (!self.remote) [_server stop];   // a remote host decides what comes next
     [_client leaveGame];
-    [_frontEnd levelEnded:_missionIndex success:success results:results remote:self.remote];
+    if (self.deathmatch) [_frontEnd showLANResults:results hosting:_server.publicHosting];
+    else [_frontEnd levelEnded:_missionIndex success:success results:results remote:self.remote];
 }
 
 - (void)pauseFlight {
@@ -666,7 +731,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     _input.mouseCaptured = NO;
     [_input releaseAllKeys];
 #endif
-    [_pauseMenu showRemote:self.remote cockpit:_cockpit.boolValue];
+    [_pauseMenu showRemote:self.remote || _server.publicHosting cockpit:_cockpit.boolValue];
     [self presentOverlay:_pauseMenu];
 }
 
@@ -691,6 +756,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 }
 
 - (void)abortToMenu {
+    BOOL network = self.remote || _server.publicHosting;
     _client.inputSuspended = NO;
     [[GameAudio shared] play:@"ui-back"];
     _state = HostStateMenus;
@@ -698,7 +764,9 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     [_client leaveGame];
     if (self.remote) { [_client disconnect]; [self connectLocal]; }
     [_clientView clearMission];
-    [_frontEnd levelLeft:_missionIndex];
+    [self closeLANGame];
+    if (network) [_frontEnd showBrowser];
+    else [_frontEnd levelLeft:_missionIndex];
 }
 
 #pragma mark - Overlays
@@ -764,7 +832,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     if (_state != HostStateFlying) {
         // Keep both ends of the connection alive while nothing is flown.
         [_client sendInput:(ControlState){ .hat = -1 } actions:0 dt:dt];
-        [_server frame:dt paused:_booted && (_state == HostStateLoading || _state == HostStatePaused) && !self.remote];
+        [_server frame:dt paused:_booted && (_state == HostStateLoading || _state == HostStatePaused) && !self.remote && !_server.publicHosting];
     }
     if (_state == HostStatePaused) { [self updatePause:actions]; return; }
     if (_state == HostStateLoading) { [self updateLoading:actions]; return; }
@@ -780,7 +848,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
         else [_frontEnd frame:actions];
         return;
     }
-    if ((actions & InputActionRestart) && !self.remote) { [self startLevel:_missionIndex]; return; }
+    if ((actions & InputActionRestart) && !self.remote && !_server.publicHosting) { [self startLevel:_missionIndex]; return; }
     if (actions & InputActionBack) { [self pauseFlight]; return; }
 
     [_client sendInput:controls actions:actions dt:dt];

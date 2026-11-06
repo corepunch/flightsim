@@ -10,6 +10,8 @@
 
 - (NSArray *)targetablesFor:(GClient *)cl {
     NSMutableArray *list = [NSMutableArray array];
+    if (GIsDeathmatch()) for (GClient *other in _clients)
+        if (other != cl && other.inGame && other.ship.alive) [list addObject:other.ship];
     for (GPilot *p in _pilots) if (p.ship.alive && p.ship.team == TeamEnemy) [list addObject:p.ship];
     NSMutableSet *objectiveIds = [NSMutableSet set];
     for (MissionObjective *o in _runner.objectives) if (o.state == MissionObjectiveActive) [objectiveIds addObjectsFromArray:o.targets];

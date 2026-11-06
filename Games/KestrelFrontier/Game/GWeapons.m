@@ -40,7 +40,7 @@
     GEvent((GameEvent){ .type = EV_DAMAGE, .entity = s.number, .flags = shielded ? EVF_SHIELDED : 0, .scale = shake });
     if (!s.alive) {
         if (s.client) s.client.deaths++;
-        else if (attacker && s.team == TeamEnemy) attacker.kills++;
+        if (attacker && TeamsHostile(attacker.ship.team, s.team)) attacker.kills++;
         [self destroyShip:s];
     }
 }
@@ -201,7 +201,7 @@ NSString *GSecondaryShort(const ShipDef *def) { return OrRule(def ? def->seconda
     t.position = s.position + s.forward * 6 - s.up * 1.0f;
     t.velocity = s.velocity + s.forward * weapon->launchSpeed;
     t.life = weapon->life;
-    t.team = TeamFriend;
+    t.team = s.team;
     t.owner = cl;
     t.target = target;
     t.aim = cl.aimSubsystem;

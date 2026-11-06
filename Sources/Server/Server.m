@@ -172,6 +172,20 @@ static void SV_CvarSet(const char *name, const char *value) { [Cvar set:@(name ?
     return n;
 }
 
+- (NSArray<NSString *> *)clientNames {
+    NSMutableArray *names = [NSMutableArray array];
+    for (ServerSlot *s in _slots) if (s.state != SlotFree) [names addObject:s.name ?: @""];
+    return names;
+}
+
+- (void)closeSession {
+    self.publicHosting = NO;
+    [self stop];
+    for (NSUInteger i = 0; i < _slots.count; i++)
+        if (_slots[i].state != SlotFree && !_slots[i].channel.address.isLoopback)
+            [self drop:(int)i reason:[NSString stringWithFormat:@"{#%@}", @"net.host_closed"]];
+}
+
 #pragma mark - Configstrings and gamestate
 
 static NSData *ConfigStringMessage(int index, NSString *value) {
@@ -254,6 +268,7 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
 }
 
 - (void)connectionless:(NSString *)text from:(NetAddress *)from transport:(id<NetTransport>)t {
+    if (!self.publicHosting && !from.isLoopback) return;
     NSArray *args = [text componentsSeparatedByString:@" "];
     NSString *cmd = args.firstObject;
     if ([cmd isEqualToString:@"info"]) {

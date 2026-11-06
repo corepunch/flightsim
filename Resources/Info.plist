@@ -4,6 +4,10 @@
 <dict>
     <key>FSDefaultGame</key>
     <string>KestrelFrontier</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Find friends and host dogfights over the same Wi-Fi network.</string>
+    <key>NSBonjourServices</key>
+    <array><string>_kestrel._udp</string></array>
     <key>CFBundleExecutable</key>
     <string>KestrelFrontier</string>
     <key>CFBundleIdentifier</key>

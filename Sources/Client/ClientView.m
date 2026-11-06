@@ -547,6 +547,7 @@ static float Ease(float value, float target, float rate, float dt) {
     f.kills = ps->stats[STAT_KILLS];
     f.deaths = ps->stats[STAT_DEATHS];
     f.playerDead = !ps->alive;
+    f.respawning = [[self cs:CS_MODE] isEqualToString:@"deathmatch"];
     f.damageFlash = _damageFlash;
     f.cockpit = _cockpit;
     f.secondary = ps->stats[STAT_SECONDARY];

@@ -30,8 +30,10 @@ void GPrint(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
 // This game's sides. The engine only knows team numbers and the relations
 // the game publishes in CS_TEAMS (see GTeamRelations).
 typedef enum { TeamFriend, TeamEnemy, TeamNeutral, TeamCount } Team;
+BOOL GIsDeathmatch(void);
 
 static inline bool TeamsHostile(Team a, Team b) {
+    if (GIsDeathmatch()) return a != b;
     return (a == TeamFriend && b == TeamEnemy) || (a == TeamEnemy && b == TeamFriend);
 }
 
@@ -41,7 +43,7 @@ static inline NSString *GTeamRelations(void) {
     char s[MAX_TEAMS * MAX_TEAMS + 1];
     for (int a = 0; a < MAX_TEAMS; a++)
         for (int b = 0; b < MAX_TEAMS; b++)
-            s[a * MAX_TEAMS + b] = a == b ? '1' : (a < TeamCount && b < TeamCount && TeamsHostile((Team)a, (Team)b) ? '2' : '0');
+            s[a * MAX_TEAMS + b] = a == b ? '1' : (TeamsHostile((Team)a, (Team)b) ? '2' : '0');
     s[MAX_TEAMS * MAX_TEAMS] = 0;
     return @(s);
 }

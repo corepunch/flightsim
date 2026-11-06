@@ -42,17 +42,27 @@
 @property (nonatomic) double lastSeen;
 @end
 
-// Finds servers on the local network: broadcasts "info" to PORT_SERVER (and
-// the next few ports) every couple of seconds and collects the replies.
-// Also asks any address given with -query: (direct IP).
+// Finds a declared Bonjour service and asks its resolved IPv4 addresses for
+// game information. macOS also broadcasts to the default ports for legacy
+// hosts; iOS uses unicast so it needs no multicast entitlement.
 @interface LANBrowser : NSObject
 
 - (instancetype)init;
 @property (nonatomic, readonly) NSArray<LANServer *> *servers;   // newest replies, sorted by name
+@property (atomic, readonly) BOOL discoveryFailed;
 
 - (void)query:(NetAddress *)address;
 - (void)poll;       // call every frame while browsing
+- (void)stop;       // finishes Bonjour callbacks on the main thread
 
+@end
+
+// Publishes a specific Bonjour service; UDP gameplay remains unicast.
+// Create only after the player chooses to host, release to stop advertising.
+@interface LANAdvertisement : NSObject
+- (instancetype)initWithName:(NSString *)name port:(int)port;
+- (void)stop;
+@property (atomic, readonly) BOOL failed;
 @end
 
 // MARK: - NetChannel

@@ -34,12 +34,16 @@ GetGameAPIFunc GameLoaderOpen(void);
 @property (atomic) BOOL loading;                // set while -spawnLevel: runs; frame: does nothing
 @property (nonatomic, readonly) double time;
 @property (nonatomic, readonly) int clientCount;
+@property (nonatomic, readonly) NSArray<NSString *> *clientNames;
+@property (nonatomic) BOOL publicHosting;       // only explicit LAN sessions accept remote players
 @property (nonatomic, readonly) BOOL missionEnded;   // the game has sent its debrief
 
 // Loads a mission. Slow; call off the render thread with `loading` set.
 // Every connected client gets the new gamestate and must begin again.
 - (void)spawnLevel:(NSString *)name;
 - (void)stop;
+// Closes a hosted session and tells every peer immediately.
+- (void)closeSession;
 
 // Reads packets, runs whole ticks for the elapsed real time, sends snapshots.
 - (void)frame:(double)dt;

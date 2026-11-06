@@ -14,6 +14,8 @@ if len(sys.argv) == 2:
         shutil.copytree(root / 'Games' / 'KestrelFrontier' / 'Data' / name, game / 'Data' / name)
     shutil.copytree(root / 'Resources' / 'Strings', qa / 'Strings')
     missions = []
+    missions.append(dict(name='check-dogfight', title='Dogfight', player=dict(ship='executioner'), loadout=dict(torpedoes=4),
+                         rules=dict(deathmatch=True, fragLimit=3, matchSeconds=30, respawnSeconds=3)))
     for i, ship in enumerate(('executioner', 'wasp')):
         p = game / 'Data' / 'Ships' / (ship + '.json')
         d = json.loads(p.read_text())

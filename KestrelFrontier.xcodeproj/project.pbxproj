@@ -1411,6 +1411,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"257CC24D6FE79BB00913E599" = {
+			"isa" = "PBXFileReference";
+			"path" = "LANGame.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"03841706B32D8E0FABA22592" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "257CC24D6FE79BB00913E599";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"521FA47765E243F28A4FB712" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "257CC24D6FE79BB00913E599";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"9339FDB9B2531DF0CA7321D4" = {
 			"isa" = "PBXFileReference";
 			"path" = "Loading.m";
@@ -1643,6 +1663,7 @@
 			"children" = (
 				"7AF867F53679CDC513C0B8CA",
 				"5E62144903070C3BC61E2B08",
+				"257CC24D6FE79BB00913E599",
 				"9339FDB9B2531DF0CA7321D4",
 				"41FA8B43ED71B55433E09AD0",
 				"3F8072F9260C297B007FFC54",
@@ -1903,6 +1924,7 @@
 				"F31AB976A1B2AB41A476E04E",
 				"940C2B92CEBF3E1A1612782D",
 				"6DD82C5E7F4CB9A1CC38560A",
+				"03841706B32D8E0FABA22592",
 				"E8C89EA86C5030B4D6FBBD48",
 				"EA524BB2D5F1F5B7F3F03FC5",
 				"1FD941059AE01742007269F1",
@@ -1964,6 +1986,7 @@
 				"63F80E833DC18123E8370997",
 				"779026633E677BC0ED6D61FF",
 				"00915447642B036EEED42931",
+				"521FA47765E243F28A4FB712",
 				"21261BC47075F231EA0C656A",
 				"5E6BF1812FDC1433DC99542D",
 				"3A2BBB808A4F7BAF6DA123E0",

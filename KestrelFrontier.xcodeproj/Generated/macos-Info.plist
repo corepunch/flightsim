@@ -24,8 +24,14 @@
 	<string>KestrelFrontier</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_kestrel._udp</string>
+	</array>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Find friends and host dogfights over the same Wi-Fi network.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

@@ -67,9 +67,9 @@ id FSJSON(NSURL *url);
 // come from the game, through ship definitions, configstrings and the game
 // stats range.
 
-// Version 4 requires ship-data identity validation before beginning.
-// Version 3 clients do not validate CS_GAME and must not join these servers.
-#define PROTOCOL_VERSION 5
+// Version 6 distinguishes campaign results from competitive LAN matches.
+// Older front ends would record a dogfight as a campaign mission completion.
+#define PROTOCOL_VERSION 6
 
 #define TICK_RATE 30
 #define TICK_DT (1.0f / TICK_RATE)
@@ -107,6 +107,7 @@ static inline TeamRelation TeamRelationIn(const char *csTeams, int a, int b) {
 #define CS_TEAMS 3              // team relations, see TeamRelationIn
 #define CS_SECONDARY_NAME 4     // the secondary weapon's name for readouts ("TORPEDO")
 #define CS_SECONDARY_SHORT 5    // and a short form for small buttons ("TORP")
+#define CS_MODE 6               // "campaign" or "deathmatch"
 #define CS_MODELS 16            // "ship:<definition>" or "cap:<Asset>:<style>"
 #define MAX_MODELS 256
 #define CS_STRINGS (CS_MODELS + MAX_MODELS)   // names, class names
@@ -610,6 +611,9 @@ typedef struct {
     bool succeedWhenObjectivesDone;     // every required objective complete (ongoing ones excepted)
     bool failOnObjectiveFailed;         // a required objective failed
     bool failWhenPlayersDown;           // every player's ship is down (destroyed or disabled)
+    bool deathmatch;                    // independent pilots, scoring and automatic respawns
+    int fragLimit;                     // kills to win a deathmatch
+    float matchSeconds, respawnSeconds;
 } LevelRules;
 
 typedef struct {
@@ -670,7 +674,7 @@ enum {
 // (GameExport). Only plain C crosses it, so the game can live in its own
 // dylib and be rebuilt or swapped without touching the engine.
 
-#define GAME_API_VERSION 3
+#define GAME_API_VERSION 4
 
 typedef struct {
     float radius;

@@ -223,6 +223,7 @@ static SKShapeNode *Bracket(void) {
         [_help addChild:l];
     }
     _help.hidden = YES;
+    _help.zPosition = 200;
     [_root addChild:_help];
 
     _navMarks = [NSMutableArray array];
@@ -401,6 +402,24 @@ static SKShapeNode *Bracket(void) {
     CGFloat headingTop = heading ? CGRectGetMaxY(heading.frame) : 7;
     _objectivePanel.position = CGPointMake(edgeLeft + 128 * scopeScale + 16,
                                            s.height - topMargin - headingTop);
+    CGFloat helpWidth = MAX(1, MIN(760, s.width - insets.left - insets.right - 48));
+    CGFloat helpY = 0;
+    for (SKNode *node in _help.children) if ([node isKindOfClass:SKLabelNode.class]) {
+        SKLabelNode *label = (SKLabelNode *)node;
+        label.numberOfLines = 0;
+        label.preferredMaxLayoutWidth = MAX(1, helpWidth - 32);
+        label.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+        label.position = CGPointMake(16, -16 + helpY);
+        helpY -= CGRectGetHeight(label.frame) + 8;
+    }
+    [[_help childNodeWithName:@"help-backdrop"] removeFromParent];
+    CGFloat helpHeight = -helpY + 24;
+    SKSpriteNode *helpBackdrop = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:0.92]
+        size:CGSizeMake(helpWidth, helpHeight)];
+    helpBackdrop.name = @"help-backdrop"; helpBackdrop.anchorPoint = CGPointMake(0, 1); helpBackdrop.zPosition = -1;
+    [_help addChild:helpBackdrop];
+    _help.position = CGPointMake(insets.left + (s.width - insets.left - insets.right - helpWidth) / 2,
+        insets.bottom + (s.height - insets.top - insets.bottom + helpHeight) / 2);
     CGFloat rowStep = _touchLayout ? 16 : 18;
     _secondaryRack.position = CGPointMake(_laserBar.position.x, _laserBar.position.y + rowStep);
     _secondaryLabel.position = CGPointMake(_secondaryRack.position.x - 10, _secondaryRack.position.y + 3);
@@ -462,14 +481,17 @@ static SKShapeNode *Bracket(void) {
 }
 
 - (NSArray<SKNode *> *)conditionRows { return @[_hullBar, _shieldBar, _laserBar, _secondaryRack]; }
+- (SKLabelNode *)scoreLabel { return _scoreLabel; }
+- (BOOL)helpVisible { return !_help.hidden; }
+- (CGRect)helpRect { return _help.frame; }
 
 - (void)setInputText:(NSString *)text { _inputLabel.text = @""; }
 - (void)toggleHelp {
-    _help.hidden = YES;
+    [self setHelpVisible:_help.hidden];
 }
 - (void)setHelpVisible:(BOOL)visible {
-    _help.hidden = YES;
-    _objectivePanel.hidden = NO;
+    _help.hidden = !visible;
+    _objectivePanel.hidden = visible || _objectivePanel.children.count < 2;
 }
 
 - (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {
@@ -582,9 +604,14 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     _throttleLabel.text = L10nFormat(f.boosting ? @"hud.throttle_boost" : @"hud.throttle", (int)lroundf(f.throttle * 100));
     _speedLabel.text = L10nFormat(@"hud.speed", (int)lroundf(f.speed));
     _scoreLabel.text = L10nFormat(@"hud.score", f.kills, f.deaths);
+    _deadLabel.text = L10n(f.respawning ? @"hud.destroyed" : @"hud.destroyed_campaign");
     for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _scoreLabel, _secondaryLabel, _secondaryRack])
         n.hidden = f.cockpit;
-    _scoreLabel.hidden = YES;
+    _scoreLabel.hidden = !f.respawning || !_help.hidden;
+    _scoreLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeLeft;
+    _scoreLabel.fontSize = MIN(s.width, s.height) < 550 ? 12 : 16;
+    _scoreLabel.position = PointAdd(_objectivePanel.position, CGPointMake(0, -20));
+    _objectivePanel.hidden = f.respawning || !_help.hidden || _objectivePanel.children.count < 2;
     if (_touchLayout) _throttleFrame.hidden = YES;
     [self updateSecondary:f.secondary capacity:f.secondaryCapacity name:f.secondaryName];
     _aimMark.hidden = !f.aimVisible || f.playerDead;

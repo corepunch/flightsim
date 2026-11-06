@@ -61,6 +61,7 @@ typedef struct {
     BOOL boosting;
     int kills, deaths;
     BOOL playerDead;
+    BOOL respawning;        // deathmatch; campaign death ends the mission
     CGPoint sun;            // projected light source, HUD points
     float sunVisibility;    // 0..1
     float deltaTime;        // seconds, for the lens exposure response
@@ -100,6 +101,9 @@ typedef NSEdgeInsets HUDInsets;
 // For checks: the condition rows on the right, bottom up (hull, shield,
 // laser), then the secondary rack above them.
 @property (nonatomic, readonly) NSArray<SKNode *> *conditionRows;
+@property (nonatomic, readonly) SKLabelNode *scoreLabel;
+@property (nonatomic, readonly) BOOL helpVisible;
+@property (nonatomic, readonly) CGRect helpRect;
 
 - (void)updateFrame:(HUDFrame)frame targets:(const HUDTarget *)targets count:(NSUInteger)count;
 - (void)updateInstruments:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count cockpit:(BOOL)cockpit;

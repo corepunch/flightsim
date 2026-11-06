@@ -4,7 +4,7 @@
 #import "Shared.h"
 #import "Common.h"
 
-typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampaign, FrontScreenBrowser };
+typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampaign, FrontScreenBrowser, FrontScreenLAN };
 
 @implementation FrontEnd {
     __weak id<UIServices> _services;
@@ -12,6 +12,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     Briefing *_briefing;
     ServerBrowser *_browser;
     LANBrowser *_lan;
+    LANGame *_lanGame;
     FrontScreen _screen, _browserReturn;
 }
 
@@ -21,6 +22,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
         _mainMenu = [[MainMenu alloc] initWithSize:size];
         _briefing = [[Briefing alloc] initWithSize:size];
         _browser = [[ServerBrowser alloc] initWithSize:size];
+        _lanGame = [[LANGame alloc] initWithSize:size];
         _screen = FrontScreenMainMenu;
     }
     return self;
@@ -33,6 +35,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
         case FrontScreenMainMenu: return _mainMenu;
         case FrontScreenCampaign: return _briefing;
         case FrontScreenBrowser: return _browser;
+        case FrontScreenLAN: return _lanGame;
     }
     return _mainMenu;
 }
@@ -64,7 +67,10 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 
 #pragma mark - Showing screens
 
+- (void)stopBrowsing { [_lan stop]; _lan = nil; }
+
 - (void)showMainMenu {
+    [self stopBrowsing];
     [self prepareMainMenu];
     [self present:FrontScreenMainMenu];
 }
@@ -85,6 +91,13 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     NSString *server = _services.connectedServer;
     [_browser setStatus:server ? L10nFormat(@"browser.connected", server) : @""];
     [self present:FrontScreenBrowser];
+}
+
+- (void)showLANResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting {
+    NSMutableArray *shown = [NSMutableArray array];
+    for (NSString *line in results) [shown addObject:L10nExpand(line)];
+    [_lanGame showResults:shown hosting:hosting];
+    [self present:FrontScreenLAN];
 }
 
 - (void)setBrowserStatus:(NSString *)status { [_browser setStatus:status]; }
@@ -109,7 +122,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     NSMutableArray *shown = [NSMutableArray array];
     for (NSString *line in results) [shown addObject:L10nExpand(line)];
     results = shown;
-    if (success) { ProgressRecordResult(index, results); ProgressMarkCompleted(index); }
+    if (success && !remote) { ProgressRecordResult(index, results); ProgressMarkCompleted(index); }
     [_briefing showDebrief:index success:success results:results];
     [self present:FrontScreenCampaign];
 }
@@ -123,6 +136,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
         case FrontScreenMainMenu: [self mainMenuFrame:actions]; break;
         case FrontScreenCampaign: [self campaignFrame:actions]; break;
         case FrontScreenBrowser: [self browserFrame:actions]; break;
+        case FrontScreenLAN: [self lanFrame:actions]; break;
     }
 }
 
@@ -162,14 +176,46 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     NSMutableArray *list = [NSMutableArray array];
     for (LANServer *s in _lan.servers) if (![_services isOwnServer:s]) [list addObject:s];
     [_browser showServers:list];
+    if (_lan.discoveryFailed) [_browser setStatus:L10n(@"browser.permission")];
     switch ([_browser handle:actions]) {
         case BrowserCommandJoin: [_services joinServer:_browser.selected.address]; break;
+        case BrowserCommandCreate:
+            [_services cancelJoin];
+            [_lanGame showSetup];
+            [self present:FrontScreenLAN];
+            break;
         case BrowserCommandBack:
             [_services cancelJoin];
+            [self stopBrowsing];
             if (_browserReturn == FrontScreenMainMenu) [self showMainMenu];
             else [self present:_browserReturn];
             break;
         default: break;
+    }
+    [_services drawMenuBackdrop];
+}
+
+- (void)lanFrame:(InputAction)actions {
+    if (_services.hostingFailed) {
+        [_services closeLANGame]; [self showBrowser];
+        [_browser setStatus:L10n(@"browser.host_failed")]; return;
+    }
+    if (_lanGame.stage == LANGameLobby) [_lanGame showPilots:_services.hostedPilots];
+    switch ([_lanGame handle:actions]) {
+        case LANGameCommandBack:
+            [_services closeLANGame];
+            [self showBrowser];
+            _browserReturn = FrontScreenMainMenu;
+            break;
+        case LANGameCommandConfirm:
+            if (_lanGame.stage == LANGameSetup) {
+                if ([_services createLANGame]) [_lanGame showPilots:_services.hostedPilots];
+                else { [self showBrowser]; [_browser setStatus:L10n(@"browser.host_failed")]; }
+            } else if (_lanGame.stage == LANGameResults) {
+                [_lanGame showPilots:_services.hostedPilots];
+            } else [_services startLANMatch];
+            break;
+        case LANGameCommandNone: break;
     }
     [_services drawMenuBackdrop];
 }

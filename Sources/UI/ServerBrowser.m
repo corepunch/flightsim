@@ -26,11 +26,13 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     NSString *_status;
     NSString *_signature;
     CGSize _laidOut;
+    ScreenInsets _usedInsets;
     CGRect _backRect, _joinRect, _serverRows;
     NSUInteger _firstVisible;
     CGFloat _rowHeight;
     CGPoint _pendingPoint;
     BOOL _hasPendingPoint;
+    BOOL _createSelected;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -44,13 +46,15 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
         [_stage addChild:_root];
         [self addChild:_stage];
         _servers = @[];
+        _createSelected = YES;
     }
     return self;
 }
 
-- (LANServer *)selected { return _index < _servers.count ? _servers[_index] : nil; }
+- (LANServer *)selected { return !_createSelected && _index < _servers.count ? _servers[_index] : nil; }
 
 - (void)setStatus:(NSString *)status {
+    if ([_status ?: @"" isEqualToString:status ?: @""]) return;
     _status = [status copy];
     _signature = nil;
     [self rebuild];
@@ -81,6 +85,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     [_root removeAllChildren];
     [_hover reset];
     _laidOut = self.size;
+    _usedInsets = self.contentInsets;
     CGSize s = self.size;
     _stage.position = CGPointMake(s.width / 2, s.height / 2);
     _root.position = CGPointMake(-s.width / 2, -s.height / 2);
@@ -112,6 +117,12 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 
     CGRect body = regions.body;
     CGFloat x = CGRectGetMinX(body), y = CGRectGetMaxY(body), width = body.size.width;
+    _createRect = CGRectMake(x, y - 48, MIN(width, 260), 48);
+    SKShapeNode *create = UIActionButtonSized(_createRect, L10n(@"browser.create"), _createSelected ? UIAmber : UIInk, 17);
+    [_root addChild:create];
+    [_hover addButton:create rect:_createRect accent:UIAmber outline:NULL];
+    y -= 66;
+    body = RectFromEdges(x, CGRectGetMinY(body), CGRectGetMaxX(body), MAX(CGRectGetMinY(body), y));
     if (!_servers.count) {
         SKLabelNode *none = Text(M(@"emptySize", 17), Ink(0.55));
         none.text = L10n(@"browser.searching");
@@ -125,18 +136,23 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     _serverRows = CGRectMake(x, y - visible * rowHeight, width, visible * rowHeight);
     for (NSUInteger i = _firstVisible; i < _firstVisible + visible; i++) {
         LANServer *srv = _servers[i];
-        BOOL sel = i == _index;
+        BOOL sel = !_createSelected && i == _index;
         const LevelDef *level = LevelNamed(srv.levelName);
         NSString *mission = level ? level->title : nil;
         SKLabelNode *l = Text(M(@"rowSize", 16), sel ? Amber(1) : Ink(0.85));
-        l.text = L10nFormat(@"browser.row", sel ? @">" : @" ", srv.name, srv.players, srv.maxPlayers,
-                            mission ? L10nFormat(@"browser.flying", mission) : L10n(@"browser.in_menus"), srv.address);
+        l.text = L10nFormat(@"browser.row", sel ? @">" : @" ", srv.name, srv.players, srv.maxPlayers);
         l.numberOfLines = 1;
         l.preferredMaxLayoutWidth = width;
         l.lineBreakMode = NSLineBreakByTruncatingTail;
         l.position = CGPointMake(x, y - (i - _firstVisible) * rowHeight);
         [_root addChild:l];
         [rows addObject:l];
+        SKLabelNode *detail = Text(12, Ink(0.55));
+        detail.text = L10nFormat(@"browser.row_detail", mission ?: L10n(@"browser.in_menus"), srv.address);
+        detail.numberOfLines = 1; detail.preferredMaxLayoutWidth = width;
+        detail.lineBreakMode = NSLineBreakByTruncatingTail;
+        detail.position = PointAdd(l.position, CGPointMake(0, -22));
+        [_root addChild:detail];
     }
 
     CGRect footer = regions.footer;
@@ -201,7 +217,18 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 }
 
 - (void)update:(NSTimeInterval)currentTime {
-    if (!CGSizeEqualToSize(_laidOut, self.size)) [self rebuild];
+    if (!CGSizeEqualToSize(_laidOut, self.size) || memcmp(&_usedInsets, &_contentInsets, sizeof _usedInsets)) [self rebuild];
+}
+
+- (CGRect)joinRect { return _joinRect; }
+- (CGRect)serverRows { return _serverRows; }
+- (void)pointerScroll:(CGFloat)delta at:(CGPoint)point {
+    CGPoint at = CGPointMake(point.x * self.size.width, point.y * self.size.height);
+    if (!CGRectContainsPoint(_serverRows, at) || !_servers.count) return;
+    NSInteger next = (NSInteger)_index + (delta > 0 ? 1 : -1);
+    _index = (NSUInteger)MAX(0, MIN((NSInteger)_servers.count - 1, next));
+    _createSelected = NO;
+    [self rebuild];
 }
 
 - (BrowserCommand)handle:(InputAction)actions {
@@ -211,18 +238,31 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
     _hasPendingPoint = NO;
     if (CGRectContainsPoint(_backRect, click)) actions |= InputActionBack;
+    else if (CGRectContainsPoint(_createRect, click)) return BrowserCommandCreate;
     else if (CGRectContainsPoint(_joinRect, click)) actions |= InputActionConfirm;
     else if (CGRectContainsPoint(_serverRows, click)) {
         NSUInteger row = _firstVisible + (NSUInteger)((CGRectGetMaxY(_serverRows) - click.y) / MAX(_rowHeight, 1));
-        if (row < _servers.count) { _index = row; [[GameAudio shared] play:@"ui-hover"]; [self rebuild]; }
+        if (row < _servers.count) { _index = row; _createSelected = NO; [[GameAudio shared] play:@"ui-hover"]; [self rebuild]; }
     }
     if (actions & InputActionBack) { [[GameAudio shared] play:@"ui-back"]; return BrowserCommandBack; }
     if (actions & (InputActionUp | InputActionDown)) [[GameAudio shared] play:@"ui-hover"];
-    if (actions & InputActionConfirm) [[GameAudio shared] play:_servers.count ? @"ui-confirm" : @"ui-alert"];
+    if (actions & InputActionConfirm) {
+        [[GameAudio shared] play:@"ui-confirm"];
+        return _createSelected || !_servers.count ? BrowserCommandCreate : BrowserCommandJoin;
+    }
     if (_servers.count) {
-        if (actions & InputActionUp) { _index = (_index + _servers.count - 1) % _servers.count; [self rebuild]; }
-        if (actions & InputActionDown) { _index = (_index + 1) % _servers.count; [self rebuild]; }
-        if (actions & InputActionConfirm) return BrowserCommandJoin;
+        if (actions & InputActionUp) {
+            if (_createSelected) { _createSelected = NO; _index = _servers.count - 1; }
+            else if (_index == 0) _createSelected = YES;
+            else _index--;
+            [self rebuild];
+        }
+        if (actions & InputActionDown) {
+            if (_createSelected) { _createSelected = NO; _index = 0; }
+            else if (_index + 1 == _servers.count) _createSelected = YES;
+            else _index++;
+            [self rebuild];
+        }
     }
     return BrowserCommandNone;
 }
