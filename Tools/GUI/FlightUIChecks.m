@@ -25,6 +25,59 @@ static CGRect FrameInScene(SKNode *node, SKScene *scene) {
     CGPoint hi = [scene convertPoint:CGPointMake(CGRectGetMaxX(rect), CGRectGetMaxY(rect)) fromNode:node.parent];
     return CGRectMake(lo.x, lo.y, hi.x-lo.x, hi.y-lo.y);
 }
+static int CheckFrameOwnership(void) {
+    HUDFrame hud = {0};
+    CockpitFrame cockpit = {0};
+    CockpitContact contacts[2] = {0};
+    HUDTarget targets[2] = {0};
+    __weak NSString *weapon, *cockpitWeapon, *status, *objective, *label, *name, *className, *cargo, *component;
+    __weak id preview;
+    @autoreleasepool {
+        HUDFrame sourceHUD = {0};
+        sourceHUD.secondaryName = L10nExpand(@"{#game.weapon.torpedo}");
+        sourceHUD.status = [NSMutableString stringWithString:@"SCANNING 40%"];
+        weapon = sourceHUD.secondaryName;
+        status = sourceHUD.status;
+        hud = sourceHUD;
+        CockpitFrame sourceCockpit = {0};
+        sourceCockpit.secondaryName = L10nExpand(@"{#game.weapon.torpedo}");
+        cockpitWeapon = sourceCockpit.secondaryName;
+        sourceCockpit.objective = [NSMutableString stringWithString:@"Patrol the next navigation point"];
+        objective = sourceCockpit.objective;
+        cockpit = sourceCockpit;
+        CockpitContact contact = {0};
+        id model = [NSObject new];
+        contact.preview = model;
+        contact.name = [NSMutableString stringWithString:@"Corsair Cutter Rask"];
+        contact.className = [NSMutableString stringWithString:@"Corsair cutter"];
+        contact.cargo = [NSMutableString stringWithString:@"Skarn munitions"];
+        contact.component = [NSMutableString stringWithString:@"SHIELD GENERATOR"];
+        preview = contact.preview;
+        name = contact.name; className = contact.className; cargo = contact.cargo; component = contact.component;
+        contacts[0] = contact;
+        contacts[1] = contacts[0];
+        contacts[0] = (CockpitContact){0};
+        HUDTarget target = {0};
+        target.label = [NSMutableString stringWithString:@"Navigation point one"];
+        label = target.label;
+        targets[0] = target;
+        targets[1] = targets[0];
+        targets[0] = (HUDTarget){0};
+    }
+    // Translated strings and temporary contacts must survive pool drainage and
+    // value copies, even when the original frame or array slot has gone away.
+    CHECK(weapon && cockpitWeapon && status && objective && label && preview && name && className && cargo && component);
+    CHECK([hud.secondaryName isEqualToString:L10n(@"game.weapon.torpedo")]);
+    CHECK([hud.status isEqualToString:@"SCANNING 40%"]);
+    CHECK([cockpit.secondaryName isEqualToString:hud.secondaryName]);
+    CHECK([cockpit.objective isEqualToString:@"Patrol the next navigation point"]);
+    CHECK([contacts[1].name isEqualToString:@"Corsair Cutter Rask"]);
+    CHECK([contacts[1].className isEqualToString:@"Corsair cutter"]);
+    CHECK([contacts[1].cargo isEqualToString:@"Skarn munitions"]);
+    CHECK([contacts[1].component isEqualToString:@"SHIELD GENERATOR"]);
+    CHECK([targets[1].label isEqualToString:@"Navigation point one"]);
+    return 0;
+}
 static int CheckSensors(void) {
     CockpitFrame frame = {.alive=YES, .target=0};
     CockpitContact contacts[3] = {
@@ -503,6 +556,6 @@ static int CheckSimulation(void) {
 int main(int argc, const char **argv) { @autoreleasepool {
     [NSApplication sharedApplication];
     Output = argc>1 ? @(argv[1]) : @"/tmp";
-    if (CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckSettingLayout() || CheckControls() || CheckFrontEnd() || CheckLANLayouts() || CheckProtocol() || CheckSimulation()) return 1;
+    if (CheckFrameOwnership() || CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckSettingLayout() || CheckControls() || CheckFrontEnd() || CheckLANLayouts() || CheckProtocol() || CheckSimulation()) return 1;
     puts("PASS: flight instruments, mission grid, pause, capacitor and cargo protocol.");
 } return 0; }

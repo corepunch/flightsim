@@ -12,6 +12,8 @@
 // What the client tells the cockpit and the HUD instruments each frame. No
 // renderer types: the target preview is an opaque handle from
 // -[Refresh previewForModel:].
+// Frame values own their object fields: localization can create temporary
+// strings, and contacts are copied into arrays before the renderer uses them.
 #define COCKPIT_MAX_CONTACTS 24
 
 typedef struct CockpitContact {
@@ -23,8 +25,8 @@ typedef struct CockpitContact {
     BOOL shielded;              // capital with its shield generators up
     BOOL attacking;             // in an attack run on the player
     BOOL disabled;              // a fighter drifting with its systems down
-    __unsafe_unretained id preview;           // Refresh preview handle for the target readout
-    __unsafe_unretained NSString *name, *className, *cargo, *component;
+    id preview;                // Refresh preview handle for the target readout
+    NSString *name, *className, *cargo, *component;
 } CockpitContact;
 
 typedef struct CockpitFrame {
@@ -43,8 +45,8 @@ typedef struct CockpitFrame {
     BOOL six;                   // someone attacking from behind
     float nearest;              // distance to the closest hostile, metres
     int secondary;              // secondary weapon rounds left
-    __unsafe_unretained NSString *secondaryName;  // short name from the game ("TORP")
-    __unsafe_unretained NSString *objective;     // current objective, for the status display
+    NSString *secondaryName;   // short name from the game ("TORP")
+    NSString *objective;       // current objective, for the status display
 } CockpitFrame;
 
 // MARK: - HUD
@@ -81,10 +83,10 @@ typedef struct {
     float damageFlash;      // 0..1
     BOOL cockpit;           // gauges are on the cockpit displays instead
     int secondary, secondaryCapacity;       // secondary weapon rounds left and carried
-    __unsafe_unretained NSString *secondaryName;   // its name, from the game ("TORPEDO")
+    NSString *secondaryName;   // short name from the game ("TORP")
     BOOL aimVisible;        // subsystem aim marker on the selected capital
     CGPoint aim;
-    __unsafe_unretained NSString *status;   // under the boresight, e.g. "SCANNING 40%"
+    NSString *status;       // under the boresight, e.g. "SCANNING 40%"
 } HUDFrame;
 
 typedef NS_ENUM(int, HUDKind) { HUDKindEnemy, HUDKindFriend, HUDKindNeutral, HUDKindNav };
@@ -100,7 +102,7 @@ typedef struct {
     float health;
     HUDKind kind;
     BOOL capital, selected;
-    __unsafe_unretained NSString *label;
+    NSString *label;
 } HUDTarget;
 
 #if TARGET_OS_IOS
