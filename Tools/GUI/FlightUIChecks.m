@@ -93,7 +93,7 @@ static int CheckHUD(void) {
         SKNode *forward = hud.forwardScope, *rear = hud.rearScope;
         SKNode *objectives = [hud valueForKey:@"objectivePanel"];
         CHECK(fabs(forward.position.y - rear.position.y) < 0.01);
-        CHECK(CGRectGetMaxX(forward.frame) + 8 <= CGRectGetMinX([objectives calculateAccumulatedFrame]));
+        CHECK(CGRectGetMaxX([(SensorScope *)forward discFrame]) + 18 <= CGRectGetMinX([objectives calculateAccumulatedFrame]));
         CHECK(CGRectGetMinX(forward.frame) >= 0);
         CHECK(CGRectGetMaxX(rear.frame) <= hud.size.width);
         // The circular scopes have equal top and side margins, even when a

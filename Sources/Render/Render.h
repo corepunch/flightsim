@@ -210,6 +210,9 @@ void ApplyHullRolloff(SCNMaterial *m);
 @interface SensorScope : SKNode
 - (instancetype)initRear:(BOOL)rear;
 - (void)updateFrame:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count;
+// The disc, in the parent's coordinates: what neighbours lay out against,
+// since blips and labels can reach past it.
+@property (nonatomic, readonly) CGRect discFrame;
 @end
 
 // MARK: - LensFlare
