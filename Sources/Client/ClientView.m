@@ -50,6 +50,15 @@ typedef struct {
     float shake;                // hits and explosions, decaying
 } ChaseCam;
 
+// Banks the ship into a yaw turn so it leans like an aircraft instead of
+// pivoting flat like a car. The lean follows the eased yaw rate (so it settles
+// back when the stick centres) and turns only about the nose axis, which leaves
+// aim, flight and the server's state untouched. Roughly 20 degrees at full yaw.
+static simd_quatf BankedOrientation(const ShipMoveState *m) {
+    float bank = fminf(fmaxf(m->angularVelocity.y * 0.45f, -0.45f), 0.45f);
+    return simd_normalize(simd_mul(m->orientation, simd_quaternion(bank, simd_make_float3(0, 0, 1))));
+}
+
 static float Ease(float value, float target, float rate, float dt) {
     return value + (target - value) * (1.0f - expf(-rate * dt));
 }
@@ -404,7 +413,7 @@ static float Ease(float value, float target, float rate, float dt) {
     _cues = cues;
     RefEntity me = {
         .key = ps->entity, .kind = EntityFighter, .model = [self refModel:ps->model],
-        .origin = ps->move.origin, .orientation = ps->move.orientation, .scale = 1,
+        .origin = ps->move.origin, .orientation = BankedOrientation(&ps->move), .scale = 1,
         .throttle = ps->move.throttle, .hull = ps->hull, .boost = ps->move.boosting,
     };
     [_refresh setPlayer:&me alive:alive interior:_cockpit];
@@ -447,7 +456,9 @@ static float Ease(float value, float target, float rate, float dt) {
     simd_quatf shipQ = ps->move.orientation;
     if (!_hadPlayer || simd_length(chase.orientation.vector) < 0.5f) chase.orientation = shipQ;
     chase.orientation = simd_slerp(chase.orientation, shipQ, 1.0f - expf(-(_cockpit ? 30.0f : 7.0f) * dt));
-    simd_quatf q = simd_mul(_cockpit ? shipQ : chase.orientation, look);
+    // The chase camera follows the unbanked ship so the lean shows; the cockpit
+    // eye leans with it.
+    simd_quatf q = simd_mul(_cockpit ? BankedOrientation(&ps->move) : chase.orientation, look);
 
     float speed = simd_length(ps->move.velocity);
     // Ease boost effects in and out so toggling boost never pops the camera.
@@ -456,7 +467,7 @@ static float Ease(float value, float target, float rate, float dt) {
     simd_float3 offset = _cockpit ? RefCockpitEye
                                   : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
     simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : chase.orientation, simd_act(look, offset));
-    if (_cockpit) pos = ps->move.origin + simd_act(shipQ, offset);
+    if (_cockpit) pos = ps->move.origin + simd_act(BankedOrientation(&ps->move), offset);
 
     chase.shake = fmaxf(0, chase.shake - dt * 1.5f);
     // Smooth shake: two sines per axis, ~3-7 Hz, at frequencies with no common
