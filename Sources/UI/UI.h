@@ -164,6 +164,41 @@ typedef NSEdgeInsets BriefingInsets;
 
 // MARK: - MainMenu
 
+// Declarative settings content. The form owns row heights, padding, alignment,
+// responsive stacking and slider interaction; screens supply only content.
+@interface UISettingItem : NSObject
++ (instancetype)choice:(NSString *)title value:(NSString *)value detail:(NSString *)detail action:(void (^)(void))action;
++ (instancetype)slider:(NSString *)title value:(float)value minimum:(float)minimum maximum:(float)maximum
+                step:(float)step text:(NSString *(^)(float))text change:(void (^)(float))change;
++ (instancetype)action:(NSString *)title value:(NSString *)value action:(void (^)(void))action;
+@end
+
+@interface UISettingsForm : SKNode
+- (instancetype)initWithItems:(NSArray<UISettingItem *> *)items width:(CGFloat)width;
+@property (nonatomic) NSUInteger selectedIndex;
+@property (nonatomic, readonly) CGFloat height;
+@property (nonatomic, readonly) NSArray<NSValue *> *rowRects, *controlRects, *titleRects;
+@property (nonatomic, readonly) BOOL dragging;
+- (BOOL)clickAt:(CGPoint)point; // YES after an action that refreshes content
+- (void)beginAt:(CGPoint)point;
+- (void)dragTo:(CGPoint)point;
+- (void)endDrag;
+- (void)hoverAt:(CGPoint)point;
+- (BOOL)adjust:(NSInteger)direction;
+@end
+
+// The engine's flight options and fixed bindings, reused in the menu and pause.
+// The title stays visible while the body scrolls on small screens.
+@interface ControlsPanel : SKNode <ScreenInput>
+- (void)layoutIn:(CGRect)bounds sceneSize:(CGSize)size;
+- (BOOL)handle:(InputAction)actions; // YES when Back is chosen
+@property (nonatomic, readonly) CGRect backRect, scrollRect;
+@property (nonatomic, readonly) NSArray<NSValue *> *settingRects; // in scrollContent's coordinates
+@property (nonatomic, readonly) CGFloat scrollOffset;
+@property (nonatomic, readonly) SKNode *scrollContent;
+@property (nonatomic, readonly) UISettingsForm *form;
+@end
+
 #if TARGET_OS_IOS
 typedef UIEdgeInsets MainMenuInsets;
 #else
@@ -184,6 +219,7 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
 // Insets are in scene points. When used as a SceneKit overlay, the host
 // supplies its view's safe area. In a standalone SKView the scene reads it.
 @property (atomic) MainMenuInsets contentInsets;
+@property (nonatomic, readonly) ControlsPanel *controlsPanel;
 
 - (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed;
 - (MainMenuCommand)handle:(InputAction)actions;
@@ -206,9 +242,12 @@ typedef NS_ENUM(NSInteger, PauseCommand) {
 
 // The in-flight pause menu, laid out by Resources/UI/menus/pause.json. Its
 // buttons' ids map to commands: resume, camera, sound, restart, missions;
+// controls opens the engine's flight preferences within this screen.
 // other ids do nothing. Flags for "when": "online" (a remote game, where the
 // mission keeps running) and "cockpit" (the cockpit camera is on).
 @interface PauseMenu : SKScene <ScreenInput>
+@property (atomic) ScreenInsets contentInsets;
+@property (nonatomic, readonly) ControlsPanel *controlsPanel;
 - (void)showRemote:(BOOL)remote cockpit:(BOOL)cockpit;
 - (PauseCommand)handle:(InputAction)actions;
 @end

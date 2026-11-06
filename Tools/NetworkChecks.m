@@ -72,9 +72,10 @@ static BOOL assertPendingPrediction;
 @property ShipMoveState drawn;
 @property NSMutableArray<NSData *> *predictedVelocities, *serverVelocities;
 @property NSUInteger damageEvents;
+@property (nonatomic, copy) NSString *lastRadio;
 @end
 @implementation Spy
-- (void)serverCommand:(int)t a:(NSString *)a b:(NSString *)b c:(NSString *)c {}
+- (void)serverCommand:(int)t a:(NSString *)a b:(NSString *)b c:(NSString *)c { if (t == SVC_RADIO) self.lastRadio = a; }
 - (void)handleEvent:(const GameEvent *)e player:(const PlayerState *)ps {
     if (e->type == EV_DAMAGE && e->entity != ps->entity) self.damageEvents++;
     if (e->type == EV_BOLT && e->entity == ps->entity) {
@@ -511,6 +512,94 @@ static void BoardRun(void) {
     [server stop];
     puts("PASS boarding: boarders wait for a whole target, capture a disabled one after dockSeconds, restart when one is lost, objective completes");
 }
+static void SecondaryTargetingRun(void) {
+    routes = [NSMutableDictionary dictionary]; delay = 0; dropEvery = 0; blackout = NO;
+    assertPendingPrediction = NO;
+    Server *server = [[Server alloc] initWithName:@"Secondary targeting"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-orders"];
+    Spy *view = [Spy new];
+    Client *client = [[Client alloc] initWithView:(ClientView *)view];
+    __weak Client *weak = client; client.gamestateHandler = ^{ [weak begin]; };
+    [client connectTo:[NetAddress loopback:1] transport:[Link port:10] name:@"Missile pilot"];
+    Steps(server, @[client], (ControlState){0}, 60);
+    GClient *pilot = level->_clients[0];
+    CHECK(pilot.inGame && pilot.ship.alive);
+    pilot.torpedoes = 3;
+    int rounds = pilot.torpedoes;
+    pilot.selected = nil;
+    // Deliver the launch command without advancing a world tick: acquisition
+    // must happen during the launch, before regular targeting runs again.
+    [client sendInput:(ControlState){0} actions:InputActionSecondary dt:TICK_DT];
+    [server frame:0];
+    CHECK(pilot.selected && pilot.torpedoes == rounds - 1);
+    CHECK(level->_torpedoes.count == 1 && level->_torpedoes.lastObject.target == pilot.selected);
+    GFighter *drone = pilot.selected; CHECK([drone isKindOfClass:GFighter.class]);
+    GCapital *capital = level->_capitals.firstObject; CHECK(capital);
+    capital.position = pilot.ship.position + pilot.ship.forward * 700;
+    pilot.selected = capital; pilot.targetIsManual = YES;
+    [level fireTorpedoFor:pilot];
+    CHECK(pilot.selected == capital && level->_torpedoes.lastObject.target == capital);
+    CHECK(level->_torpedoes.lastObject.aim == pilot.aimSubsystem);
+    CHECK(pilot.torpedoes == rounds - 2);
+    // A destroyed selection is replaced and still fires on the first press.
+    [level destroyCapital:capital];
+    pilot.selected = capital; pilot.targetIsManual = YES;
+    [level fireTorpedoFor:pilot];
+    CHECK(pilot.selected == drone && level->_torpedoes.lastObject.target == drone);
+    CHECK(pilot.torpedoes == rounds - 3 && !level->_torpedoes.lastObject.aim);
+    NSUInteger launched = level->_torpedoes.count;
+    pilot.torpedoes = 1;
+    pilot.selected = nil;
+    [level->_pilots removeAllObjects];
+    [level fireTorpedoFor:pilot];
+    CHECK(!pilot.selected && pilot.torpedoes == 1 && level->_torpedoes.count == launched);
+    // Only hostile targets close to the crosshair qualify. The farther but
+    // better-aligned ship wins, and automatic locks follow a change of aim.
+    GCapital *near = [GCapital capitalWithAsset:@"Corvette" style:nil team:TeamEnemy];
+    GCapital *aligned = [GCapital capitalWithAsset:@"Corvette" style:nil team:TeamEnemy];
+    [level->_capitals addObjectsFromArray:@[near, aligned]];
+    simd_float3 forward = pilot.ship.forward, right = pilot.ship.right, origin = pilot.ship.position;
+    near.position = origin + forward * 300 + right * 25;
+    aligned.position = origin + forward * 1800 + right * 5;
+    pilot.selected = nil; pilot.targetIsManual = NO;
+    [level updateTargetingFor:pilot];
+    CHECK(pilot.selected == aligned);
+    near.position = origin + forward * 300;
+    [level updateTargetingFor:pilot];
+    CHECK(pilot.selected == near);
+    [level fireTorpedoFor:pilot];
+    CHECK(level->_torpedoes.lastObject.target == near && pilot.torpedoes == 0);
+    pilot.torpedoes = 2;
+    launched = level->_torpedoes.count;
+    // Turning away clears an automatic lock rather than firing offscreen.
+    near.position = origin + forward * 300 + right * 60;
+    aligned.position = origin - forward * 300;
+    [level fireTorpedoFor:pilot];
+    CHECK(!pilot.selected && pilot.torpedoes == 2 && level->_torpedoes.count == launched);
+    // Even stale manual locks become invalid when an enemy changes sides.
+    near.position = origin + forward * 300;
+    for (NSNumber *team in @[@(TeamFriend), @(TeamNeutral)]) {
+        near.team = team.intValue;
+        pilot.selected = near; pilot.targetIsManual = YES;
+        [level fireTorpedoFor:pilot];
+        CHECK(!pilot.selected && !pilot.targetIsManual && pilot.torpedoes == 2 && level->_torpedoes.count == launched);
+        [level cycleTargetFor:pilot];
+        CHECK(pilot.selected != near);
+    }
+    near.team = TeamEnemy;
+    near.departed = YES;
+    pilot.selected = nil; pilot.targetIsManual = NO;
+    [level fireTorpedoFor:pilot];
+    CHECK(!pilot.selected && pilot.torpedoes == 2);
+    near.departed = NO;
+    near.stealthRange = 100;
+    [level fireTorpedoFor:pilot];
+    CHECK(!pilot.selected && pilot.torpedoes == 2);
+    [server frame:0 paused:YES]; [client readPackets];
+    CHECK([view.lastRadio isEqualToString:MissionText(@"combat.no_targets", nil)]);
+    [client disconnect]; [server stop];
+    puts("PASS secondary targeting: first-press launch, manual enemy lock, crosshair proximity over distance, automatic retargeting, no offscreen/friendly/neutral/departed/hidden targets, ammunition preserved without a target");
+}
 static void UDPSmoke(void) {
     assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
@@ -562,7 +651,7 @@ static void DeathmatchRun(void) {
     }
     GClient *a = level->_clients[0], *b = level->_clients[MAX_CLIENTS-1];
     [level cycleTargetFor:a]; CHECK(a.selected && a.selected != a.ship);
-    b.selected = a.ship; [level fireTorpedoFor:b];
+    b.selected = a.ship; b.targetIsManual = YES; [level fireTorpedoFor:b];
     CHECK(level->_torpedoes.lastObject.team == b.ship.team);
     [level->_torpedoes removeAllObjects];
     uint16_t oldEntity = b.ship.number;
@@ -585,7 +674,7 @@ static void DeathmatchRun(void) {
     Steps(server, clients, (ControlState){0}, 60);
     CHECK(!server.missionEnded && a.kills == 0 && b.deaths == 0 && b.ship.alive);
     // Leaving a solo host waiting must never finish an empty-objective mission.
-    GClient *departing = level->_clients[1]; departing.selected = a.ship;
+    GClient *departing = level->_clients[1]; departing.selected = a.ship; departing.targetIsManual = YES;
     [level fireTorpedoFor:departing];
     GTorpedo *orphan = level->_torpedoes.lastObject; CHECK(orphan.owner == departing);
     for (NSUInteger i = 1; i < clients.count; i++) [clients[i] disconnect];
@@ -680,6 +769,7 @@ int main(int argc, const char **argv) { @autoreleasepool {
     IonPlayer();
     OrdersRun();
     BoardRun();
+    SecondaryTargetingRun();
     UDPSmoke();
     DeathmatchRun();
     ConnectTimeoutCheck();

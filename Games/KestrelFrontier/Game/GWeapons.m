@@ -182,11 +182,14 @@ NSString *GSecondaryShort(const ShipDef *def) { return OrRule(def ? def->seconda
 
 - (void)fireTorpedoFor:(GClient *)cl {
     GFighter *s = cl.ship;
-    id target = cl.selected;
     if (!s.alive || s.disabled) return;
+    // Commands can arrive before this frame's targeting update. Acquire the
+    // target and its subsystem now so the same press can launch the weapon.
+    [self updateTargetingFor:cl];
+    id target = cl.selected;
     const ShipSecondary *weapon = &s.definition->secondary;
-    if (cl.torpedoes <= 0 || !BodyAlive(target)) {
-        GCommand(cl, SVC_RADIO, MissionText(cl.torpedoes <= 0 ? @"combat.no_secondary" : @"combat.select_target", nil), @"", nil);
+    if (cl.torpedoes <= 0 || !BodyAlive(target) || !TeamsHostile(s.team, BodyTeam(target))) {
+        GCommand(cl, SVC_RADIO, MissionText(cl.torpedoes <= 0 ? @"combat.no_secondary" : @"combat.no_targets", nil), @"", nil);
         return;
     }
     if (simd_distance(BodyPosition(target), s.position) > weapon->range) {

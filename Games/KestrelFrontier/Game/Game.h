@@ -227,6 +227,7 @@ typedef NS_ENUM(NSInteger, PilotLeaving) { PilotStaying, PilotDocking, PilotJump
 @property (nonatomic, strong) GFighter *ship;
 @property (nonatomic) int kills, deaths, torpedoes;
 @property (nonatomic, weak) id selected;
+@property (nonatomic) BOOL targetIsManual; // T / target button keeps an explicit enemy lock
 @property (nonatomic, weak) GSubsystem *aimSubsystem;
 @property (nonatomic) double cmdTime, lastBump;     // seconds of commands run
 @property (nonatomic, copy) NSString *status, *sentStatus;

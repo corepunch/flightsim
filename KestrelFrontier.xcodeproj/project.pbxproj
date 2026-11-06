@@ -650,6 +650,26 @@
 			);
 			"sourceTree" = "<group>";
 		};
+		"D7691FEEE36C1C62D9672A86" = {
+			"isa" = "PBXFileReference";
+			"path" = "FlightControls.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"93B9BBB10F670BF783011C21" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "D7691FEEE36C1C62D9672A86";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"FA4434847FAD62E240C9BA02" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "D7691FEEE36C1C62D9672A86";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"E10CBAFB65645CE4BDDC3EFC" = {
 			"isa" = "PBXFileReference";
 			"path" = "Input.h";
@@ -706,6 +726,7 @@
 			"isa" = "PBXGroup";
 			"path" = "Input";
 			"children" = (
+				"D7691FEEE36C1C62D9672A86",
 				"E10CBAFB65645CE4BDDC3EFC",
 				"EBCD7FCF1D14C399E9FE3F3E",
 				"1619E0E63DB9D9ADF55E0CD9",
@@ -1391,6 +1412,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"0BAE555A743A3D16EC4080F1" = {
+			"isa" = "PBXFileReference";
+			"path" = "ControlsPanel.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"CC4F9A4D297FF0DBCF84943A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "0BAE555A743A3D16EC4080F1";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"06CAFC2ED41AFB1D26695DCF" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "0BAE555A743A3D16EC4080F1";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"5E62144903070C3BC61E2B08" = {
 			"isa" = "PBXFileReference";
 			"path" = "FrontEnd.m";
@@ -1637,6 +1678,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"0031E18773F7BA6D5077AB1B" = {
+			"isa" = "PBXFileReference";
+			"path" = "UISettingsForm.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"F365BC11D11F67498EF09307" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "0031E18773F7BA6D5077AB1B";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"C8395B85D9BA6A172271FD30" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "0031E18773F7BA6D5077AB1B";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"ABF8A704D28EA8A017362EDC" = {
 			"isa" = "PBXFileReference";
 			"path" = "UITheme.m";
@@ -1662,6 +1723,7 @@
 			"path" = "UI";
 			"children" = (
 				"7AF867F53679CDC513C0B8CA",
+				"0BAE555A743A3D16EC4080F1",
 				"5E62144903070C3BC61E2B08",
 				"257CC24D6FE79BB00913E599",
 				"9339FDB9B2531DF0CA7321D4",
@@ -1675,6 +1737,7 @@
 				"84B3D45B9B081490849BD404",
 				"D4C91D096E021A45E3923A87",
 				"A0B7717091DC976B7BD96039",
+				"0031E18773F7BA6D5077AB1B",
 				"ABF8A704D28EA8A017362EDC",
 			);
 			"sourceTree" = "<group>";
@@ -1894,6 +1957,7 @@
 				"E3BAFB07624F6577D79D98EE",
 				"6B839E6B2579ADDFAE67D51F",
 				"4009EE748AD594AC7F7D6779",
+				"93B9BBB10F670BF783011C21",
 				"52008117FAF5E634CBB78072",
 				"6C89D9B5FBAE10C2BC7F79E8",
 				"EA49ADD38A481AA444F5E708",
@@ -1923,6 +1987,7 @@
 				"419640121AD728914FAEB565",
 				"F31AB976A1B2AB41A476E04E",
 				"940C2B92CEBF3E1A1612782D",
+				"CC4F9A4D297FF0DBCF84943A",
 				"6DD82C5E7F4CB9A1CC38560A",
 				"03841706B32D8E0FABA22592",
 				"E8C89EA86C5030B4D6FBBD48",
@@ -1935,6 +2000,7 @@
 				"BCC69BE9FEF8C1AD7EB979ED",
 				"B53619A32BAACC04DC0947BC",
 				"53A704EC357CA4AEA1E5345C",
+				"F365BC11D11F67498EF09307",
 				"AB84E9F172D7CC4CD5F00B38",
 				"D333CB6EC38148AC7C563FB0",
 				"9A8F4D5042691289620BFD69",
@@ -1959,6 +2025,7 @@
 				"7E9F3289797ABF52E16F99A5",
 				"CEF700888D27BD6EE485C46F",
 				"162E208C5216735E6513B19A",
+				"FA4434847FAD62E240C9BA02",
 				"B3D25F6BA3BB680BCAF776DD",
 				"5AF0CF09039305C9CAD73182",
 				"901D0E47D1E8AFA1C5B0CF25",
@@ -1985,6 +2052,7 @@
 				"DDC0D67AAAA5499A4BEA641A",
 				"63F80E833DC18123E8370997",
 				"779026633E677BC0ED6D61FF",
+				"06CAFC2ED41AFB1D26695DCF",
 				"00915447642B036EEED42931",
 				"521FA47765E243F28A4FB712",
 				"21261BC47075F231EA0C656A",
@@ -1997,6 +2065,7 @@
 				"B1B93A59243A96A2B7DA779E",
 				"331FCC0B7C09A04E4A800032",
 				"1987F5077973522EF9E86DE3",
+				"C8395B85D9BA6A172271FD30",
 				"088586AD122F949F4E626565",
 			);
 			"buildActionMask" = 2147483647;

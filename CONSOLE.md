@@ -62,11 +62,16 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `cl_testInput` | 0 | cheat | A pilot who weaves and fires, for testing prediction |
 | `cl_testFire` | 0 | cheat | Holds the trigger |
 | `in_throttle` | 0 | | Throttle at launch |
+| `in_expert` | 0 | archive | Horizontal mouse, trackball, joystick, controller or touch stick rolls (1) instead of yawing (0) |
+| `in_sensitivityX` | 1 | archive | Horizontal flight sensitivity, clamped to 0.25–2 |
+| `in_sensitivityY` | 1 | archive | Vertical flight sensitivity, clamped to 0.25–2 |
+| `in_invertPitch` | 0 | archive | Invert primary analog pitch (I toggles it); keyboard arrows keep their direction |
 | `in_touchOnly` | 0 | | iOS: ignores game controllers |
 | `ui_timescale` | 1 | | Front-end motion runs this many times slower |
 | `ui_reduceMotion` | | | Reduce front-end motion: 0 off, 1 on, empty follows the system setting |
 | `ui_motion` | | | Front-end motion style: full, fade or none; empty follows the game's UI theme |
 | `ui_unlockAll` | 0 | cheat | Every mission is open |
+| `g_autoTargetCone` | 8 | | Automatic enemy acquisition radius around the crosshair in degrees, clamped to 0–45; manual enemy locks stay selected |
 | `g_aimAssist` | 1 | archive | Scales the aim-assist cone of players' guns (ship `gun.assist`, degrees); 0 turns it off |
 | `g_god` | 0 | cheat | Players take no damage |
 | `g_autopilot` | 0 | cheat | The AI flies the first player's ship |

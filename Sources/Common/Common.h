@@ -36,6 +36,12 @@ static inline CGPoint PointMultiply(CGPoint p, CGSize s) { return CGPointMake(p.
 
 static inline CGPoint RectCenter(CGRect r) { return CGPointMake(CGRectGetMidX(r), CGRectGetMidY(r)); }
 static inline CGPoint RectTopCenter(CGRect r) { return CGPointMake(CGRectGetMidX(r), CGRectGetMaxY(r)); }
+// A point expressed as fractions of a rectangle, without clamping at its edges.
+static inline CGPoint PointFractionInRect(CGPoint p, CGRect r) {
+    CGPoint local = PointSub(p, r.origin);
+    return PointMultiply(local, CGSizeMake(r.size.width > 0 ? 1 / r.size.width : 0,
+                                           r.size.height > 0 ? 1 / r.size.height : 0));
+}
 static inline CGRect RectFromEdges(CGFloat left, CGFloat bottom, CGFloat right, CGFloat top) {
     return CGRectMake(left, bottom, right - left, top - bottom);
 }

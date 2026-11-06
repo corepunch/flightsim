@@ -15,7 +15,6 @@
     "briefing.loadout_one": "Loadout: twin cutters, %d torpedo",
     "briefing.loadout_many": "Loadout: twin cutters, %d torpedoes",
     "combat.no_secondary": "Torpedoes spent",
-    "combat.select_target": "Lock a target to launch a torpedo",
     "combat.out_of_range": "Target beyond torpedo reach"
   }
 }

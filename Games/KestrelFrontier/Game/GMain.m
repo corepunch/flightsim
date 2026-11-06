@@ -266,6 +266,7 @@ static void ClientDisconnect(int index) {
 static void Init(void) {
     FSSetGame(@(gi.cvarString("fs_game") ?: ""));   // this module's copy of the search path
     gi.cvarRegister("g_aimAssist", "1", CVAR_ARCHIVE, "Scales the aim-assist cone of players' guns; 0 turns it off");
+    gi.cvarRegister("g_autoTargetCone", "8", 0, "Automatic enemy acquisition radius around the crosshair, in degrees (0..45)");
     gi.cvarRegister("g_god", "0", CVAR_CHEAT, "Players take no damage");
     gi.cvarRegister("g_autopilot", "0", CVAR_CHEAT, "The AI flies the first player's ship");
     gi.cvarRegister("g_warp", "", CVAR_CHEAT, "Entity id to spawn the first player next to, facing it");

@@ -7,7 +7,7 @@
 #import <math.h>
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); return EXIT_FAILURE; } } while (0)
-#define NEAR(a, b) (fabsf((a) - (b)) < 0.0001f)
+#define NEAR(a, b) (fabs((double)(a) - (double)(b)) < 0.0001)
 
 // Keep the checks independent of any controller attached to the test Mac.
 @interface CheckInput : Input
@@ -45,40 +45,62 @@ int main(void) {
         input.mouseCaptured = YES;
         CheckEvent *event = [CheckEvent new];
 
+        FlightControls *settings = [FlightControls shared];
+        [settings reset];
         [input mouseMovedByX:160 y:-80];
         ControlState c = [input poll:1.0f / 60];
         CHECK(c.yaw > 0 && c.pitch > 0 && c.roll == 0);
-        float pitch = c.pitch;
+        float yaw = c.yaw, pitch = c.pitch;
         [view rightMouseDown:event];
-        c = [input poll:1.0f / 60];
-        CHECK(c.yaw == 0 && c.roll == 0 && NEAR(c.pitch, pitch));
-        event.movementX = 160;
-        [view rightMouseDragged:event];
-        [view mouseDown:event]; // simultaneous guns + roll
-        c = [input poll:1.0f / 60];
-        CHECK(c.roll > 0 && c.yaw == 0 && c.fire && NEAR(c.pitch, pitch));
-        CHECK(NEAR([input poll:1.0f / 30].roll, c.roll)); // holds without more motion
-        [view mouseUp:event];
-        [view rightMouseUp:event];
-        c = [input poll:1.0f / 60];
-        CHECK(c.roll == 0 && c.yaw == 0 && !c.fire && NEAR(c.pitch, pitch));
-        [input mouseMovedByX:-160 y:0];
-        CHECK([input poll:1.0f / 60].yaw < 0);
-        [view rightMouseDown:event];
-        event.movementX = -160;
-        [view rightMouseDragged:event];
-        CHECK([input poll:1.0f / 60].roll < 0);
-
-        // Only the wheel button centres the stick; the held roll mode survives.
-        event.button = 3;
-        [view otherMouseDown:event];
-        CHECK([input poll:1.0f / 60].roll < 0);
+        CHECK([input consumeActions] == InputActionSecondary);
+        CHECK([input consumeActions] == 0); // a press launches once
+        c = [input poll:0];
+        CHECK(NEAR(c.yaw, yaw) && NEAR(c.pitch, pitch) && c.roll == 0);
         event.button = 2;
         [view otherMouseDown:event];
-        c = [input poll:1.0f / 60];
-        CHECK(c.pitch == 0 && c.yaw == 0 && c.roll == 0);
-        [view rightMouseDragged:event];
-        CHECK([input poll:1.0f / 60].roll < 0);
+        CHECK([input consumeActions] == InputActionTarget);
+        CHECK(NEAR([input poll:0].yaw, yaw)); // target selection never recentres
+        event.button = 3;
+        [view otherMouseDown:event];
+        CHECK([input consumeActions] == 0);
+        [view mouseDown:event];
+        CHECK([input poll:0].fire);
+        [view mouseUp:event];
+        CHECK(![input poll:0].fire);
+
+        settings.expert = YES;
+        c = [input poll:0];
+        CHECK(c.yaw == 0 && NEAR(c.roll, yaw) && NEAR(c.pitch, pitch));
+        CHECK(NEAR([input poll:1.0f / 30].roll, c.roll));
+        settings.horizontalSensitivity = 0.5;
+        c = [input poll:0];
+        CHECK(NEAR(c.roll, yaw * 0.5f) && NEAR(c.pitch, pitch));
+        settings.verticalSensitivity = 1.5;
+        CHECK(NEAR([input poll:0].pitch, pitch * 1.5f));
+        settings.invertPitch = YES;
+        CHECK(NEAR([input poll:0].pitch, -pitch * 1.5f));
+        // Touch and controller use the same engine mapping, preserving their
+        // separate roll stick, buttons, throttle and boost.
+        ControlState stick = {.yaw=-0.4f, .pitch=0.3f, .roll=0.1f, .throttle=0.7f, .fire=YES, .boost=YES, .hat=-1};
+        c = [settings applyTo:stick];
+        CHECK(c.yaw == 0 && NEAR(c.roll, -0.1f) && NEAR(c.pitch, -0.45f));
+        CHECK(c.throttle == stick.throttle && c.fire && c.boost && c.hat == -1);
+        FlightControls *reloaded = [FlightControls new];
+        CHECK(reloaded.expert && reloaded.invertPitch && NEAR(reloaded.horizontalSensitivity, 0.5f));
+        CHECK([[NSUserDefaults.standardUserDefaults stringForKey:@"cvar.in_expert"] isEqualToString:@"1"]);
+        settings.horizontalSensitivity = NAN;
+        CHECK(settings.horizontalSensitivity == 1);
+        settings.horizontalSensitivity = 100;
+        settings.verticalSensitivity = -10;
+        CHECK(settings.horizontalSensitivity == 2 && settings.verticalSensitivity == 0.25f);
+        [settings reset];
+        CHECK(!settings.expert && !settings.invertPitch && settings.horizontalSensitivity == 1 && settings.verticalSensitivity == 1);
+        [view rightMouseDown:event];
+        event.button = 2;
+        [view otherMouseDown:event];
+        CHECK([input consumeActions] == InputActionTarget);
+        CHECK([input consumeActions] == InputActionSecondary);
+        CHECK([input consumeActions] == 0);
 
         event.wheelDelta = 1;
         [view scrollWheel:event];
@@ -118,7 +140,7 @@ int main(void) {
         c = [input poll:0];
         CHECK(c.throttle == 0 && c.roll == 0 && c.yaw == 0 && c.pitch == 0);
         [input mouseMovedByX:160 y:0];
-        CHECK([input poll:0].yaw > 0); // no stuck roll modifier after release
+        CHECK([input poll:0].yaw > 0); // steering resumes in Casual
         [view rightMouseDown:event];
         [input setMouseFire:YES];
         [input mouseMovedByX:160 y:80];
@@ -148,7 +170,13 @@ int main(void) {
         CHECK(e[1].kind == PointerEventDown && e[2].kind == PointerEventClick && NEAR(e[2].at.x, 0.5));
         CHECK(e[3].kind == PointerEventScroll && NEAR(e[3].delta, -36));
         CHECK(input.pointer.drain.length == 0);
-        puts("PASS: mouse flight routing, roll transitions, fire, recenter, wheel direction, bounds, release and screen pointer events.");
+        [view mouseDragged:at];
+        [view mouseUp:at];
+        queued = input.pointer.drain;
+        e = queued.bytes;
+        CHECK(queued.length == 3 * sizeof(PointerEvent));
+        CHECK(e[0].kind == PointerEventDrag && e[1].kind == PointerEventHover && e[2].kind == PointerEventUp);
+        puts("PASS: mouse flight modes, sensitivity, saved settings, weapons, wheel direction, bounds, release and screen pointer events.");
     }
     return EXIT_SUCCESS;
 }

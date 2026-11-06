@@ -39,6 +39,9 @@ typedef NS_ENUM(int, PointerEventKind) {
     PointerEventDown,       // a press or touch began
     PointerEventClick,      // released where it went down, without dragging
     PointerEventScroll,     // wheel or a touch drag: `delta` points, + scrolls content up
+    PointerEventDrag,       // position while the primary pointer is held
+    PointerEventUp,
+    PointerEventCancel,
 };
 
 typedef struct {
@@ -54,6 +57,9 @@ typedef struct {
 - (void)pointerDown:(CGPoint)at;
 - (void)pointerClick:(CGPoint)at;
 - (void)pointerScroll:(CGFloat)delta at:(CGPoint)at;
+- (void)pointerDrag:(CGPoint)at;
+- (void)pointerUp:(CGPoint)at;
+- (void)pointerCancel;
 @end
 
 // Delivers one event to a screen, if it takes that kind.
@@ -65,6 +71,9 @@ static inline void ScreenInputDeliver(id screen, PointerEvent e) {
         case PointerEventDown: if ([s respondsToSelector:@selector(pointerDown:)]) [s pointerDown:e.at]; break;
         case PointerEventClick: if ([s respondsToSelector:@selector(pointerClick:)]) [s pointerClick:e.at]; break;
         case PointerEventScroll: if ([s respondsToSelector:@selector(pointerScroll:at:)]) [s pointerScroll:e.delta at:e.at]; break;
+        case PointerEventDrag: if ([s respondsToSelector:@selector(pointerDrag:)]) [s pointerDrag:e.at]; break;
+        case PointerEventUp: if ([s respondsToSelector:@selector(pointerUp:)]) [s pointerUp:e.at]; break;
+        case PointerEventCancel: if ([s respondsToSelector:@selector(pointerCancel)]) [s pointerCancel]; break;
     }
 }
 
@@ -91,6 +100,18 @@ typedef struct {
     int hat;         // -1 centred, 0..7 clockwise from up
 } ControlState;
 
+// Engine-wide flight preferences, shared by every game and input device.
+// Explicit rudder/roll controls remain available in either steering mode.
+@interface FlightControls : NSObject
++ (instancetype)shared;
+@property (nonatomic) BOOL expert;
+@property (nonatomic) BOOL invertPitch;
+@property (nonatomic) float horizontalSensitivity; // 0.25..2
+@property (nonatomic) float verticalSensitivity;   // 0.25..2
+- (ControlState)applyTo:(ControlState)state;
+- (void)reset;
+@end
+
 #if TARGET_OS_IOS
 extern NSNotificationName const InputControllerDidChangeNotification;
 #endif
@@ -114,7 +135,7 @@ extern NSNotificationName const InputControllerDidChangeNotification;
 - (void)flagsChanged:(NSEvent *)event;
 - (void)mouseMovedByX:(CGFloat)dx y:(CGFloat)dy;
 - (void)setMouseFire:(BOOL)down;
-- (void)setMouseRoll:(BOOL)down;     // hold to route horizontal mouse input to roll
+- (void)queueMouseAction:(InputAction)action;
 - (void)adjustMouseThrottleBy:(float)delta;
 - (void)recenterMouse;
 - (void)releaseAllKeys;
