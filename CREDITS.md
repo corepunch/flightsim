@@ -89,8 +89,13 @@ Made for this project:
 
 ## Techniques
 
-The skybox, explosions (shader-driven fire spheres), shockwave ring and lens
-streaks are procedural; they ship no image assets.
+Explosion fire and smoke use **Explosion00** by **Thomas ICHÉ / Unity Labs Paris**,
+from [Free VFX image sequences and flipbooks](https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks),
+released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+`Resources/Particles/explosion.png` is a lossless PNG conversion of the supplied
+`Explosion00_5x5.tga`; `Tools/Art/prepare_explosion.py` reproduces it.
+
+The skybox, impact fire spheres and lens streaks are procedural.
 They build on these published techniques:
 - Domain-warped fBm noise: Inigo Quilez, "Domain Warping",
   https://iquilezles.org/articles/warp/
