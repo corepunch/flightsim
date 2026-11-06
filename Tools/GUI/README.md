@@ -21,8 +21,8 @@ crossfades and looping, flight engine/boost response, effect playback, the saved
 sound modes and pausing when the app loses focus. It also exercises the main
 menu sound setting and saves desktop, compact and portrait menu previews.
 
-Run `./Tools/run-mouse-checks.sh` to check mouse flight event routing, held roll,
-roll/yaw transitions, simultaneous fire, wheel-click centring, wheel direction
+Run `./Tools/run-mouse-checks.sh` to check mouse flight event routing, Casual/Expert steering,
+separate sensitivity, saved preferences, mouse weapons and targeting, wheel direction
 with either macOS scrolling setting, throttle limits and input release. It uses
 the native game objects and ignores attached controllers for repeatable checks.
 
@@ -64,6 +64,6 @@ whatever the machine's Reduce Motion setting is.
 
 Flight UI checks also render LAN creation, eight-pilot lobbies and server
 selection at compact phone, notched phone, iPad and desktop sizes. They cover
-keyboard creation, waiting for a second pilot, rematch navigation, PvP scores
+settings row padding and centring, slider dragging and cancellation, keyboard creation, waiting for a second pilot, rematch navigation, PvP scores
 and the wrapping H/F1 help panel. See [the release review](../../RELEASE_REVIEW.md)
 for selected previews and the distinction between scene fixtures and device tests.

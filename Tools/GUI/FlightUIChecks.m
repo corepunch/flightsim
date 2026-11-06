@@ -218,19 +218,19 @@ static int CheckGrid(void) {
     return 0;
 }
 static int CheckPause(void) {
+    [FlightControls.shared reset];
     for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {
         PauseMenu *menu = [[PauseMenu alloc] initWithSize:size.sizeValue];
         [menu showRemote:NO cockpit:NO];
         CHECK([menu handle:InputActionBack] == PauseCommandResume);
         CHECK([menu handle:InputActionConfirm] == PauseCommandResume);
-        // pause.json reproduces the hand-written layout: a centred panel at most
-        // 400 x 360 with 24/12 pt margins, five rows of at most 44 pt, 6 pt apart.
+        // The pause panel includes the engine controls alongside flight actions.
         {
             CGSize s = size.sizeValue;
-            CGFloat w = MIN(400, s.width - 48), h = MIN(360, s.height - 24);
-            CGFloat x = (s.width - w) / 2, y = (s.height - h) / 2, row = MIN(44, (h - 82) / 5 - 6);
+            CGFloat w = MIN(400, s.width - 48), h = MIN(410, s.height - 24);
+            CGFloat x = (s.width - w) / 2, y = (s.height - h) / 2, row = MIN(44, (h - 82) / 6 - 6);
             id layout = [menu valueForKey:@"_layout"];
-            NSArray *ids = @[@"resume", @"camera", @"sound", @"restart", @"missions"];
+            NSArray *ids = @[@"resume", @"camera", @"controls", @"sound", @"restart", @"missions"];
             for (NSUInteger i = 0; i < ids.count; i++) {
                 CGRect got = [(UILayoutResult *)layout frame:[@"items." stringByAppendingString:ids[i]]];
                 CGRect want = CGRectMake(x + 22, y + h - 70 - (i + 1) * (row + 6), w - 44, row);
@@ -240,13 +240,101 @@ static int CheckPause(void) {
         }
         Save(menu, [NSString stringWithFormat:@"pause-%.0fx%.0f.png", menu.size.width,menu.size.height]);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandCamera);
+        [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandNone);
+        CHECK(menu.controlsPanel != nil);
+        Save(menu, [NSString stringWithFormat:@"controls-%.0fx%.0f.png", menu.size.width, menu.size.height]);
+        BOOL expert = FlightControls.shared.expert;
+        [menu handle:InputActionConfirm]; CHECK(FlightControls.shared.expert != expert);
+        [menu handle:InputActionDown];
+        [menu handle:InputActionLeft]; CHECK(FlightControls.shared.horizontalSensitivity == 0.75f);
+        [menu handle:InputActionRight]; CHECK(FlightControls.shared.horizontalSensitivity == 1);
+        [menu handle:InputActionDown];
+        [menu handle:InputActionRight]; CHECK(FlightControls.shared.verticalSensitivity == 1.25f);
+        for (int i=0; i<2; i++) [menu handle:InputActionDown];
+        [menu handle:InputActionConfirm]; CHECK(!FlightControls.shared.expert && FlightControls.shared.verticalSensitivity == 1);
+        CHECK([menu handle:InputActionBack] == PauseCommandNone && !menu.controlsPanel);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandSound);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandRestart);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandMissions);
         [menu showRemote:YES cockpit:YES];
-        for (int i=0;i<3;i++) [menu handle:InputActionDown];
+        for (int i=0;i<4;i++) [menu handle:InputActionDown];
         CHECK([menu handle:InputActionConfirm] == PauseCommandNone);
     }
+    return 0;
+}
+static int CheckSettingLayout(void) {
+    NSString *(^text)(float) = ^NSString *(float value) { return [NSString stringWithFormat:@"%.0f%%", value*100]; };
+    NSArray *items = @[[UISettingItem choice:@"Steering mode" value:@"EXPERT" detail:nil action:^{}],
+                      [UISettingItem slider:@"Horizontal sensitivity" value:1 minimum:0.25 maximum:2 step:0.25 text:text change:^(float v) {}],
+                      [UISettingItem action:@"A longer translated setting title that must wrap safely within its own row" value:@"RESTORE" action:^{}]];
+    for (NSNumber *width in @[@260, @320, @539, @540, @760, @1100]) {
+        UISettingsForm *form = [[UISettingsForm alloc] initWithItems:items width:width.doubleValue];
+        for (NSUInteger i = 0; i < items.count; i++) {
+            CGRect row = UnboxRect(form.rowRects[i]), control = UnboxRect(form.controlRects[i]), title = UnboxRect(form.titleRects[i]);
+            CHECK(CGRectContainsRect(CGRectInset(row, 15, 15), control));
+            CHECK(CGRectContainsRect(CGRectInset(row, 15, 15), title));
+            CHECK(!CGRectIntersectsRect(control, title));
+            if (width.doubleValue >= 540) {
+                CHECK(fabs(CGRectGetMidY(row) - CGRectGetMidY(control)) < 0.01);
+                CHECK(fabs(CGRectGetMidY(row) - CGRectGetMidY(title)) < 0.5);
+            }
+        }
+    }
+    return 0;
+}
+static int CheckControls(void) {
+    [Cvar set:@"ui_reduceMotion" value:@"1"];
+    [FlightControls.shared reset];
+    for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(852,393)], [NSValue valueWithSize:NSMakeSize(320,568)]]) {
+        MainMenu *menu = [[MainMenu alloc] initWithSize:size.sizeValue];
+        menu.contentInsets = menu.size.width == 852 ? NSEdgeInsetsMake(0,59,21,59) : NSEdgeInsetsMake(24,0,20,0);
+        for (int i=0; i<3; i++) [menu handle:InputActionDown];
+        [menu handle:InputActionConfirm];
+        ControlsPanel *panel = menu.controlsPanel;
+        CHECK(panel && panel.settingRects.count == 5);
+        CHECK(CGRectContainsRect(RectWithSize(menu.size), panel.backRect));
+        CHECK(CGRectContainsRect(RectWithSize(menu.size), panel.scrollRect));
+        // Click the actual mode button through the host screen's pointer path.
+        CGPoint click = [menu convertPoint:RectCenter(UnboxRect(panel.form.controlRects[0])) fromNode:panel.form];
+        [menu pointerClick:CGPointMake(click.x/menu.size.width, click.y/menu.size.height)];
+        [menu handle:0];
+        CHECK(FlightControls.shared.expert);
+        Save(menu, [NSString stringWithFormat:@"main-controls-expert-%.0fx%.0f.png", menu.size.width, menu.size.height]);
+        CGRect back = panel.backRect;
+        CGPoint centre = RectCenter(panel.scrollRect);
+        [menu pointerScroll:10000 at:CGPointMake(centre.x/menu.size.width, centre.y/menu.size.height)];
+        CHECK(panel.scrollOffset >= 0 && CGRectEqualToRect(back, panel.backRect));
+        if (menu.size.height < 600) CHECK(panel.scrollOffset > 0);
+        Save(menu, [NSString stringWithFormat:@"main-controls-bindings-%.0fx%.0f.png", menu.size.width, menu.size.height]);
+        [menu pointerScroll:-10000 at:CGPointMake(centre.x/menu.size.width, centre.y/menu.size.height)];
+        CHECK(panel.scrollOffset == 0);
+        // A slider owns its drag: finger movement adjusts its value without
+        // scrolling the form, including clamping beyond either end of the bar.
+        [menu handle:InputActionDown];
+        CGRect slider = UnboxRect(panel.form.controlRects[1]);
+        CGPoint start = [menu convertPoint:RectCenter(slider) fromNode:panel.form];
+        CGPoint fraction = PointFractionInRect(start, RectWithSize(menu.size));
+        ScreenInputDeliver(menu, (PointerEvent){ .kind=PointerEventDown, .at=fraction });
+        CHECK(panel.form.dragging && fabs(FlightControls.shared.horizontalSensitivity - 1.125f) < 0.001);
+        CGFloat offset = panel.scrollOffset;
+        [menu pointerScroll:40 at:fraction];
+        CHECK(panel.scrollOffset == offset);
+        CGPoint end = [menu convertPoint:PointAdd(RectCenter(slider), CGPointMake(CGRectGetWidth(slider), 0)) fromNode:panel.form];
+        ScreenInputDeliver(menu, (PointerEvent){ .kind=PointerEventDrag, .at=PointFractionInRect(end, RectWithSize(menu.size)) });
+        CHECK(FlightControls.shared.horizontalSensitivity == 2);
+        ScreenInputDeliver(menu, (PointerEvent){ .kind=PointerEventCancel });
+        CHECK(!panel.form.dragging);
+        [menu pointerDrag:fraction];
+        CHECK(FlightControls.shared.horizontalSensitivity == 2);
+        ScreenInputDeliver(menu, (PointerEvent){ .kind=PointerEventDown, .at=fraction }); ScreenInputDeliver(menu, (PointerEvent){ .kind=PointerEventUp, .at=fraction });
+        CHECK(!panel.form.dragging);
+        // Back returns to the host menu without resuming or launching a mission.
+        CGPoint point = RectCenter(panel.backRect);
+        [menu pointerClick:CGPointMake(point.x/menu.size.width, point.y/menu.size.height)];
+        CHECK([menu handle:0] == MainMenuCommandNone && !menu.controlsPanel);
+        [FlightControls.shared reset];
+    }
+    [Cvar set:@"ui_reduceMotion" value:@""];
     return 0;
 }
 // The front end runs the menus through UIServices alone; a stand-in host
@@ -406,6 +494,6 @@ static int CheckSimulation(void) {
 int main(int argc, const char **argv) { @autoreleasepool {
     [NSApplication sharedApplication];
     Output = argc>1 ? @(argv[1]) : @"/tmp";
-    if (CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckFrontEnd() || CheckLANLayouts() || CheckProtocol() || CheckSimulation()) return 1;
+    if (CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckSettingLayout() || CheckControls() || CheckFrontEnd() || CheckLANLayouts() || CheckProtocol() || CheckSimulation()) return 1;
     puts("PASS: flight instruments, mission grid, pause, capacitor and cargo protocol.");
 } return 0; }

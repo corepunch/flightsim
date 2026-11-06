@@ -2,7 +2,6 @@
 #if TARGET_OS_IOS
 #import "Input.h"
 #import "Common.h"
-#import "Common.h"
 #import <GameController/GameController.h>
 #import <os/lock.h>
 
@@ -29,6 +28,7 @@ static float Deadzone(float value) {
 - (instancetype)init {
     if ((self = [super init])) {
         _pointer = [PointerQueue new];
+        [FlightControls shared];
         _lock = OS_UNFAIR_LOCK_INIT;
         _throttle = fminf(fmaxf([Cvar get:@"in_throttle" defaultValue:@"0" flags:0 help:@"Throttle at launch (0..1)"].value, 0), 1);
         _touchOnly = [Cvar get:@"in_touchOnly" defaultValue:@"0" flags:0 help:@"Ignore game controllers (touch layout checks)"];
@@ -207,6 +207,7 @@ static float Deadzone(float value) {
             _fireTapped = NO;
         }
     }
+    state = [[FlightControls shared] applyTo:state];
     state.throttle = _throttle;
     os_unfair_lock_unlock(&_lock);
     return state;

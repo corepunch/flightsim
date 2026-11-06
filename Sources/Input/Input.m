@@ -6,7 +6,6 @@
 #undef EventType
 #import "Input.h"
 #import "Common.h"
-#import "Common.h"
 #import <IOKit/hid/IOHIDManager.h>
 #import <IOKit/hid/IOHIDUsageTables.h>
 #import <os/lock.h>
@@ -51,7 +50,7 @@ static void HIDRemoveCallback(void *ctx, IOReturn result, void *sender, IOHIDDev
 @implementation Input {
     os_unfair_lock _lock;
     NSMutableIndexSet *_keys;
-    BOOL _shift, _mouseFire, _mouseRoll, _invertMouse;
+    BOOL _shift, _mouseFire;
     CGPoint _stick;
     float _kbThrottle, _throttle;
     InputAction _actions;
@@ -73,6 +72,7 @@ static void HIDRemoveCallback(void *ctx, IOReturn result, void *sender, IOHIDDev
 - (instancetype)init {
     if ((self = [super init])) {
         _pointer = [PointerQueue new];
+        [FlightControls shared];
         _lock = OS_UNFAIR_LOCK_INIT;
         _keys = [NSMutableIndexSet indexSet];
         _hat = -1;
@@ -289,7 +289,7 @@ static NSString *AxisName(uint32_t key) {
     [_keys removeAllIndexes];
     _shift = NO;
     _mouseFire = NO;
-    _mouseRoll = NO;
+    _actions = 0;
     _stick = CGPointZero;
     self.mouseStick = _stick;
     os_unfair_lock_unlock(&_lock);
@@ -299,7 +299,7 @@ static NSString *AxisName(uint32_t key) {
     if (!self.mouseCaptured) return;
     os_unfair_lock_lock(&_lock);
     const CGFloat sens = 1.0 / 320.0;
-    CGPoint move = CGPointMake(dx, -dy * (_invertMouse ? -1 : 1));
+    CGPoint move = CGPointMake(dx, -dy);
     _stick = PointClampLength(PointAdd(_stick, PointScale(move, sens)), 1);
     self.mouseStick = _stick;
     os_unfair_lock_unlock(&_lock);
@@ -311,16 +311,10 @@ static NSString *AxisName(uint32_t key) {
     os_unfair_lock_unlock(&_lock);
 }
 
-- (void)setMouseRoll:(BOOL)down {
+- (void)queueMouseAction:(InputAction)action {
+    if (!self.mouseCaptured) return;
     os_unfair_lock_lock(&_lock);
-    down = down && self.mouseCaptured;
-    if (_mouseRoll != down) {
-        _mouseRoll = down;
-        // Each horizontal mode starts centred: never turn held yaw into roll,
-        // or leave the ship yawing when the roll modifier is released.
-        _stick.x = 0;
-        self.mouseStick = _stick;
-    }
+    _actions |= action & (InputActionTarget | InputActionSecondary);
     os_unfair_lock_unlock(&_lock);
 }
 
@@ -342,8 +336,11 @@ static NSString *AxisName(uint32_t key) {
 
 - (InputAction)consumeActions {
     os_unfair_lock_lock(&_lock);
-    InputAction a = _actions;
-    _actions = 0;
+    // Target first, then launch on the next frame, as on touch/controller.
+    InputAction weapons = _actions & (InputActionTarget | InputActionSecondary);
+    InputAction next = (weapons & InputActionTarget) ? InputActionTarget : (weapons & InputActionSecondary);
+    InputAction a = (_actions & ~(InputActionTarget | InputActionSecondary)) | next;
+    _actions = weapons & ~next;
     os_unfair_lock_unlock(&_lock);
 
     // Actions that only concern input itself are handled here.
@@ -359,7 +356,7 @@ static NSString *AxisName(uint32_t key) {
             self.throttleFromJoystick = NO;
         }
         if (a & InputActionInvertThrottle) _invertThrottle = !_invertThrottle;
-        if (a & InputActionInvertMouse) _invertMouse = !_invertMouse;
+        if (a & InputActionInvertMouse) [FlightControls shared].invertPitch = ![FlightControls shared].invertPitch;
         os_unfair_lock_unlock(&_lock);
         [self updateAxisDescription];
     }
@@ -396,7 +393,8 @@ static NSString *AxisName(uint32_t key) {
 
     // Keyboard: arrows behave like a stick (up = push forward = nose down).
     float kp = ([self key:kVK_DownArrow] ? 1.0f : 0) - ([self key:kVK_UpArrow] ? 1.0f : 0);
-    float ky = ([self key:kVK_ANSI_D] || [self key:kVK_RightArrow] ? 1.0f : 0) - ([self key:kVK_ANSI_A] || [self key:kVK_LeftArrow] ? 1.0f : 0);
+    float kx = (float)[self key:kVK_RightArrow] - (float)[self key:kVK_LeftArrow];
+    float ky = (float)[self key:kVK_ANSI_D] - (float)[self key:kVK_ANSI_A];
     float kr = ([self key:kVK_ANSI_E] ? 1.0f : 0) - ([self key:kVK_ANSI_Q] ? 1.0f : 0);
 
     float mx = 0, my = 0;
@@ -414,9 +412,13 @@ static NSString *AxisName(uint32_t key) {
         if (_rudderAxis) jr = deadzone([self centredAxis:_rudderAxis], 0.12f);
     }
 
-    c.pitch = clampf(kp + my + jy, -1, 1);
-    c.yaw = clampf(ky + (_mouseRoll ? 0 : mx) + jr, -1, 1);
-    c.roll = clampf(kr + (_mouseRoll ? mx : 0) + jx, -1, 1);
+    c.pitch = my + jy;
+    c.yaw = mx + jx;
+    c = [[FlightControls shared] applyTo:c];
+    BOOL expert = [FlightControls shared].expert;
+    c.pitch = clampf(c.pitch + kp, -1, 1);
+    c.yaw = clampf(c.yaw + ky + jr + (expert ? 0 : kx), -1, 1);
+    c.roll = clampf(c.roll + kr + (expert ? kx : 0), -1, 1);
     c.boost = _shift || [self key:kVK_Tab] || (_buttons & (1u << 1)) || (_buttons & (1u << 3));
     c.fire = [self key:kVK_Space] || _mouseFire || (_buttons & 1u);
     c.hat = _hat;

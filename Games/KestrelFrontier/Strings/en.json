@@ -18,7 +18,6 @@
     "briefing.loadout_one": "Loadout: twin lasers, %d torpedo",
     "briefing.loadout_many": "Loadout: twin lasers, %d torpedoes",
     "combat.no_secondary": "No torpedoes left",
-    "combat.select_target": "Select a target to launch a torpedo",
     "combat.out_of_range": "Target out of torpedo range",
     "radio.distress_wing_01": "I'm taking fire! Taking fire! I need cover, now!",
     "radio.distress_wing_02": "Help! Help! Get them off me!",

@@ -220,6 +220,7 @@ static NSString *PartKindName(SubsystemKind kind) {
     cl.ship = s;
     cl.torpedoes = _startTorpedoes;
     cl.selected = nil;
+    cl.targetIsManual = NO;
     cl.aimSubsystem = nil;
     cl.cmdTime = 0;
     cl.lastBump = -1;

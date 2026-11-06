@@ -2,7 +2,7 @@
   "children": [
     { "type": "shade", "color": "black", "opacity": 0.72 },
     {
-      "type": "panel", "id": "panel", "size": [400, 360], "margin": [24, 12],
+      "type": "panel", "id": "panel", "size": [400, 410], "margin": [24, 12],
       "stroke": ["ink", 0.8], "fill": ["panel", 0.98],
       "children": [
         { "type": "label", "id": "title", "anchor": [0.5, 1], "pivot": [0.5, 0.5], "offset": [0, -28], "size": [0, 20],
@@ -17,6 +17,7 @@
           "items": [
             { "id": "resume", "text": "pause.resume" },
             { "id": "camera", "text": "pause.camera_chase", "when": { "cockpit": { "text": "pause.camera_cockpit" } } },
+            { "id": "controls", "text": "menu.controls" },
             { "id": "sound", "text": "$sound" },
             { "id": "restart", "text": "pause.restart", "when": { "online": { "text": "pause.restart_host_only", "disabled": true } } },
             { "id": "missions", "text": "pause.missions", "when": { "online": { "text": "pause.leave" } } }

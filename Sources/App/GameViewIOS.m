@@ -48,6 +48,7 @@
 - (void)controllerChanged:(NSNotification *)note { [_flightControls updateController]; }
 
 - (void)resignActive:(NSNotification *)note {
+    if (_screenTouch) [_input.pointer push:(PointerEvent){ .kind = PointerEventCancel }];
     _screenTouch = nil;
     [_input setApplicationActive:NO];
     [_flightControls cancelInput];
@@ -69,6 +70,7 @@
 
 - (void)applySafeAreaTo:(SKScene *)scene {
     UIEdgeInsets safe = self.safeAreaInsets;
+    if ([scene isKindOfClass:PauseMenu.class]) ((PauseMenu *)scene).contentInsets = safe;
     if ([scene isKindOfClass:MainMenu.class]) ((MainMenu *)scene).contentInsets = safe;
     if ([scene isKindOfClass:HUD.class]) ((HUD *)scene).contentInsets = safe;
     if ([scene isKindOfClass:Briefing.class]) ((Briefing *)scene).contentInsets = safe;
@@ -115,6 +117,7 @@
     CGPoint point = [_screenTouch locationInView:self];
     if (!_touchDragged && PointDistance(point, _touchStart) < 8) return;
     _touchDragged = YES;
+    [self push:PointerEventDrag at:point delta:0];
     if (CGRectContainsPoint(self.bounds, _touchStart)) [self push:PointerEventScroll at:_touchStart delta:_touchLast.y - point.y];
     _touchLast = point;
 }
@@ -127,11 +130,13 @@
     UITouch *touch = _screenTouch;
     _screenTouch = nil;
     CGPoint point = [touch locationInView:self];
+    [self push:PointerEventUp at:point delta:0];
     if (_touchDragged || ![self screenShown] || !CGRectContainsPoint(self.bounds, point)) return;
     [self push:PointerEventClick at:point delta:0];
 }
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    if (_screenTouch && [touches containsObject:_screenTouch]) [_input.pointer push:(PointerEvent){ .kind = PointerEventCancel }];
     if (_screenTouch && [touches containsObject:_screenTouch]) _screenTouch = nil;
     [super touchesCancelled:touches withEvent:event];
 }

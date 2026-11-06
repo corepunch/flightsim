@@ -21,6 +21,7 @@
 }
 
 - (void)windowLostFocus:(NSNotification *)n {
+    if ([self screenShown]) [self.input.pointer push:(PointerEvent){ .kind = PointerEventCancel }];
     [self releaseMouse];
     [self.input releaseAllKeys];
 }
@@ -37,7 +38,6 @@
     if (!self.input.mouseCaptured) return;
     self.input.mouseCaptured = NO;
     [self.input setMouseFire:NO];
-    [self.input setMouseRoll:NO];
     [self.input recenterMouse];
     CGAssociateMouseAndMouseCursorPosition(true);
     [NSCursor unhide];
@@ -124,11 +124,15 @@
     if (!self.input.mouseCaptured) { [self captureMouse]; return; }
     [self.input setMouseFire:YES];
 }
-- (void)mouseUp:(NSEvent *)event { [self.input setMouseFire:NO]; }
-- (void)rightMouseDown:(NSEvent *)event { [self.input setMouseRoll:YES]; }
-- (void)rightMouseUp:(NSEvent *)event { [self.input setMouseRoll:NO]; }
+- (void)mouseUp:(NSEvent *)event {
+    [self.input setMouseFire:NO];
+    if ([self screenShown]) [self push:PointerEventUp at:[self convertPoint:event.locationInWindow fromView:nil] delta:0];
+}
+- (void)rightMouseDown:(NSEvent *)event {
+    if ([self.overlaySKScene isKindOfClass:HUD.class]) [self.input queueMouseAction:InputActionSecondary];
+}
 - (void)otherMouseDown:(NSEvent *)event {
-    if (event.buttonNumber == 2 && self.input.mouseCaptured) [self.input recenterMouse];
+    if (event.buttonNumber == 2 && [self.overlaySKScene isKindOfClass:HUD.class]) [self.input queueMouseAction:InputActionTarget];
 }
 
 - (void)mouseMoved:(NSEvent *)event {
@@ -136,6 +140,7 @@
     [self.input mouseMovedByX:event.deltaX y:event.deltaY];
 }
 - (void)mouseDragged:(NSEvent *)event {
+    if ([self screenShown]) [self push:PointerEventDrag at:[self convertPoint:event.locationInWindow fromView:nil] delta:0];
     [self reportHover:event];
     [self.input mouseMovedByX:event.deltaX y:event.deltaY];
 }

@@ -33,7 +33,7 @@ static SKShader *MenuArtShader(void) {
     SKNode *_stage, *_scenery, *_root, *_ghost, *_target;
     SKTexture *_art;
     NSString *_campaignLabel, *_missionLabel;
-    CGRect _rows[MenuItemCount], _controlsBack;
+    CGRect _rows[MenuItemCount];
     UILayout *_layout;
     NSArray<NSDictionary *> *_items;
     CGSize _laidOut;
@@ -50,8 +50,6 @@ static SKShader *MenuArtShader(void) {
     SKSpriteNode *_artNode, *_backdropNode;
     SKNode *_rowNodes[MenuItemCount];
     NSMutableArray<SKLabelNode *> *_header, *_rowLabels[MenuItemCount], *_footerLabels;
-    NSMutableArray<SKNode *> *_controlRows;
-    TitleBar *_controlsBar;
     UIHover *_hover;
 }
 
@@ -92,6 +90,7 @@ static SKShader *MenuArtShader(void) {
     _missionLabel = title.length ? L10nFormat(@"menu.mission_line", (unsigned long)index + 1, title.uppercaseString) : @"";
     _selected = 0;
     _controls = NO;
+    _controlsPanel = nil;
     _hasPendingPoint = NO;
     _transition = _presented ? UITransitionIntro : UITransitionNone;
     [self rebuild];
@@ -181,39 +180,9 @@ static SKShader *MenuArtShader(void) {
 }
 
 - (void)drawControlsIn:(CGRect)bounds {
-    CGFloat x = CGRectGetMinX(bounds), y = CGRectGetMaxY(bounds);
-    CGFloat width = MIN(580, CGRectGetWidth(bounds));
-    // The panel's title bar: back to the main menu, then the title.
-    CGRect header = RectFromEdges(x, y - [TitleBar heightCompact:NO], x + width, y);
-    _controlsBar = [[TitleBar alloc] initWithHeader:header compact:NO];
-    _controlsBack = [_controlsBar addBack:L10n(@"controls.back") accent:UIAmber];
-    [_controlsBar setTitle:L10n(@"controls.title") kicker:L10n(@"controls.kicker")];
-    [_root addChild:_controlsBar];
-    [_controlsBar registerHover:_hover];
-    CGFloat listTop = CGRectGetMinY(header) - 27;
-    // Action and binding columns, from the catalog.
-#if TARGET_OS_IOS
-    NSArray<NSString *> *actions = L10nList(@"controls.touch.actions"), *keys = L10nList(@"controls.touch.keys");
-#else
-    NSArray<NSString *> *actions = L10nList(@"controls.desktop.actions"), *keys = L10nList(@"controls.desktop.keys");
-#endif
-    NSMutableArray<NSArray<NSString *> *> *bindings = [NSMutableArray array];
-    for (NSUInteger i = 0; i < MIN(actions.count, keys.count); i++) [bindings addObject:@[actions[i], keys[i]]];
-    CGFloat line = MIN(33, (CGRectGetHeight(bounds) - 130) / bindings.count);
-    CGFloat font = width < 390 ? 11 : 14;
-    _controlRows = [NSMutableArray array];
-    for (NSUInteger i = 0; i < bindings.count; i++) {
-        CGFloat rowY = listTop - i * line;
-        SKNode *row = [SKNode node];
-        [_root addChild:row];
-        _target = row;
-        [self label:bindings[i][0] size:font color:UIMenuTitle opacity:0.92 x:x y:rowY];
-        SKLabelNode *key = [self label:bindings[i][1] size:font color:UIInk opacity:0.9 x:x + width - 4 y:rowY];
-        key.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
-        key.name = @"key";
-        _target = nil;
-        [_controlRows addObject:row];
-    }
+    if (!_controlsPanel) _controlsPanel = [ControlsPanel new];
+    [_controlsPanel layoutIn:bounds sceneSize:self.size];
+    [_root addChild:_controlsPanel];
 }
 
 - (MainMenuInsets)layoutInsets {
@@ -236,8 +205,6 @@ static SKShader *MenuArtShader(void) {
     if (_selected >= [self itemCount]) _selected = 0;
     [_root removeAllChildren];
     [_hover reset];
-    _controlsBar = nil;
-    _controlRows = nil;
     memset(_rowNodes, 0, sizeof(_rowNodes));
     _header = [NSMutableArray array];
     _footerLabels = [NSMutableArray array];
@@ -245,7 +212,6 @@ static SKShader *MenuArtShader(void) {
     _stage.position = CGPointMake(self.size.width / 2, self.size.height / 2);
     _root.position = _ghost.position = _scenery.position = CGPointMake(-self.size.width / 2, -self.size.height / 2);
     memset(_rows, 0, sizeof(_rows));
-    _controlsBack = CGRectZero;
     _laidOut = self.size;
     _usedInsets = [self layoutInsets];
 
@@ -422,15 +388,7 @@ static SKShader *MenuArtShader(void) {
 }
 
 - (void)animateControls {
-    NSTimeInterval t = 0;
-    for (SKLabelNode *label in _header) { UIMotionDecode(label, t, 0.4); t += 0.06; }
-    for (NSUInteger i = 0; i < _controlRows.count; i++) {
-        SKNode *row = _controlRows[i];
-        UIMotionSlideIn(row, CGVectorMake(-26, 0), 0.12 + i * 0.045, 0.3);
-        SKLabelNode *key = (SKLabelNode *)[row childNodeWithName:@"key"];
-        if (key) UIMotionDecode(key, 0.2 + i * 0.045, 0.35);
-    }
-    [_controlsBar revealAfter:0.3];
+    UIMotionFlickerIn(_controlsPanel, 0);
 }
 
 // Life while the menu sits: the art drifts, the selected chevron beckons,
@@ -483,8 +441,7 @@ static SKShader *MenuArtShader(void) {
         [label runAction:UIAfter(0.08, [SKAction fadeOutWithDuration:0.16])];
     }
     for (SKLabelNode *label in _footerLabels) [label runAction:[SKAction fadeOutWithDuration:0.12]];
-    for (SKNode *row in _controlRows) [row runAction:[SKAction fadeOutWithDuration:0.15]];
-    [_controlsBar runAction:[SKAction fadeOutWithDuration:0.15]];
+    [_controlsPanel runAction:[SKAction fadeOutWithDuration:0.15]];
     return MAX(longest, 0.24);
 }
 
@@ -532,11 +489,24 @@ static SKShader *MenuArtShader(void) {
 
 
 
-- (void)pointerHover:(CGPoint)point { [_hover queuePointAtFraction:point]; }
+- (void)pointerHover:(CGPoint)point {
+    if (_controls) [_controlsPanel pointerHover:point];
+    else [_hover queuePointAtFraction:point];
+}
 
 - (void)pointerClick:(CGPoint)point {
+    if (_controls) { [_controlsPanel pointerClick:point]; return; }
     _pendingPoint = point;
     _hasPendingPoint = YES;
+}
+
+- (void)pointerDown:(CGPoint)at { [_controlsPanel pointerDown:at]; }
+- (void)pointerDrag:(CGPoint)at { [_controlsPanel pointerDrag:at]; }
+- (void)pointerUp:(CGPoint)at { [_controlsPanel pointerUp:at]; }
+- (void)pointerCancel { [_controlsPanel pointerCancel]; }
+
+- (void)pointerScroll:(CGFloat)delta at:(CGPoint)at {
+    if (_controls) [_controlsPanel pointerScroll:delta at:at];
 }
 
 - (void)refreshLayout {
@@ -557,9 +527,10 @@ static SKShader *MenuArtShader(void) {
     if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
     _hasPendingPoint = NO;
     if (_controls) {
-        if ((actions & (InputActionBack | InputActionConfirm)) || CGRectContainsPoint(_controlsBack, click)) {
+        if ([_controlsPanel handle:actions]) {
             [[GameAudio shared] play:@"ui-back"];
             _controls = NO;
+            _controlsPanel = nil;
             _transition = UITransitionPage;
             [self rebuild];
         }
@@ -586,6 +557,7 @@ static SKShader *MenuArtShader(void) {
     if ([item isEqualToString:@"quit"]) return MainMenuCommandQuit;
     if ([item isEqualToString:@"controls"]) {
         _controls = YES;
+        _controlsPanel = [ControlsPanel new];
         _transition = UITransitionPage;
         [self rebuild];
     } else if ([item isEqualToString:@"sound"]) {

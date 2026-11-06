@@ -11,15 +11,12 @@
 - (NSArray *)targetablesFor:(GClient *)cl {
     NSMutableArray *list = [NSMutableArray array];
     if (GIsDeathmatch()) for (GClient *other in _clients)
-        if (other != cl && other.inGame && other.ship.alive) [list addObject:other.ship];
-    for (GPilot *p in _pilots) if (p.ship.alive && p.ship.team == TeamEnemy) [list addObject:p.ship];
-    NSMutableSet *objectiveIds = [NSMutableSet set];
-    for (MissionObjective *o in _runner.objectives) if (o.state == MissionObjectiveActive) [objectiveIds addObjectsFromArray:o.targets];
+        if (other != cl && other.inGame && other.ship.alive && TeamsHostile(cl.ship.team, other.ship.team)) [list addObject:other.ship];
+    for (GPilot *p in _pilots) if (p.ship.alive && TeamsHostile(cl.ship.team, p.ship.team)) [list addObject:p.ship];
     for (GCapital *c in _capitals) {
         if (!c.alive || c.departed || c.isAsteroid) continue;
         if (![self capital:c visibleTo:cl.ship]) continue;
-        BOOL objective = [objectiveIds containsObject:c.identifier ?: @""] || [objectiveIds containsObject:c.group ?: @""];
-        if (c.team == TeamEnemy || objective) [list addObject:c];
+        if (TeamsHostile(cl.ship.team, c.team)) [list addObject:c];
     }
     return list;
 }
@@ -27,6 +24,7 @@
 - (void)cycleTargetFor:(GClient *)cl {
     GFighter *me = cl.ship;
     if (!me.alive) return;
+    cl.targetIsManual = NO;
     NSArray *list = [[self targetablesFor:cl] sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
         float da = simd_distance(BodyPosition(a), me.position), db = simd_distance(BodyPosition(b), me.position);
         return da < db ? NSOrderedAscending : (da > db ? NSOrderedDescending : NSOrderedSame);
@@ -38,20 +36,28 @@
     }
     NSUInteger i = cl.selected ? [list indexOfObject:cl.selected] : NSNotFound;
     cl.selected = list[i == NSNotFound ? 0 : (i + 1) % list.count];
+    cl.targetIsManual = YES;
 }
 
 - (void)autoTargetFor:(GClient *)cl {
     GFighter *me = cl.ship;
-    id sel = cl.selected;
-    if (BodyAlive(sel) && (![sel isKindOfClass:[GCapital class]] || [self capital:sel visibleTo:me])) return;
+    NSArray *targets = [self targetablesFor:cl];
+    if (cl.targetIsManual && cl.selected && [targets containsObject:cl.selected]) return;
     cl.selected = nil;
-    float best = FLT_MAX;
-    for (id u in [self targetablesFor:cl]) {
+    cl.targetIsManual = NO;
+    float degrees = GCvar("g_autoTargetCone");
+    float cone = clampf(isfinite(degrees) ? degrees : 8, 0, 45) * (float)M_PI / 180;
+    float bestAlignment = cosf(cone), bestDistance = FLT_MAX;
+    // Angular proximity wins; distance only breaks a tie along the same ray.
+    // Automatic locks follow the crosshair instead of sticking to an old foe.
+    for (id u in targets) {
         simd_float3 rel = BodyPosition(u) - me.position;
         float d = simd_length(rel);
-        float off = acosf(clampf(simd_dot(me.forward, rel / fmaxf(d, 1)), -1, 1));
-        float score = off + d / 3000.0f;
-        if (score < best) { best = score; cl.selected = u; }
+        if (d < 1e-5f) continue;
+        float alignment = simd_dot(me.forward, rel / d);
+        if (alignment > bestAlignment || (alignment == bestAlignment && d < bestDistance)) {
+            bestAlignment = alignment; bestDistance = d; cl.selected = u;
+        }
     }
 }
 

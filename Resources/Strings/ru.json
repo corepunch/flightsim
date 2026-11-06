@@ -11,6 +11,7 @@
     "loading.scrambling_fighter_wings": "Подготовка истребительных эскадрилий…",
     "loading.uploading_assets": "Загрузка геометрии и текстур…",
     "loading.compiling_shaders": "Компиляция шейдеров…",
-    "loading.mission_tip": "Изучите цели миссии перед вылетом."
+    "loading.mission_tip": "Изучите цели миссии перед вылетом.",
+    "combat.no_targets": "Нет цели"
   }
 }
