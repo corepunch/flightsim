@@ -53,9 +53,10 @@ typedef struct {
 // Banks the ship into a yaw turn so it leans like an aircraft instead of
 // pivoting flat like a car. The lean follows the eased yaw rate (so it settles
 // back when the stick centres) and turns only about the nose axis, which leaves
-// aim, flight and the server's state untouched. Roughly 20 degrees at full yaw.
+// aim, flight and the server's state untouched. About 28 degrees at full yaw
+// for a ship turning 1.45 rad/s.
 static simd_quatf BankedOrientation(const ShipMoveState *m) {
-    float bank = fminf(fmaxf(m->angularVelocity.y * 0.45f, -0.45f), 0.45f);
+    float bank = fminf(fmaxf(m->angularVelocity.y * 0.34f, -0.6f), 0.6f);
     return simd_normalize(simd_mul(m->orientation, simd_quaternion(bank, simd_make_float3(0, 0, 1))));
 }
 

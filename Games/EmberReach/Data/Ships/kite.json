@@ -25,7 +25,7 @@
     "maxSpeed": 145,
     "turnRate": 1.1,
     "pitchRate": 1.5,
-    "yawRate": 0.9,
+    "yawRate": 1.5,
     "rollRate": 2.8,
     "agility": 6.0,
     "grip": 1.5,

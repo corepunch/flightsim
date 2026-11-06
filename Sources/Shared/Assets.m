@@ -93,7 +93,7 @@ static ShipDef *LoadShipDef(NSString *name) {
     }
     NSArray *color = d[@"exhaustColor"];
     s->exhaustColor = color.count >= 3 ? Vec3(color) : simd_make_float3(1, 0.5f, 0.2f);
-    ShipParams params = { .maxSpeed = 150, .turnRate = 1, .pitchRate = 1.45f, .yawRate = 0.85f, .rollRate = 2.6f, .agility = 5.5f,
+    ShipParams params = { .maxSpeed = 150, .turnRate = 1, .pitchRate = 1.45f, .yawRate = 1.45f, .rollRate = 2.6f, .agility = 5.5f,
                           .grip = 1.4f, .boostSpeed = 0.9f, .boostGrip = 2.2f, .boostTurn = 0.7f, .boostDrain = 0.28f, .boostRecharge = 0.12f };
     s->params = ParamsFrom(d[@"params"], params);
     s->aiParams = ParamsFrom(d[@"ai"], s->params);
