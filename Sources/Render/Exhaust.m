@@ -158,6 +158,48 @@ static PlatformImage *LuminanceAlphaImage(NSURL *url) {
     }
 }
 
++ (PlatformImage *)straightAlphaParticleTexture:(NSString *)name {
+    static NSMutableDictionary<NSString *, PlatformImage *> *cache;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
+    @synchronized (cache) {
+        PlatformImage *img = cache[name];
+        if (img) return img;
+        CGImageRef src = PlatformImageCGImage([self particleTexture:name]);
+        size_t w = CGImageGetWidth(src), h = CGImageGetHeight(src);
+        NSMutableData *data = [NSMutableData dataWithLength:w * h * 4];
+        uint8_t *px = data.mutableBytes;
+        CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+        CGContextRef ctx = CGBitmapContextCreate(px, w, h, 8, w * 4, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
+        CGContextDrawImage(ctx, CGRectMake(0, 0, w, h), src);
+        CGContextRelease(ctx);
+        for (size_t i = 0; i < w * h; i++) {
+            uint8_t *p = px + i * 4;
+            if (p[3] == 0) continue;
+            float a = p[3] / 255.0f;
+            float rgb[3], lum = 0;
+            for (int c = 0; c < 3; c++) { rgb[c] = p[c] / 255.0f / a; lum = fmaxf(lum, rgb[c]); }
+            // Several sprites are grey shapes on opaque black: the dark pixels
+            // are background, not dark smoke. Fade coverage out with
+            // brightness and keep the brightness as shading.
+            float k = fminf(fmaxf((lum - 0.03f) / 0.37f, 0), 1);
+            a *= k * k * (3 - 2 * k);
+            for (int c = 0; c < 3; c++) p[c] = (uint8_t)lroundf(fminf(rgb[c] / 0.8f, 1) * 255);
+            p[3] = (uint8_t)lroundf(a * 255);
+        }
+        // Bitmap contexts cannot hold straight alpha, so build the image from the bytes.
+        CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
+        CGImageRef out = CGImageCreate(w, h, 8, 32, w * 4, cs, (CGBitmapInfo)kCGImageAlphaLast,
+                                       provider, NULL, false, kCGRenderingIntentDefault);
+        img = PlatformImageFromCGImage(out);
+        CGImageRelease(out);
+        CGDataProviderRelease(provider);
+        CGColorSpaceRelease(cs);
+        cache[name] = img;
+        return img;
+    }
+}
+
 static SCNMaterial *FlameMaterial(simd_float3 tint, float seed) {
     SCNMaterial *m = [SCNMaterial material];
     m.lightingModelName = SCNLightingModelConstant;
