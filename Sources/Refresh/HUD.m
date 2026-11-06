@@ -9,6 +9,7 @@ static SKColor *HUDColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static SKColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
 static SKColor *FriendColor(CGFloat a) { return UIColorWithOpacity(UIFriendly, a); }
 static SKColor *NeutralColor(CGFloat a) { return UIColorWithOpacity(UIHUDNeutral, a); }
+static SKColor *ReticleColor(CGFloat a) { return UIColorWithOpacity(UIReticle, a); }
 static SKColor *TargetColor(CGFloat a) { return [SKColor colorWithRed:1 green:0.92 blue:0.18 alpha:a]; }
 static SKColor *KindColor(HUDKind k, CGFloat a) {
     switch (k) {
@@ -104,6 +105,9 @@ static SKShapeNode *Bracket(void) {
     SensorScope *_forwardScope, *_rearScope;
     ConditionBar *_hullBar, *_shieldBar, *_laserBar;     // bottom up, under the secondary rack
     SKShapeNode *_boresight, *_cursor, *_cursorLine, *_ring;
+    // The chase view's reticle, drawn in perspective each frame: one node per
+    // ring so farther rings can be fainter.
+    NSArray<SKShapeNode *> *_reticleRings;
     SKShapeNode *_throttleFrame, *_throttleFill, *_boostFill;
     SKLabelNode *_speedLabel, *_throttleLabel, *_scoreLabel, *_inputLabel, *_deadLabel;
     SKNode *_help;
@@ -172,6 +176,17 @@ static SKShapeNode *Bracket(void) {
         [_boresight addChild:tick];
     }
     [_root addChild:_boresight];
+    NSMutableArray<SKShapeNode *> *rings = [NSMutableArray array];
+    for (int i = 0; i < HUD_RETICLE_RINGS; i++) {
+        SKShapeNode *n = [SKShapeNode node];
+        n.strokeColor = ReticleColor(0.95 - 0.22 * i);
+        n.lineWidth = i ? 1 : 1.5;
+        n.lineCap = kCGLineCapRound;
+        n.hidden = YES;
+        [_root addChild:n];
+        [rings addObject:n];
+    }
+    _reticleRings = rings;
 
     _ring = [SKShapeNode shapeNodeWithCircleOfRadius:100];
     _ring.strokeColor = HUDColor(0.12);
@@ -246,10 +261,10 @@ static SKShapeNode *Bracket(void) {
     _aimMark.path = am;
     CGPathRelease(am);
     _aimMark.strokeColor = TargetColor(1);
-    _aimMark.lineWidth = 2.5;
+    _aimMark.lineWidth = 1;
     SKShapeNode *aimOutline = [SKShapeNode shapeNodeWithPath:_aimMark.path];
     aimOutline.strokeColor = [SKColor colorWithWhite:0 alpha:0.9];
-    aimOutline.lineWidth = 5.5;
+    aimOutline.lineWidth = 3;
     aimOutline.zPosition = -1;
     [_aimMark addChild:aimOutline];
     _aimMark.zPosition = 20;
@@ -278,7 +293,7 @@ static SKShapeNode *Bracket(void) {
     _selectedLeadOutline = [SKShapeNode node];
     for (SKShapeNode *outline in @[_selectedOutline, _selectedLeadOutline]) {
         outline.strokeColor = [SKColor colorWithWhite:0 alpha:0.9];
-        outline.lineWidth = 6;
+        outline.lineWidth = 3;
         outline.zPosition = 19;
         outline.hidden = YES;
         [_root addChild:outline];
@@ -493,8 +508,9 @@ static SKShapeNode *Bracket(void) {
     [self layoutIfNeeded];
     [_forwardScope updateFrame:frame contacts:contacts count:count];
     [_rearScope updateFrame:frame contacts:contacts count:count];
-    _targetReadout.hidden = cockpit;
-    if (!cockpit) [_targetReadout updateFrame:frame contacts:contacts count:count];
+    // The chase view leaves the target to its bracket and the scopes; the
+    // readout's preview would sit under the ship.
+    _targetReadout.hidden = YES;
     _hullBar.hidden = _laserBar.hidden = cockpit;
     _shieldBar.hidden = cockpit || frame.shieldRecharge <= 0;     // a ship with no shield shows none
     [_hullBar setLevel:frame.hull recharge:0 color:frame.hull < 0.3 ? EnemyColor(0.9) : HUDColor(0.8)];
@@ -602,13 +618,46 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     CGPathRelease(p);
 }
 
+// The ship's frame at one ring, mapping metres there to view points.
+static CGAffineTransform RingTransform(HUDRing r) {
+    return (CGAffineTransform){ r.right.x, r.right.y, r.up.x, r.up.y, r.centre.x, r.centre.y };
+}
+
+// The reticle: separate rings of one radius at growing distances along the
+// line of fire, so perspective shrinks them toward the aim point and the row
+// shows which way the guns point. The nearest ring carries side arcs, the
+// farthest the pip.
+- (void)drawReticle:(HUDFrame)f hidden:(BOOL)hidden {
+    const CGFloat radius = 2.5, arc = 3.6;
+    int count = hidden ? 0 : f.reticleRings;
+    for (int i = 0; i < HUD_RETICLE_RINGS; i++) {
+        SKShapeNode *node = _reticleRings[i];
+        node.hidden = i >= count;
+        if (node.hidden) continue;
+        CGAffineTransform t = RingTransform(f.reticle[i]);
+        CGMutablePathRef p = CGPathCreateMutable();
+        CGPathAddEllipseInRect(p, &t, CGRectMake(-radius, -radius, radius * 2, radius * 2));
+        if (i == 0)
+            for (int side = 0; side < 2; side++) {
+                CGFloat mid = side ? M_PI : 0, half = 0.6;
+                CGPathMoveToPoint(p, &t, cos(mid - half) * arc, sin(mid - half) * arc);
+                CGPathAddArc(p, &t, 0, 0, arc, mid - half, mid + half, false);
+            }
+        if (i == count - 1) CGPathAddEllipseInRect(p, &t, CGRectMake(-0.4, -0.4, 0.8, 0.8));
+        node.path = p;
+        CGPathRelease(p);
+    }
+}
+
 - (void)updateFrame:(HUDFrame)f targets:(const HUDTarget *)targets count:(NSUInteger)count {
     [self layoutIfNeeded];
     CGSize s = self.size;
     CGPoint center = CGPointMake(s.width / 2, s.height / 2);
 
-    _boresight.hidden = !f.boresightVisible || f.playerDead;
+    BOOL perspective = !f.cockpit && f.reticleRings > 0;
+    _boresight.hidden = !f.boresightVisible || f.playerDead || perspective;
     _boresight.position = f.boresight;
+    [self drawReticle:f hidden:!perspective || f.playerDead];
 
     CGFloat ringR = MIN(s.width, s.height) * 0.22;
     _ring.hidden = _cursor.hidden = _cursorLine.hidden = !f.mouseCaptured || f.playerDead;
@@ -663,15 +712,16 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
         a.hidden = t.onScreen || !(t.selected || nav || (t.kind == HUDKindEnemy && !t.capital));
         l.hidden = !(t.onScreen && t.hasLead && (t.selected || (t.kind == HUDKindEnemy && !t.capital)));
         b.strokeColor = c;
-        b.lineWidth = t.selected ? 3 : 1.5;
+        b.lineWidth = t.selected ? 1 : 1.5;
         b.zPosition = a.zPosition = l.zPosition = t.selected ? 20 : 0;
         a.fillColor = t.selected ? c : KindColor(t.kind, 0.7);
         a.strokeColor = t.selected ? [SKColor colorWithWhite:0 alpha:0.9] : SKColor.clearColor;
         a.lineWidth = t.selected ? 2 : 0;
         [a setScale:t.selected ? 1.4 : 1];
         l.strokeColor = t.selected ? c : EnemyColor(0.8);
-        l.lineWidth = t.selected ? 2.25 : 1.5;
         [l setScale:t.selected ? 1.35 : 1];
+        // The stroke scales with the node: the selection's stays 1 pt.
+        l.lineWidth = t.selected ? 1 / l.xScale : 1.5;
         for (SKShapeNode *tick in l.children) {
             tick.strokeColor = l.strokeColor;
             tick.lineWidth = l.lineWidth;
@@ -721,6 +771,7 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
                 _selectedOutline.hidden = NO;
                 _selectedLeadOutline.position = t.lead;
                 [_selectedLeadOutline setScale:l.xScale];
+                _selectedLeadOutline.lineWidth = 3 / l.xScale;
                 _selectedLeadOutline.hidden = l.hidden;
             }
             l.position = t.lead;

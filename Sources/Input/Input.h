@@ -108,6 +108,9 @@ typedef struct {
 @property (nonatomic) BOOL invertPitch;
 @property (nonatomic) float horizontalSensitivity; // 0.25..2
 @property (nonatomic) float verticalSensitivity;   // 0.25..2
+// The chase camera looks into turns and shares the ship's lean; off, it stays
+// fixed behind the ship.
+@property (nonatomic) BOOL dynamicCamera;
 - (ControlState)applyTo:(ControlState)state;
 - (void)reset;
 @end

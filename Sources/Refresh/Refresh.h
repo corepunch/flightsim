@@ -52,9 +52,22 @@ typedef struct CockpitFrame {
 typedef struct CockpitContact CockpitContact;
 typedef struct CockpitFrame CockpitFrame;
 
+// One ring of the chase view's reticle tube: its projected centre and the
+// ship's right and up axes there, one metre long, as view-point offsets. The
+// ring leans and foreshortens with the ship.
+typedef struct {
+    CGPoint centre, right, up;
+} HUDRing;
+
+#define HUD_RETICLE_RINGS 3
+
 typedef struct {
     CGPoint boresight;      // where the guns converge, view points
     BOOL boresightVisible;
+    // The chase view's reticle: rings along the line of fire, nearest first.
+    // None in the cockpit, or when the line leaves the view.
+    HUDRing reticle[HUD_RETICLE_RINGS];
+    int reticleRings;
     CGPoint mouseStick;     // -1..1
     BOOL mouseCaptured;
     float throttle, boostEnergy, speed;
