@@ -845,6 +845,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 - (NSUInteger)selectedIndex { return _index; }
 - (SKLabelNode *)speech { return _caption.speech; }
 - (CGRect)captionRect { return _caption.rect; }
+- (CGRect)portraitRectForCharacter:(NSString *)name { return [_portraitLayer childNodeWithName:name].frame; }
 - (BOOL)captionOnRight { return _caption.right; }
 - (CGRect)confirmRect { return _buttons.confirm; }
 - (CGRect)previousRect { return _buttons.previous; }
@@ -1456,15 +1457,22 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 }
 
 - (void)buildBriefing {
+    NSString *action = L10n([self hasNextBriefingPage] ? @"briefing.skip" : @"briefing.launch");
+    [self buildStoryLine:_pages[_page] room:_mission.briefingRoom action:action];
+}
+
+// Before and after a mission, the conversation uses the same stage. Only the
+// room art, dialogue and optional tactical display change.
+- (void)buildStoryLine:(StoryLine *)line room:(NSString *)room action:(NSString *)action {
     CGSize size = self.size;
-    CampaignMission *mission = _mission;
-    BriefingPage *page = _pages[_page];
+    CampaignMission *mission = CampaignMissionAt(_index);
+    NSArray<StoryLine *> *lines = _mode == ModeBriefing ? _pages : StoryBriefingPages(mission);
+    lines = [lines arrayByAddingObjectsFromArray:mission.debrief.dialogue ?: @[]];
     BOOL narrow = size.width < size.height * 1.24;
     BOOL compact = [self compactStoryLayout];
     BOOL phone = compact && !narrow;
     CGFloat textSize = phone ? 19 : MIN(24, MAX(14, size.width / 60));
     CGFloat minTextSize = phone ? 15 : 12;
-    NSString *action = L10n([self hasNextBriefingPage] ? @"briefing.skip" : @"briefing.launch");
     // Touch screens navigate from a bar along the top, which leaves the bottom
     // to the caption; desktop keeps its hint rail along the bottom.
     BOOL topBar = self.touchNavigationEnabled || compact;
@@ -1474,7 +1482,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     // The monitor clears the whole bar, not just today's controls, so it stays
     // put when PREV appears after the first page.
     NSArray<NSValue *> *clear = bar ? @[BoxRect(bar.row)] : nil;
-    CGRect screen = [self addBackdrop:mission.briefingRoom raiseBoard:compact && !narrow clear:clear];
+    CGRect screen = [self addBackdrop:room raiseBoard:compact && !narrow clear:clear];
     BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
     if (!paintedBoard) {
         CGFloat margin = size.width * 0.06, panelTop = size.height * 0.93;
@@ -1499,17 +1507,20 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     CGFloat captionWidth = screen.size.width * (phone ? 0.9 : 0.70);
     CGFloat laneLeft = CGRectGetMinX(screen), laneRight = CGRectGetMaxX(screen);
     const CGFloat captionPadding = [self captionHeader] + 12; // Speaker header and bottom inset.
-    CGFloat tallestCaption = [self captionTextHeightForLines:_pages width:captionWidth fontSize:textSize] + captionPadding;
+    CGFloat tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
     // Leave a gap below the monitor while keeping the caption above the footer.
     CGFloat captionTop = CGRectGetMinY(screen) + (paintedBoard ? 0 : 3) - CaptionDrop;
     while (tallestCaption > captionTop - floor && textSize > minTextSize) {
         textSize = MAX(minTextSize, textSize - 1);
-        tallestCaption = [self captionTextHeightForLines:_pages width:captionWidth fontSize:textSize] + captionPadding;
+        tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
     }
-    CGFloat captionHeight = [self captionTextHeightForLines:@[page] width:captionWidth fontSize:textSize] + captionPadding;
+    // Short screens can exhaust the font budget. Anchor every bubble to the
+    // same raised top instead of moving just the longer lines upward.
+    captionTop = MAX(captionTop, floor + tallestCaption);
+    CGFloat captionHeight = [self captionTextHeightForLines:@[line] width:captionWidth fontSize:textSize] + captionPadding;
     CGFloat captionBottom = MAX(floor, captionTop - captionHeight);
 
-    [self buildMonitor:screen mission:mission page:page titled:!bar];
+    if (_mode == ModeBriefing) [self buildMonitor:screen mission:mission page:_pages[_page] titled:!bar];
 
     CGFloat wing = CGRectGetMinX(screen);
     CGRect speakerArea, playerArea;
@@ -1531,12 +1542,12 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         speakerArea = CGRectMake(center - width / 2, bottom, width, height);
         playerArea = CGRectMake(size.width - center - width / 2, bottom, width, height);
     }
-    BOOL playerSpeaking = [self addPortraitsForLine:page speakerArea:speakerArea playerArea:playerArea];
+    BOOL playerSpeaking = [self addPortraitsForLine:line speakerArea:speakerArea playerArea:playerArea];
 
     CGFloat captionLeft = playerSpeaking ? laneRight - captionWidth : laneLeft;
-    [self addCaption:page inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
+    [self addCaption:line inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
              fontSize:textSize speakerOnRight:playerSpeaking];
-    [self footer:L10n(@"briefing.hint") action:action];
+    [self footer:L10n(_mode == ModeBriefing ? @"briefing.hint" : @"debrief.conversation_hint") action:action];
 }
 
 // titled: the monitor heads its readouts with the mission's name; screens with
@@ -1716,26 +1727,13 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     CGFloat inset = MAX(MIN(50, s.width * 0.05), MAX(safe.left, safe.right) + 12);
     CGFloat width = MAX(1, s.width - 2 * inset);
     CGFloat fontSize = MIN(23, MAX(15, s.width / 58));
-    if (_debriefBeat > 0 && MIN(s.width, s.height) <= 500) fontSize = 18;
     BOOL more = _success && _index + 1 < CampaignMissions().count;
     NSString *next = L10n(more ? @"debrief.next_mission" : @"debrief.missions");
 
     if (_debriefBeat > 0 && _debriefBeat <= conversation.count) {
         StoryLine *line = conversation[_debriefBeat - 1];
-        [self addBackdrop:mission.debriefRoom raiseBoard:NO clear:nil];
-        CGFloat captionHeight = MAX(72, [self captionTextHeightForLines:conversation width:width fontSize:fontSize] + [self captionHeader] + 8);
-        BOOL compact = [self compactStoryLayout];
-        CGFloat floor = compact ? (s.height - captionHeight) / 2 : safe.bottom + 72;
-        CGFloat bottom = compact ? 0 : floor + captionHeight - 8;
-        CGFloat height = compact ? floor + 6 : s.height - bottom - 26;
-        CGRect leftArea = CGRectMake(inset, bottom, width / 2, MAX(1, height));
-        BOOL playerSpeaking = [self addPortraitsForLine:line speakerArea:leftArea playerArea:CGRectOffset(leftArea, width / 2, 0)];
-        CGFloat captionBottom = MAX(safe.bottom + (compact ? 10 : self.touchNavigationEnabled ? 16 : 70),
-                                    floor - CaptionDrop);
-        [self addCaption:line inRect:CGRectMake(inset, captionBottom, width, captionHeight)
-                 fontSize:fontSize speakerOnRight:playerSpeaking];
-        [self footer:L10n(@"debrief.conversation_hint")
-               action:_debriefBeat == conversation.count ? next : L10n(@"debrief.continue")];
+        [self buildStoryLine:line room:mission.debriefRoom
+                     action:_debriefBeat == conversation.count ? next : L10n(@"debrief.continue")];
         return;
     }
 
