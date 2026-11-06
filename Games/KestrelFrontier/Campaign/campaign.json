@@ -108,6 +108,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "Three scouts down and the picket line holds. The Skarn now know we are watching.",
         "lose": "We lost you on the patrol. Without that report, the Skarn will know exactly where the Bastion is.",
         "dialogue": [
@@ -203,6 +204,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "Both freighters made the jump. The fleet will eat this week.",
         "lose": "We lost cargo the fleet cannot replace.",
         "dialogue": [
@@ -277,6 +279,7 @@
         "intel": ["Defend: Relay K-7 (one turret, fragile core)", "Hostile: 4 waves of Talon bombers with Wasp cover"]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "K-7 finished its transmission. Fleet Command knows what is happening at Kestrel.",
         "lose": "K-7 is gone. We are deaf and mute until it can be rebuilt.",
         "dialogue": [
@@ -358,6 +361,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The corvette Vesk is debris. Survey drones are flying again.",
         "lose": "The corvette got away, and it will be back.",
         "dialogue": [
@@ -435,6 +439,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "We cut a supply line, and the corsairs now know we are onto them.",
         "lose": "We lost the chance to identify the shipment at Tarn.",
         "dialogue": [
@@ -519,6 +524,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The Corla is fuelled and on its way to the fleet.",
         "lose": "Brenn depot burned. The fleet will be rationing fuel.",
         "dialogue": [
@@ -597,6 +603,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "All five escape pods are aboard the Mercy. Their survivors are safe.",
         "lose": "We did not get everyone out.",
         "dialogue": [
@@ -691,6 +698,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The Halcyon's scan found a Skarn shipyard hidden behind the field. That changes everything.",
         "lose": "The Halcyon is lost, and with her whatever is hiding in Corvid.",
         "dialogue": [
@@ -749,6 +757,7 @@
         "intel": ["Target: Skarn minelayer (1 turret)", "Hazard: 16 proximity mines", "Hostile: 2x Wasp escort"]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The corridor is clear and the Bastion moved to the new anchorage.",
         "lose": "The corridor is still mined. The Bastion is trapped.",
         "dialogue": [
@@ -840,6 +849,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The Kestrel limped home. She will fly again.",
         "lose": "The Kestrel is lost with most of her crew.",
         "dialogue": [
@@ -912,6 +922,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "Tannhal holds. Forty thousand people are sleeping tonight because you held the line.",
         "lose": "Tannhal was hit hard. The casualty count is still rising.",
         "dialogue": [
@@ -999,6 +1010,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The outer defences are down. The shipyard is exposed.",
         "lose": "The platforms still hold the approach.",
         "dialogue": [
@@ -1079,6 +1091,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The recordings show a Skarn dreadnought nearly finished. Fleet Command has ordered the evacuation of the Kestrel colonies.",
         "lose": "The recordings were lost with your fighter.",
         "dialogue": [
@@ -1172,6 +1185,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "Six thousand people are safe beyond the Halden gate.",
         "lose": "The Aurora Star never reached the gate.",
         "dialogue": [
@@ -1263,6 +1277,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The destroyer Gorran flies Concord colours now. The Bastion took hits, but she is still the Bastion.",
         "lose": "We lost the destroyer and everything in her log.",
         "dialogue": [
@@ -1344,6 +1359,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "Four hundred of our people are free. Many of them are already asking to fly.",
         "lose": "The barge was lost with everyone aboard.",
         "dialogue": [
@@ -1437,6 +1453,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The courier is destroyed. Korr will have to bring the Hammer to Halden and fire from her own bridge.",
         "lose": "The courier reached the Hammer. Korr can fire from wherever she likes.",
         "dialogue": [
@@ -1510,6 +1527,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "Asteroid Hollow is rubble. The shipyard has lost its suppliers.",
         "lose": "The corsairs are still in business.",
         "dialogue": [
@@ -1619,6 +1637,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The Iron Vow broke on the Bastion's defences. One ship is left: the dreadnought.",
         "lose": "The cruiser reached the Bastion.",
         "dialogue": [
@@ -1743,6 +1762,7 @@
         ]
       },
       "debrief": {
+        "room": "Hangar",
         "win": "The Hammer of Skarn broke up before it could fire. Halden Gate is still open.",
         "lose": "The assault failed. The Hammer still stands between the fleet and Halden Gate.",
         "dialogue": [

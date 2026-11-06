@@ -1,5 +1,9 @@
 {
   "rooms": {
+    "Hangar": {
+      "image": "Hangar",
+      "size": [1672, 941]
+    },
     "Bastion": {
       "image": "Bastion",
       "size": [

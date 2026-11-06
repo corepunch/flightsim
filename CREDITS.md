@@ -75,7 +75,7 @@ Made for this project:
   `Games/KestrelFrontier/Art/build_cockpit.py`) and its displays, which are drawn in code
 - The Kestrel Frontier campaign: missions, briefings and debriefings in
   `Games/KestrelFrontier/Campaign/campaign.json` and `Games/KestrelFrontier/Levels/`
-- The Bastion briefing backdrop and character portraits in `Games/KestrelFrontier/Briefing/`,
+- The Bastion briefing and Hangar debrief backdrops and character portraits in `Games/KestrelFrontier/Briefing/`,
   illustrated with ImageGen
 - Tactical schematics rendered from the capital ship meshes by
   `Games/KestrelFrontier/Art/build_schematics.py`

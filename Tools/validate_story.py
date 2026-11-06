@@ -278,7 +278,9 @@ def validate_game(game):
     for name, room in ROOMS.items():
         width, height = check_art(art(f'{room["image"]}.png'))
         assert room["size"] == [width, height], f"Room {name}: size differs from its art"
-        assert len(room["bezel"]) >= 3 and all(0 <= x <= width and 0 <= y <= height for x, y in room["bezel"]), name
+        bezel = room.get("bezel", [])
+        assert (not bezel and "board" not in room) or len(bezel) >= 3, name
+        assert all(0 <= x <= width and 0 <= y <= height for x, y in bezel), name
     for character in CAST["characters"].values():
         assert character["faces"] in ("left", "right") and character["name"].strip(), character
     for portrait in PORTRAITS:
