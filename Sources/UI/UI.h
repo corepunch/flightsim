@@ -50,6 +50,7 @@ typedef NSEdgeInsets BriefingInsets;
 // Layout as last built, for Tools/GUI checks.
 @property (nonatomic, readonly) SKLabelNode *speech;            // the caption's line, if one is up
 @property (nonatomic, readonly) CGRect captionRect;
+- (CGRect)portraitRectForCharacter:(NSString *)name;
 @property (nonatomic, readonly) BOOL captionOnRight;             // the speaker sits on the right
 @property (nonatomic, readonly) CGRect confirmRect, previousRect, backRect;
 @property (nonatomic, readonly) CGRect scrollRect;              // empty unless text overflows

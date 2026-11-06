@@ -165,6 +165,58 @@ static int CheckCampaignCaptions(void) {
     return EXIT_SUCCESS;
 }
 
+static int CheckSharedConversationStage(NSString *output) {
+    NSString *motion = [Cvar find:@"ui_reduceMotion"].string;
+    [Cvar set:@"ui_reduceMotion" value:@"1"];
+    const CGSize sizes[] = {{667,375}, {852,393}, {1194,834}, {1600,900}};
+    const NSEdgeInsets insets[] = {{0,0,0,0}, {0,59,21,59}, {24,0,20,0}, {0,0,0,0}};
+    for (NSUInteger v = 0; v < sizeof(sizes) / sizeof(sizes[0]); v++) {
+        SizeTarget(sizes[v]);
+        Briefing *scene = [[Briefing alloc] initWithSize:sizes[v]];
+        scene.touchNavigationEnabled = v < 3;
+        scene.contentInsets = insets[v];
+        for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
+            [scene showBriefing:mission];
+            CGRect player = [scene portraitRectForCharacter:StoryPlayer()];
+            CGRect caption = scene.captionRect;
+            CGFloat fontSize = scene.speech.fontSize;
+            if (mission == 0) {
+                [view presentScene:scene];
+                Save([output stringByAppendingPathComponent:[NSString stringWithFormat:@"stage-before-%.0f.png", sizes[v].width]]);
+            }
+            [scene showDebrief:mission success:YES results:@[]];
+            NSUInteger beat = 0;
+            for (StoryLine *line in CampaignMissionAt(mission).debrief.dialogue) {
+                UIMotionFinishTyping(scene.speech);
+                [scene handle:InputActionConfirm];
+                CHECK(CGRectEqualToRect(player, [scene portraitRectForCharacter:StoryPlayer()]));
+                CHECK(fabs(CGRectGetWidth(caption) - CGRectGetWidth(scene.captionRect)) < 0.01);
+                if (fabs(CGRectGetMaxY(caption) - CGRectGetMaxY(scene.captionRect)) >= 0.01)
+                    fprintf(stderr, "Stage mismatch %.0fx%.0f mission %lu: %s -> %s, font %.0f\n", sizes[v].width, sizes[v].height,
+                            (unsigned long)mission + 1, NSStringFromRect(caption).UTF8String, NSStringFromRect(scene.captionRect).UTF8String, fontSize);
+                CHECK(fabs(CGRectGetMaxY(caption) - CGRectGetMaxY(scene.captionRect)) < 0.01);
+                CHECK(scene.speech.fontSize == fontSize);
+                CHECK(CGRectContainsRect(CGRectInset(scene.captionRect, -1, -1), scene.speech.frame));
+                NSString *other = [line.portrait isEqualToString:StoryPlayer()] ? line.listener : line.portrait;
+                CGRect speaker = [scene portraitRectForCharacter:other];
+                CHECK(!CGRectIsEmpty(speaker));
+                CHECK(fabs(CGRectGetHeight(player) - CGRectGetHeight(speaker)) < 0.01);
+                if (v < 2) {
+                    CHECK(CGRectGetMaxY(player) > CGRectGetMaxY(scene.captionRect) + 32);
+                    CHECK(CGRectGetMaxY(speaker) > CGRectGetMaxY(scene.captionRect) + 32);
+                }
+                if (mission == 0 && beat < 2) {
+                    UIMotionFinishTyping(scene.speech);
+                    Save([output stringByAppendingPathComponent:[NSString stringWithFormat:@"stage-after-%.0f-%lu.png", sizes[v].width, (unsigned long)beat]]);
+                }
+                beat++;
+            }
+        }
+    }
+    [Cvar set:@"ui_reduceMotion" value:motion];
+    return EXIT_SUCCESS;
+}
+
 // Map steps with a camera or labels: each plays out for a second and a half
 // and is saved, to look at how the camera framed the page.
 static int CheckTimeline(NSString *output) {
@@ -240,6 +292,7 @@ int main(int argc, const char **argv) {
         [Cvar set:@"ui_reduceMotion" value:@"0"];
         CHECK(!UIMotionReduced());
         if (CheckCampaignCaptions() != EXIT_SUCCESS) return EXIT_FAILURE;
+        if (CheckSharedConversationStage(output) != EXIT_SUCCESS) return EXIT_FAILURE;
         if (CheckCaret(output) != EXIT_SUCCESS) return EXIT_FAILURE;
         if (CheckHighlight() != EXIT_SUCCESS) return EXIT_FAILURE;
         if (CheckAutoplay() != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -270,6 +323,14 @@ int main(int argc, const char **argv) {
             CHECK(!UIMotionIsTyping(speech));
             CHECK(![speech childNodeWithName:@"motion.caret"]);
             CHECK([[scene valueForKey:@"_page"] unsignedIntegerValue] == 1);
+            [scene showDebrief:0 success:YES results:@[@"+ Patrol complete"]];
+            [scene handle:InputActionConfirm];
+            for (NSUInteger beat = 0; beat < 2; beat++) {
+                for (int i = 0; i <= 90; i++) Render(renderer, i / 60.0);
+                UIMotionFinishTyping(scene.speech);
+                Save([output stringByAppendingPathComponent:[NSString stringWithFormat:@"debrief-%.0f-%lu.png", size.width, (unsigned long)beat]]);
+                if (beat == 0) [scene handle:InputActionConfirm];
+            }
         }
         if (CheckTimeline(output) != EXIT_SUCCESS) return EXIT_FAILURE;
         puts("PASS: dialogue caret, line returns, Unicode, skip controls and rendered briefing at desktop and phone sizes.");
