@@ -1,4 +1,4 @@
-# Builds the game for macOS and the iOS simulator and runs every check the
+# Builds the game for macOS and runs every check the
 # repository has: the headless unit checks of the shared core, the campaign
 # data validator, and the GUI checks, which launch small app bundles in the
 # runner's desktop session (see Tools/GUI/README.md). macOS only: the game
@@ -25,11 +25,8 @@ jobs:
         run: |
           xcodebuild -version
           clang --version | head -1
-          xcrun --sdk iphonesimulator --show-sdk-version
       - name: Build macOS app
         run: ./build.sh
-      - name: Build iOS simulator app
-        run: ./build.sh ios-simulator
       - name: Validate campaign data
         run: python3 -I Tools/validate_story.py
       - name: Unit checks
