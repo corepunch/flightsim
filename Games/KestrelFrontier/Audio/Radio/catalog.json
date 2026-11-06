@@ -1,0 +1,185 @@
+{
+  "language": "en",
+  "lines": [
+    {
+      "text": "I'm taking fire! Taking fire! I need cover, now!",
+      "file": "distress-wing-01.wav",
+      "durationSeconds": 4.3611791383219956,
+      "key": "radio.distress_wing_01"
+    },
+    {
+      "text": "Help! Help! Get them off me!",
+      "file": "distress-wing-02.wav",
+      "durationSeconds": 3.2136961451247164,
+      "key": "radio.distress_wing_02"
+    },
+    {
+      "text": "They're all over me! Somebody cover me!",
+      "file": "distress-wing-03.wav",
+      "durationSeconds": 3.2406349206349208,
+      "key": "radio.distress_wing_03"
+    },
+    {
+      "text": "I'm getting hit! I'm getting hit!",
+      "file": "distress-wing-04.wav",
+      "durationSeconds": 3.1597278911564626,
+      "key": "radio.distress_wing_04"
+    },
+    {
+      "text": "I can't shake them! I need help!",
+      "file": "distress-wing-05.wav",
+      "durationSeconds": 2.673650793650794,
+      "key": "radio.distress_wing_05"
+    },
+    {
+      "text": "Cover me! Cover me! They're tearing me apart!",
+      "file": "distress-wing-06.wav",
+      "durationSeconds": 3.2889342403628117,
+      "key": "radio.distress_wing_06"
+    },
+    {
+      "text": "We're getting hit! We need cover!",
+      "file": "distress-crew-01.wav",
+      "durationSeconds": 2.779501133786848,
+      "key": "radio.distress_crew_01"
+    },
+    {
+      "text": "They're shooting us to pieces! Do something!",
+      "file": "distress-crew-02.wav",
+      "durationSeconds": 3.2454421768707484,
+      "key": "radio.distress_crew_02"
+    },
+    {
+      "text": "We're under fire! Somebody help us!",
+      "file": "distress-crew-03.wav",
+      "durationSeconds": 3.0785487528344673,
+      "key": "radio.distress_crew_03"
+    },
+    {
+      "text": "We can't take much more! Get them off us!",
+      "file": "distress-crew-04.wav",
+      "durationSeconds": 3.760453514739229,
+      "key": "radio.distress_crew_04"
+    },
+    {
+      "text": "Incoming fire! We need help over here!",
+      "file": "distress-crew-05.wav",
+      "durationSeconds": 3.608299319727891,
+      "key": "radio.distress_crew_05"
+    },
+    {
+      "text": "More hostiles coming in! Watch it!",
+      "file": "wave-01.wav",
+      "durationSeconds": 2.496780045351474,
+      "key": "radio.wave_01"
+    },
+    {
+      "text": "Here they come! Don't let them through!",
+      "file": "wave-02.wav",
+      "durationSeconds": 2.4588208616780047,
+      "key": "radio.wave_02"
+    },
+    {
+      "text": "We've got company! Get ready!",
+      "file": "wave-03.wav",
+      "durationSeconds": 2.5165532879818593,
+      "key": "radio.wave_03"
+    },
+    {
+      "text": "Heads up! Another group coming in!",
+      "file": "wave-04.wav",
+      "durationSeconds": 2.7710657596371884,
+      "key": "radio.wave_04"
+    },
+    {
+      "text": "Hostiles spotted. Weapons free.",
+      "file": "contacts-01.wav",
+      "durationSeconds": 3.2974149659863947,
+      "key": "radio.contacts_01"
+    },
+    {
+      "text": "Contact! They're coming straight at us.",
+      "file": "contacts-02.wav",
+      "durationSeconds": 2.8010884353741496,
+      "key": "radio.contacts_02"
+    },
+    {
+      "text": "Enemy fighters. Stay sharp.",
+      "file": "contacts-03.wav",
+      "durationSeconds": 2.9839455782312925,
+      "key": "radio.contacts_03"
+    },
+    {
+      "text": "Eyes up. We've got incoming.",
+      "file": "contacts-04.wav",
+      "durationSeconds": 2.2224943310657594,
+      "key": "radio.contacts_04"
+    },
+    {
+      "text": "Great shot!",
+      "file": "praise-01.wav",
+      "durationSeconds": 1.222267573696145,
+      "key": "radio.praise_01"
+    },
+    {
+      "text": "Nice work! That's how it's done!",
+      "file": "praise-02.wav",
+      "durationSeconds": 2.916734693877551,
+      "key": "radio.praise_02"
+    },
+    {
+      "text": "Yeah! That got them!",
+      "file": "praise-03.wav",
+      "durationSeconds": 2.041133786848073,
+      "key": "radio.praise_03"
+    },
+    {
+      "text": "That's the last of them. Good shooting.",
+      "file": "praise-04.wav",
+      "durationSeconds": 3.0127437641723356,
+      "key": "radio.praise_04"
+    },
+    {
+      "text": "You owe me one!",
+      "file": "banter-01.wav",
+      "durationSeconds": 2.030204081632653,
+      "key": "radio.banter_01"
+    },
+    {
+      "text": "Still in one piece? Good. Keep it that way.",
+      "file": "banter-02.wav",
+      "durationSeconds": 3.532517006802721,
+      "key": "radio.banter_02"
+    },
+    {
+      "text": "That was close. Way too close.",
+      "file": "banter-03.wav",
+      "durationSeconds": 3.3378684807256236,
+      "key": "radio.banter_03"
+    },
+    {
+      "text": "I'm right with you.",
+      "file": "ready-01.wav",
+      "durationSeconds": 1.4049886621315193,
+      "key": "radio.ready_01"
+    },
+    {
+      "text": "I've got your back. Let's do this.",
+      "file": "ready-02.wav",
+      "durationSeconds": 2.3793650793650793,
+      "key": "radio.ready_02"
+    },
+    {
+      "text": "We lost one! Keep moving!",
+      "file": "loss-01.wav",
+      "durationSeconds": 2.9839455782312925,
+      "key": "radio.loss_01"
+    },
+    {
+      "text": "We've got a pilot down! Stay together!",
+      "file": "loss-02.wav",
+      "durationSeconds": 4.090022675736962,
+      "key": "radio.loss_02"
+    }
+  ]
+}

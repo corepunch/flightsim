@@ -69,14 +69,17 @@
     {
       "when": { "spawned": "scouts" },
       "do": [
-        { "radio": {"from": "Bastion Control", "text": "Contacts near NAV 2! Three Wasps. Engage."} }
+        { "radio": {"from": "Bastion Control", "text": ["{#radio.contacts_01}", "{#radio.contacts_02}", "{#radio.contacts_03}", "{#radio.contacts_04}"]} }
       ]
     },
     {
       "when": { "objective": "scouts" },
       "do": [
-        { "radio": {"from": "Bastion Control", "text": "Scopes are clean. Nice shooting, Lancer."} }
+        { "radio": {"from": "Bastion Control", "text": ["{#radio.praise_01}", "{#radio.praise_02}", "{#radio.praise_03}", "{#radio.praise_04}"]} }
       ]
-    }
+    },
+    {"when": {"attacked": "wingman", "not": {"destroyed": "wingman"}}, "do": [{"radio": {"from": "Lancer 2", "text": ["{#radio.distress_wing_01}", "{#radio.distress_wing_02}", "{#radio.distress_wing_03}", "{#radio.distress_wing_04}", "{#radio.distress_wing_05}", "{#radio.distress_wing_06}"]}}]},
+    {"when": {"time": 6, "not": {"destroyed": "wingman"}}, "do": [{"radio": {"from": "Lancer 2", "text": ["{#radio.ready_01}", "{#radio.ready_02}"]}}]},
+    {"when": {"destroyed": "wingman"}, "do": [{"radio": {"from": "Bastion Control", "text": ["{#radio.loss_01}", "{#radio.loss_02}"]}}]}
   ]
 }

@@ -68,19 +68,25 @@ def main():
     unused = sorted(k for k in english.keys() - used)
     assert not unused, f"en.json has keys no code uses: {unused}"
 
-    # A game's catalogs (Games/<name>/Strings) layer over the engine's: they
-    # override engine keys, so they hold only English keys, of the same kind
-    # and format, and need no name or direction of their own.
+    # Game catalogs also add content keys referenced by their JSON tokens.
     overlays = 0
     for path in sorted((ROOT / "Games").glob("*/Strings/*.json")):
         overlays += 1
         locale = f"{path.parent.parent.name}/{path.stem}"
+        game = path.parent.parent
+        game_english = {**english, **json.loads((path.parent / "en.json").read_text())["strings"]}
+        content_used = set()
+        for content in game.rglob("*.json"):
+            if "Strings" not in content.relative_to(game).parts:
+                content_used.update(re.findall(r'\{#([a-z0-9_.]+)\}', content.read_text(encoding="utf-8")))
+        assert content_used <= game_english.keys(), f"{locale}: missing content keys {content_used - game_english.keys()}"
         strings = json.loads(path.read_text(encoding="utf-8")).get("strings")
         assert isinstance(strings, dict), f"{locale}: no strings"
         for key, value in strings.items():
-            assert key in english, f"{locale}: {key} is not an engine key"
-            items, reference = values(value), values(english[key])
-            assert isinstance(value, list) == isinstance(english[key], list), f"{locale}: {key} differs from English in kind"
+            assert key in game_english, f"{locale}: {key} is not an English key"
+            assert key in english or key in content_used, f"{locale}: unused content key {key}"
+            items, reference = values(value), values(game_english[key])
+            assert isinstance(value, list) == isinstance(game_english[key], list), f"{locale}: {key} differs from English in kind"
             for item in items:
                 assert isinstance(item, str), f"{locale}: {key} must be text or a list of text"
                 assert specifiers(item) == specifiers(reference[0]), \

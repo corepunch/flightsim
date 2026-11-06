@@ -98,6 +98,7 @@ dictionaries around:
 | `Data/Styles/*.json` | `MaterialSpec` | Render/CapitalView.m |
 | `Data/rules.json` | `GameRules` | the game module |
 | `Campaign/campaign.json` | `CampaignMission`, `MissionBriefing`, `MissionDebrief`, `StoryDefaults` | Story |
+| `Audio/Radio/catalog.json` | `RadioLine` (caption key, reference text, recording without a spoken callsign) | Audio |
 | `Story/characters.json`, `Story/rooms.json` | `StoryCharacter`, `StoryRoom` | Story |
 
 Shared contracts are C structs (with ARC-managed object fields), cached for the

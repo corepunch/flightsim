@@ -13,12 +13,112 @@
 static NSString *const MixKey = @"KestrelFrontier.audioMix";
 static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 
+// A catalog entry keeps the subtitle key and its authored recording together.
+@interface RadioLine : NSObject
+@property (nonatomic, readonly) NSString *identifier, *text;
+@property (nonatomic, readonly) AVAudioPlayer *player;
+- (instancetype)initWithJSON:(id)json;
+@end
+
+@implementation RadioLine
+- (instancetype)initWithJSON:(id)json {
+    NSString *file = JSONString(json, @"file");
+    NSString *text = JSONString(json, @"text");
+    if (!file.length || ![file.lastPathComponent isEqualToString:file] || !text.length) return nil;
+    NSURL *url = FSURL(@"Audio/Radio", file.stringByDeletingPathExtension, file.pathExtension);
+    NSError *error;
+    AVAudioPlayer *player = url ? [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error] : nil;
+    if (!player) { NSLog(@"Radio: missing or invalid %@", file); return nil; }
+    if ((self = [super init])) {
+        _identifier = [JSONString(json, @"key") copy]; _text = [text copy]; _player = player;
+        [_player prepareToPlay];
+    }
+    return self;
+}
+@end
+
+typedef struct { RadioLine *line; CFTimeInterval until; } PendingRadio;
+
+// One shared frequency; stale chatter is discarded instead of building a backlog.
+@interface RadioChannel : NSObject
+@property (nonatomic, readonly) BOOL playing, pending;
+@property (nonatomic, readonly) NSString *text;
+- (void)transmit:(NSString *)text;
+- (void)update;
+- (void)clear;
+@end
+
+@implementation RadioChannel {
+    NSString *_game;
+    NSArray<RadioLine *> *_lines;
+    RadioLine *_current;
+    PendingRadio _waiting;
+    CFTimeInterval _nextAt;
+    Cvar *_volume;
+}
+- (instancetype)init {
+    if ((self = [super init]))
+        _volume = [Cvar get:@"s_radioVolume" defaultValue:@"0.32" flags:CVAR_ARCHIVE help:@"Background radio voice volume (0–1)"];
+    return self;
+}
+- (BOOL)playing { return _current.player.playing; }
+- (BOOL)pending { return _waiting.line != nil; }
+- (NSString *)text { return _current.text ?: @""; }
+- (void)clear {
+    [_current.player stop]; _current.player.currentTime = 0;
+    _current = nil; _waiting = (PendingRadio){0}; _nextAt = 0;
+}
+- (void)loadCatalog {
+    NSString *game = FSGame();
+    if ([_game isEqualToString:game]) return;
+    [self clear]; _game = [game copy];
+    id json = FSJSON(FSURL(@"Audio/Radio", @"catalog", @"json"));
+    NSMutableArray *lines = [NSMutableArray array];
+    for (id entry in JSONArray(json, @"lines")) {
+        RadioLine *line = [[RadioLine alloc] initWithJSON:entry];
+        if (line) [lines addObject:line];
+    }
+    _lines = [lines copy];
+}
+- (void)start:(RadioLine *)line {
+    _current = line;
+    line.player.currentTime = 0;
+    line.player.volume = fminf(1, fmaxf(0, _volume.value));
+    [line.player play];
+}
+- (void)transmit:(NSString *)text {
+    [self loadCatalog];
+    [self update];
+    if (_volume.value <= 0) return;
+    NSString *key = [text hasPrefix:@"{#"] && [text hasSuffix:@"}"] ? [text substringWithRange:NSMakeRange(2, text.length - 3)] : text;
+    for (RadioLine *line in _lines) {
+        if (![line.identifier isEqualToString:key] && ![line.text isEqualToString:text]) continue;
+        if (_current == line || _waiting.line == line) return;
+        CFTimeInterval now = CACurrentMediaTime();
+        if (!_current && now >= _nextAt) [self start:line];
+        else if (!_waiting.line) _waiting = (PendingRadio){line, now + 6};
+        return;
+    }
+}
+- (void)update {
+    CFTimeInterval now = CACurrentMediaTime();
+    if (_volume.value <= 0) { [self clear]; return; }
+    if (_current && !_current.player.playing) { _current = nil; _nextAt = now + 1.25; }
+    if (_waiting.line && now > _waiting.until) _waiting = (PendingRadio){0};
+    if (!_current && _waiting.line && now >= _nextAt) {
+        RadioLine *line = _waiting.line;
+        _waiting = (PendingRadio){0}; [self start:line];
+    }
+}
+@end
+
 @implementation GameAudio {
     dispatch_queue_t _queue;
     NSMutableDictionary<NSString *, NSArray<AVAudioPlayer *> *> *_effects;
     NSMutableDictionary<NSString *, NSNumber *> *_lastPlayed;
     NSArray<NSArray<AVAudioPlayer *> *> *_music;
     AVAudioPlayer *_engine, *_boost;
+    RadioChannel *_radio;
     NSMutableArray *_observers;
     NSUInteger _mix, _musicVoice[2];
     float _musicGain[2], _throttle;
@@ -60,6 +160,7 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
         _mix = MIN(2, MAX(0, [defaults integerForKey:MixKey]));
         // Do not block the renderer on compressed-file preparation.
         dispatch_async(_queue, ^{
+            self->_radio = [RadioChannel new];
 #if TARGET_OS_IOS
             NSError *error;
             [AVAudioSession.sharedInstance setCategory:AVAudioSessionCategoryAmbient error:&error];
@@ -115,6 +216,7 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 }
 
 - (void)pauseAll {
+    [_radio clear];
     for (NSArray *track in _music) for (AVAudioPlayer *p in track) [p pause];
     [_engine pause];
     [_boost pause];
@@ -140,6 +242,24 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 }
 
 - (void)play:(NSString *)name { [self play:name gain:1 pan:0]; }
+
+- (void)radio:(NSString *)text {
+    dispatch_async(_queue, ^{
+        if (self->_mix == 2 || !self->_active || self->_interrupted || !self->_flying) return;
+        [self->_radio transmit:text];
+    });
+}
+
+- (void)clearRadio { dispatch_async(_queue, ^{ [self->_radio clear]; }); }
+- (BOOL)radioPlaying {
+    __block BOOL value; dispatch_sync(_queue, ^{ value = self->_radio.playing; }); return value;
+}
+- (BOOL)radioPending {
+    __block BOOL value; dispatch_sync(_queue, ^{ value = self->_radio.pending; }); return value;
+}
+- (NSString *)radioText {
+    __block NSString *value; dispatch_sync(_queue, ^{ value = self->_radio.text; }); return value;
+}
 
 - (void)play:(NSString *)name gain:(float)gain pan:(float)pan {
     if (gain < 0.015f) return;
@@ -175,10 +295,12 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 - (void)frame:(float)dt flying:(BOOL)flying {
     dispatch_async(_queue, ^{
         if (self->_flying != flying) {
+            [self->_radio clear];
             self->_flying = flying;
             self->_alive = NO; // Await fresh ship state after a mission transition.
         }
         if (!self->_active || self->_interrupted || self->_mix == 2) return;
+        [self->_radio update];
         float ease = 1 - expf(-fminf(dt, 0.1f) * 2.5f);
         for (NSUInteger i = 0; i < self->_music.count; i++) {
             NSArray<AVAudioPlayer *> *voices = self->_music[i];

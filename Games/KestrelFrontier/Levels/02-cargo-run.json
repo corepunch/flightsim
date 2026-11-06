@@ -110,9 +110,9 @@
       ]
     },
     {
-      "when": { "spawned": "talons" },
+      "when": { "spawned": "talons", "not": { "destroyed": "wingman" } },
       "do": [
-        { "radio": {"from": "Lancer 2", "text": "Bombers inbound on the convoy, two o'clock low!"} }
+        { "radio": {"from": "Lancer 2", "text": ["{#radio.wave_01}", "{#radio.wave_02}", "{#radio.wave_03}", "{#radio.wave_04}"]} }
       ]
     },
     {
@@ -120,6 +120,9 @@
       "do": [
         { "radio": {"from": "Tobin", "text": "Gate lock. We owe you a drink, Lancer."} }
       ]
-    }
+    },
+    {"when": {"attacked": "wingman", "not": {"destroyed": "wingman"}}, "do": [{"radio": {"from": "Lancer 2", "text": ["{#radio.distress_wing_01}", "{#radio.distress_wing_02}", "{#radio.distress_wing_03}", "{#radio.distress_wing_04}", "{#radio.distress_wing_05}", "{#radio.distress_wing_06}"]}}]},
+    {"when": {"attacked": "mira", "not": {"destroyed": "mira"}}, "do": [{"radio": {"from": "Mira", "text": ["{#radio.distress_crew_01}", "{#radio.distress_crew_02}", "{#radio.distress_crew_03}", "{#radio.distress_crew_04}", "{#radio.distress_crew_05}"]}}]},
+    {"when": {"objective": "bombers", "not": {"destroyed": "wingman"}}, "do": [{"radio": {"from": "Lancer 2", "text": ["{#radio.banter_01}", "{#radio.banter_02}", "{#radio.banter_03}"]}}]}
   ]
 }

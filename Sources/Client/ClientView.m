@@ -177,6 +177,7 @@ static float Ease(float value, float target, float rate, float dt) {
 }
 
 - (void)clearMission {
+    [[GameAudio shared] clearRadio];
     [_views removeAllObjects];
     for (int i = 0; i < REF_MAX_BOLTS; i++) _bolts[i].active = NO;
     [_refresh clearWorld];
@@ -334,13 +335,15 @@ static float Ease(float value, float target, float rate, float dt) {
 }
 
 - (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c {
+    NSString *radio = a;
     // The server sends catalog tokens; show them in the player's language.
     a = L10nExpand(a);
     if (type != SVC_BANNER && type != SVC_OBJECTIVES) b = L10nExpand(b);
     c = L10nExpand(c);
     switch (type) {
         case SVC_RADIO:
-            [[GameAudio shared] play:b.length ? @"ui-panel" : @"ui-alert" gain:b.length ? 0.25f : 0.7f pan:0];
+            [[GameAudio shared] radio:radio];
+            if (!b.length) [[GameAudio shared] play:@"ui-alert" gain:0.7f pan:0];
             [_hud showMessage:a from:b]; break;
         case SVC_BANNER:
             [[GameAudio shared] play:[b isEqualToString:@"red"] ? @"ui-alert" : @"ui-confirm"];

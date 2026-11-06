@@ -59,6 +59,11 @@ roughness and metalness maps, resized and re-encoded:
 ## Original content
 
 Made for this project:
+- Thirty original English pilot radio lines in `Games/KestrelFrontier/Audio/Radio/`,
+  generated with Runway on 2026-11-06 (preset voices Billy, Mark and Clint).
+  `Games/KestrelFrontier/Art/Radio/manifest.json` records the scripts, delivery tags,
+  voices, model and cloud task IDs; `Masters/` preserves the unprocessed MP3s.
+  `build_radio.py` reproduces the band-limited mono deliveries and radio squelch.
 - Original generated music and sci-fi sound effects in `Resources/Audio/`,
   created with Runway on 2026-11-05. `Resources/Audio/manifest.json` records
   the generation prompts, models and cloud task IDs. These generated assets

@@ -58,6 +58,7 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `cl_predict` | 1 | | Predicts the player's ship between snapshots |
 | `cl_cockpit` | 0 | archive | Cockpit camera (C toggles it) |
 | `cl_autoStart` | 0 | | Skips the loading card's start prompt, for scripted runs |
+| `s_radioVolume` | 0.32 | archive | Background radio voice volume (0–1); 0 silences voices. Music keeps its normal volume |
 | `cl_testInput` | 0 | cheat | A pilot who weaves and fires, for testing prediction |
 | `cl_testFire` | 0 | cheat | Holds the trigger |
 | `in_throttle` | 0 | | Throttle at launch |

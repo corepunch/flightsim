@@ -98,6 +98,14 @@ static NSSet *Qualifiers(void) { return [NSSet setWithObjects:@"state", nil]; }
         for (NSDictionary *a in actions) {
             if (![a isKindOfClass:NSDictionary.class] || a.count != 1) { [problems addObject:[where stringByAppendingString:@": each action is an object with one key"]]; continue; }
             if (!ActionNamed(a.allKeys.firstObject)) [problems addObject:[NSString stringWithFormat:@"%@: unknown action \"%@\"", where, a.allKeys.firstObject]];
+            if (a[@"radio"]) {
+                id radio = a[@"radio"], text = [radio isKindOfClass:NSDictionary.class] ? radio[@"text"] : nil;
+                NSArray *lines = JSONStrings(radio, @"text");
+                BOOL valid = lines.count > 0 && JSONString(radio, @"from").length > 0;
+                if ([text isKindOfClass:NSArray.class] && lines.count != [text count]) valid = NO;
+                for (NSString *line in lines) if (![line stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet].length) valid = NO;
+                if (!valid) [problems addObject:[where stringByAppendingString:@": radio needs from and non-empty text (a string or list of strings)"]];
+            }
         }
     }
     return problems;
@@ -222,7 +230,10 @@ static NSMutableDictionary<NSString *, MissionAction> *Actions(void) {
     dispatch_once(&once, ^{
         actions = [NSMutableDictionary dictionary];
         actions[@"spawn"] = ^(id v, id<MissionEventContext> c) { for (NSString *n in Names(v)) [c.world missionSpawn:n]; };
-        actions[@"radio"] = ^(NSDictionary *v, id<MissionEventContext> c) { [c.world missionRadio:v[@"text"] ?: @"" from:v[@"from"] ?: @""]; };
+        actions[@"radio"] = ^(NSDictionary *v, id<MissionEventContext> c) {
+            NSArray<NSString *> *lines = JSONStrings(v, @"text");
+            if (lines.count) [c.world missionRadio:lines[arc4random_uniform((uint32_t)lines.count)] from:JSONString(v, @"from") ?: @""];
+        };
         actions[@"banner"] = ^(NSDictionary *v, id<MissionEventContext> c) {
             if ([v isKindOfClass:NSString.class]) [c.world missionBanner:(NSString *)v alert:NO];
             else [c.world missionBanner:v[@"text"] ?: @"" alert:[v[@"alert"] boolValue]];

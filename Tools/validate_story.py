@@ -208,7 +208,9 @@ def validate_mission(mission):
                 assert set(names) <= held, (index, action)
                 spawned_by_events.update(names)
             elif kind == "radio":
-                assert value["text"].strip() and value["from"].strip(), (index, action)
+                lines = value["text"] if isinstance(value["text"], list) else [value["text"]]
+                assert lines and all(isinstance(line, str) and line.strip() for line in lines), (index, action)
+                assert value["from"].strip(), (index, action)
             elif kind == "set_team":
                 assert set(value) <= named, (index, action)
             elif kind == "destroy":
@@ -228,8 +230,36 @@ def load_levels(game):
     return levels
 
 
+def validate_radio(game, levels):
+    path = game / "Audio/Radio/catalog.json"
+    if not path.is_file():
+        return
+    catalog = json.loads(path.read_text())
+    lines = catalog["lines"]
+    assert lines and catalog["language"].strip(), path
+    captions = {"{#" + line["key"] + "}" for line in lines}
+    files = {line["file"] for line in lines}
+    assert len(captions) == len(lines) == len(files), f"{path}: duplicate caption or recording"
+    used = set()
+    for level in levels.values():
+        for event in level.get("events", []):
+            for action in event["do"]:
+                if "radio" in action:
+                    text = action["radio"]["text"]
+                    used.update(text if isinstance(text, list) else [text])
+    assert captions <= used, f"{path}: unused recordings {captions - used}"
+    for line in lines:
+        assert line["text"].strip() and 0.5 < line["durationSeconds"] < 8, line
+        assert Path(line["file"]).name == line["file"] and (path.parent / line["file"]).is_file(), line
+    assert files == {item.name for item in path.parent.glob("*.wav")}, f"{path}: orphan recording"
+    strings = json.loads((game / "Strings/en.json").read_text())["strings"]
+    assert all(strings[line["key"]] == line["text"] for line in lines), f"{path}: captions differ from recordings"
+    print(f"{game.name}: validated {len(lines)} radio recordings and their event captions")
+
+
 def validate_game(game):
     levels = load_levels(game)
+    validate_radio(game, levels)
     campaign_file = game / "Campaign/campaign.json"
     if not campaign_file.is_file():
         print(f"{game.name}: validated {len(levels)} levels (no campaign)")

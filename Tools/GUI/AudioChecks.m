@@ -2,6 +2,8 @@
 #import <AVFoundation/AVFoundation.h>
 #import "Audio.h"
 #import "UI.h"
+#import "Shared.h"
+#import "Common.h"
 
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "Audio check failed at line %d: %s\n", __LINE__, #c); return EXIT_FAILURE; } } while (0)
 
@@ -21,10 +23,20 @@ static int Checks(NSString *output) {
     NSURL *manifestURL = [NSBundle.mainBundle URLForResource:@"manifest" withExtension:@"json" subdirectory:@"Audio"];
     NSDictionary *manifest = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:manifestURL] options:0 error:nil];
     CHECK([manifest[@"assets"] count] == 14);
+    NSURL *radioURL = FSURL(@"Audio/Radio", @"catalog", @"json");
+    NSDictionary *radio = FSJSON(radioURL);
+    CHECK([radio[@"lines"] count] == 30);
+    NSMutableArray *assets = [manifest[@"assets"] mutableCopy];
+    for (NSDictionary *line in radio[@"lines"]) {
+        CHECK([line[@"text"] length] && [line[@"key"] length] && !line[@"from"]);
+        NSMutableDictionary *asset = [line mutableCopy];
+        asset[@"radio"] = @YES; [assets addObject:asset];
+    }
     // Decode every frame, not just the header; reject silence and corrupt/truncated downloads.
-    for (NSDictionary *asset in manifest[@"assets"]) {
+    for (NSDictionary *asset in assets) {
         @autoreleasepool {
-            NSURL *url = [manifestURL.URLByDeletingLastPathComponent URLByAppendingPathComponent:asset[@"file"]];
+            NSURL *base = [asset[@"radio"] boolValue] ? radioURL : manifestURL;
+            NSURL *url = [base.URLByDeletingLastPathComponent URLByAppendingPathComponent:asset[@"file"]];
             NSError *error;
             AVAudioFile *file = [[AVAudioFile alloc] initForReading:url error:&error];
             CHECK(file && !error);
@@ -70,7 +82,34 @@ static int Checks(NSString *output) {
     Frames(audio, YES, 180);
     CHECK(music[1][0].playing && !music[0][0].playing);
     CHECK(engine.playing && engine.volume > 0.20 && engine.rate > 1.1 && boost.playing);
+
+    [Cvar set:@"s_radioVolume" value:@"0.32"];
+    float musicVolume = music[1][0].volume;
+    NSString *first = @"I'm taking fire! Taking fire! I need cover, now!";
+    NSString *second = @"We're getting hit! We need cover!";
+    [audio radio:@"No recording exists for this line"];
+    CHECK(!audio.radioPlaying);
+    [audio radio:first];
+    CHECK(audio.radioPlaying && [audio.radioText isEqualToString:first]);
+    [audio radio:second];
+    CHECK(audio.radioPlaying && audio.radioPending && [audio.radioText isEqualToString:first]);
+    CHECK(fabs(music[1][0].volume - musicVolume) < 0.001); // Voices never duck the score.
+    [audio clearRadio];
+    CHECK(!audio.radioPlaying && !audio.radioPending);
+    [audio radio:@"{#radio.distress_wing_01}"];
+    CHECK(audio.radioPlaying && [audio.radioText isEqualToString:first]);
+    [audio clearRadio];
+    CHECK(!audio.radioPlaying);
+    [Cvar set:@"s_radioVolume" value:@"0"];
+    [audio radio:first];
+    CHECK(!audio.radioPlaying);
+    [Cvar set:@"s_radioVolume" value:@"0.32"];
+    [audio radio:first];
+    CHECK(audio.radioPlaying);
     Frames(audio, NO, 180);
+    CHECK(!audio.radioPlaying && !audio.radioPending);
+    [audio radio:first];
+    CHECK(!audio.radioPlaying); // A late server message cannot speak over the menus.
     CHECK(!engine.playing && !boost.playing && !music[1][0].playing);
 
     // Force a boundary so the prepared second music voice must take over.

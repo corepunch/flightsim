@@ -180,7 +180,7 @@ typedef NS_ENUM(NSInteger, MissionObjectiveState) {
 //   all: [ … ], any: [ … ], not: { … }
 // Actions:
 //   spawn: name | [names]    a held entity, wave or group arrives
-//   radio: { from, text }    radio message to every player
+//   radio: { from, text }    radio message to every player; text may be a list of alternatives
 //   banner: { text, alert }  big centred line
 //   set_team: { name: team } units change side
 //   destroy: name            units are destroyed

@@ -586,6 +586,22 @@ static void CheckArrivals(void) {
 // attacked, scanned and disabled read what the world reports about the units
 // by a name; scanned and disabled need all of them.
 static void CheckUnitStateTriggers(void) {
+    NSArray *alternatives = @[@"Taking fire!", @"Cover me!"];
+    NSDictionary *radioEvent = @{ @"when": @{ @"time": @0 },
+        @"do": @[@{ @"radio": @{ @"from": @"Lancer 2", @"text": alternatives } }] };
+    CHECK([MissionEvents problemsWithEvents:@[radioEvent]].count == 0);
+    CHECK(([MissionEvents problemsWithEvents:@[@{ @"when": @{ @"time": @0 },
+        @"do": @[@{ @"radio": @{ @"from": @"Lancer 2", @"text": @[@"Cover me!", @7] } }] }]].count > 0));
+    CHECK(([MissionEvents problemsWithEvents:@[@{ @"when": @{ @"time": @0 },
+        @"do": @[@{ @"radio": @{ @"from": @"Lancer 2", @"text": @[] } }] }]].count > 0));
+    LevelDef *radioLevel = LevelCreate(@{ @"events": @[radioEvent] });
+    FakeWorld *radioWorld = [FakeWorld new];
+    radioWorld.runner = [[MissionRunner alloc] initWithLevel:radioLevel world:radioWorld];
+    Run(radioWorld, 0.1f);
+    CHECK(radioWorld.radio.count == 1 && [alternatives containsObject:radioWorld.radio.firstObject]);
+    Run(radioWorld, 0.1f);
+    CHECK(radioWorld.radio.count == 1);
+    LevelRelease(radioLevel);
     LevelDef *level = LevelCreate(@{
         @"events": @[
             @{ @"when": @{ @"attacked": @"convoy" }, @"do": @[@{ @"set_flag": @"hit" }] },
