@@ -68,6 +68,9 @@ static int CheckHUD(void) {
         [hud updateFrame:frame targets:NULL count:0];
         [hud updateInstruments:instrument contacts:&contact count:1 cockpit:NO];
         SKNode *speed = [hud valueForKey:@"speedLabel"], *throttle = [hud valueForKey:@"throttleLabel"], *input = [hud valueForKey:@"inputLabel"], *target = [hud valueForKey:@"targetReadout"];
+        // The chase HUD hides the readout; it still lays out and draws on its own.
+        CHECK(target.hidden);
+        [(TargetReadout *)target updateFrame:instrument contacts:&contact count:1];
         CHECK(!CGRectIntersectsRect(speed.frame, throttle.frame));
         CHECK(CGRectContainsRect(RectWithSize(hud.size), speed.frame));
         CHECK(CGRectContainsRect(RectWithSize(hud.size), throttle.frame));
@@ -140,6 +143,7 @@ static int CheckHUD(void) {
         NSString *prefix = [NSString stringWithFormat:@"hud-%.0fx%.0f", hud.size.width, hud.size.height];
         Save(hud, [prefix stringByAppendingString:@".png"]);
         instrument.target = -1; [hud updateInstruments:instrument contacts:NULL count:0 cockpit:NO];
+        [readout updateFrame:instrument contacts:NULL count:0];
         CHECK(![[(SKLabelNode *)[readout valueForKey:@"empty"] text] isEqualToString:@""]);
         Save(hud, [prefix stringByAppendingString:@"-no-target.png"]);
         [hud setObjectives:@[] states:@[]];
@@ -251,7 +255,12 @@ static int CheckPause(void) {
         [menu handle:InputActionDown];
         [menu handle:InputActionRight]; CHECK(FlightControls.shared.verticalSensitivity == 1.25f);
         for (int i=0; i<2; i++) [menu handle:InputActionDown];
+        BOOL dynamic = FlightControls.shared.dynamicCamera;
+        [menu handle:InputActionConfirm]; CHECK(FlightControls.shared.dynamicCamera != dynamic);
+        FlightControls.shared.dynamicCamera = NO;
+        [menu handle:InputActionDown];
         [menu handle:InputActionConfirm]; CHECK(!FlightControls.shared.expert && FlightControls.shared.verticalSensitivity == 1);
+        CHECK(FlightControls.shared.dynamicCamera);
         CHECK([menu handle:InputActionBack] == PauseCommandNone && !menu.controlsPanel);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandSound);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandRestart);
@@ -291,7 +300,7 @@ static int CheckControls(void) {
         for (int i=0; i<3; i++) [menu handle:InputActionDown];
         [menu handle:InputActionConfirm];
         ControlsPanel *panel = menu.controlsPanel;
-        CHECK(panel && panel.settingRects.count == 5);
+        CHECK(panel && panel.settingRects.count == 6);
         CHECK(CGRectContainsRect(RectWithSize(menu.size), panel.backRect));
         CHECK(CGRectContainsRect(RectWithSize(menu.size), panel.scrollRect));
         // Click the actual mode button through the host screen's pointer path.

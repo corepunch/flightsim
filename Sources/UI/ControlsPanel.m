@@ -44,6 +44,8 @@
                          text:percent change:^(float value) { controls.verticalSensitivity = value; }],
         [UISettingItem choice:L10n(@"controls.invert") value:L10n(controls.invertPitch ? @"controls.on" : @"controls.off")
                        detail:nil action:^{ controls.invertPitch = !controls.invertPitch; }],
+        [UISettingItem choice:L10n(@"controls.camera") value:L10n(controls.dynamicCamera ? @"controls.on" : @"controls.off")
+                       detail:nil action:^{ controls.dynamicCamera = !controls.dynamicCamera; }],
         [UISettingItem action:L10n(@"controls.reset") value:L10n(@"controls.restore") action:^{ [controls reset]; }],
     ];
 }
@@ -136,7 +138,8 @@
         }
     }
     if (actions & (InputActionUp | InputActionDown)) {
-        _form.selectedIndex = (_form.selectedIndex + ((actions & InputActionUp) ? 4 : 1)) % 5;
+        NSInteger count = (NSInteger)_settingRects.count;
+        _form.selectedIndex = (_form.selectedIndex + ((actions & InputActionUp) ? count - 1 : 1)) % count;
         _selected = _form.selectedIndex;
         [self revealSelection];
     }

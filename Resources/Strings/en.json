@@ -322,6 +322,7 @@
     "controls.horizontal": "Horizontal sensitivity",
     "controls.vertical": "Vertical sensitivity",
     "controls.invert": "Invert pitch",
+    "controls.camera": "Dynamic camera",
     "controls.on": "ON",
     "controls.off": "OFF",
     "controls.reset": "Default controls",

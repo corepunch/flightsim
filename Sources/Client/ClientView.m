@@ -44,6 +44,8 @@ static CockpitCues CockpitCuesOf(const PlayerState *ps) {
 // chases its target with 1 - exp(-k dt), so it never depends on frame rate.
 typedef struct {
     simd_quatf orientation;     // lags the ship's
+    simd_float3 lead;           // turn the view leads by: local pitch, yaw rotation vector
+    float roll;                 // the part of the ship's lean the view shares
     float lookYaw, lookPitch;   // free look, toward the hat
     float boost;                // boost effects, 0..1
     float fov;
@@ -55,10 +57,23 @@ typedef struct {
 // back when the stick centres) and turns only about the nose axis, which leaves
 // aim, flight and the server's state untouched. About 28 degrees at full yaw
 // for a ship turning 1.45 rad/s.
-static simd_quatf BankedOrientation(const ShipMoveState *m) {
-    float bank = fminf(fmaxf(m->angularVelocity.y * 0.34f, -0.6f), 0.6f);
-    return simd_normalize(simd_mul(m->orientation, simd_quaternion(bank, simd_make_float3(0, 0, 1))));
+static float BankAngle(const ShipMoveState *m) {
+    return fminf(fmaxf(m->angularVelocity.y * 0.34f, -0.6f), 0.6f);
 }
+
+static simd_quatf BankedOrientation(const ShipMoveState *m) {
+    return simd_normalize(simd_mul(m->orientation, simd_quaternion(BankAngle(m), simd_make_float3(0, 0, 1))));
+}
+
+// A rotation from a rotation vector (axis times angle).
+static simd_quatf QuatFromRotation(simd_float3 v) {
+    float a = simd_length(v);
+    return a > 1e-5f ? simd_quaternion(a, v / a) : simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
+}
+
+// How far ahead of the ship the chase reticle's rings hang, nearest first.
+// The chase camera aims at the last, so in level flight it is the screen's centre.
+static const float ReticleDistances[HUD_RETICLE_RINGS] = { 25, 60, 110 };
 
 static float Ease(float value, float target, float rate, float dt) {
     return value + (target - value) * (1.0f - expf(-rate * dt));
@@ -460,18 +475,40 @@ static float Ease(float value, float target, float rate, float dt) {
     simd_quatf shipQ = ps->move.orientation;
     if (!_hadPlayer || simd_length(chase.orientation.vector) < 0.5f) chase.orientation = shipQ;
     chase.orientation = simd_slerp(chase.orientation, shipQ, 1.0f - expf(-(_cockpit ? 30.0f : 7.0f) * dt));
-    // The chase camera follows the unbanked ship so the lean shows; the cockpit
-    // eye leans with it.
-    simd_quatf q = simd_mul(_cockpit ? BankedOrientation(&ps->move) : chase.orientation, look);
+    // The dynamic chase view sits behind the ship but looks into its turn and
+    // climb, so the ship slides away from where it is heading (out of a turn,
+    // down in a pull-up) and the pilot sees where it is going. It also shares
+    // part of the ship's lean, which tilts the horizon. Roll rate is left out:
+    // it should spin the ship, not swing the view. Pitch leads less than yaw
+    // because the ship already sits low in the frame.
+    BOOL dynamic = !_cockpit && FlightControls.shared.dynamicCamera;
+    simd_float3 w = ps->move.angularVelocity;
+    simd_float3 lead = simd_make_float3(clampf(w.x * 0.12f, -0.13f, 0.13f), clampf(w.y * 0.3f, -0.42f, 0.42f), 0);
+    if (!dynamic) lead = 0;
+    chase.lead += (lead - chase.lead) * (1.0f - expf(-4.0f * dt));
+    chase.roll = Ease(chase.roll, dynamic ? BankAngle(&ps->move) * 0.6f : 0, 5, dt);
+    simd_quatf view = simd_mul(simd_mul(chase.orientation, QuatFromRotation(chase.lead)),
+                               simd_quaternion(chase.roll, simd_make_float3(0, 0, 1)));
+    // The cockpit eye leans with the ship; the chase view only partly, so the
+    // rest of the lean shows on the hull.
+    simd_quatf q = simd_mul(_cockpit ? BankedOrientation(&ps->move) : view, look);
 
     float speed = simd_length(ps->move.velocity);
     // Ease boost effects in and out so toggling boost never pops the camera.
     chase.boost = Ease(chase.boost, ps->move.boosting ? 1 : 0, 4, dt);
     float boostFx = chase.boost;
+    // Dynamic: low and close behind the ship, which sits in the lower part of
+    // the frame with the reticle and whatever it is chasing above it. Fixed:
+    // farther back, looking along the ship's nose.
     simd_float3 offset = _cockpit ? RefCockpitEye
-                                  : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
+                       : dynamic ? simd_make_float3(0, 3.2f, 14.0f + speed * 0.008f + boostFx * 3.0f)
+                                 : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
     simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : chase.orientation, simd_act(look, offset));
     if (_cockpit) pos = ps->move.origin + simd_act(BankedOrientation(&ps->move), offset);
+    // Aim down the line of fire at the farthest reticle ring, which puts it
+    // at the centre of the screen and the ship below it.
+    if (dynamic) q = simd_mul(q, simd_quaternion(-atan2f(offset.y, offset.z + ReticleDistances[HUD_RETICLE_RINGS - 1]),
+                                                   simd_make_float3(1, 0, 0)));
 
     chase.shake = fmaxf(0, chase.shake - dt * 1.5f);
     // Smooth shake: two sines per axis, ~3-7 Hz, at frequencies with no common
@@ -553,6 +590,18 @@ static float Ease(float value, float target, float rate, float dt) {
     HUDFrame f = {0};
     CGSize size = _refresh.viewSize;
     f.boresightVisible = [self project:me + fwd * 400.0f into:&f.boresight];
+    // The chase reticle is a row of rings ahead of the ship on its line of
+    // fire, leaning with the hull, so its perspective shows where the guns point.
+    if (!_cockpit) {
+        simd_quatf banked = BankedOrientation(&ps->move);
+        simd_float3 right = simd_act(banked, simd_make_float3(1, 0, 0)), up = simd_act(banked, simd_make_float3(0, 1, 0));
+        for (int i = 0; i < HUD_RETICLE_RINGS; i++) {
+            simd_float3 centre = me + fwd * ReticleDistances[i];
+            CGPoint c, r, u;
+            if (![self project:centre into:&c] || ![self project:centre + right into:&r] || ![self project:centre + up into:&u]) break;
+            f.reticle[f.reticleRings++] = (HUDRing){ .centre = c, .right = PointSub(r, c), .up = PointSub(u, c) };
+        }
+    }
     f.mouseStick = _input.mouseStick;
     f.mouseCaptured = _input.mouseCaptured;
     f.throttle = ps->move.throttle;

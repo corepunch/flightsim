@@ -441,6 +441,7 @@ UIMotionStyle UIThemeMotion(void);
 #define UIFriendly UIThemeColor(@"friendly")
 #define UIHUDNeutral UIThemeColor(@"hudNeutral")
 #define UIShield UIThemeColor(@"shield")
+#define UIReticle UIThemeColor(@"reticle")
 #define UIBoost UIThemeColor(@"boost")
 #define UIYellow UIThemeColor(@"yellow")
 #define UIBackground UIThemeColor(@"background")

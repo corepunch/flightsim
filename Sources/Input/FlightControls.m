@@ -6,7 +6,7 @@ static float Sensitivity(Cvar *cvar) {
 }
 
 @implementation FlightControls {
-    Cvar *_expert, *_horizontal, *_vertical, *_invert;
+    Cvar *_expert, *_horizontal, *_vertical, *_invert, *_dynamicCamera;
 }
 
 + (instancetype)shared {
@@ -22,6 +22,8 @@ static float Sensitivity(Cvar *cvar) {
         _horizontal = [Cvar get:@"in_sensitivityX" defaultValue:@"1" flags:CVAR_ARCHIVE help:@"Horizontal flight sensitivity (0.25..2)"];
         _vertical = [Cvar get:@"in_sensitivityY" defaultValue:@"1" flags:CVAR_ARCHIVE help:@"Vertical flight sensitivity (0.25..2)"];
         _invert = [Cvar get:@"in_invertPitch" defaultValue:@"0" flags:CVAR_ARCHIVE help:@"Invert pitch on mouse, touch and primary stick"];
+        _dynamicCamera = [Cvar get:@"cl_dynamicCamera" defaultValue:@"1" flags:CVAR_ARCHIVE
+                              help:@"Chase camera looks into turns and leans with the ship (0: fixed behind it)"];
     }
     return self;
 }
@@ -30,6 +32,8 @@ static float Sensitivity(Cvar *cvar) {
 - (void)setExpert:(BOOL)value { [_expert setInteger:value]; }
 - (BOOL)invertPitch { return _invert.boolValue; }
 - (void)setInvertPitch:(BOOL)value { [_invert setInteger:value]; }
+- (BOOL)dynamicCamera { return _dynamicCamera.boolValue; }
+- (void)setDynamicCamera:(BOOL)value { [_dynamicCamera setInteger:value]; }
 - (float)horizontalSensitivity { return Sensitivity(_horizontal); }
 - (void)setHorizontalSensitivity:(float)value { [_horizontal setValue:isfinite(value) ? clampf(value, 0.25f, 2) : 1]; }
 - (float)verticalSensitivity { return Sensitivity(_vertical); }
@@ -48,5 +52,6 @@ static float Sensitivity(Cvar *cvar) {
     [_horizontal reset];
     [_vertical reset];
     [_invert reset];
+    [_dynamicCamera reset];
 }
 @end
