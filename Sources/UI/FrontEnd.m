@@ -87,7 +87,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 
 - (void)showBrowser {
     if (_screen != FrontScreenBrowser) _browserReturn = _screen;
-    if (!_lan) _lan = [LANBrowser new];
+    if (!_lan) _lan = [_services makeLANBrowser];
     NSString *server = _services.connectedServer;
     [_browser setStatus:server ? L10nFormat(@"browser.connected", server) : @""];
     [self present:FrontScreenBrowser];

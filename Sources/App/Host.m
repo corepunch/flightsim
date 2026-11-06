@@ -480,6 +480,8 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 - (NSString *)connectedServer { return self.remote ? _client.serverAddress.string : nil; }
 - (void)drawMenuBackdrop { [_clientView menuFrame:_time]; }
 
+- (LANBrowser *)makeLANBrowser { return [LANBrowser new]; }
+
 - (BOOL)isOwnServer:(LANServer *)s {
     return _serverUDP && s.address.port == _serverUDP.port && [self isOwnAddress:s.address];
 }

@@ -89,6 +89,10 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)drawMenuBackdrop;
 // Whether a LAN listing is our own listen server (left off the list).
 - (BOOL)isOwnServer:(LANServer *)server;
+// Starts LAN discovery for the server browser. It opens a broadcast socket and
+// a Bonjour search, so a host without a network (a check) returns nil and the
+// browser lists nothing.
+- (LANBrowser *)makeLANBrowser;
 @property (nonatomic, readonly) double time;
 @property (nonatomic, readonly, copy) NSString *connectedServer;   // a remote host we are on, or nil
 @end

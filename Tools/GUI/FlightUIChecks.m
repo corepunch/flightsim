@@ -269,6 +269,7 @@ static int CheckPause(void) {
 - (void)quitAfter:(NSTimeInterval)seconds {}
 - (void)drawMenuBackdrop {}
 - (BOOL)isOwnServer:(LANServer *)server { return NO; }
+- (LANBrowser *)makeLANBrowser { return nil; }   // no sockets: nothing for the firewall to ask about
 - (double)time { return 0; }
 - (NSString *)connectedServer { return nil; }
 @end
