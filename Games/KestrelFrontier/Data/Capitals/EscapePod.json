@@ -1,5 +1,5 @@
 {
-  "className": "Escape Pod",
+  "className": "{#game.class.escape_pod}",
   "hp": 0.6,
   "style": "civil",
   "prop": true

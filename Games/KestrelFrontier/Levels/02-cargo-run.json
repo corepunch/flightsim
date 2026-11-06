@@ -82,13 +82,13 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "Keep Mira and Tobin intact" },
+    { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "{#mission.objective.cargo_run.protect}" },
     {
       "id": "escort",
       "type": "escort",
       "targets": ["convoy"],
       "navs": ["gatenav"],
-      "text": "Escort both to Halden Gate",
+      "text": "{#mission.objective.cargo_run.escort}",
       "depart": true
     },
     {
@@ -96,7 +96,7 @@
       "type": "destroy",
       "targets": ["talons"],
       "optional": true,
-      "text": "Destroy the Talon bombers"
+      "text": "{#mission.objective.cargo_run.bombers}"
     }
   ],
   "events": [
@@ -106,7 +106,7 @@
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Mira", "text": "Mira and Tobin are under way. Keep the Talons off us."} }
+        { "radio": {"from": "Mira", "text": "{#radio.mission.cargo_run.line_1}"} }
       ]
     },
     {
@@ -118,7 +118,7 @@
     {
       "when": { "objective": "escort" },
       "do": [
-        { "radio": {"from": "Tobin", "text": "Gate lock. We owe you a drink, Lancer."} }
+        { "radio": {"from": "Tobin", "text": "{#radio.mission.cargo_run.line_2}"} }
       ]
     },
     {"when": {"attacked": "wingman", "not": {"destroyed": "wingman"}}, "do": [{"radio": {"from": "Lancer 2", "text": ["{#radio.distress_wing_01}", "{#radio.distress_wing_02}", "{#radio.distress_wing_03}", "{#radio.distress_wing_04}", "{#radio.distress_wing_05}", "{#radio.distress_wing_06}"]}}]},

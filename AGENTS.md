@@ -35,6 +35,8 @@ python3 -I Tools/validate_story.py  # every game's levels, campaign, cast and ar
 ./Tools/run-gui-checks.sh           # portraits and campaign safe areas (desktop session)
 ./Tools/run-dialogue-checks.sh      # briefing captions and typing (desktop session)
 ./Tools/run-flight-ui-checks.sh     # HUD, cockpit, mission grid (desktop session)
+./Tools/run-ui-reference-checks.sh  # standalone UI reference sheets for iPhone, iPad and desktop
+./Tools/run-ui-localization-checks.sh # every language at every reference configuration
 ./Tools/run-mouse-checks.sh         # mouse flight (desktop session)
 ./Tools/run-audio-checks.sh         # audio (desktop session)
 ./Tools/run-flare-checks.sh         # lens flare rendering (desktop session)
@@ -44,8 +46,18 @@ GUI suites open a separate app bundle with `open -W` and need a logged-in macOS
 desktop session; previews and logs land in `build/<suite>-checks.*/`. Look at the
 previews when you change how something looks.
 
+The UI catalogue is `build/ui-reference/index.html`: filter by device, control
+or screen, and inspect at actual size without starting the game. Regenerate it
+after UI changes and inspect the affected controls in every configuration.
+
 The strings validator (part of the unit checks) fails on catalog keys no code
 uses: delete a string from `Resources/Strings/en.json` when you delete its last use.
+Every shipped locale must contain the complete English key set, including game
+overrides and content keys. Preserve format specifiers, array lengths and argument
+order. Keep native language declarations and permission prompts in sync. Render
+`build/ui-localization/index.html` after translation changes; optional locale
+arguments to the runner allow focused iteration. Send localization tokens over
+the wire and expand them on the client, so each player sees their own language.
 
 Checks read UI state through read-only properties declared for them (for example
 `Briefing`'s `speech`, `captionRect`, `scrollRect`), not by KVC into private ivars.
@@ -91,6 +103,23 @@ ARC allows object pointers in C structs in `.m` files. Give an object a method
 **Subsystems are classes.** A self-contained piece of a screen or system gets its
 own small class (`TacticalMap : SKCropNode`, `TextViewport : SKNode` in
 `Sources/UI/Briefing.m`) rather than a cluster of ivars and methods in its host.
+
+**Compose shared UI controls; never position their parts in scenes.** Scenes
+declare a bar's information, title and actions with callbacks. `TitleBar`,
+`UIInfoBar`, `UISettingsForm` and `ScreenRegions` own sizing, typography, padding,
+alignment, responsive placement, interaction states and hit geometry. For
+example, create an information bar with hint text and a Continue action handler;
+do not place a rail, left label and right Continue button independently. Reuse
+the same control across scenes. Extend or refactor the shared control when a
+composition is missing instead of adding screen-specific offsets. Touch flight
+artwork and layout belong to `UITouchControls`; the platform adapter routes input.
+
+Every new shared control or supported visual/configuration state must have a
+fixture in `Tools/GUI/UIReference.m`. Render the real production control, not a
+separate illustration or HTML imitation. Cover the applicable normal, selected,
+hover, pressed and disabled states, long text, empty/full content, safe areas and
+responsive breakpoints on iPhone, iPad and desktop. Keep the catalogue's matrix
+and coverage notes current when adding a supported configuration.
 
 **Data is read once into typed contracts.** JSON stays the format, but it is parsed
 in one place into structs or immutable classes (see the table in

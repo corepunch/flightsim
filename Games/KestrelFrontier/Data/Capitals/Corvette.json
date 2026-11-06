@@ -1,5 +1,5 @@
 {
-  "className": "Corvette",
+  "className": "{#game.class.corvette}",
   "hp": 9,
   "style": "skarn"
 }

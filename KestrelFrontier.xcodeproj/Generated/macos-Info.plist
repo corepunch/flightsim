@@ -4,6 +4,8 @@
 <dict>
 	<key>ATSApplicationFontsPath</key>
 	<string>Fonts</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>Kestrel Frontier</string>
 	<key>CFBundleExecutable</key>
@@ -12,6 +14,30 @@
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>de</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>it</string>
+		<string>pt-BR</string>
+		<string>pt-PT</string>
+		<string>ru</string>
+		<string>uk</string>
+		<string>pl</string>
+		<string>tr</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>ja</string>
+		<string>ko</string>
+		<string>ar</string>
+		<string>hi</string>
+		<string>bn</string>
+		<string>id</string>
+		<string>th</string>
+		<string>vi</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>Kestrel Frontier</string>
 	<key>CFBundlePackageType</key>

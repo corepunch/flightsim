@@ -1,5 +1,5 @@
 {
-  "className": "Survey Ship",
+  "className": "{#game.class.survey_ship}",
   "hp": 22,
   "style": "concord"
 }

@@ -101,20 +101,20 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Keep bombers off the Bastion" },
+    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "{#mission.objective.destroyer_ambush.protect}" },
     {
       "id": "shields",
       "type": "disable",
       "targets": ["cruiser"],
       "kind": "Shield",
-      "text": "Hit 2 shield gens on Iron Vow"
+      "text": "{#mission.objective.iron_wall.shields}"
     },
     {
       "id": "kill",
       "type": "destroy",
       "targets": ["cruiser"],
       "after": ["shields"],
-      "text": "Destroy heavy cruiser Iron Vow"
+      "text": "{#mission.objective.iron_wall.kill}"
     }
   ],
   "events": [
@@ -124,33 +124,33 @@
       "when": { "time": 3 },
       "do": [
         {
-          "radio": { "from": "Commander Varn", "text": "Go for the two shield generators on top of the Iron Vow." }
+          "radio": { "from": "Commander Varn", "text": "{#radio.mission.iron_wall.line_1}" }
         }
       ]
     },
     {
       "when": { "spawned": "strix" },
       "do": [
-        { "radio": {"from": "Bastion Control", "text": "Two fast movers off the cruiser's bow. It's the Strix pair from the Veil, and they're hunting Lancer flight."} }
+        { "radio": {"from": "Bastion Control", "text": "{#radio.mission.iron_wall.line_2}"} }
       ]
     },
     {
       "when": { "spawned": "talons2" },
       "do": [
-        { "radio": {"from": "Captured Destroyer Gorran", "text": "Gorran here. Bombers on the starboard side. Our guns will take any that come near us."} }
+        { "radio": {"from": "Captured Destroyer Gorran", "text": "{#radio.mission.iron_wall.line_3}"} }
       ]
     },
     {
       "when": { "objective": "shields" },
       "do": [
-        { "radio": {"from": "CNS Kestrel", "text": "Its shields are down! All guns, fire!"} }
+        { "radio": {"from": "CNS Kestrel", "text": "{#radio.mission.iron_wall.line_4}"} }
       ]
     },
     {
       "when": { "objective": "kill" },
       "do": [
         {
-          "radio": { "from": "Commander Varn", "text": "The Iron Vow is gone. Lancer flight, return to Bastion." }
+          "radio": { "from": "Commander Varn", "text": "{#radio.mission.iron_wall.line_5}" }
         }
       ]
     },
@@ -159,7 +159,7 @@
       "do": [
         { "destroy": "Lancer 2" },
         {
-          "radio": { "from": "Bastion Control", "text": "Lancer Two is down. No escape beacon. Rescue is on the way." }
+          "radio": { "from": "Bastion Control", "text": "{#radio.mission.iron_wall.line_6}" }
         }
       ]
     }

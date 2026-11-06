@@ -1,5 +1,43 @@
 #import "UI.h"
 #import "Shared.h"
+#import <CoreText/CoreText.h>
+
+void UISetCenteredButtonText(SKLabelNode *label, NSString *text) {
+    NSMutableParagraphStyle *paragraph = [NSMutableParagraphStyle new];
+    paragraph.alignment = NSTextAlignmentCenter;
+    paragraph.lineBreakMode = label.lineBreakMode;
+#if TARGET_OS_IOS
+    UIFont *font = [UIFont fontWithName:label.fontName size:label.fontSize] ?: [UIFont systemFontOfSize:label.fontSize];
+#else
+    NSFont *font = [NSFont fontWithName:label.fontName size:label.fontSize] ?: [NSFont systemFontOfSize:label.fontSize];
+#endif
+    label.text = text;
+    label.attributedText = [[NSAttributedString alloc] initWithString:text attributes:@{
+        NSFontAttributeName:font, NSForegroundColorAttributeName:label.fontColor ?: SKColor.whiteColor,
+        NSParagraphStyleAttributeName:paragraph,
+    }];
+}
+
+void UIFitMultilineButtonLabel(SKLabelNode *label, NSString *text, NSUInteger lines, CGFloat height) {
+    NSString *remaining = text ?: @"";
+    for (;;) {
+        UISetCenteredButtonText(label, remaining);
+        // Count shaped lines instead of estimating their height from a Latin font.
+        CTFramesetterRef setter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)label.attributedText);
+        CGPathRef path = CGPathCreateWithRect(CGRectMake(0,0,label.preferredMaxLayoutWidth,100000),NULL);
+        CTFrameRef frame = CTFramesetterCreateFrame(setter,CFRangeMake(0,0),path,NULL);
+        CFIndex count = CFArrayGetCount(CTFrameGetLines(frame));
+        CFRelease(frame); CGPathRelease(path); CFRelease(setter);
+        // SpriteKit rounds ink bounds beyond the advances used to wrap a line.
+        CGFloat inkWidth = ceil(label.preferredMaxLayoutWidth) + 1;
+        if ((count <= (CFIndex)lines && CGRectGetHeight(label.frame) <= height &&
+            CGRectGetWidth(label.frame) <= inkWidth) || !remaining.length) break;
+        NSString *unmarked = [remaining hasSuffix:@"…"] ? [remaining substringToIndex:remaining.length-1] : remaining;
+        if (!unmarked.length) { remaining = @""; continue; }
+        NSRange last = [unmarked rangeOfComposedCharacterSequenceAtIndex:unmarked.length-1];
+        remaining = last.location ? [[unmarked substringToIndex:last.location] stringByAppendingString:@"…"] : @"";
+    }
+}
 
 static NSDictionary *Theme(void) {
     static NSDictionary *theme;

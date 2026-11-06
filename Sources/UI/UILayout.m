@@ -94,11 +94,11 @@
 }
 
 - (NSArray<NSDictionary *> *)items {
-#if TARGET_OS_IOS
-    NSString *platform = @"ios";
-#else
-    NSString *platform = @"mac";
-#endif
+    return [self itemsForTouch:TARGET_OS_IOS];
+}
+
+- (NSArray<NSDictionary *> *)itemsForTouch:(BOOL)touch {
+    NSString *platform = touch ? @"ios" : @"mac";
     NSMutableArray *items = [NSMutableArray array];
     for (NSDictionary *item in _root[@"items"]) {
         NSArray *platforms = item[@"platforms"];
@@ -196,16 +196,22 @@
     for (NSDictionary *item in n[@"items"]) if ([item isKindOfClass:NSDictionary.class]) [items addObject:[self resolve:item]];
     NSUInteger count = items.count;
     if (!count) return;
+    NSUInteger columns = MAX(1, (NSUInteger)[self number:n[@"columns"] fallback:1]);
+    NSUInteger rows = (count + columns - 1) / columns;
     CGFloat gap = [self number:n[@"gap"] fallback:6];
-    CGFloat row = MIN([self number:n[@"rowHeight"] fallback:44], frame.size.height / count - gap);
+    CGFloat row = MIN([self number:n[@"rowHeight"] fallback:44], (CGRectGetHeight(frame) - gap * (rows - 1)) / rows);
+    CGFloat width = (CGRectGetWidth(frame) - gap * (columns - 1)) / columns;
     NSMutableArray *ids = [NSMutableArray array];
     for (NSUInteger i = 0; i < count; i++) {
         NSDictionary *item = items[i];
         NSString *itemId = item[@"id"] ?: [NSString stringWithFormat:@"%lu", (unsigned long)i];
         NSString *key = [NSString stringWithFormat:@"%@.%@", listId, itemId];
-        CGRect rect = CGRectMake(CGRectGetMinX(frame), CGRectGetMaxY(frame) - row - i * (row + gap), frame.size.width, row);
+        CGRect rect = CGRectMake(CGRectGetMinX(frame) + (i / rows) * (width + gap),
+                                 CGRectGetMaxY(frame) - row - (i % rows) * (row + gap), width, row);
         BOOL disabled = [item[@"disabled"] boolValue];
-        SKShapeNode *button = UIActionButton(rect, [self text:item[@"text"]], [key isEqualToString:_selected] ? UIAmber : UIInk);
+        NSUInteger lines = MAX(1, (NSUInteger)[self number:n[@"textLines"] fallback:1]);
+        SKShapeNode *button = UIActionButtonWithLines(rect, [self text:item[@"text"]],
+            [key isEqualToString:_selected] ? UIAmber : UIInk, 17, lines);
         button.alpha = disabled ? 0.35 : 1;
         button.name = key;
         [into addChild:button];

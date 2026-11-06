@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / ฝูงบิน",
+    "loading.mission_kicker": "EMBER REACH / ภารกิจ %02lu",
+    "browser.kicker": "EMBER REACH / หลายผู้เล่น",
+    "controls.kicker": "EMBER REACH / คู่มือการบิน",
+    "menu.unit": "HEARTH / KITE / ฝูงบิน",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / ยานลาดตระเวน",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / ควบคุมการบิน",
+    "briefing.orders_line": "คำสั่งของคุณอยู่บนกระดาน",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "อาวุธ: เครื่องตัดคู่ ตอร์ปิโด %d ลูก",
+    "briefing.loadout_many": "อาวุธ: เครื่องตัดคู่ ตอร์ปิโด %d ลูก",
+    "combat.no_secondary": "ตอร์ปิโดหมด",
+    "combat.out_of_range": "เป้าหมายอยู่นอกระยะตอร์ปิโด",
+    "mission.objective.ash_patrol.patrol": "ลาดตระเวน NAV 1, 2, 3 ตามลำดับ",
+    "mission.objective.ash_patrol.raiders": "ทำลายยานจู่โจม Jackal 3 ลำ",
+    "mission.objective.ash_patrol.rtb": "กลับไป Hearth Station",
+    "mission.objective.ore_convoy.protect": "ปกป้อง Cinder",
+    "mission.objective.ore_convoy.escort": "คุ้มกัน Cinder ไปยัง Reach Relay",
+    "mission.objective.ore_convoy.raiders": "ทำลายยานจู่โจมที่ยิงเรือสินค้า",
+    "game.weapon.torpedo": "ตอร์ปิโด",
+    "game.weapon.torpedo_short": "ตอร์ปิโด",
+    "radio.mission.ash_patrol.line_1": "บินผ่านสัญญาณตามลำดับ Kite 1 บันทึกทุกจุด",
+    "radio.mission.ash_patrol.line_2": "Jackal สามลำนอกกลุ่มเมฆเถ้า เข้าปะทะ",
+    "radio.mission.ash_patrol.line_3": "เรดาร์โล่ง กลับบ้านได้ Kite",
+    "radio.mission.ore_convoy.line_1": "Cinder ออกเดินทาง แร่ปิดผนึกแล้ว อยู่ใกล้ไว้กองกำลังอาสา",
+    "radio.mission.ore_convoy.line_2": "กลุ่มจู่โจมที่สองกำลังตัดเส้นทางไปหาเรือสินค้า!",
+    "radio.mission.ore_convoy.line_3": "ล็อกสถานีแล้ว แร่ปลอดภัย เครื่องดื่มที่ Cinderfall ฉันเลี้ยง"
+  }
+}

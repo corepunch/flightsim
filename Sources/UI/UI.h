@@ -52,6 +52,8 @@ typedef NSEdgeInsets BriefingInsets;
 @property (nonatomic, readonly) CGRect captionRect;
 @property (nonatomic, readonly) NSString *backdropRoom;
 - (CGRect)portraitRectForCharacter:(NSString *)name;
+// Conservative head clearance in the shared portrait canvas's upper third.
+- (CGRect)portraitFaceRegionForCharacter:(NSString *)name;
 @property (nonatomic, readonly) BOOL captionOnRight;             // the speaker sits on the right
 @property (nonatomic, readonly) CGRect confirmRect, previousRect, backRect;
 @property (nonatomic, readonly) CGRect scrollRect;              // empty unless text overflows
@@ -65,7 +67,7 @@ typedef NSEdgeInsets BriefingInsets;
 
 // MARK: - FrontEnd
 
-@class NetAddress, LANServer, Loading;
+@class NetAddress, LANServer, Loading, UILayoutResult;
 
 // What the front end may ask of the engine. The host implements it; the
 // front end never touches the server, client, renderer or view.
@@ -191,6 +193,7 @@ typedef NSEdgeInsets BriefingInsets;
 // The engine's flight options and fixed bindings, reused in the menu and pause.
 // The title stays visible while the body scrolls on small screens.
 @interface ControlsPanel : SKNode <ScreenInput>
+@property (nonatomic) BOOL touchNavigationEnabled;
 - (void)layoutIn:(CGRect)bounds sceneSize:(CGSize)size;
 - (BOOL)handle:(InputAction)actions; // YES when Back is chosen
 @property (nonatomic, readonly) CGRect backRect, scrollRect;
@@ -216,6 +219,7 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
 
 // Takes pointer input through <ScreenInput>.
 @interface MainMenu : SKScene <ScreenInput>
+@property (nonatomic) BOOL touchNavigationEnabled;
 
 // Insets are in scene points. When used as a SceneKit overlay, the host
 // supplies its view's safe area. In a standalone SKView the scene reads it.
@@ -248,6 +252,7 @@ typedef NS_ENUM(NSInteger, PauseCommand) {
 // mission keeps running) and "cockpit" (the cockpit camera is on).
 @interface PauseMenu : SKScene <ScreenInput>
 @property (atomic) ScreenInsets contentInsets;
+@property (nonatomic, readonly) UILayoutResult *layout;
 @property (nonatomic, readonly) ControlsPanel *controlsPanel;
 - (void)showRemote:(BOOL)remote cockpit:(BOOL)cockpit;
 - (PauseCommand)handle:(InputAction)actions;
@@ -357,7 +362,7 @@ typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandC
 //               centred vertically in its frame
 //   "buttons"   a vertical list of action buttons from "items" (each with
 //               "id", "text", optional "disabled" and "when"), "rowHeight",
-//               "gap"; rows shrink to fit the frame
+//               "gap", optional "columns" and "textLines"; rows shrink to fit the frame
 //   "group"     nothing drawn; for positioning children
 // Numbers anywhere can be replaced by { "compact": n, "regular": n }.
 
@@ -393,6 +398,7 @@ typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandC
 // The root's "items" array (for screens that draw their own rows), filtered
 // by an optional per-item "platforms": ["mac", "ios"].
 - (NSArray<NSDictionary *> *)items;
+- (NSArray<NSDictionary *> *)itemsForTouch:(BOOL)touch;
 
 @end
 
@@ -485,6 +491,12 @@ static inline SKLabelNode *UIInterfaceLabel(CGFloat size, SKColor *color, SKLabe
     return label;
 }
 
+// Font and wrapping changes can offset SpriteKit's nominal centre. Align the
+// measured glyph bounds, including multi-line setting titles and hints.
+static inline void UICenterLabelVertically(SKLabelNode *label, CGFloat y) {
+    label.position = PointAdd(label.position, CGPointMake(0, y - CGRectGetMidY(label.frame)));
+}
+
 // Skew action controls, selection highlights, and horizontal progress indicators.
 static inline CGPathRef UICreateSkewedPath(CGRect rect) CF_RETURNS_RETAINED {
     CGFloat left = CGRectGetMinX(rect), right = CGRectGetMaxX(rect);
@@ -520,17 +532,46 @@ static inline SKLabelNode *UIButtonLabel(NSString *text, CGFloat fontSize, CGPoi
     label.fontName = UIInterfaceBoldFont;
     label.position = at;
     label.text = text;
+    UICenterLabelVertically(label, at.y);
     return label;
 }
 
-static inline SKShapeNode *UIActionButtonSized(CGRect rect, NSString *text, UIRGB accent, CGFloat fontSize) {
+// SpriteKit does not consistently truncate single-line labels using
+// preferredMaxLayoutWidth. Fit the actual glyph bounds, without shrinking type.
+static inline void UIFitControlLabel(SKLabelNode *label, CGFloat width) {
+    NSString *text = label.text ?: @"";
+    while (CGRectGetWidth(label.frame) > MAX(1, width) && text.length) {
+        NSRange last = [text rangeOfComposedCharacterSequenceAtIndex:text.length - 1];
+        text = [text substringToIndex:last.location];
+        label.text = text.length ? [text stringByAppendingString:@"…"] : @"";
+    }
+}
+
+// SpriteKit centres a multiline label's block; paragraph alignment centres
+// each individual line inside that block.
+void UISetCenteredButtonText(SKLabelNode *label, NSString *text);
+void UIFitMultilineButtonLabel(SKLabelNode *label, NSString *text, NSUInteger lines, CGFloat height);
+
+static inline SKShapeNode *UIActionButtonWithLines(CGRect rect, NSString *text, UIRGB accent, CGFloat fontSize, NSUInteger lines) {
     SKShapeNode *button = UISkewedShape(rect, UIColorWithOpacity(accent, 0.85), UIColorWithOpacity(UIPanel, 0.96));
-    [button addChild:UIButtonLabel(text, fontSize, RectCenter(rect))];
+    SKLabelNode *label = UIButtonLabel(text, fontSize, RectCenter(rect));
+    label.numberOfLines = lines > 1 ? 0 : 1;
+    label.preferredMaxLayoutWidth = MAX(1, CGRectGetWidth(rect) - MIN(CGRectGetHeight(rect) * UISlant, CGRectGetWidth(rect) * 0.25) - 20);
+    label.lineBreakMode = lines > 1 ? NSLineBreakByWordWrapping : NSLineBreakByTruncatingTail;
+    if (lines > 1) {
+        UIFitMultilineButtonLabel(label, text, lines, CGRectGetHeight(rect) - 4);
+    } else UIFitControlLabel(label, label.preferredMaxLayoutWidth);
+    UICenterLabelVertically(label, CGRectGetMidY(rect));
+    [button addChild:label];
     return button;
 }
 
+static inline SKShapeNode *UIActionButtonSized(CGRect rect, NSString *text, UIRGB accent, CGFloat fontSize) {
+    return UIActionButtonWithLines(rect, text, accent, fontSize, 1);
+}
+
 static inline SKShapeNode *UIActionButton(CGRect rect, NSString *text, UIRGB accent) {
-    return UIActionButtonSized(rect, text, accent, 13);
+    return UIActionButtonSized(rect, text, accent, 17);
 }
 
 // Navigation back: a plate whose left end is an arrowhead, so leaving a screen
@@ -538,7 +579,8 @@ static inline SKShapeNode *UIActionButton(CGRect rect, NSString *text, UIRGB acc
 static inline CGFloat UIBackControlTip(CGRect rect) { return rect.size.height * 0.45; }
 
 static inline CGFloat UIBackControlWidth(NSString *text, CGFloat height, CGFloat fontSize) {
-    return UIButtonLabel(text, fontSize, CGPointZero).frame.size.width + UIBackControlTip(CGRectMake(0, 0, 0, height)) + 30;
+    return UIButtonLabel(text, fontSize, CGPointZero).frame.size.width + UIBackControlTip(CGRectMake(0, 0, 0, height))
+        + height * UISlant + 24;
 }
 
 static inline CGPathRef UICreateBackControlPath(CGRect rect) CF_RETURNS_RETAINED {
@@ -562,7 +604,10 @@ static inline SKShapeNode *UIBackControl(CGRect rect, NSString *text, UIRGB acce
     button.fillColor = UIColorWithOpacity(UIPanel, 0.96);
     button.lineWidth = 1;
     CGPoint at = RectCenter(RectInsetEdges(rect, UIBackControlTip(rect), 0, rect.size.height * UISlant, 0));
-    [button addChild:UIButtonLabel(text, fontSize, at)];
+    SKLabelNode *label = UIButtonLabel(text, fontSize, at);
+    UIFitControlLabel(label, CGRectGetWidth(rect) - UIBackControlTip(rect) - rect.size.height * UISlant - 12);
+    UICenterLabelVertically(label, at.y);
+    [button addChild:label];
     return button;
 }
 
@@ -730,22 +775,27 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
 
 // MARK: - TitleBar
 
+// A screen supplies the meaning of an action; the bar owns its presentation
+// and hit testing. Capture screen owners weakly in handlers.
+@interface UIBarAction : NSObject
++ (instancetype)title:(NSString *)title accent:(UIRGB)accent handler:(void (^)(void))handler;
+@property (nonatomic) BOOL enabled;
+@end
+
 // The bar along the top of a screen or panel: the back control on the left (an
 // arrow plate), the screen's kicker and title beside it, and the screen's
 // actions on the right, filling in from the right end so the primary action
 // sits in the corner. Neighbouring controls tuck their slanted edges together.
 //
-// Add the controls, then the title, then add the bar to the scene; its rects
-// are in the bar's parent's coordinates, so put it at the origin.
+// Supply actions in primary-first order. The bar's rects are in its parent's
+// coordinates, so put it at the origin.
 @interface TitleBar : SKNode
 + (CGFloat)heightCompact:(BOOL)compact;
-// header: the region the bar fills; its height is the bar's.
-- (instancetype)initWithHeader:(CGRect)header compact:(BOOL)compact;
-- (CGRect)addBack:(NSString *)title accent:(UIRGB)accent;
-// At least minWidth wide, at most two fifths of the bar. The first is primary.
-- (CGRect)addAction:(NSString *)title accent:(UIRGB)accent minWidth:(CGFloat)minWidth;
-// In the space between the back control and the actions; kicker may be nil.
-- (void)setTitle:(NSString *)title kicker:(NSString *)kicker;
+// The controls are centred vertically in the supplied region.
+- (instancetype)initWithHeader:(CGRect)header compact:(BOOL)compact back:(UIBarAction *)back
+                         title:(NSString *)title kicker:(NSString *)kicker actions:(NSArray<UIBarAction *> *)actions;
+- (CGRect)rectForAction:(UIBarAction *)action;
+- (BOOL)activateAt:(CGPoint)point;
 @property (nonatomic, readonly) CGFloat height, fontSize;
 @property (nonatomic, readonly) CGRect row, lane;   // the whole bar, and the space for the title
 @property (nonatomic, readonly) NSArray<SKShapeNode *> *controls;   // in the order added
@@ -754,4 +804,41 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
 - (void)registerHover:(UIHover *)hover;
 // The controls drop in from above in turn and the title decodes.
 - (void)revealAfter:(NSTimeInterval)delay;
+@end
+
+// A footer rail containing readable information and an optional primary action.
+// The same bar is used by conversations, reports and informational footers.
+@interface UIInfoBar : SKNode
++ (CGFloat)heightCompact:(BOOL)compact;
+- (instancetype)initWithRegion:(CGRect)region compact:(BOOL)compact console:(BOOL)console
+                          info:(NSString *)info action:(UIBarAction *)action;
+@property (nonatomic, readonly) CGRect row, actionRect;
+@property (nonatomic, readonly) SKLabelNode *infoLabel;
+@property (nonatomic, readonly) SKShapeNode *action;
+- (BOOL)activateAt:(CGPoint)point;
+- (void)registerHover:(UIHover *)hover;
+@end
+
+// MARK: - UITouchControls
+
+// Shared flight control artwork and hit geometry. The UIKit adapter supplies
+// touches; the reference renderer uses the same layout and visual states.
+typedef NS_ENUM(NSInteger, TouchControl) {
+    TouchControlNone = -1,
+    TouchControlStick, TouchControlThrottle, TouchControlFire,
+    TouchControlSecondary, TouchControlTarget, TouchControlPause, TouchControlCount
+};
+
+@interface UITouchControls : SKNode
+@property (nonatomic) BOOL controllerConnected;
+@property (nonatomic, readonly) NSDictionary<NSNumber *, SKLabelNode *> *buttonLabels;
++ (CGRect)pauseRectForSize:(CGSize)size insets:(ScreenInsets)insets;
+- (void)layoutWithSize:(CGSize)size insets:(ScreenInsets)insets;
+- (TouchControl)controlAt:(CGPoint)point; // top-origin view points
+- (CGPoint)centerForControl:(TouchControl)control;
+- (CGRect)rectForControl:(TouchControl)control; // scene points
+- (void)setSecondaryLabel:(NSString *)label;
+- (void)displayStick:(CGPoint)position stretched:(BOOL)stretched;
+- (void)displayThrottle:(float)value;
+- (void)setPressed:(BOOL)pressed control:(TouchControl)control;
 @end

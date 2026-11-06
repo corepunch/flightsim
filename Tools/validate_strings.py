@@ -31,11 +31,21 @@ SPEC = re.compile(r"%(?:\d+\$)?[-+ #0']*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|h|ll|l
 
 
 def specifiers(text):
-    return [s for s in SPEC.findall(text) if s != "%"]
+    return [s.group(0) for s in SPEC.finditer(text) if s.group(1) != "%"]
 
 
 def values(value):
     return value if isinstance(value, list) else [value]
+
+
+def check_translation(locale, key, value, reference):
+    items, original = values(value), values(reference)
+    assert isinstance(value, list) == isinstance(reference, list), f"{locale}: {key} differs from English in kind"
+    assert len(items) == len(original), f"{locale}: {key} differs from English in list length"
+    for item, source in zip(items, original):
+        assert isinstance(item, str) and item, f"{locale}: {key} must be nonempty text or a list of text"
+        assert specifiers(item) == specifiers(source), \
+            f"{locale}: {key} has format {specifiers(item)}, English has {specifiers(source)}"
 
 
 def main():
@@ -70,11 +80,15 @@ def main():
 
     # Game catalogs also add content keys referenced by their JSON tokens.
     overlays = 0
+    for directory in sorted((ROOT / "Games").glob("*/Strings")):
+        locales = {p.stem for p in directory.glob("*.json")}
+        assert locales == catalogs.keys(), f"{directory}: locale catalogs differ from the engine: {locales ^ catalogs.keys()}"
     for path in sorted((ROOT / "Games").glob("*/Strings/*.json")):
         overlays += 1
         locale = f"{path.parent.parent.name}/{path.stem}"
         game = path.parent.parent
-        game_english = {**english, **json.loads((path.parent / "en.json").read_text())["strings"]}
+        own_english = json.loads((path.parent / "en.json").read_text())["strings"]
+        game_english = {**english, **own_english}
         content_used = set()
         for content in game.rglob("*.json"):
             if "Strings" not in content.relative_to(game).parts:
@@ -82,29 +96,31 @@ def main():
         assert content_used <= game_english.keys(), f"{locale}: missing content keys {content_used - game_english.keys()}"
         strings = json.loads(path.read_text(encoding="utf-8")).get("strings")
         assert isinstance(strings, dict), f"{locale}: no strings"
+        assert own_english.keys() <= strings.keys(), f"{locale}: untranslated game keys {own_english.keys() - strings.keys()}"
         for key, value in strings.items():
             assert key in game_english, f"{locale}: {key} is not an English key"
             assert key in english or key in content_used, f"{locale}: unused content key {key}"
-            items, reference = values(value), values(game_english[key])
-            assert isinstance(value, list) == isinstance(game_english[key], list), f"{locale}: {key} differs from English in kind"
-            for item in items:
-                assert isinstance(item, str), f"{locale}: {key} must be text or a list of text"
-                assert specifiers(item) == specifiers(reference[0]), \
-                    f"{locale}: {key} has format {specifiers(item)}, English has {specifiers(reference[0])}"
+            check_translation(locale, key, value, game_english[key])
 
     for locale, catalog in catalogs.items():
         assert isinstance(catalog.get("name"), str) and catalog.get("direction") in ("ltr", "rtl"), \
             f"{locale}: needs a name and direction ltr/rtl"
         strings = catalog.get("strings")
         assert isinstance(strings, dict), f"{locale}: no strings"
+        assert strings.keys() == english.keys(), f"{locale}: catalog keys differ from English: {strings.keys() ^ english.keys()}"
         for key, value in strings.items():
             assert key in english, f"{locale}: {key} is not an English key"
-            items, reference = values(value), values(english[key])
-            assert all(isinstance(v, str) and v for v in items), f"{locale}: {key} must be text or a list of text"
-            assert isinstance(value, list) == isinstance(english[key], list), f"{locale}: {key} differs from English in kind"
-            for item in items:
-                assert specifiers(item) == specifiers(reference[0]), \
-                    f"{locale}: {key} has format {specifiers(item)}, English has {specifiers(reference[0])}"
+            check_translation(locale, key, value, english[key])
+
+    # Keep native language selection and permission prompts in sync with the catalogs.
+    import plistlib
+    for name in ("Info.plist", "Info-iOS.plist"):
+        info = plistlib.loads((ROOT / "Resources" / name).read_bytes())
+        assert set(info["CFBundleLocalizations"]) == catalogs.keys(), f"{name}: supported languages differ from catalogs"
+        assert info["CFBundleDevelopmentRegion"] == "en", f"{name}: English must be the fallback"
+    for locale in catalogs:
+        prompt = ROOT / "Resources/Localizations" / f"{locale}.lproj/InfoPlist.strings"
+        assert prompt.is_file() and '"NSLocalNetworkUsageDescription"' in prompt.read_text(), f"{locale}: missing native network permission text"
 
     theme = json.loads(THEME.read_text(encoding="utf-8"))
     style = STYLE.read_text(encoding="utf-8")

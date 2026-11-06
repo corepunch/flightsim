@@ -182,7 +182,8 @@ NSString *L10nFormat(NSString *key, ...);
 
 // Expands catalog tokens in text that came from the server: "{#key}" or
 // "{#key<US>arg<US>arg}" (US = U+001F), anywhere in the string. The key's
-// string takes the arguments as %@ in order. Text without tokens comes back
+// string takes the arguments as %@ in order; arguments may contain nested
+// tokens, such as a localized ship class. Text without tokens comes back
 // unchanged, so level text written in one language passes through.
 NSString *L10nExpand(NSString *text);
 

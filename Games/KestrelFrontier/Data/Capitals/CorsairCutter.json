@@ -1,5 +1,5 @@
 {
-  "className": "Corsair Cutter",
+  "className": "{#game.class.corsair_cutter}",
   "hp": 5,
   "style": "corsair"
 }

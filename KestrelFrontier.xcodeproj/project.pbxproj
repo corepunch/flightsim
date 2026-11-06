@@ -114,6 +114,8 @@
 					"-framework",
 					"CoreGraphics",
 					"-framework",
+					"CoreText",
+					"-framework",
 					"QuartzCore",
 					"-framework",
 					"ImageIO",
@@ -158,6 +160,8 @@
 					"Metal",
 					"-framework",
 					"CoreGraphics",
+					"-framework",
+					"CoreText",
 					"-framework",
 					"QuartzCore",
 					"-framework",
@@ -209,6 +213,8 @@
 					"-framework",
 					"CoreGraphics",
 					"-framework",
+					"CoreText",
+					"-framework",
 					"QuartzCore",
 					"-framework",
 					"IOKit",
@@ -255,6 +261,8 @@
 					"Metal",
 					"-framework",
 					"CoreGraphics",
+					"-framework",
+					"CoreText",
 					"-framework",
 					"QuartzCore",
 					"-framework",
@@ -1718,6 +1726,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"18E95E50414B272DD790F5F1" = {
+			"isa" = "PBXFileReference";
+			"path" = "UITouchControls.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"DE988AA5641270BAA21542D2" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "18E95E50414B272DD790F5F1";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"552EB49945F287EAD4C35FEA" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "18E95E50414B272DD790F5F1";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"4BDF5C49E56F258E9C706DEA" = {
 			"isa" = "PBXGroup";
 			"path" = "UI";
@@ -1739,6 +1767,7 @@
 				"A0B7717091DC976B7BD96039",
 				"0031E18773F7BA6D5077AB1B",
 				"ABF8A704D28EA8A017362EDC",
+				"18E95E50414B272DD790F5F1",
 			);
 			"sourceTree" = "<group>";
 		};
@@ -2002,6 +2031,7 @@
 				"53A704EC357CA4AEA1E5345C",
 				"F365BC11D11F67498EF09307",
 				"AB84E9F172D7CC4CD5F00B38",
+				"DE988AA5641270BAA21542D2",
 				"D333CB6EC38148AC7C563FB0",
 				"9A8F4D5042691289620BFD69",
 				"895AE943B6B4278E975BE9D4",
@@ -2067,6 +2097,7 @@
 				"1987F5077973522EF9E86DE3",
 				"C8395B85D9BA6A172271FD30",
 				"088586AD122F949F4E626565",
+				"552EB49945F287EAD4C35FEA",
 			);
 			"buildActionMask" = 2147483647;
 			"runOnlyForDeploymentPostprocessing" = 0;

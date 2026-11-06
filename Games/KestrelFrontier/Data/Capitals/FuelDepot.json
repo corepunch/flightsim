@@ -1,5 +1,5 @@
 {
-  "className": "Fuel Depot",
+  "className": "{#game.class.fuel_depot}",
   "hp": 40,
   "style": "civil"
 }

@@ -1,5 +1,5 @@
 {
-  "className": "Stealth Prototype",
+  "className": "{#game.class.stealth_prototype}",
   "hp": 3,
   "style": "stealth"
 }

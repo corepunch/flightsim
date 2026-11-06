@@ -46,14 +46,14 @@
     }
   ],
   "objectives": [
-    { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "Patrol NAV 1, 2, 3 in order" },
-    { "id": "scouts", "type": "destroy", "targets": ["scouts"], "text": "Destroy 3 Wasp scouts" },
+    { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "{#mission.objective.first_watch.patrol}" },
+    { "id": "scouts", "type": "destroy", "targets": ["scouts"], "text": "{#mission.objective.first_watch.scouts}" },
     {
       "id": "rtb",
       "type": "reach",
       "navs": ["home"],
       "after": ["patrol", "scouts"],
-      "text": "Fly to the BASTION nav marker"
+      "text": "{#mission.objective.first_watch.rtb}"
     }
   ],
   "events": [
@@ -62,7 +62,7 @@
       "when": { "time": 2 },
       "do": [
         {
-          "radio": { "from": "Bastion Control", "text": "Follow the cyan diamonds. Fly close to each to log it." }
+          "radio": { "from": "Bastion Control", "text": "{#radio.mission.first_watch.line_1}" }
         }
       ]
     },

@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / 飛行隊",
+    "loading.mission_kicker": "EMBER REACH / ミッション %02lu",
+    "browser.kicker": "EMBER REACH / マルチプレイ",
+    "controls.kicker": "EMBER REACH / フライトマニュアル",
+    "menu.unit": "HEARTH / KITE / 飛行隊",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / 哨戒艇",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / 飛行管制",
+    "briefing.orders_line": "任務内容は画面に表示されています。",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "装備：連装カッター、魚雷%d発",
+    "briefing.loadout_many": "装備：連装カッター、魚雷%d発",
+    "combat.no_secondary": "魚雷がない",
+    "combat.out_of_range": "目標は魚雷の射程外",
+    "mission.objective.ash_patrol.patrol": "NAV 1、2、3を順番に哨戒する",
+    "mission.objective.ash_patrol.raiders": "Jackal襲撃機を3機撃破する",
+    "mission.objective.ash_patrol.rtb": "Hearth Stationへ帰還する",
+    "mission.objective.ore_convoy.protect": "Cinderを守る",
+    "mission.objective.ore_convoy.escort": "CinderをReach Relayまで護衛する",
+    "mission.objective.ore_convoy.raiders": "貨物船を攻撃する襲撃機を撃破する",
+    "game.weapon.torpedo": "魚雷",
+    "game.weapon.torpedo_short": "魚雷",
+    "radio.mission.ash_patrol.line_1": "Kite 1、ビーコンを順番に回れ。すべて記録するんだ。",
+    "radio.mission.ash_patrol.line_2": "灰雲のそばにJackalが3機。交戦せよ。",
+    "radio.mission.ash_patrol.line_3": "レーダーはクリアだ。帰ってこい、Kite。",
+    "radio.mission.ore_convoy.line_1": "Cinder出発、鉱石は封印済みだ。近くにいてくれ、民兵隊。",
+    "radio.mission.ore_convoy.line_2": "第2の襲撃隊が航路を横切って貨物船へ向かっている！",
+    "radio.mission.ore_convoy.line_3": "リレーを捕捉。鉱石は無事だ。Cinderfallでは私のおごりだ。"
+  }
+}

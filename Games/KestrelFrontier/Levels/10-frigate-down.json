@@ -70,12 +70,12 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["kestrel"], "text": "Protect the damaged Kestrel" },
+    { "id": "protect", "type": "protect", "targets": ["kestrel"], "text": "{#mission.objective.frigate_down.protect}" },
     {
       "id": "corvettes",
       "type": "destroy",
       "targets": ["cv1", "cv2"],
-      "text": "Destroy corvettes Ruun and Ilk"
+      "text": "{#mission.objective.frigate_down.corvettes}"
     }
   ],
   "events": [
@@ -87,7 +87,7 @@
         {
           "radio": {
             "from": "CNS Kestrel",
-            "text": "Kestrel to any Concord fighter - we are losing shields, please hurry!"
+            "text": "{#radio.mission.frigate_down.line_1}"
           }
         }
       ]
@@ -95,7 +95,7 @@
     {
       "when": { "objective": "corvettes" },
       "do": [
-        { "radio": {"from": "CNS Kestrel", "text": "That was the last of them. Thank you, Lancer."} }
+        { "radio": {"from": "CNS Kestrel", "text": "{#radio.mission.frigate_down.line_2}"} }
       ]
     }
   ]

@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / FLIEGERSTAFFEL",
+    "loading.mission_kicker": "EMBER REACH / MISSION %02lu",
+    "browser.kicker": "EMBER REACH / MEHRSPIELER",
+    "controls.kicker": "EMBER REACH / FLUGHANDBUCH",
+    "menu.unit": "HEARTH / KITE / FLIEGERSTAFFEL",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / PATROUILLENSCHIFF",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Flugkontrolle",
+    "briefing.orders_line": "Deine Befehle stehen auf der Tafel.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Bewaffnung: Zwillingsschneider, %d Torpedo",
+    "briefing.loadout_many": "Bewaffnung: Zwillingsschneider, %d Torpedos",
+    "combat.no_secondary": "Keine Torpedos mehr",
+    "combat.out_of_range": "Ziel außerhalb der Torpedoreichweite",
+    "mission.objective.ash_patrol.patrol": "NAV 1, 2, 3 der Reihe nach abfliegen",
+    "mission.objective.ash_patrol.raiders": "3 Jackal-Plünderer zerstören",
+    "mission.objective.ash_patrol.rtb": "Zur Hearth Station zurückkehren",
+    "mission.objective.ore_convoy.protect": "Die Cinder schützen",
+    "mission.objective.ore_convoy.escort": "Cinder zum Reach Relay eskortieren",
+    "mission.objective.ore_convoy.raiders": "Die Angreifer des Frachters zerstören",
+    "game.weapon.torpedo": "TORPEDO",
+    "game.weapon.torpedo_short": "TORP",
+    "radio.mission.ash_patrol.line_1": "Fliege die Baken der Reihe nach ab, Kite 1. Erfasse jede.",
+    "radio.mission.ash_patrol.line_2": "Drei Jackals vor der Aschewolke. Angreifen.",
+    "radio.mission.ash_patrol.line_3": "Keine Kontakte mehr. Komm heim, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder unterwegs, Erz gesichert. Bleibt nah, Miliz.",
+    "radio.mission.ore_convoy.line_2": "Zweite Plünderergruppe kreuzt die Route zum Frachter!",
+    "radio.mission.ore_convoy.line_3": "Relaisverbindung steht. Erz ist sicher. Die Drinks in Cinderfall gehen auf mich."
+  }
+}

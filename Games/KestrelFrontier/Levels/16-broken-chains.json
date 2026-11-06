@@ -63,15 +63,15 @@
       "type": "disable",
       "targets": ["barge"],
       "kind": "Turret",
-      "text": "Destroy Thal's 6 turrets only"
+      "text": "{#mission.objective.broken_chains.turrets}"
     },
-    { "id": "protect", "type": "protect", "targets": ["barge"], "text": "Keep the prison barge intact" },
+    { "id": "protect", "type": "protect", "targets": ["barge"], "text": "{#mission.objective.broken_chains.protect}" },
     {
       "id": "hold",
       "type": "survive",
       "seconds": 70,
       "after": ["turrets"],
-      "text": "Cover Thal for 70 s until tow"
+      "text": "{#mission.objective.broken_chains.hold}"
     }
   ],
   "events": [
@@ -83,7 +83,7 @@
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Turrets only, Lancer. Steady hands."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.broken_chains.line_1}"} }
       ]
     },
     {
@@ -92,7 +92,7 @@
         {
           "radio": {
             "from": "Kesh Ardan",
-            "text": "Thal is ours. Those bombers know exactly where we are. Keep them off the hull!"
+            "text": "{#radio.mission.broken_chains.line_2}"
           }
         }
       ]
@@ -100,7 +100,7 @@
     {
       "when": { "objective": "hold" },
       "do": [
-        { "radio": {"from": "CNS Kestrel", "text": "Tow lines attached. We are taking them home."} }
+        { "radio": {"from": "CNS Kestrel", "text": "{#radio.mission.broken_chains.line_3}"} }
       ]
     }
   ]

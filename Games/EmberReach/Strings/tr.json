@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / UÇUŞ FİLOSU",
+    "loading.mission_kicker": "EMBER REACH / GÖREV %02lu",
+    "browser.kicker": "EMBER REACH / ÇOK OYUNCULU",
+    "controls.kicker": "EMBER REACH / UÇUŞ KILAVUZU",
+    "menu.unit": "HEARTH / KITE / UÇUŞ FİLOSU",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / DEVRİYE GEMİSİ",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Uçuş Kontrol",
+    "briefing.orders_line": "Emirlerin panoda.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Donanım: çift kesici, %d torpido",
+    "briefing.loadout_many": "Donanım: çift kesici, %d torpido",
+    "combat.no_secondary": "Torpido kalmadı",
+    "combat.out_of_range": "Hedef torpido menzili dışında",
+    "mission.objective.ash_patrol.patrol": "NAV 1, 2, 3 noktalarını sırayla devriye gez",
+    "mission.objective.ash_patrol.raiders": "3 Jackal akıncısını yok et",
+    "mission.objective.ash_patrol.rtb": "Hearth Station'a dön",
+    "mission.objective.ore_convoy.protect": "Cinder'ı koru",
+    "mission.objective.ore_convoy.escort": "Cinder'a Reach Relay'e kadar eşlik et",
+    "mission.objective.ore_convoy.raiders": "Yük gemisine saldıran akıncıları yok et",
+    "game.weapon.torpedo": "TORPİDO",
+    "game.weapon.torpedo_short": "TORP",
+    "radio.mission.ash_patrol.line_1": "İşaretleri sırayla geç, Kite 1. Her birini kaydet.",
+    "radio.mission.ash_patrol.line_2": "Kül bulutunda üç Jackal. Saldırın.",
+    "radio.mission.ash_patrol.line_3": "Radar temiz. Eve dön, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder yola çıktı, cevher mühürlü. Yakın kalın, milisler.",
+    "radio.mission.ore_convoy.line_2": "İkinci akıncı grubu, yük gemisine doğru yolu kesiyor!",
+    "radio.mission.ore_convoy.line_3": "Röle kilidi. Cevher güvende. Cinderfall'da içkiler benden."
+  }
+}

@@ -79,8 +79,8 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["relay"], "text": "Keep bombers off Relay K-7" },
-    { "id": "hold", "type": "survive", "seconds": 150, "text": "Hold 2:30 for K-7 to transmit" }
+    { "id": "protect", "type": "protect", "targets": ["relay"], "text": "{#mission.objective.relay_silence.protect}" },
+    { "id": "hold", "type": "survive", "seconds": 150, "text": "{#mission.objective.relay_silence.hold}" }
   ],
   "events": [
     { "when": {"time": 8}, "do": [{"spawn": "b1"}] },
@@ -95,7 +95,7 @@
         {
           "radio": {
             "from": "Relay K-7",
-            "text": "K-7 to fighter cover: transmitting backlog now. Two and a half minutes."
+            "text": "{#radio.mission.relay_silence.line_1}"
           }
         }
       ]
@@ -103,13 +103,13 @@
     {
       "when": { "spawned": "b2" },
       "do": [
-        { "radio": {"from": "Relay K-7", "text": "New bombers on scope, from starboard!"} }
+        { "radio": {"from": "Relay K-7", "text": "{#radio.mission.relay_silence.line_2}"} }
       ]
     },
     {
       "when": { "spawned": "b4" },
       "do": [
-        { "radio": {"from": "Relay K-7", "text": "Last wave, coming from below. Almost done!"} }
+        { "radio": {"from": "Relay K-7", "text": "{#radio.mission.relay_silence.line_3}"} }
       ]
     }
   ]

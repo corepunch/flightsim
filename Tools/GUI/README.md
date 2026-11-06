@@ -56,7 +56,7 @@ The visual references are [Cooke's photographed anamorphic flares](https://cooke
 and [ShareGrid's Kowa lens tests](https://www.sharegrid.com/learn/lens-sets/kowa-cine-prominar-anamorphic).
 
 Run `./Tools/run-dialogue-checks.sh` for native rendered dialogue and briefing
-checks. It verifies the bundled proportional Oxanium faces, fixed wrapping during
+checks. It verifies caption clearance from portrait heads, the bundled proportional Oxanium faces, fixed wrapping during
 typing, intact Unicode characters, carriage returns, and click-to-finish controls.
 Desktop and phone PNG previews remain in the printed `build/dialogue-checks.*`
 directory. It forces motion on (`ui_reduceMotion 0`), so it runs the same
@@ -67,3 +67,67 @@ selection at compact phone, notched phone, iPad and desktop sizes. They cover
 settings row padding and centring, slider dragging and cancellation, keyboard creation, waiting for a second pilot, rematch navigation, PvP scores
 and the wrapping H/F1 help panel. See [the release review](../../RELEASE_REVIEW.md)
 for selected previews and the distinction between scene fixtures and device tests.
+
+## Standalone UI reference
+
+Run `./Tools/run-ui-reference-checks.sh`, then open
+[`build/ui-reference/index.html`](../../build/ui-reference/index.html). No game,
+mission, server, model baking or simulator is started. The runner links the
+production engine, shares resources by symlink, renders actual SpriteKit nodes,
+and checks button/hint centring, callback routing, disabled actions, settings
+padding, two-line pause labels, rendered per-line text centring, pause touch sizes and touch-control hit geometry. It refreshes the same
+output directory; an optional first argument chooses a separate output folder.
+
+The offline catalogue filters by family, configuration, category and name. Use
+Actual size or open a PNG to judge typography at one scene point per pixel;
+fit-to-card thumbnails and the three JPG overview sheets are for navigation.
+Print the filtered catalogue for a reference sheet. `manifest.json` records every
+fixture, point size and safe inset. CI keeps the catalogue with the previews.
+
+The matrix covers 568×320 and 667×375 phones without a notch; 852×393 and
+932×430 phones with side/home insets; 1194×834 iPad and a 600×834 iPad window;
+1280×720, 1600×900, 2288×818 and narrow 640×660 desktop windows. An 834×1194
+portrait iPad is an extra layout stress case: the native iOS app currently ships
+landscape orientations. These are shared scene fixtures rendered on macOS, not
+native simulator/device screenshots. Retina scaling and native event delivery
+still need device testing.
+
+Coverage includes action normal/selected/hover/disabled states, back/title bars
+with zero/one/two actions, long translations, information bars with/without an
+action, settings choices and actions, slider minimum/midpoint/maximum, every
+pause selection across local/online and chase/cockpit configurations, menu
+start/continue/replay and selections, mission current/locked/completed tiles and all three star ratings, conversation,
+tactical map, success/failure/overflow reports, loading empty/half/ready, LAN
+setup/waiting/ready/full/results, browser empty/selected/error, HUD conditions,
+targets/objectives/messages/help/respawn, unshielded and critical states, empty
+missile racks, the four fixed-resolution cockpit glass displays in normal,
+warning and destroyed states, and the shared touch controls at rest,
+pressed/stretched and with a controller attached. Production controls without a
+pressed state are not given a made-up one. This is a finite breakpoint/state
+matrix, not a claim to enumerate every pixel size or every string in the campaign.
+New controls and layout states must extend `UIReference.m` and this inventory.
+
+
+## Localized reference
+
+Run `./Tools/run-ui-localization-checks.sh` to render all 21 languages in the same
+11 configurations. Optional language arguments, such as `de ar ja`, restrict a
+development run. The offline sheet is `build/ui-localization/index.html`, with
+language, device and name filters and actual-size inspection. It covers the main
+menu, online pause, flight settings, information bar, HUD with objectives and
+radio captions, and help. The runner checks button containment and centring,
+locale selection, and native CoreText glyph fallback for every catalog entry,
+including game content. `--glyphs-only` checks both games in every language;
+`--verify-only` checks all layout configurations without writing previews. Use
+these for quick iteration before regenerating the sheets. No game session or
+font download is needed.
+`--flight-only` refreshes the HUD/help previews while retaining existing menu
+previews; a missing language sheet is rendered in full.
+
+The core and both game catalogs are complete in every supported language. The
+unit validator rejects missing keys, mismatched arrays or format specifiers, and
+native language declarations or permission prompts that fall out of sync. Briefing and debrief story
+dialogue remains English; mission objectives, all in-flight radio captions, ship
+classes, cargo and weapon labels are translated. Proper names, callsigns and navigation markers retain their
+map spelling. These previews use the Mac's system font fallback; native iOS
+rendering should also be reviewed before release.

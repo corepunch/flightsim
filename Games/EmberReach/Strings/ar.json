@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / جناح الطيران",
+    "loading.mission_kicker": "EMBER REACH / المهمة %02lu",
+    "browser.kicker": "EMBER REACH / لعب جماعي",
+    "controls.kicker": "EMBER REACH / دليل الطيران",
+    "menu.unit": "HEARTH / KITE / جناح الطيران",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / زورق دورية",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / مراقبة الطيران",
+    "briefing.orders_line": "أوامرك على اللوحة.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "التسليح: قاطعان، %d طوربيد",
+    "briefing.loadout_many": "التسليح: قاطعان، %d طوربيد",
+    "combat.no_secondary": "نفدت الطوربيدات",
+    "combat.out_of_range": "الهدف خارج مدى الطوربيدات",
+    "mission.objective.ash_patrol.patrol": "دُر على NAV 1، 2، 3 بالترتيب",
+    "mission.objective.ash_patrol.raiders": "دمّر 3 مغيرات Jackal",
+    "mission.objective.ash_patrol.rtb": "عُد إلى Hearth Station",
+    "mission.objective.ore_convoy.protect": "احمِ Cinder",
+    "mission.objective.ore_convoy.escort": "رافق Cinder إلى Reach Relay",
+    "mission.objective.ore_convoy.raiders": "دمّر المغيرات التي تهاجم سفينة الشحن",
+    "game.weapon.torpedo": "طوربيد",
+    "game.weapon.torpedo_short": "طوربيد",
+    "radio.mission.ash_patrol.line_1": "حلّق بين الإشارات بالترتيب، Kite 1. سجل كل واحدة.",
+    "radio.mission.ash_patrol.line_2": "ثلاث مقاتلات Jackal قرب سحابة الرماد. اشتبكوا.",
+    "radio.mission.ash_patrol.line_3": "الرادار خالٍ. عُد إلى الوطن، Kite.",
+    "radio.mission.ore_convoy.line_1": "انطلقت Cinder، الخام مختوم. ابقوا قريبين يا رجال الميليشيا.",
+    "radio.mission.ore_convoy.line_2": "مجموعة مغيرات ثانية تعبر المسار نحو سفينة الشحن!",
+    "radio.mission.ore_convoy.line_3": "تم تثبيت المرحل. الخام آمن. المشروبات في Cinderfall على حسابي."
+  }
+}

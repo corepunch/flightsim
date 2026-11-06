@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / SQUADRIGLIA",
+    "loading.mission_kicker": "EMBER REACH / MISSIONE %02lu",
+    "browser.kicker": "EMBER REACH / MULTIGIOCATORE",
+    "controls.kicker": "EMBER REACH / MANUALE DI VOLO",
+    "menu.unit": "HEARTH / KITE / SQUADRIGLIA",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / PATTUGLIATORE",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Controllo volo",
+    "briefing.orders_line": "I tuoi ordini sono sulla lavagna.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Armamento: tagliatori binati, %d siluro",
+    "briefing.loadout_many": "Armamento: tagliatori binati, %d siluri",
+    "combat.no_secondary": "Siluri esauriti",
+    "combat.out_of_range": "Bersaglio fuori portata dei siluri",
+    "mission.objective.ash_patrol.patrol": "Pattuglia NAV 1, 2, 3 in ordine",
+    "mission.objective.ash_patrol.raiders": "Distruggi 3 predoni Jackal",
+    "mission.objective.ash_patrol.rtb": "Torna a Hearth Station",
+    "mission.objective.ore_convoy.protect": "Proteggi la Cinder",
+    "mission.objective.ore_convoy.escort": "Scorta la Cinder fino a Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Distruggi i predoni che attaccano il cargo",
+    "game.weapon.torpedo": "SILURO",
+    "game.weapon.torpedo_short": "SIL.",
+    "radio.mission.ash_patrol.line_1": "Segui i segnali in ordine, Kite 1. Registrali tutti.",
+    "radio.mission.ash_patrol.line_2": "Tre Jackal presso la nube di cenere. Attaccate.",
+    "radio.mission.ash_patrol.line_3": "Radar libero. Torna a casa, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder in viaggio, minerale sigillato. Restate vicini, milizia.",
+    "radio.mission.ore_convoy.line_2": "Secondo gruppo di predoni, tagliano la rotta verso il cargo!",
+    "radio.mission.ore_convoy.line_3": "Aggancio al ripetitore. Il minerale è salvo. Offro io a Cinderfall."
+  }
+}

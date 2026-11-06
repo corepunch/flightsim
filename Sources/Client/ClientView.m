@@ -133,7 +133,7 @@ static float Ease(float value, float target, float rate, float dt) {
     NSArray *cs = self.configStrings;
     return index >= 0 && index < (int)cs.count ? cs[index] : @"";
 }
-- (NSString *)stringAt:(uint16_t)i { return i ? [self cs:CS_STRINGS + i] : nil; }
+- (NSString *)stringAt:(uint16_t)i { return i ? L10nExpand([self cs:CS_STRINGS + i]) : nil; }
 - (NSString *)modelAt:(uint16_t)i { return i ? [self cs:CS_MODELS + i] : @""; }
 
 // The renderer's handle for a model configstring; registered on first use
@@ -616,7 +616,7 @@ static float Ease(float value, float target, float rate, float dt) {
     f.cockpit = _cockpit;
     f.secondary = ps->stats[STAT_SECONDARY];
     f.secondaryCapacity = ps->stats[STAT_SECONDARY_CAPACITY];
-    f.secondaryName = [self cs:CS_SECONDARY_NAME];
+    f.secondaryName = L10nExpand([self cs:CS_SECONDARY_NAME]);
     f.status = _status;
     int aim = ps->stats[STAT_AIM_PART] - 1;
     const GameModelInfo *targetInfo = target.kind == EntityCapital ? [_refresh infoForModel:target.refModel] : NULL;
@@ -691,7 +691,7 @@ static float Ease(float value, float target, float rate, float dt) {
                            _input.joystickName ? L10nFormat(@"hud.input_joystick", _input.joystickName, _input.axisDescription) : L10n(@"hud.input_no_joystick"),
                            L10n(_input.throttleFromJoystick ? @"hud.input_throttle_stick" : @"hud.input_throttle_keys"),
                            L10n(_input.mouseCaptured ? @"hud.input_mouse_captured" : @"hud.input_mouse_free"),
-                           [self cs:CS_SECONDARY_NAME].lowercaseString);
+                           L10nExpand([self cs:CS_SECONDARY_NAME]).lowercaseString);
 #endif
     if (![inputText isEqualToString:_lastInputText]) {
         _lastInputText = inputText;
@@ -724,7 +724,7 @@ static float Ease(float value, float target, float rate, float dt) {
     f.target = -1;
     f.nearest = FLT_MAX;
     f.secondary = ps->stats[STAT_SECONDARY];
-    f.secondaryName = [self cs:CS_SECONDARY_SHORT];
+    f.secondaryName = L10nExpand([self cs:CS_SECONDARY_SHORT]);
     f.objective = _objectiveSummary;
     f.weaponEnergy = ps->stats[STAT_WEAPON_ENERGY] / 1000.0f;
     f.weaponShotEnergy = _playerDef ? _playerDef->gun.energy : 0;
@@ -771,8 +771,8 @@ static float Ease(float value, float target, float rate, float dt) {
         if (fighter) {
             const ShipDef *def = v.definition;
             k.preview = [_refresh previewForModel:v.refModel];
-            k.name = [self stringAt:s.name] ?: (def ? @(def->displayName) : L10n(@"cockpit.fighter"));
-            k.className = [self stringAt:s.className] ?: (def ? @(def->displayName) : @"");
+            k.name = [self stringAt:s.name] ?: (def ? L10nExpand(@(def->displayName)) : L10n(@"cockpit.fighter"));
+            k.className = [self stringAt:s.className] ?: (def ? L10nExpand(@(def->displayName)) : @"");
             k.attacking = hostile && (s.flags & EF_ATTACKING) && s.target == ps->entity &&
                           simd_dot(QuatForward(s.orientation), -rel / fmaxf(dist, 1)) > 0.8f;
             if (k.attacking && dist < 700 && k.local.z > 0) f.six = YES;

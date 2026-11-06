@@ -1,5 +1,5 @@
 {
-  "className": "Shipyard",
+  "className": "{#game.class.shipyard}",
   "hp": 50,
   "style": "skarn"
 }

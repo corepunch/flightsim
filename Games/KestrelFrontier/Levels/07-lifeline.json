@@ -90,10 +90,10 @@
       "type": "collect",
       "targets": ["pods"],
       "range": 30,
-      "text": "Rescue 5 pods (within 30 m)"
+      "text": "{#mission.objective.lifeline.rescue}"
     },
-    { "id": "protect", "type": "protect", "targets": ["mercy"], "text": "Defend hospital ship Mercy" },
-    { "id": "pods", "type": "protect", "targets": ["pods"], "text": "Keep unrescued pods intact" }
+    { "id": "protect", "type": "protect", "targets": ["mercy"], "text": "{#mission.objective.lifeline.protect}" },
+    { "id": "pods", "type": "protect", "targets": ["pods"], "text": "{#mission.objective.lifeline.pods}" }
   ],
   "events": [
     { "when": {"time": 15}, "do": [{"spawn": "hunters"}] },
@@ -101,19 +101,19 @@
     {
       "when": { "time": 2 },
       "do": [
-        { "radio": {"from": "Mercy", "text": "Beacons are on your scope, Lancer. Please hurry."} }
+        { "radio": {"from": "Mercy", "text": "{#radio.mission.lifeline.line_1}"} }
       ]
     },
     {
       "when": { "spawned": "hunters" },
       "do": [
-        { "radio": {"from": "Mercy", "text": "Skarn fighters going for the pods!"} }
+        { "radio": {"from": "Mercy", "text": "{#radio.mission.lifeline.line_2}"} }
       ]
     },
     {
       "when": { "spawned": "bombers" },
       "do": [
-        { "radio": {"from": "Mercy", "text": "Bombers on our tail! Help!"} }
+        { "radio": {"from": "Mercy", "text": "{#radio.mission.lifeline.line_3}"} }
       ]
     }
   ]

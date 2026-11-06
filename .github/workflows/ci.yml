@@ -58,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [mouse, gui, flight-ui, flare, audio, dialogue]
+        check: [mouse, gui, flight-ui, flare, audio, dialogue, ui-reference, ui-localization]
     steps:
       - uses: actions/checkout@v4
       - name: Build macOS app
@@ -73,6 +73,15 @@ jobs:
           path: |
             build/${{ matrix.check }}-checks.*/**/*.log
             build/${{ matrix.check }}-checks.*/**/*.png
+            build/ui-reference/*.png
+            build/ui-reference/*.jpg
+            build/ui-reference/*.html
+            build/ui-reference/*.json
+            build/ui-reference/*.log
+            build/ui-localization/*.png
+            build/ui-localization/*.html
+            build/ui-localization/*.json
+            build/ui-localization/*.log
             !build/${{ matrix.check }}-checks.*/**/*.app/**
           if-no-files-found: ignore
           retention-days: 7

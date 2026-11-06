@@ -1,5 +1,5 @@
 {
-  "className": "Jump Gate",
+  "className": "{#game.class.jump_gate}",
   "hp": 1,
   "style": "concord",
   "invulnerable": true

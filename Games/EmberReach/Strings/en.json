@@ -6,7 +6,10 @@
     "browser.kicker": "EMBER REACH  /  MULTIPLAYER",
     "controls.kicker": "EMBER REACH  /  FLIGHT MANUAL",
     "menu.unit": "HEARTH STATION   /   KITE FLIGHT",
-    "menu.wordmark": ["EMBER", "REACH"],
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
     "menu.caption": "KITE 01   /   PATROL CRAFT",
     "missions.kicker": "EMBER REACH  /  HEARTH STATION",
     "briefing.default_speaker": "Hearth Control",
@@ -15,6 +18,20 @@
     "briefing.loadout_one": "Loadout: twin cutters, %d torpedo",
     "briefing.loadout_many": "Loadout: twin cutters, %d torpedoes",
     "combat.no_secondary": "Torpedoes spent",
-    "combat.out_of_range": "Target beyond torpedo reach"
+    "combat.out_of_range": "Target beyond torpedo reach",
+    "mission.objective.ash_patrol.patrol": "Patrol NAV 1, 2, 3 in order",
+    "mission.objective.ash_patrol.raiders": "Destroy 3 Jackal raiders",
+    "mission.objective.ash_patrol.rtb": "Return to Hearth Station",
+    "mission.objective.ore_convoy.protect": "Keep the Cinder intact",
+    "mission.objective.ore_convoy.escort": "Escort the Cinder to Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Destroy the raiders hitting the hauler",
+    "game.weapon.torpedo": "TORPEDO",
+    "game.weapon.torpedo_short": "TORP",
+    "radio.mission.ash_patrol.line_1": "Fly the beacons in order, Kite 1. Log each one.",
+    "radio.mission.ash_patrol.line_2": "Three Jackals off the ash cloud. Engage.",
+    "radio.mission.ash_patrol.line_3": "Clean scopes. Bring it home, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder under way, ore sealed. Stay close, militia.",
+    "radio.mission.ore_convoy.line_2": "Second raider group, cutting across the lane for the hauler!",
+    "radio.mission.ore_convoy.line_3": "Relay lock. Ore's safe. Drinks in Cinderfall are on me."
   }
 }

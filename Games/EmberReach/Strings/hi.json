@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / उड़ान दल",
+    "loading.mission_kicker": "EMBER REACH / मिशन %02lu",
+    "browser.kicker": "EMBER REACH / मल्टीप्लेयर",
+    "controls.kicker": "EMBER REACH / उड़ान पुस्तिका",
+    "menu.unit": "HEARTH / KITE / उड़ान दल",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / गश्ती यान",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / उड़ान नियंत्रण",
+    "briefing.orders_line": "आपके आदेश बोर्ड पर हैं।",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "साजोसामान: दोहरे कटर, %d टॉरपीडो",
+    "briefing.loadout_many": "साजोसामान: दोहरे कटर, %d टॉरपीडो",
+    "combat.no_secondary": "टॉरपीडो खत्म",
+    "combat.out_of_range": "लक्ष्य टॉरपीडो की सीमा से बाहर",
+    "mission.objective.ash_patrol.patrol": "NAV 1, 2, 3 पर क्रम से गश्त करें",
+    "mission.objective.ash_patrol.raiders": "3 Jackal हमलावर नष्ट करें",
+    "mission.objective.ash_patrol.rtb": "Hearth Station लौटें",
+    "mission.objective.ore_convoy.protect": "Cinder को सुरक्षित रखें",
+    "mission.objective.ore_convoy.escort": "Cinder को Reach Relay तक पहुँचाएँ",
+    "mission.objective.ore_convoy.raiders": "मालवाहक पर हमला कर रहे हमलावर नष्ट करें",
+    "game.weapon.torpedo": "टॉरपीडो",
+    "game.weapon.torpedo_short": "टॉरपीडो",
+    "radio.mission.ash_patrol.line_1": "बीकन क्रम से पार करो, Kite 1। हर एक दर्ज करो।",
+    "radio.mission.ash_patrol.line_2": "राख के बादल के पास तीन Jackal। हमला करो।",
+    "radio.mission.ash_patrol.line_3": "रडार साफ़। घर लौटो, Kite।",
+    "radio.mission.ore_convoy.line_1": "Cinder चल पड़ा, अयस्क सील है। पास रहो, मिलिशिया।",
+    "radio.mission.ore_convoy.line_2": "दूसरा हमलावर दल मालवाहक की ओर रास्ता काट रहा है!",
+    "radio.mission.ore_convoy.line_3": "रिले लॉक। अयस्क सुरक्षित है। Cinderfall में ड्रिंक मेरी तरफ़ से।"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / 飛行聯隊",
+    "loading.mission_kicker": "EMBER REACH / 任務 %02lu",
+    "browser.kicker": "EMBER REACH / 多人遊戲",
+    "controls.kicker": "EMBER REACH / 飛行手冊",
+    "menu.unit": "HEARTH / KITE / 飛行聯隊",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / 巡邏艇",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / 飛行管制",
+    "briefing.orders_line": "你的命令已顯示在螢幕上。",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "裝備：雙聯切割器，%d枚魚雷",
+    "briefing.loadout_many": "裝備：雙聯切割器，%d枚魚雷",
+    "combat.no_secondary": "魚雷已耗盡",
+    "combat.out_of_range": "目標超出魚雷射程",
+    "mission.objective.ash_patrol.patrol": "按順序巡邏 NAV 1、2、3",
+    "mission.objective.ash_patrol.raiders": "摧毀3架 Jackal 劫掠機",
+    "mission.objective.ash_patrol.rtb": "返回 Hearth Station",
+    "mission.objective.ore_convoy.protect": "保護 Cinder",
+    "mission.objective.ore_convoy.escort": "護送 Cinder 前往 Reach Relay",
+    "mission.objective.ore_convoy.raiders": "摧毀正在攻擊貨船的劫掠機",
+    "game.weapon.torpedo": "魚雷",
+    "game.weapon.torpedo_short": "魚雷",
+    "radio.mission.ash_patrol.line_1": "Kite 1，按順序飛過信標，記錄每一個。",
+    "radio.mission.ash_patrol.line_2": "灰雲旁有三架 Jackal，迎擊。",
+    "radio.mission.ash_patrol.line_3": "雷達已清空。回家吧，Kite。",
+    "radio.mission.ore_convoy.line_1": "Cinder 已出發，礦石封裝完畢。民兵，跟緊一點。",
+    "radio.mission.ore_convoy.line_2": "第二批劫掠機正橫穿航道，衝向貨船！",
+    "radio.mission.ore_convoy.line_3": "已鎖定中繼站，礦石安全了。到了 Cinderfall 我請喝酒。"
+  }
+}

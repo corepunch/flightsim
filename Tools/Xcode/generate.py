@@ -18,11 +18,11 @@ DEFAULT_GAME = "KestrelFrontier"
 MAC_ONLY = {"FXRecorder.m", "GameView.m", "Input.m", "main.m"}
 IOS_ONLY = {"GameViewIOS.m", "InputIOS.m", "mainIOS.m", "TouchFlightControls.m"}
 IOS_FRAMEWORKS = (
-    "UIKit", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "QuartzCore",
+    "UIKit", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "CoreText", "QuartzCore",
     "ImageIO", "GameController", "AVFoundation",
 )
 MAC_FRAMEWORKS = (
-    "Cocoa", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "QuartzCore",
+    "Cocoa", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "CoreText", "QuartzCore",
     "IOKit", "Carbon", "ImageIO", "AVFoundation", "CoreMedia", "CoreVideo",
 )
 PRESERVED = ("CODE_SIGN", "DEVELOPMENT_TEAM", "PROVISIONING_PROFILE", "PRODUCT_BUNDLE_IDENTIFIER")

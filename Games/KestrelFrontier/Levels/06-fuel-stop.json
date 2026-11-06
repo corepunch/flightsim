@@ -79,9 +79,9 @@
       "id": "protect",
       "type": "protect",
       "targets": ["corla", "depot"],
-      "text": "Defend Corla and Brenn Depot"
+      "text": "{#mission.objective.fuel_stop.protect}"
     },
-    { "id": "hold", "type": "survive", "seconds": 150, "text": "Cover refuelling for 2:30" }
+    { "id": "hold", "type": "survive", "seconds": 150, "text": "{#mission.objective.fuel_stop.hold}" }
   ],
   "events": [
     { "when": {"time": 10}, "do": [{"spawn": "r1"}] },
@@ -91,20 +91,20 @@
     {
       "when": { "time": 2 },
       "do": [
-        { "radio": {"from": "Corla", "text": "Hose connected. Keep them off us for a few minutes."} }
+        { "radio": {"from": "Corla", "text": "{#radio.mission.fuel_stop.line_1}"} }
       ]
     },
     {
       "when": { "spawned": "r2" },
       "do": [
-        { "radio": {"from": "Lancer 5", "text": "Talons inbound on Corla. I'm taking the lead bomber."} }
+        { "radio": {"from": "Lancer 5", "text": "{#radio.mission.fuel_stop.line_2}"} }
       ]
     },
-    { "when": {"time": 75}, "do": [{"radio": {"from": "Corla", "text": "Halfway there."}}] },
+    { "when": {"time": 75}, "do": [{"radio": {"from": "Corla", "text": "{#radio.mission.fuel_stop.line_3}"}}] },
     {
       "when": { "objective": "hold" },
       "do": [
-        { "radio": {"from": "Corla", "text": "Tanks full, undocking. Thanks, Lancer."} }
+        { "radio": {"from": "Corla", "text": "{#radio.mission.fuel_stop.line_4}"} }
       ]
     }
   ]

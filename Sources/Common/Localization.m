@@ -76,32 +76,45 @@ NSArray<NSString *> *L10nList(NSString *key) {
     return @[];
 }
 
-NSString *L10nExpand(NSString *text) {
-    if (![text containsString:@"{#"]) return text;
+static NSString *ExpandTokens(NSString *text, NSUInteger nesting) {
+    if (nesting >= 16 || ![text containsString:@"{#"]) return text;
     NSMutableString *out = [NSMutableString string];
     NSUInteger i = 0, n = text.length;
     while (i < n) {
         NSRange open = [text rangeOfString:@"{#" options:0 range:NSMakeRange(i, n - i)];
         if (open.location == NSNotFound) { [out appendString:[text substringFromIndex:i]]; break; }
-        NSRange close = [text rangeOfString:@"}" options:0 range:NSMakeRange(open.location, n - open.location)];
-        if (close.location == NSNotFound) { [out appendString:[text substringFromIndex:i]]; break; }
+        // A translated entity label can itself be a token inside a message argument.
+        NSMutableArray<NSString *> *parts = [NSMutableArray array];
+        NSUInteger start = open.location + 2, depth = 1, close = NSNotFound;
+        for (NSUInteger at = start; at < n; at++) {
+            unichar character = [text characterAtIndex:at];
+            if (character == '{' && at + 1 < n && [text characterAtIndex:at + 1] == '#') { depth++; at++; }
+            else if (character == '}' && --depth == 0) {
+                [parts addObject:[text substringWithRange:NSMakeRange(start, at - start)]];
+                close = at; break;
+            } else if (character == '\x1f' && depth == 1) {
+                [parts addObject:[text substringWithRange:NSMakeRange(start, at - start)]];
+                start = at + 1;
+            }
+        }
+        if (close == NSNotFound) { [out appendString:[text substringFromIndex:i]]; break; }
         [out appendString:[text substringWithRange:NSMakeRange(i, open.location - i)]];
-        NSString *body = [text substringWithRange:NSMakeRange(open.location + 2, close.location - open.location - 2)];
-        NSArray<NSString *> *parts = [body componentsSeparatedByString:@"\x1f"];
         NSString *format = L10n(parts.firstObject);
         // Arguments are strings: substitute %@ one by one (no varargs from data).
         NSMutableString *s = [format mutableCopy];
         for (NSUInteger a = 1; a < parts.count; a++) {
             NSRange at = [s rangeOfString:@"%@"];
             if (at.location == NSNotFound) break;
-            [s replaceCharactersInRange:at withString:parts[a]];
+            [s replaceCharactersInRange:at withString:ExpandTokens(parts[a], nesting + 1)];
         }
         [s replaceOccurrencesOfString:@"%%" withString:@"%" options:0 range:NSMakeRange(0, s.length)];
         [out appendString:s];
-        i = close.location + 1;
+        i = close + 1;
     }
     return out;
 }
+
+NSString *L10nExpand(NSString *text) { return ExpandTokens(text, 0); }
 
 NSString *L10nFormat(NSString *key, ...) {
     va_list args;

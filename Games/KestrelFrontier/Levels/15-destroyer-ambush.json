@@ -83,27 +83,27 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Keep bombers off the Bastion" },
+    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "{#mission.objective.destroyer_ambush.protect}" },
     {
       "id": "engines",
       "type": "disable",
       "targets": ["destroyer"],
       "kind": "Engine",
-      "text": "Hit Gorran's 3 stern engines"
+      "text": "{#mission.objective.destroyer_ambush.engines}"
     },
     {
       "id": "capture",
       "type": "capture",
       "targets": ["destroyer"],
       "after": ["engines"],
-      "text": "Cover the marines boarding Gorran"
+      "text": "{#mission.objective.destroyer_ambush.capture}"
     },
     {
       "id": "marines",
       "type": "protect",
       "targets": ["marines"],
       "percent": 1,
-      "text": "Keep one marine lighter flying"
+      "text": "{#mission.objective.destroyer_ambush.marines}"
     },
     {
       "id": "turrets",
@@ -111,7 +111,7 @@
       "targets": ["destroyer"],
       "kind": "Turret",
       "optional": true,
-      "text": "Silence Gorran's turrets for the lighters"
+      "text": "{#mission.objective.destroyer_ambush.turrets}"
     }
   ],
   "events": [
@@ -125,7 +125,7 @@
         {
           "radio": {
             "from": "Bastion Control",
-            "text": "Jump signature ahead. Stay with Bastion and watch for bombers."
+            "text": "{#radio.mission.destroyer_ambush.line_1}"
           }
         }
       ]
@@ -133,31 +133,31 @@
     {
       "when": { "spawned": "destroyer" },
       "do": [
-        { "radio": {"from": "Bastion Control", "text": "Destroyer in the anchorage! Go for the engines!"} }
+        { "radio": {"from": "Bastion Control", "text": "{#radio.mission.destroyer_ambush.line_2}"} }
       ]
     },
     {
       "when": { "objective": "engines" },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "She's dead in space. Hold your fire on the hull. Marines are launching."} }
+        { "radio": {"from": "Commander Varn", "text": "{#radio.mission.destroyer_ambush.line_3}"} }
       ]
     },
     {
       "when": { "spawned": "marines" },
       "do": [
-        { "radio": {"from": "Marine Lighter", "text": "Lighters away. Keep those turrets busy, Lancer. We need ten seconds alongside."} }
+        { "radio": {"from": "Marine Lighter", "text": "{#radio.mission.destroyer_ambush.line_4}"} }
       ]
     },
     {
       "when": { "objective": "capture" },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "Gorran is ours. Get her log off the bridge before someone wipes it."} }
+        { "radio": {"from": "Commander Varn", "text": "{#radio.mission.destroyer_ambush.line_5}"} }
       ]
     },
     {
       "when": { "all": [ { "destroyed": "destroyer" }, { "not": { "objective": "capture" } } ] },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "She's breaking up. Her log went with her."} },
+        { "radio": {"from": "Commander Varn", "text": "{#radio.mission.destroyer_ambush.line_6}"} },
         { "end": "failure" }
       ]
     }

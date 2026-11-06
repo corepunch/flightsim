@@ -435,6 +435,10 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     return nil;
 }
 
+- (NSDictionary<NSString *, SKScene *> *)displayScenes {
+    return @{ @"target":_target, @"ship":_self, @"power":_radar, @"status":_status };
+}
+
 #pragma mark - Display layout
 
 - (void)buildDisplays {

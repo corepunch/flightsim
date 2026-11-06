@@ -55,7 +55,7 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
         BOOL stacked = width < 540;
         CGFloat innerWidth = MAX(1, width - 2 * SettingInset);
         CGFloat controlWidth = stacked ? innerWidth : MIN(260, innerWidth * 0.47);
-        SKLabelNode *title = UIInterfaceLabel(14, UIColorWithOpacity(UIMenuTitle, 1), SKLabelHorizontalAlignmentModeLeft,
+        SKLabelNode *title = UIInterfaceLabel(16, UIColorWithOpacity(UIMenuTitle, 1), SKLabelHorizontalAlignmentModeLeft,
                                               SKLabelVerticalAlignmentModeCenter);
         title.text = item.title;
         title.numberOfLines = 0;
@@ -77,6 +77,7 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
         _background = UIReadoutPanel(_rowRect, UIColorWithOpacity(UIInk, 0.35), UIColorWithOpacity(UIInk, 0.04));
         [self addChild:_background];
         title.position = CGPointMake(CGRectGetMinX(titleLane), CGRectGetMidY(titleLane));
+        UICenterLabelVertically(title, CGRectGetMidY(titleLane));
         [self addChild:title];
         _titleRect = title.frame;
         _rail = UIActionButtonSized(_controlRect, @"", UIAmber, 14);
@@ -90,7 +91,7 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
             [_progress addChild:_fill];
             [self addChild:_progress];
         }
-        _valueLabel = UIButtonLabel(@"", 14, RectCenter(_controlRect));
+        _valueLabel = UIButtonLabel(@"", 17, RectCenter(_controlRect));
         _valueLabel.fontColor = UIColorWithOpacity(UIAmber, 1);
         [self addChild:_valueLabel];
         [self updateValue];
@@ -104,6 +105,8 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
 }
 - (void)updateValue {
     _valueLabel.text = _item.kind == SettingSlider ? _item.text(_item.value) : _item.valueTitle;
+    UIFitControlLabel(_valueLabel, CGRectGetWidth(_controlRect) - CGRectGetHeight(_controlRect) * UISlant - 20);
+    UICenterLabelVertically(_valueLabel, CGRectGetMidY(_controlRect));
     if (_item.kind != SettingSlider) return;
     CGFloat range = _item.maximum - _item.minimum;
     CGFloat fraction = range > 0 ? clampf((_item.value - _item.minimum) / range, 0, 1) : 0;
@@ -150,7 +153,7 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
             [titles addObject:BoxRect(CGRectApplyAffineTransform(row.titleRect, offset))];
             y -= row.height + SettingGap;
             if (item.detail.length) {
-                SKLabelNode *detail = UIInterfaceLabel(13, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft,
+                SKLabelNode *detail = UIInterfaceLabel(14, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft,
                                                        SKLabelVerticalAlignmentModeTop);
                 detail.text = item.detail;
                 detail.numberOfLines = 0;

@@ -125,13 +125,13 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "Protect CNS Bastion" },
+    { "id": "protect", "type": "protect", "targets": ["bastion"], "text": "{#mission.objective.hammerfall.protect}" },
     {
       "id": "shields",
       "type": "disable",
       "targets": ["dread"],
       "kind": "Shield",
-      "text": "Hit 4 dorsal shield generators"
+      "text": "{#mission.objective.hammerfall.shields}"
     },
     {
       "id": "engines",
@@ -139,14 +139,14 @@
       "targets": ["dread"],
       "kind": "Engine",
       "after": ["shields"],
-      "text": "Destroy 4 engines at the stern"
+      "text": "{#mission.objective.hammerfall.engines}"
     },
     {
       "id": "core",
       "type": "destroy",
       "targets": ["dread"],
       "after": ["engines"],
-      "text": "Hit the reactor in the trench"
+      "text": "{#mission.objective.hammerfall.core}"
     }
   ],
   "events": [
@@ -157,7 +157,7 @@
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "This is it. Every pilot, every gun. Hammerfall."} }
+        { "radio": {"from": "Commander Varn", "text": "{#radio.mission.hammerfall.line_1}"} }
       ]
     },
     {
@@ -166,7 +166,7 @@
         {
           "radio": {
             "from": "Dr. Imani",
-            "text": "I have its charging signal. Kesh and I will talk you through the run."
+            "text": "{#radio.mission.hammerfall.line_2}"
           }
         }
       ]
@@ -174,27 +174,27 @@
     {
       "when": { "spawned": "strix" },
       "do": [
-        { "radio": {"from": "Lancer 4", "text": "Strix flight, all four of them, off the Hammer's bow. Korr's honour guard. Keep them off Lead!"} }
+        { "radio": {"from": "Lancer 4", "text": "{#radio.mission.hammerfall.line_3}"} }
       ]
     },
     {
       "when": { "objective": "shields" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Shields down! Now the engines at the stern!"} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.hammerfall.line_4}"} }
       ]
     },
     {
       "when": { "objective": "engines" },
       "do": [
         {
-          "radio": { "from": "Commander Varn", "text": "Hit the reactor in the upper trench ahead of the tower." }
+          "radio": { "from": "Commander Varn", "text": "{#radio.mission.hammerfall.line_5}" }
         }
       ]
     },
     {
       "when": { "objective": "core" },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "It is breaking up... It is over. Bring them home."} }
+        { "radio": {"from": "Commander Varn", "text": "{#radio.mission.hammerfall.line_6}"} }
       ]
     }
   ]

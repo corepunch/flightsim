@@ -1,5 +1,5 @@
 {
-  "className": "Heavy Cruiser",
+  "className": "{#game.class.heavy_cruiser}",
   "hp": 45,
   "style": "skarn"
 }

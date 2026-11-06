@@ -39,3 +39,13 @@ Motion setting always turns it down to none.
 
 `Tools/validate_story.py` checks every game's levels and campaign;
 `Tools/validate_strings.py` checks every game's string catalogs.
+
+
+User-visible content may use `{#catalog.key}` tokens. Objectives, weapon labels,
+ship classes and cargo keep these tokens in the server data and wire strings;
+clients expand them using their own language. Keep identifiers, assets, model
+names and script references literal. Each shipped locale in `Strings/` must
+translate the game's complete English catalog, including engine-key overrides,
+so a generic engine translation cannot replace game-specific wording. The
+current translation scope covers the interface, flight feedback and objectives;
+briefing and debrief campaign conversations remain English; in-flight radio is translated.

@@ -33,6 +33,8 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     CGPoint _pendingPoint;
     BOOL _hasPendingPoint;
     BOOL _createSelected;
+    TitleBar *_bar;
+    InputAction _barInput;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -107,11 +109,17 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     ];
     CGFloat step = M(@"notesStep", 20);
     ScreenRegions regions = ScreenRegionsMake(s, safe, lines.count * step);
-    TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact];
-    _backRect = [bar addBack:L10n(@"browser.back") accent:UIInk];
-    _joinRect = self.selected ? [bar addAction:L10n(@"browser.join") accent:UIAmber minWidth:M(@"buttonWidth", 145)]
-                              : CGRectZero;
-    [bar setTitle:L10n(@"browser.title") kicker:L10n(@"browser.kicker")];
+    __weak ServerBrowser *owner = self;
+    UIBarAction *back = [UIBarAction title:L10n(@"browser.back") accent:UIInk handler:^{
+        ServerBrowser *screen = owner; if (screen) screen->_barInput |= InputActionBack;
+    }];
+    UIBarAction *join = [UIBarAction title:L10n(@"browser.join") accent:UIAmber handler:^{
+        ServerBrowser *screen = owner; if (screen) screen->_barInput |= InputActionConfirm;
+    }];
+    TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact back:back
+        title:L10n(@"browser.title") kicker:L10n(@"browser.kicker") actions:self.selected ? @[join] : @[]];
+    _bar = bar;
+    _backRect = [bar rectForAction:back]; _joinRect = [bar rectForAction:join];
     [_root addChild:bar];
     [bar registerHover:_hover];
 
@@ -237,9 +245,9 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     CGPoint click = CGPointMake(-1, -1);
     if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
     _hasPendingPoint = NO;
-    if (CGRectContainsPoint(_backRect, click)) actions |= InputActionBack;
+    _barInput = 0;
+    if ([_bar activateAt:click]) actions |= _barInput;
     else if (CGRectContainsPoint(_createRect, click)) return BrowserCommandCreate;
-    else if (CGRectContainsPoint(_joinRect, click)) actions |= InputActionConfirm;
     else if (CGRectContainsPoint(_serverRows, click)) {
         NSUInteger row = _firstVisible + (NSUInteger)((CGRectGetMaxY(_serverRows) - click.y) / MAX(_rowHeight, 1));
         if (row < _servers.count) { _index = row; _createSelected = NO; [[GameAudio shared] play:@"ui-hover"]; [self rebuild]; }

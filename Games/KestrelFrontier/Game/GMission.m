@@ -384,7 +384,7 @@ static simd_float3 FormationSlot(LevelFormation f, int i) {
             GCapital *c = [GCapital capitalWithAsset:asset style:@"rock" team:TeamNeutral];
             c.number = [self allocEntity];
             c.identifier = [NSString stringWithFormat:@"rock%d", i];
-            c.name = @"Asteroid";
+            c.name = c.className;
             simd_float3 p;
             do { p = simd_make_float3(drand48() * 2 - 1, (drand48() * 2 - 1) * 0.45, drand48() * 2 - 1); } while (simd_length(p) > 1);
             c.position = f->center + p * f->radius;
@@ -399,7 +399,7 @@ static simd_float3 FormationSlot(LevelFormation f, int i) {
             GCapital *c = [GCapital capitalWithAsset:@"Mine" style:nil team:TeamEnemy];
             c.number = [self allocEntity];
             c.identifier = [NSString stringWithFormat:@"mine%d", i];
-            c.name = @"Mine";
+            c.name = c.className;
             c.group = f->group;
             c.position = f->center + simd_make_float3(drand48() - 0.5, drand48() - 0.5, drand48() - 0.5) * f->size;
             c.spin = 20;

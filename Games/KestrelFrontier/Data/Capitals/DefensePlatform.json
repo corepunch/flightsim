@@ -1,5 +1,5 @@
 {
-  "className": "Defence Platform",
+  "className": "{#game.class.defence_platform}",
   "hp": 14,
   "style": "skarn"
 }

@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / ESCUADRÓN",
+    "loading.mission_kicker": "EMBER REACH / MISIÓN %02lu",
+    "browser.kicker": "EMBER REACH / MULTIJUGADOR",
+    "controls.kicker": "EMBER REACH / MANUAL DE VUELO",
+    "menu.unit": "HEARTH / KITE / ESCUADRÓN",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / NAVE PATRULLERA",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Control de vuelo",
+    "briefing.orders_line": "Tus órdenes están en el panel.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Armamento: cortadores gemelos, %d torpedo",
+    "briefing.loadout_many": "Armamento: cortadores gemelos, %d torpedos",
+    "combat.no_secondary": "No quedan torpedos",
+    "combat.out_of_range": "Objetivo fuera del alcance de torpedos",
+    "mission.objective.ash_patrol.patrol": "Patrulla NAV 1, 2, 3 en orden",
+    "mission.objective.ash_patrol.raiders": "Destruye 3 asaltantes Jackal",
+    "mission.objective.ash_patrol.rtb": "Regresa a Hearth Station",
+    "mission.objective.ore_convoy.protect": "Protege al Cinder",
+    "mission.objective.ore_convoy.escort": "Escolta al Cinder hasta Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Destruye a los asaltantes que atacan al carguero",
+    "game.weapon.torpedo": "TORPEDO",
+    "game.weapon.torpedo_short": "TORP",
+    "radio.mission.ash_patrol.line_1": "Sigue las balizas en orden, Kite 1. Registra cada una.",
+    "radio.mission.ash_patrol.line_2": "Tres Jackal junto a la nube de ceniza. Atacad.",
+    "radio.mission.ash_patrol.line_3": "Radar limpio. Vuelve a casa, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder en marcha, mineral sellado. No os alejéis, milicia.",
+    "radio.mission.ore_convoy.line_2": "¡Segundo grupo de asaltantes, cruzan la ruta hacia el carguero!",
+    "radio.mission.ore_convoy.line_3": "Enlace con el relé. El mineral está a salvo. Invito a las copas en Cinderfall."
+  }
+}

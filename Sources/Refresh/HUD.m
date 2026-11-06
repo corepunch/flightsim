@@ -24,12 +24,6 @@ static SKLabelNode *Label(CGFloat size, SKLabelHorizontalAlignmentMode align) {
     return UIMonoLabel(size, HUDColor(0.9), align, SKLabelVerticalAlignmentModeCenter);
 }
 
-// How far a centred label's capitals reach below its position. Labels centre
-// on their capitals, so this is where the visible text ends, whatever it says.
-static CGFloat CapsBelowCentre(SKLabelNode *label) {
-    return [PlatformFont fontWithName:label.fontName size:label.fontSize].capHeight / 2;
-}
-
 // Four corner marks of a square of side `size`, centred on the origin.
 static CGPathRef BracketPath(CGFloat size) {
     CGMutablePathRef p = CGPathCreateMutable();
@@ -61,6 +55,7 @@ static SKShapeNode *Bracket(void) {
 @property (nonatomic) CGFloat width;                // of a full bar, points
 - (void)setLevel:(float)level recharge:(float)perSecond color:(SKColor *)color;
 @property (nonatomic, readonly) CGFloat inkBottom;  // lowest visible point, from the position
+@property (nonatomic, readonly) CGFloat inkHeight;
 @end
 
 @implementation ConditionBar {
@@ -94,8 +89,9 @@ static SKShapeNode *Bracket(void) {
     _chunk.fillColor = [color colorWithAlphaComponent:CGColorGetAlpha(color.CGColor) * 0.35];
 }
 
-// The bar starts at the position; the title's capitals can reach lower.
-- (CGFloat)inkBottom { return MIN(0, _title.position.y - CapsBelowCentre(_title)); }
+// Fallback scripts can extend beyond the Latin font's capital height.
+- (CGFloat)inkBottom { return MIN(0, CGRectGetMinY(_title.frame)); }
+- (CGFloat)inkHeight { return MAX(6, CGRectGetHeight(_title.frame)); }
 
 @end
 
@@ -222,6 +218,7 @@ static SKShapeNode *Bracket(void) {
     _throttleLabel = Label(13, SKLabelHorizontalAlignmentModeLeft);
     [_root addChild:_throttleLabel];
     _speedLabel = Label(22, SKLabelHorizontalAlignmentModeLeft);
+    _speedLabel.text = L10nFormat(@"hud.speed", 0);
     [_root addChild:_speedLabel];
 
     _hullBar = [[ConditionBar alloc] initWithTitle:L10n(@"hud.hull")];
@@ -422,22 +419,45 @@ static SKShapeNode *Bracket(void) {
     // Match the actual text edge to the bottom of the target details.
     SKNode *heading = _objectivePanel.children.firstObject;
     CGFloat bottomMargin = edgeBottom + (compact ? 11 : 20) * panelScale;
+    CGFloat rowStep = _touchLayout ? 16 : 18;
+    for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar]) rowStep = MAX(rowStep, bar.inkHeight + 4);
     if (phoneLayout && s.width > s.height) {
         // The corner readouts end on the same line as the target details, so
         // every bottom indicator keeps one distance from the screen edge.
-        CGFloat lift = bottomMargin + CapsBelowCentre(_speedLabel) - _speedLabel.position.y;
+        CGFloat lift = bottomMargin - CGRectGetMinY(_speedLabel.frame);
         _speedLabel.position = PointAdd(_speedLabel.position, CGPointMake(0, lift));
         _throttleLabel.position = PointAdd(_throttleLabel.position, CGPointMake(0, lift));
         lift = bottomMargin - _hullBar.inkBottom - _hullBar.position.y;
         for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar])
             bar.position = PointAdd(bar.position, CGPointMake(0, lift));
     }
+    _shieldBar.position = PointAdd(_hullBar.position, CGPointMake(0, rowStep));
+    _laserBar.position = PointAdd(_shieldBar.position, CGPointMake(0, rowStep));
     CGFloat topMargin = phoneLayout ? MAX(insets.top, bottomMargin) : (_touchLayout ? insets.top + 30 : 36);
     CGFloat headingTop = heading ? CGRectGetMaxY(heading.frame) : 7;
     // Clear of the forward scope's drawn edge, whatever its scale.
     CGFloat scopeRight = CGRectGetMaxX(_forwardScope.discFrame);
     _objectivePanel.position = CGPointMake(scopeRight + (compact ? 20 : 28),
                                            s.height - topMargin - headingTop);
+    CGFloat objectivesRight = CGRectGetMinX(_rearScope.discFrame) - 12;
+    if (_touchLayout) objectivesRight = MIN(objectivesRight,
+        CGRectGetMinX([UITouchControls pauseRectForSize:s insets:insets]) - 12);
+    CGFloat objectivesWidth = MAX(80, objectivesRight - _objectivePanel.position.x);
+    CGFloat rowY = -22;
+    CGFloat boxHalf = [PlatformFont fontWithName:UIMonoFont size:14].capHeight / 2;
+    for (SKNode *row in _objectivePanel.children) {
+        if (row == heading) continue;
+        for (SKNode *child in row.children) if ([child isKindOfClass:SKLabelNode.class]) {
+            SKLabelNode *label=(SKLabelNode *)child;
+            label.numberOfLines=0;
+            label.preferredMaxLayoutWidth=MAX(1,objectivesWidth-label.position.x);
+            label.lineBreakMode=NSLineBreakByWordWrapping;
+            label.verticalAlignmentMode=SKLabelVerticalAlignmentModeTop;
+            label.position=CGPointMake(label.position.x,boxHalf);
+        }
+        row.position=CGPointMake(0,rowY);
+        rowY=MIN(rowY-22,CGRectGetMinY([row calculateAccumulatedFrame])-boxHalf-8);
+    }
     CGFloat helpWidth = MAX(1, MIN(760, s.width - insets.left - insets.right - 48));
     CGFloat helpY = 0;
     for (SKNode *node in _help.children) if ([node isKindOfClass:SKLabelNode.class]) {
@@ -456,7 +476,6 @@ static SKShapeNode *Bracket(void) {
     [_help addChild:helpBackdrop];
     _help.position = CGPointMake(insets.left + (s.width - insets.left - insets.right - helpWidth) / 2,
         insets.bottom + (s.height - insets.top - insets.bottom + helpHeight) / 2);
-    CGFloat rowStep = _touchLayout ? 16 : 18;
     _secondaryRack.position = CGPointMake(_laserBar.position.x, _laserBar.position.y + rowStep);
     _secondaryLabel.position = CGPointMake(_secondaryRack.position.x - 10, _secondaryRack.position.y + 3);
     for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar]) bar.width = _touchLayout ? 80 : 200;
@@ -465,6 +484,31 @@ static SKShapeNode *Bracket(void) {
     _damage.path = dp;
     CGPathRelease(dp);
     _ring.position = _cursor.position = CGPointMake(s.width / 2, s.height / 2);
+    [self layoutMessages];
+}
+
+- (void)layoutMessages {
+    CGSize size = self.size;
+    BOOL compact = _touchLayout && size.height < 550;
+    CGFloat width = compact ? MAX(160, size.width - _contentInsets.left - _contentInsets.right - 400)
+                            : MIN(760, size.width - _contentInsets.left - _contentInsets.right - 48);
+    CGRect objectives = [_objectivePanel calculateAccumulatedFrame];
+    CGFloat top = size.height - _contentInsets.top - 100;
+    if (!_objectivePanel.hidden && _objectivePanel.children.count > 1) top = MIN(top, CGRectGetMinY(objectives) - 12);
+    _messagePanel.position = CGPointMake(size.width / 2, top);
+    CGFloat y = 0;
+    for (NSUInteger i = 0; i < _messages.count; i++) {
+        SKLabelNode *label = _messages[i];
+        // Short phone screens reserve the central lane for the latest radio
+        // line; older lines have already had their time on screen.
+        label.hidden = compact && i > 0;
+        label.numberOfLines = 0;
+        label.preferredMaxLayoutWidth = MAX(1, width);
+        label.lineBreakMode = NSLineBreakByWordWrapping;
+        label.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+        label.position = CGPointMake(0, y);
+        y -= CGRectGetHeight(label.frame) + 8;
+    }
 }
 
 - (void)layoutSecondary {
@@ -523,6 +567,8 @@ static SKShapeNode *Bracket(void) {
 - (SKNode *)rearScope { return _rearScope; }
 - (BOOL)helpVisible { return !_help.hidden; }
 - (CGRect)helpRect { return _help.frame; }
+- (CGRect)objectivesRect { return _objectivePanel.hidden ? CGRectZero : [_objectivePanel calculateAccumulatedFrame]; }
+- (CGRect)messagesRect { return _messagePanel.hidden ? CGRectZero : [_messagePanel calculateAccumulatedFrame]; }
 
 - (void)setInputText:(NSString *)text { _inputLabel.text = @""; }
 - (void)toggleHelp {
@@ -531,6 +577,7 @@ static SKShapeNode *Bracket(void) {
 - (void)setHelpVisible:(BOOL)visible {
     _help.hidden = !visible;
     _objectivePanel.hidden = visible || _objectivePanel.children.count < 2;
+    [self layoutMessages];
 }
 
 - (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {
@@ -584,6 +631,7 @@ static SKShapeNode *Bracket(void) {
         [row addChild:l];
         [_objectivePanel addChild:row];
     }
+    [self layoutIfNeeded];
 }
 
 - (void)showMessage:(NSString *)text from:(NSString *)from {
@@ -593,7 +641,8 @@ static SKShapeNode *Bracket(void) {
     [_messagePanel addChild:l];
     [_messages insertObject:l atIndex:0];
     while (_messages.count > 3) { [_messages.lastObject removeFromParent]; [_messages removeLastObject]; }
-    for (NSUInteger i = 0; i < _messages.count; i++) _messages[i].position = CGPointMake(0, -22.0 * i);
+    [self layoutIfNeeded];
+    [self layoutMessages];
     [l runAction:[SKAction sequence:@[[SKAction waitForDuration:7], [SKAction fadeOutWithDuration:1.5]]]];
 }
 
@@ -683,7 +732,9 @@ static CGAffineTransform RingTransform(HUDRing r) {
     _scoreLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeLeft;
     _scoreLabel.fontSize = MIN(s.width, s.height) < 550 ? 12 : 16;
     _scoreLabel.position = PointAdd(_objectivePanel.position, CGPointMake(0, -20));
+    BOOL objectivesWereHidden = _objectivePanel.hidden;
     _objectivePanel.hidden = f.respawning || !_help.hidden || _objectivePanel.children.count < 2;
+    if (objectivesWereHidden != _objectivePanel.hidden) [self layoutMessages];
     if (_touchLayout) _throttleFrame.hidden = YES;
     [self updateSecondary:f.secondary capacity:f.secondaryCapacity name:f.secondaryName];
     _aimMark.hidden = !f.aimVisible || f.playerDead;

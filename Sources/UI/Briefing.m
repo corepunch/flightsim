@@ -36,6 +36,7 @@ static const CGFloat ScrollGutter = 10;
 static NSString *const PortraitDeparture = @"portraitDeparture";
 // Reserve room for the widest portrait canvas at the shared height.
 static const CGFloat MaxPortraitAspect = 1.04;
+static const CGFloat PortraitFaceBand = 0.30, CaptionFaceGap = 8;
 static const CGFloat CaptionDrop = 42;
 static const CGFloat PortraitDepth = 1, CaptionDepth = 2, FooterDepth = 3;
 static const CGFloat MonitorInset = 6;
@@ -250,7 +251,7 @@ static void EachContact(const LevelDef *level, void (^body)(MapContact contact))
     for (int i = 0; i < level->waveCount; i++) {
         const LevelWave *w = &level->waves[i];
         const ShipDef *ship = ShipDefNamed(w->ship);
-        NSString *label = w->name ?: L10nFormat(@"briefing.map_wave", @(w->count), ship ? @(ship->displayName) : w->ship);
+        NSString *label = w->name ?: L10nFormat(@"briefing.map_wave", @(w->count), ship ? L10nExpand(@(ship->displayName)) : w->ship);
         const LevelEntity *carrier = w->mothership ? LevelEntityNamed(level, w->mothership) : NULL;   // launches from it
         body((MapContact){ .kind = ContactWave, .identifier = w->identifier, .pos = carrier ? carrier->pos : w->pos, .team = w->team, .label = label });
     }
@@ -812,6 +813,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     BOOL _presented;
     NSMutableArray<SKNode *> *_footerNodes;
     TitleBar *_bar;                         // in _footerNodes when touch navigation is up
+    UIInfoBar *_infoBar;
+    InputAction _barInput;
     Shown _shown;
     Autoplay _autoplay;
     SKNode *_portraitLayer;
@@ -848,6 +851,10 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 - (CGRect)captionRect { return _caption.rect; }
 - (NSString *)backdropRoom { return _backdropRoom; }
 - (CGRect)portraitRectForCharacter:(NSString *)name { return [_portraitLayer childNodeWithName:name].frame; }
+- (CGRect)portraitFaceRegionForCharacter:(NSString *)name {
+    CGRect portrait = [self portraitRectForCharacter:name];
+    return RectInsetEdges(portrait, 0, 0, 0, CGRectGetHeight(portrait) * (1 - PortraitFaceBand));
+}
 - (BOOL)captionOnRight { return _caption.right; }
 - (CGRect)confirmRect { return _buttons.confirm; }
 - (CGRect)previousRect { return _buttons.previous; }
@@ -871,9 +878,9 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 static const CGFloat PhoneSpeakerFont = 16;
 static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
-- (CGFloat)footerInset {
-    BriefingInsets safe = self.contentInsets;
-    return MAX(MIN(50, self.size.width * 0.05), MAX(safe.left, safe.right) + 12);
+- (UIBarAction *)barAction:(NSString *)title input:(InputAction)input {
+    __weak Briefing *owner = self;
+    return [UIBarAction title:title accent:UIAmber handler:^{ Briefing *screen = owner; if (screen) screen->_barInput |= input; }];
 }
 
 - (NSString *)footerActionLabel:(NSString *)action {
@@ -883,7 +890,9 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 // The mission list keeps a hint line in its footer where there is room for it.
 - (BOOL)listHasHint { return !ScreenRegionsMake(self.size, self.contentInsets, 0).compact && self.size.width > 750; }
 
-- (ScreenRegions)listRegions { return ScreenRegionsMake(self.size, self.contentInsets, [self listHasHint] ? 20 : 0); }
+- (ScreenRegions)listRegions {
+    return ScreenRegionsMake(self.size, self.contentInsets, [self listHasHint] ? [UIInfoBar heightCompact:NO] : 0);
+}
 
 // The story screens' title bar for touch: back to the missions, then the
 // previous page and the action in the top-right corner, with the mission's
@@ -891,13 +900,18 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 - (TitleBar *)storyBar:(NSString *)action rects:(FooterButtons *)rects {
     ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets, 0);
     BOOL compact = regions.compact;
-    TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:compact];
-    FooterButtons b = { .back = [bar addBack:L10n(@"story.missions") accent:UIAmber] };
-    if (action) b.confirm = [bar addAction:[self footerActionLabel:action] accent:UIAmber minWidth:compact ? 132 : 144];
+    UIBarAction *back = [self barAction:L10n(@"story.missions") input:InputActionBack];
+    UIBarAction *confirm = action ? [self barAction:[self footerActionLabel:action] input:InputActionConfirm] : nil;
+    UIBarAction *previous = [self barAction:L10n(@"story.previous") input:InputActionLeft];
     BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
-    if (hasPrevious) b.previous = [bar addAction:L10n(@"story.previous") accent:UIAmber minWidth:0];
-    [bar setTitle:CampaignMissionAt(_index).title.uppercaseString
-           kicker:L10nFormat(@"briefing.kicker", (unsigned long)_index + 1)];
+    NSMutableArray *actions = [NSMutableArray array];
+    if (confirm) [actions addObject:confirm];
+    if (hasPrevious) [actions addObject:previous];
+    TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:compact back:back
+        title:CampaignMissionAt(_index).title.uppercaseString
+        kicker:L10nFormat(@"briefing.kicker", (unsigned long)_index + 1) actions:actions];
+    FooterButtons b = { .back = [bar rectForAction:back], .confirm = [bar rectForAction:confirm],
+                        .previous = [bar rectForAction:previous] };
     if (rects) *rects = b;
     return bar;
 }
@@ -977,6 +991,8 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     [_hover reset];
     _footerNodes = [NSMutableArray array];
     _bar = nil;
+    _infoBar = nil;
+    _barInput = 0;
     _buttons = (FooterButtons){0};
     _grid = (MissionGrid){0};
     _map = nil;
@@ -1129,8 +1145,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
 - (void)footer:(NSString *)text action:(NSString *)action {
     [self buildFooter:text action:action];
-    SKNode *confirm = !action ? nil : _bar ? _bar.action
-                    : [_footerNodes.lastObject isKindOfClass:SKShapeNode.class] ? _footerNodes.lastObject : nil;
+    SKNode *confirm = !action ? nil : _bar ? _bar.action : _infoBar.action;
     if ([self intro]) {
         NSUInteger i = 0;
         for (SKNode *node in _footerNodes) {
@@ -1156,12 +1171,6 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     return node;
 }
 
-- (SKNode *)footerButton:(CGRect)rect title:(NSString *)title accent:(UIRGB)accent {
-    SKNode *button = [self footerAdd:UIActionButton(rect, title, accent)];
-    [_hover addButton:button rect:rect accent:accent];
-    return button;
-}
-
 - (void)footerBar:(TitleBar *)bar {
     _bar = bar;
     [self footerAdd:bar];
@@ -1170,21 +1179,19 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
 - (void)buildFooter:(NSString *)text action:(NSString *)action {
     BriefingInsets safe = self.contentInsets;
-    CGFloat inset = [self footerInset];
     BOOL console = [self illustrated];
     if (_mode == ModeList) {
         ScreenRegions regions = [self listRegions];
-        TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact];
-        _buttons.back = [bar addBack:L10n(@"missions.main_menu") accent:UIInk];
-        if (action) _buttons.confirm = [bar addAction:action accent:UIAmber minWidth:regions.compact ? 132 : 150];
-        [bar setTitle:L10n(@"missions.title") kicker:L10n(@"missions.kicker")];
+        UIBarAction *back = [self barAction:L10n(@"missions.main_menu") input:InputActionBack];
+        UIBarAction *confirm = action ? [self barAction:action input:InputActionConfirm] : nil;
+        TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact back:back
+            title:L10n(@"missions.title") kicker:L10n(@"missions.kicker") actions:confirm ? @[confirm] : @[]];
+        _buttons.back = [bar rectForAction:back];
+        _buttons.confirm = [bar rectForAction:confirm];
         [self footerBar:bar];
         if (!CGRectIsEmpty(regions.footer)) {
-            SKLabelNode *hint = Text(11, UIColorWithOpacity(UIInk, 0.65), SKLabelHorizontalAlignmentModeCenter);
-            hint.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
-            hint.text = text;
-            hint.position = RectCenter(regions.footer);
-            [self footerAdd:hint];
+            _infoBar = [[UIInfoBar alloc] initWithRegion:regions.footer compact:regions.compact console:NO info:text action:nil];
+            [self footerAdd:_infoBar];
         }
         return;
     }
@@ -1192,19 +1199,13 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         [self footerBar:[self storyBar:action rects:&_buttons]];
         return;
     }
-    CGRect rail = CGRectMake(inset - 10, safe.bottom + 14, self.size.width - 2 * inset + 20, 52);
-    [self footerAdd:UIControlRail(rail, console)];
-    CGFloat hintLeft = inset + 8;
-    SKLabelNode *hint = Para(12, UIColorWithOpacity(UIInk, console ? 0.9 : 0.65),
-                             MAX(1, self.size.width - inset - hintLeft - (action ? 200 : 0)));
-    hint.text = text;
-    hint.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
-    hint.position = CGPointMake(hintLeft, safe.bottom + 42);
-    [self footerAdd:hint];
-    if (!action) return;
-
-    _buttons.confirm = CGRectMake(self.size.width - inset - 180, safe.bottom + 20, 180, 44);
-    [self footerButton:_buttons.confirm title:action accent:console ? UIAmber : UIInk];
+    BOOL compact = ScreenRegionsMake(self.size, safe, 0).compact;
+    ScreenRegions regions = ScreenRegionsMake(self.size, safe, [UIInfoBar heightCompact:compact]);
+    UIBarAction *confirm = action ? [self barAction:action input:InputActionConfirm] : nil;
+    _infoBar = [[UIInfoBar alloc] initWithRegion:regions.footer compact:compact console:console info:text action:confirm];
+    [self footerAdd:_infoBar];
+    [_infoBar registerHover:_hover];
+    _buttons.confirm = _infoBar.actionRect;
 }
 
 #pragma mark - Briefing
@@ -1320,8 +1321,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     return _monitorMask ? CGPathGetBoundingBox(_monitorMask.path) : CGRectZero;
 }
 
-- (void)addPortrait:(NSString *)name expression:(NSString *)expression facingRight:(BOOL)facingRight
-              active:(BOOL)active inRect:(CGRect)area {
+- (CGRect)portraitArea:(CGRect)area {
     // Keep faces inside the usable landscape width, while the illustration
     // can still extend behind the bottom caption and footer.
     BriefingInsets safe = self.contentInsets;
@@ -1330,7 +1330,12 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     CGFloat side = MAX(safe.left, safe.right) * ([self compactStoryLayout] ? PhonePortraitInset : 1);
     CGRect portraitBounds = CGRectMake(side, 0, MAX(1, self.size.width - 2 * side),
                                        MAX(1, self.size.height - safe.top));
-    area = CGRectIntersection(area, portraitBounds);
+    return CGRectIntersection(area, portraitBounds);
+}
+
+- (void)addPortrait:(NSString *)name expression:(NSString *)expression facingRight:(BOOL)facingRight
+              active:(BOOL)active inRect:(CGRect)area {
+    area = [self portraitArea:area];
     if (CGRectIsNull(area) || CGRectIsEmpty(area)) return;
     SKTexture *texture = expression ? [self artTextureNamed:[NSString stringWithFormat:@"Expressions/%@-%@", name, expression]] : nil;
     if (!texture) texture = [self artTextureNamed:name];
@@ -1521,16 +1526,46 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         screen = CGPathGetBoundingBox(_monitorMask.path);
     }
 
-    // The bubble hangs below the monitor on its speaker's side; on a phone it
-    // takes most of the monitor's width.
+    CGFloat wing = CGRectGetMinX(screen);
+    CGRect speakerArea = CGRectZero, playerArea = CGRectZero;
+    if (phone) {
+        CGFloat side = MAX(self.contentInsets.left, self.contentInsets.right) * PhonePortraitInset;
+        CGFloat width = size.width * 0.36, height = MAX(1, CGRectGetMinY(bar.row) - 4);
+        speakerArea = CGRectMake(side, 0, width, height);
+        playerArea = CGRectMake(size.width - side - width, 0, width, height);
+    } else if (!narrow) {
+        CGFloat width = MIN(size.width * 0.31, wing * 1.45);
+        CGFloat bottom = compact ? 0 : floor - 10;
+        CGFloat height = MAX(1, size.height - bottom - 48);
+        CGFloat center = wing * 0.65;
+        speakerArea = CGRectMake(center - width / 2, bottom, width, height);
+        playerArea = CGRectMake(size.width - center - width / 2, bottom, width, height);
+    }
+    if (!narrow) {
+        speakerArea = [self portraitArea:speakerArea];
+        playerArea = [self portraitArea:playerArea];
+    }
+
+    // The portrait height budget determines the caption ceiling on every
+    // landscape stage, independently of the speaking character or room art.
     CGFloat captionWidth = screen.size.width * (phone ? 0.9 : 0.70);
     CGFloat laneLeft = CGRectGetMinX(screen), laneRight = CGRectGetMaxX(screen);
-    const CGFloat captionPadding = [self captionHeader] + 12; // Speaker header and bottom inset.
+    const CGFloat captionPadding = [self captionHeader] + (phone ? 8 : 12);
     CGFloat tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
     // Leave a gap below the monitor while keeping the caption above the footer.
     CGFloat captionTop = CGRectGetMinY(screen) + (paintedBoard ? 0 : 3) - CaptionDrop;
+    if (!narrow) {
+        CGFloat portraitHeight = MIN(CGRectGetHeight(speakerArea), CGRectGetWidth(speakerArea) / MaxPortraitAspect);
+        CGFloat faceCeiling = CGRectGetMinY(speakerArea) + portraitHeight * (1 - PortraitFaceBand) - CaptionFaceGap;
+        captionTop = MIN(MAX(captionTop, floor + tallestCaption), faceCeiling);
+    }
     while (tallestCaption > captionTop - floor && textSize > minTextSize) {
         textSize = MAX(minTextSize, textSize - 1);
+        tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
+    }
+    CGFloat maxCaptionWidth = size.width - self.contentInsets.left - self.contentInsets.right - 24;
+    while (phone && tallestCaption > captionTop - floor && captionWidth < maxCaptionWidth) {
+        captionWidth = MIN(maxCaptionWidth, captionWidth + 24);
         tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
     }
     // Short screens can exhaust the font budget. Anchor every bubble to the
@@ -1541,29 +1576,15 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
     if (_mode == ModeBriefing) [self buildMonitor:screen mission:mission page:_pages[_page] titled:!bar];
 
-    CGFloat wing = CGRectGetMinX(screen);
-    CGRect speakerArea, playerArea;
-    if (phone) {
-        // As large as the height allows, from the screen edge inward, below the bar.
-        CGFloat side = MAX(self.contentInsets.left, self.contentInsets.right) * PhonePortraitInset;
-        CGFloat width = size.width * 0.36, height = MAX(1, CGRectGetMinY(bar.row) - 4);
-        speakerArea = CGRectMake(side, 0, width, height);
-        playerArea = CGRectMake(size.width - side - width, 0, width, height);
-    } else if (narrow) {
-        CGFloat height = MAX(floor, captionTop - tallestCaption) + 6;
+    if (narrow) {
+        CGFloat height = MAX(1, MAX(floor, captionTop - tallestCaption) - CaptionFaceGap);
         speakerArea = CGRectMake(0, 0, size.width / 2, height);
         playerArea = CGRectOffset(speakerArea, size.width / 2, 0);
-    } else {
-        CGFloat width = MIN(size.width * 0.31, wing * 1.45);
-        CGFloat bottom = compact ? 0 : floor - 10;
-        CGFloat height = MAX(1, size.height - bottom - 48);
-        CGFloat center = wing * 0.65;
-        speakerArea = CGRectMake(center - width / 2, bottom, width, height);
-        playerArea = CGRectMake(size.width - center - width / 2, bottom, width, height);
     }
     BOOL playerSpeaking = [self addPortraitsForLine:line speakerArea:speakerArea playerArea:playerArea];
 
     CGFloat captionLeft = playerSpeaking ? laneRight - captionWidth : laneLeft;
+    if (phone) captionLeft = (size.width - captionWidth) / 2;
     [self addCaption:line inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
              fontSize:textSize speakerOnRight:playerSpeaking];
     [self footer:L10n(_mode == ModeBriefing ? @"briefing.hint" : @"debrief.conversation_hint") action:action];
@@ -1756,7 +1777,10 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         return;
     }
 
-    CGFloat top = s.height - safe.top - MIN(95, s.height * 0.15);
+    BOOL topBar = self.touchNavigationEnabled;
+    BOOL compact = ScreenRegionsMake(s, safe, 0).compact;
+    ScreenRegions regions = ScreenRegionsMake(s, safe, topBar ? 0 : [UIInfoBar heightCompact:compact]);
+    CGFloat top = MIN(s.height - safe.top - MIN(95, s.height * 0.15), CGRectGetMaxY(regions.body));
     SKLabelNode *title = Text(MIN(36, MAX(20, s.width / 30)),
                               _success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1),
                               SKLabelHorizontalAlignmentModeCenter);
@@ -1771,7 +1795,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     [_root addChild:name];
     SKNode *report = [SKNode node];
     CGFloat reportTop = CGRectGetMinY(name.frame) - 24;
-    CGFloat reportBottom = safe.bottom + 84; // Leave the footer clear.
+    CGFloat reportBottom = CGRectGetMinY(regions.body);
     SKLabelNode *summary = Para(fontSize, UIColorWithOpacity(UIInk, 0.9), MAX(1, width - ScrollGutter));
     summary.text = _success ? mission.debrief.win : mission.debrief.lose;
     summary.position = CGPointMake(inset, reportTop);
@@ -1856,7 +1880,9 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     if (a & scrollDown) [self scrollBy:54];
     if (click) {
         CGPoint point = PointMultiply(UnboxPoint(click), self.size);
-        if (CGRectContainsPoint(_buttons.confirm, point)) {
+        _barInput = 0;
+        BOOL barHit = [_bar activateAt:point] || [_infoBar activateAt:point];
+        if (_barInput & InputActionConfirm) {
             if (_mode == ModeBriefing && [self hasNextBriefingPage]) {
                 _page = _pages.count - 1;
                 [self turnPage];
@@ -1864,8 +1890,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
                 return BriefingCommandNone;
             }
             a |= InputActionConfirm;
-        } else if (CGRectContainsPoint(_buttons.previous, point)) a |= InputActionLeft;
-        else if (CGRectContainsPoint(_buttons.back, point)) a |= InputActionBack;
+        } else if (barHit) a |= _barInput;
         else if (_mode == ModeList && CGRectContainsPoint(_grid.rows, point)) {
             CGPoint inContent = PointSub(point, CGPointMake(0, _scrollOffset));
             for (NSUInteger i = 0; i < _grid.tiles.count; i++) {

@@ -37,6 +37,7 @@ static PauseCommand CommandFor(NSString *itemId) {
 }
 
 - (NSArray<NSString *> *)items { return _layout.lists[@"items"] ?: @[]; }
+- (UILayoutResult *)layout { return _layout; }
 
 - (void)rebuild {
     [self removeAllChildren];
@@ -59,14 +60,20 @@ static PauseCommand CommandFor(NSString *itemId) {
     NSMutableSet *flags = [NSMutableSet set];
     if (_remote) [flags addObject:@"online"];
     if (_cockpit) [flags addObject:@"cockpit"];
+    if (self.size.height < 440 && self.size.width >= 500) [flags addObject:@"short"];
+    ScreenInsets safe = self.contentInsets;
+#if TARGET_OS_IOS
+    if (self.view) safe = self.view.safeAreaInsets;
+#endif
+    CGRect bounds = RectInsetEdges(RectWithSize(self.size), safe.left, safe.top, safe.right, safe.bottom);
     NSArray *previous = [self items];
     NSString *selected = _selected < (NSInteger)previous.count ? [@"items." stringByAppendingString:previous[_selected]] : nil;
     UILayout *layout = [UILayout named:@"pause"];
-    _layout = [layout buildIn:CGRectMake(0, 0, self.size.width, self.size.height) sceneSize:self.size flags:flags
+    _layout = [layout buildIn:bounds sceneSize:self.size flags:flags
                     variables:@{ @"sound": [[GameAudio shared] mixTitle] } selected:selected];
     if (!selected && self.items.count) {
         // First build: highlight the first button.
-        _layout = [layout buildIn:CGRectMake(0, 0, self.size.width, self.size.height) sceneSize:self.size flags:flags
+        _layout = [layout buildIn:bounds sceneSize:self.size flags:flags
                         variables:@{ @"sound": [[GameAudio shared] mixTitle] }
                          selected:[@"items." stringByAppendingString:self.items[0]]];
     }

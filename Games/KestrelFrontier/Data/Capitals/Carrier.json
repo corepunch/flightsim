@@ -1,5 +1,5 @@
 {
-  "className": "Fleet Carrier",
+  "className": "{#game.class.fleet_carrier}",
   "hp": 120,
   "style": "concord"
 }

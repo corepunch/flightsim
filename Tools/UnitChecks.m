@@ -341,6 +341,9 @@ static void CheckDefinitions(void) {
         [styles addObject:@(def->style)];
     }
     CHECK(CapitalDefNamed(@"no-such-capital") == NULL);
+    for (NSString *asset in @[@"AsteroidA", @"AsteroidB", @"AsteroidC"])
+        CHECK(CapitalDefNamed(asset)->asteroid);
+    CHECK(!CapitalDefNamed(@"Carrier")->asteroid);
     NSDictionary *defaults = DefinitionJSON(@"Styles", @"default");
     for (NSString *slot in @[@"Hull", @"HullDark", @"Glow", @"Lights", @"ShieldGen", @"Windows", @"Trim", @"Rock"])
         CHECK([defaults[slot] isKindOfClass:NSDictionary.class]);
@@ -827,6 +830,11 @@ static void CheckMissionRuntime(void) {
     BOOL expanded = [L10nExpand(@"x {#mission.scanned\x1fRelay} y") isEqualToString:[@"x " stringByAppendingString:[scanned stringByAppendingString:@" y"]]];
     CHECK(expanded || ![L10nLocale() isEqualToString:@"en"]);
     CHECK([L10nExpand(@"plain") isEqualToString:@"plain"]);
+    CHECK([L10nExpand(@"{#mission.scanned\x1f{#part.engine}}")
+        isEqualToString:L10nFormat(@"mission.scanned", L10n(@"part.engine"))]);
+    CHECK([L10nExpand(@"{#mission.arrived\x1f{#mission.scanned\x1fRelay}}")
+        isEqualToString:L10nFormat(@"mission.arrived", L10nFormat(@"mission.scanned", @"Relay"))]);
+    CHECK([L10nExpand(@"unfinished {#mission.scanned") isEqualToString:@"unfinished {#mission.scanned"]);
 }
 
 // The catalog lookups the UI relies on: English text, lists, formats, and the

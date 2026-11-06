@@ -97,13 +97,13 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["aurora"], "text": "Keep bombers off Aurora Star" },
+    { "id": "protect", "type": "protect", "targets": ["aurora"], "text": "{#mission.objective.exodus.protect}" },
     {
       "id": "escort",
       "type": "escort",
       "targets": ["aurora"],
       "navs": ["gatenav"],
-      "text": "Escort Aurora to Halden Gate",
+      "text": "{#mission.objective.exodus.escort}",
       "depart": true
     }
   ],
@@ -112,26 +112,26 @@
       "when": { "time": 3 },
       "do": [
         {
-          "radio": { "from": "Aurora Star", "text": "This is Captain Lusk. We have children aboard, Lancer. Please." }
+          "radio": { "from": "Aurora Star", "text": "{#radio.mission.exodus.line_1}" }
         }
       ]
     },
     {
       "when": { "spawned": "relief" },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "Aurora is hit. Bastion's ready flight is launching to cover her. Hold on."} }
+        { "radio": {"from": "Commander Varn", "text": "{#radio.mission.exodus.line_2}"} }
       ]
     },
     {
       "when": { "spawned": "t2" },
       "do": [
-        { "radio": {"from": "Lancer 6", "text": "Bombers above us, diving on the liner!"} }
+        { "radio": {"from": "Lancer 6", "text": "{#radio.mission.exodus.line_3}"} }
       ]
     },
     {
       "when": { "objective": "escort" },
       "do": [
-        { "radio": {"from": "Aurora Star", "text": "Gate lock... we are through. God bless you, Lancer."} }
+        { "radio": {"from": "Aurora Star", "text": "{#radio.mission.exodus.line_4}"} }
       ]
     }
   ]

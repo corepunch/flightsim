@@ -1,5 +1,5 @@
 {
-  "className": "Liner",
+  "className": "{#game.class.liner}",
   "hp": 35,
   "style": "civil"
 }

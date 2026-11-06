@@ -45,34 +45,34 @@
     }
   ],
   "objectives": [
-    { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "Patrol NAV 1, 2, 3 in order" },
-    { "id": "raiders", "type": "destroy", "targets": ["raiders"], "text": "Destroy 3 Jackal raiders" },
+    { "id": "patrol", "type": "reach", "navs": ["nav1", "nav2", "nav3"], "text": "{#mission.objective.ash_patrol.patrol}" },
+    { "id": "raiders", "type": "destroy", "targets": ["raiders"], "text": "{#mission.objective.ash_patrol.raiders}" },
     {
       "id": "rtb",
       "type": "reach",
       "navs": ["home"],
       "after": ["patrol", "raiders"],
-      "text": "Return to Hearth Station"
+      "text": "{#mission.objective.ash_patrol.rtb}"
     }
   ],
   "events": [
     {
       "when": { "time": 2 },
       "do": [
-        { "radio": {"from": "Hearth Control", "text": "Fly the beacons in order, Kite 1. Log each one."} }
+        { "radio": {"from": "Hearth Control", "text": "{#radio.mission.ash_patrol.line_1}"} }
       ]
     },
     { "when": {"nav": "nav2"}, "do": [{"spawn": "raiders"}] },
     {
       "when": { "spawned": "raiders" },
       "do": [
-        { "radio": {"from": "Hearth Control", "text": "Three Jackals off the ash cloud. Engage."} }
+        { "radio": {"from": "Hearth Control", "text": "{#radio.mission.ash_patrol.line_2}"} }
       ]
     },
     {
       "when": { "objective": "raiders" },
       "do": [
-        { "radio": {"from": "Hearth Control", "text": "Clean scopes. Bring it home, Kite."} }
+        { "radio": {"from": "Hearth Control", "text": "{#radio.mission.ash_patrol.line_3}"} }
       ]
     }
   ]

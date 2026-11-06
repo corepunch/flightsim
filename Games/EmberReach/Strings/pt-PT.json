@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / ESQUADRÃO",
+    "loading.mission_kicker": "EMBER REACH / MISSÃO %02lu",
+    "browser.kicker": "EMBER REACH / MULTIJOGADOR",
+    "controls.kicker": "EMBER REACH / MANUAL DE VOO",
+    "menu.unit": "HEARTH / KITE / ESQUADRÃO",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / NAVE DE PATRULHA",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Comando de voo",
+    "briefing.orders_line": "Suas ordens estão no painel.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Armamento: cortadores duplos, %d torpedo",
+    "briefing.loadout_many": "Armamento: cortadores duplos, %d torpedos",
+    "combat.no_secondary": "Sem torpedos restantes",
+    "combat.out_of_range": "Alvo fora do alcance dos torpedos",
+    "mission.objective.ash_patrol.patrol": "Patrulha NAV 1, 2, 3 em ordem",
+    "mission.objective.ash_patrol.raiders": "Destrói 3 saqueadores Jackal",
+    "mission.objective.ash_patrol.rtb": "Volta para Hearth Station",
+    "mission.objective.ore_convoy.protect": "Protege a Cinder",
+    "mission.objective.ore_convoy.escort": "Escolta a Cinder até Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Destrói os saqueadores atacando o cargueiro",
+    "game.weapon.torpedo": "TORPEDO",
+    "game.weapon.torpedo_short": "TORP",
+    "radio.mission.ash_patrol.line_1": "Segue os sinais em ordem, Kite 1. Regista cada um.",
+    "radio.mission.ash_patrol.line_2": "Três Jackal perto da nuvem de cinzas. Atacam.",
+    "radio.mission.ash_patrol.line_3": "Radar limpo. Volta para casa, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder em movimento, minério selado. Ficam perto, milícia.",
+    "radio.mission.ore_convoy.line_2": "Segundo grupo de saqueadores cruzando a rota até o cargueiro!",
+    "radio.mission.ore_convoy.line_3": "Conexão com o retransmissor. O minério está seguro. As bebidas em Cinderfall são por minha conta."
+  }
+}

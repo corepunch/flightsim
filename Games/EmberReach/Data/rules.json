@@ -1,5 +1,5 @@
 {
   "defaultShip": "kite",
-  "secondary": { "projectile": "torpedo", "name": "TORPEDO", "short": "TORP" },
+  "secondary": { "projectile": "torpedo", "name": "{#game.weapon.torpedo}", "short": "{#game.weapon.torpedo_short}" },
   "fighterClass": { "friend": "Militia kite", "enemy": "Raider jackal", "neutral": "Fighter" }
 }

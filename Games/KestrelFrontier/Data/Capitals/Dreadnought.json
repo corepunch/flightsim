@@ -1,5 +1,5 @@
 {
-  "className": "Dreadnought",
+  "className": "{#game.class.dreadnought}",
   "hp": 80,
   "style": "skarn"
 }

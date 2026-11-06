@@ -142,6 +142,8 @@ void ApplyHullRolloff(SCNMaterial *m);
 @interface Cockpit : NSObject
 
 @property (nonatomic, readonly) SCNNode *node;   // origin is the pilot's eye
+// Fixed-resolution glass instruments, also rendered by the standalone UI catalogue.
+@property (nonatomic, readonly) NSDictionary<NSString *, SKScene *> *displayScenes;
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device;
 // Renders the displays into their textures; call before the frame renders.

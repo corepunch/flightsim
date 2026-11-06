@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / SKRZYDŁO",
+    "loading.mission_kicker": "EMBER REACH / MISJA %02lu",
+    "browser.kicker": "EMBER REACH / GRA WIELOOSOBOWA",
+    "controls.kicker": "EMBER REACH / PODRĘCZNIK LOTU",
+    "menu.unit": "HEARTH / KITE / SKRZYDŁO",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / PATROLOWIEC",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Kontrola lotów",
+    "briefing.orders_line": "Rozkazy są na tablicy.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Uzbrojenie: podwójne przecinaki, torpedy: %d",
+    "briefing.loadout_many": "Uzbrojenie: podwójne przecinaki, torpedy: %d",
+    "combat.no_secondary": "Brak torped",
+    "combat.out_of_range": "Cel poza zasięgiem torped",
+    "mission.objective.ash_patrol.patrol": "Obleć NAV 1, 2, 3 po kolei",
+    "mission.objective.ash_patrol.raiders": "Zniszcz 3 najeźdźców Jackal",
+    "mission.objective.ash_patrol.rtb": "Wróć do Hearth Station",
+    "mission.objective.ore_convoy.protect": "Ochroń Cindera",
+    "mission.objective.ore_convoy.escort": "Eskortuj Cindera do Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Zniszcz najeźdźców atakujących frachtowiec",
+    "game.weapon.torpedo": "TORPEDA",
+    "game.weapon.torpedo_short": "TORP",
+    "radio.mission.ash_patrol.line_1": "Obleć nadajniki po kolei, Kite 1. Zarejestruj każdy.",
+    "radio.mission.ash_patrol.line_2": "Trzy Jackale przy chmurze popiołu. Atakować.",
+    "radio.mission.ash_patrol.line_3": "Radar czysty. Wracaj do domu, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder w drodze, ruda zaplombowana. Trzymajcie się blisko, milicjo.",
+    "radio.mission.ore_convoy.line_2": "Druga grupa najeźdźców przecina trasę do frachtowca!",
+    "radio.mission.ore_convoy.line_3": "Blokada przekaźnika. Ruda bezpieczna. Stawiam drinki w Cinderfall."
+  }
+}

@@ -169,12 +169,12 @@ static int CheckCampaignCaptions(void) {
 static int CheckSharedConversationStage(NSString *output) {
     NSString *motion = [Cvar find:@"ui_reduceMotion"].string;
     [Cvar set:@"ui_reduceMotion" value:@"1"];
-    const CGSize sizes[] = {{667,375}, {852,393}, {1194,834}, {1600,900}};
-    const NSEdgeInsets insets[] = {{0,0,0,0}, {0,59,21,59}, {24,0,20,0}, {0,0,0,0}};
+    const CGSize sizes[] = {{568,320}, {667,375}, {852,393}, {1194,834}, {1600,900}};
+    const NSEdgeInsets insets[] = {{0,0,0,0}, {0,0,0,0}, {0,59,21,59}, {24,0,20,0}, {0,0,0,0}};
     for (NSUInteger v = 0; v < sizeof(sizes) / sizeof(sizes[0]); v++) {
         SizeTarget(sizes[v]);
         Briefing *scene = [[Briefing alloc] initWithSize:sizes[v]];
-        scene.touchNavigationEnabled = v < 3;
+        scene.touchNavigationEnabled = v < 4;
         scene.contentInsets = insets[v];
         for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
             [scene showBriefing:mission];
@@ -203,7 +203,17 @@ static int CheckSharedConversationStage(NSString *output) {
                 CGRect speaker = [scene portraitRectForCharacter:other];
                 CHECK(!CGRectIsEmpty(speaker));
                 CHECK(fabs(CGRectGetHeight(player) - CGRectGetHeight(speaker)) < 0.01);
-                if (v < 2) {
+                if (CGRectIntersectsRect(scene.captionRect, [scene portraitFaceRegionForCharacter:StoryPlayer()]))
+                    fprintf(stderr, "Face overlap %.0fx%.0f mission %lu: caption %s player %s\n", sizes[v].width, sizes[v].height,
+                        (unsigned long)mission + 1, NSStringFromRect(scene.captionRect).UTF8String,
+                        NSStringFromRect([scene portraitFaceRegionForCharacter:StoryPlayer()]).UTF8String);
+                CHECK(!CGRectIntersectsRect(scene.captionRect, [scene portraitFaceRegionForCharacter:StoryPlayer()]));
+                if (CGRectIntersectsRect(scene.captionRect, [scene portraitFaceRegionForCharacter:other]))
+                    fprintf(stderr, "Other face overlap %.0fx%.0f mission %lu %s: caption %s other %s\n", sizes[v].width, sizes[v].height,
+                        (unsigned long)mission + 1, other.UTF8String, NSStringFromRect(scene.captionRect).UTF8String,
+                        NSStringFromRect([scene portraitFaceRegionForCharacter:other]).UTF8String);
+                CHECK(!CGRectIntersectsRect(scene.captionRect, [scene portraitFaceRegionForCharacter:other]));
+                if (v < 3) {
                     CHECK(CGRectGetMaxY(player) > CGRectGetMaxY(scene.captionRect) + 32);
                     CHECK(CGRectGetMaxY(speaker) > CGRectGetMaxY(scene.captionRect) + 32);
                 }

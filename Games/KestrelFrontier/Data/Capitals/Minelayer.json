@@ -1,5 +1,5 @@
 {
-  "className": "Minelayer",
+  "className": "{#game.class.minelayer}",
   "hp": 7,
   "style": "skarn"
 }

@@ -379,7 +379,7 @@ const ShipDef *ShipDefForModel(NSString *model);       // "ship:<name>" -> defin
 
 // A capital ship, station, prop or rock, from Resources/Capitals/<Asset>.json:
 //   { "className": "Fleet Carrier", "hp": 120, "style": "concord",
-//     "invulnerable": false, "prop": false, "mine": false }
+//     "invulnerable": false, "prop": false, "mine": false, "asteroid": false }
 // The mesh is Resources/Models/Capital/<Asset>.scn; `style` names the hull
 // material set in Resources/Styles/<style>.json. The model configstring is
 // "cap:<Asset>:<style>".
@@ -391,6 +391,7 @@ typedef struct {
     bool invulnerable;          // never takes damage
     bool prop;                  // small thing that dies in one blast
     bool mine;                  // prop that goes off near a ship
+    bool asteroid;              // rock, excluded from ship targeting
 } CapitalDef;
 
 const CapitalDef *CapitalDefNamed(NSString *asset);     // NULL if there is no such definition

@@ -135,7 +135,7 @@
         _invulnerable = def && def->invulnerable;
         _isProp = def && def->prop;
         _isMine = def && def->mine;
-        _isAsteroid = [_className isEqualToString:@"Asteroid"];
+        _isAsteroid = def && def->asteroid;
         _isBuoy = [asset isEqualToString:@"NavBuoy"];
         _alive = YES;
         _scale = 1;

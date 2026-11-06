@@ -1,5 +1,6 @@
 {
-  "className": "Asteroid",
+  "className": "{#game.class.asteroid}",
+  "asteroid": true,
   "hp": 1,
   "style": "rock",
   "invulnerable": true

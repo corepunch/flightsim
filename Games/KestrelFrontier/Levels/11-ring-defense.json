@@ -69,12 +69,12 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["ring"], "text": "Defend Tannhal through 3 waves" },
+    { "id": "protect", "type": "protect", "targets": ["ring"], "text": "{#mission.objective.ring_defense.protect}" },
     {
       "id": "waves",
       "type": "destroy",
       "targets": ["w1", "w2", "w3", "cv"],
-      "text": "Defeat all 3 attack waves"
+      "text": "{#mission.objective.ring_defense.waves}"
     }
   ],
   "events": [
@@ -83,19 +83,19 @@
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Tannhal Control", "text": "Three waves incoming. Give the bombers priority."} }
+        { "radio": {"from": "Tannhal Control", "text": "{#radio.mission.ring_defense.line_1}"} }
       ]
     },
     {
       "when": { "spawned": "w2" },
       "do": [
-        { "radio": {"from": "Lancer 2", "text": "Bombers! Coming in from starboard, low!"} }
+        { "radio": {"from": "Lancer 2", "text": "{#radio.mission.ring_defense.line_2}"} }
       ]
     },
     {
       "when": { "spawned": "cv" },
       "do": [
-        { "radio": {"from": "Tannhal Control", "text": "Corvette jumping in, bearing zero-nine-zero!"} }
+        { "radio": {"from": "Tannhal Control", "text": "{#radio.mission.ring_defense.line_3}"} }
       ]
     }
   ]

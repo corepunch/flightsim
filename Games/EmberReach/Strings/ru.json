@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / АВИАКРЫЛО",
+    "loading.mission_kicker": "EMBER REACH / МИССИЯ %02lu",
+    "browser.kicker": "EMBER REACH / СЕТЕВАЯ ИГРА",
+    "controls.kicker": "EMBER REACH / ЛЁТНОЕ РУКОВОДСТВО",
+    "menu.unit": "HEARTH / KITE / АВИАКРЫЛО",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / ПАТРУЛЬНЫЙ КОРАБЛЬ",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Управление полётами",
+    "briefing.orders_line": "Ваши приказы на экране.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Вооружение: спаренные резаки, торпеды: %d",
+    "briefing.loadout_many": "Вооружение: спаренные резаки, торпеды: %d",
+    "combat.no_secondary": "Торпед больше нет",
+    "combat.out_of_range": "Цель вне дальности торпед",
+    "mission.objective.ash_patrol.patrol": "Облетите NAV 1, 2, 3 по порядку",
+    "mission.objective.ash_patrol.raiders": "Уничтожьте 3 рейдера Jackal",
+    "mission.objective.ash_patrol.rtb": "Вернитесь на Hearth Station",
+    "mission.objective.ore_convoy.protect": "Сохраните Cinder",
+    "mission.objective.ore_convoy.escort": "Сопроводите Cinder к Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Уничтожьте рейдеров, атакующих грузовик",
+    "game.weapon.torpedo": "ТОРПЕДА",
+    "game.weapon.torpedo_short": "ТОРП",
+    "radio.mission.ash_patrol.line_1": "Облети маяки по порядку, Kite 1. Отметь каждый.",
+    "radio.mission.ash_patrol.line_2": "Три Jackal у пепельного облака. В бой.",
+    "radio.mission.ash_patrol.line_3": "Радар чист. Возвращайся, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder в пути, руда опечатана. Держитесь рядом, ополченцы.",
+    "radio.mission.ore_convoy.line_2": "Вторая группа рейдеров пересекает трассу к грузовику!",
+    "radio.mission.ore_convoy.line_3": "Захват ретранслятора. Руда в безопасности. В Cinderfall выпивка за мой счёт."
+  }
+}

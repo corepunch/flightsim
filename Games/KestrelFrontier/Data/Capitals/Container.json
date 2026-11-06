@@ -1,5 +1,5 @@
 {
-  "className": "Cargo Container",
+  "className": "{#game.class.cargo_container}",
   "hp": 1.2,
   "style": "civil",
   "prop": true

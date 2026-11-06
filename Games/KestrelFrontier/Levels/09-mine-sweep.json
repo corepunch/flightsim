@@ -40,8 +40,8 @@
     }
   ],
   "objectives": [
-    { "id": "layer", "type": "destroy", "targets": ["layer"], "text": "Destroy the Skarn minelayer" },
-    { "id": "mines", "type": "destroy", "targets": ["mines"], "text": "Shoot all 16 mines from range" }
+    { "id": "layer", "type": "destroy", "targets": ["layer"], "text": "{#mission.objective.mine_sweep.layer}" },
+    { "id": "mines", "type": "destroy", "targets": ["mines"], "text": "{#mission.objective.mine_sweep.mines}" }
   ],
   "events": [
     { "when": {"time": 0}, "do": [{"spawn": "guards"}] },
@@ -49,14 +49,14 @@
       "when": { "time": 3 },
       "do": [
         {
-          "radio": { "from": "Bastion Control", "text": "Mines trigger within 60 metres. Shoot from a distance." }
+          "radio": { "from": "Bastion Control", "text": "{#radio.mission.mine_sweep.line_1}" }
         }
       ]
     },
     {
       "when": { "objective": "mines" },
       "do": [
-        { "radio": {"from": "Bastion Control", "text": "Corridor clear. The Bastion is moving."} }
+        { "radio": {"from": "Bastion Control", "text": "{#radio.mission.mine_sweep.line_2}"} }
       ]
     }
   ]

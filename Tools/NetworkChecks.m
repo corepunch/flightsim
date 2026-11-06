@@ -535,6 +535,11 @@ static void SecondaryTargetingRun(void) {
     CHECK(level->_torpedoes.count == 1 && level->_torpedoes.lastObject.target == pilot.selected);
     GFighter *drone = pilot.selected; CHECK([drone isKindOfClass:GFighter.class]);
     GCapital *capital = level->_capitals.firstObject; CHECK(capital);
+    for (NSString *asset in @[@"AsteroidA", @"AsteroidB", @"AsteroidC"]) {
+        GCapital *rock = [GCapital capitalWithAsset:asset style:nil team:TeamEnemy];
+        CHECK(rock.isAsteroid && [rock.className hasPrefix:@"{#"]);
+    }
+    CHECK(!capital.isAsteroid);
     capital.position = pilot.ship.position + pilot.ship.forward * 700;
     pilot.selected = capital; pilot.targetIsManual = YES;
     [level fireTorpedoFor:pilot];

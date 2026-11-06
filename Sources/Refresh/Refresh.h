@@ -83,7 +83,7 @@ typedef struct {
     float damageFlash;      // 0..1
     BOOL cockpit;           // gauges are on the cockpit displays instead
     int secondary, secondaryCapacity;       // secondary weapon rounds left and carried
-    NSString *secondaryName;   // short name from the game ("TORP")
+    NSString *secondaryName;   // its name, from the game ("TORPEDO")
     BOOL aimVisible;        // subsystem aim marker on the selected capital
     CGPoint aim;
     NSString *status;       // under the boresight, e.g. "SCANNING 40%"
@@ -120,6 +120,7 @@ typedef NSEdgeInsets HUDInsets;
 @property (nonatomic, readonly) SKNode *forwardScope, *rearScope;
 @property (nonatomic, readonly) BOOL helpVisible;
 @property (nonatomic, readonly) CGRect helpRect;
+@property (nonatomic, readonly) CGRect objectivesRect, messagesRect;
 
 - (void)updateFrame:(HUDFrame)frame targets:(const HUDTarget *)targets count:(NSUInteger)count;
 - (void)updateInstruments:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count cockpit:(BOOL)cockpit;

@@ -7,8 +7,14 @@
     SKNode *_body;
     CGFloat _contentHeight;
     NSInteger _selected;
-    BOOL _hasClick;
+    BOOL _hasClick, _backRequested;
+    TitleBar *_bar;
     CGPoint _click;
+}
+
+- (instancetype)init {
+    if ((self = [super init])) _touchNavigationEnabled = TARGET_OS_IOS;
+    return self;
 }
 
 - (SKLabelNode *)label:(NSString *)text at:(CGPoint)point size:(CGFloat)size color:(UIRGB)color parent:(SKNode *)parent {
@@ -63,13 +69,17 @@
     CGFloat x = CGRectGetMinX(_bounds), top = CGRectGetMaxY(_bounds);
     BOOL narrow = width < 540;
     CGRect header = RectFromEdges(x, top - [TitleBar heightCompact:narrow], x + width, top);
-    TitleBar *bar = [[TitleBar alloc] initWithHeader:header compact:narrow];
-    _backRect = [bar addBack:L10n(@"controls.back") accent:UIAmber];
-    [bar setTitle:L10n(@"controls.title") kicker:L10n(@"controls.kicker")];
-    [self addChild:bar];
+    __weak ControlsPanel *owner = self;
+    UIBarAction *back = [UIBarAction title:L10n(@"controls.back") accent:UIAmber handler:^{
+        ControlsPanel *screen = owner; if (screen) screen->_backRequested = YES;
+    }];
+    _bar = [[TitleBar alloc] initWithHeader:header compact:narrow back:back
+        title:L10n(@"controls.title") kicker:L10n(@"controls.kicker") actions:@[]];
+    _backRect = [_bar rectForAction:back];
+    [self addChild:_bar];
     _scrollRect = RectFromEdges(x, CGRectGetMinY(_bounds) + 24, x + width, CGRectGetMinY(header) - 12);
     [self label:L10n(@"controls.scroll_hint") at:CGPointMake(x, CGRectGetMinY(_bounds) + 16)
-           size:11 color:UIInk parent:self];
+           size:14 color:UIInk parent:self];
     SKCropNode *crop = [SKCropNode node];
     crop.maskNode = [SKShapeNode shapeNodeWithRect:_scrollRect];
     ((SKShapeNode *)crop.maskNode).fillColor = SKColor.whiteColor;
@@ -85,11 +95,8 @@
     CGFloat y = -_form.height;
     y -= 18;
     y -= [self paragraph:L10n(@"controls.bindings") y:y width:width];
-#if TARGET_OS_IOS
-    NSArray *actions = L10nList(@"controls.touch.actions"), *keys = L10nList(@"controls.touch.keys");
-#else
-    NSArray *actions = L10nList(@"controls.desktop.actions"), *keys = L10nList(@"controls.desktop.keys");
-#endif
+    NSArray *actions = L10nList(self.touchNavigationEnabled ? @"controls.touch.actions" : @"controls.desktop.actions");
+    NSArray *keys = L10nList(self.touchNavigationEnabled ? @"controls.touch.keys" : @"controls.desktop.keys");
     for (NSUInteger i = 0; i < MIN(actions.count, keys.count); i++) {
         [self label:actions[i] at:CGPointMake(0, y) size:13 color:UIMenuTitle parent:_body];
         if (narrow) {
@@ -102,7 +109,7 @@
         }
     }
     y -= 10;
-    y -= [self paragraph:L10n(TARGET_OS_IOS ? @"controls.touch_tip" : @"controls.trackball_tip") y:y width:width - 12];
+    y -= [self paragraph:L10n(self.touchNavigationEnabled ? @"controls.touch_tip" : @"controls.trackball_tip") y:y width:width - 12];
     _contentHeight = -y;
     [self setOffset:_scrollOffset];
 }
@@ -131,7 +138,8 @@
     if (actions & InputActionBack) { _hasClick = NO; return YES; }
     if (_hasClick) {
         _hasClick = NO;
-        if (CGRectContainsPoint(_backRect, _click)) return YES;
+        [_bar activateAt:_click];
+        if (_backRequested) { _backRequested = NO; return YES; }
         if (CGRectContainsPoint(_scrollRect, _click)) {
             CGPoint point = PointSub(_click, _body.position);
             if ([_form clickAt:point]) [self refreshSettings];

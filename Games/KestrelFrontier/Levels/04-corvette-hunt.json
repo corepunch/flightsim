@@ -36,13 +36,13 @@
     }
   ],
   "objectives": [
-    { "id": "kill", "type": "destroy", "targets": ["corvette"], "text": "Destroy Corvette Vesk" },
+    { "id": "kill", "type": "destroy", "targets": ["corvette"], "text": "{#mission.objective.corvette_hunt.kill}" },
     {
       "id": "escorts",
       "type": "destroy",
       "targets": ["escorts"],
       "optional": true,
-      "text": "Destroy Vesk's Wasp escorts"
+      "text": "{#mission.objective.corvette_hunt.escorts}"
     }
   ],
   "events": [
@@ -51,14 +51,14 @@
       "when": { "time": 3 },
       "do": [
         {
-          "radio": { "from": "Bastion Control", "text": "Select Vesk. Close to 1.5 km before launching torpedoes." }
+          "radio": { "from": "Bastion Control", "text": "{#radio.mission.corvette_hunt.line_1}" }
         }
       ]
     },
     {
       "when": { "objective": "kill" },
       "do": [
-        { "radio": {"from": "Bastion Control", "text": "Corvette destroyed! The belt is ours again."} }
+        { "radio": {"from": "Bastion Control", "text": "{#radio.mission.corvette_hunt.line_2}"} }
       ]
     }
   ]

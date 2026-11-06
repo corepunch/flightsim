@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / 비행대",
+    "loading.mission_kicker": "EMBER REACH / 임무 %02lu",
+    "browser.kicker": "EMBER REACH / 멀티플레이",
+    "controls.kicker": "EMBER REACH / 비행 설명서",
+    "menu.unit": "HEARTH / KITE / 비행대",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / 순찰정",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / 비행 관제",
+    "briefing.orders_line": "명령이 화면에 표시되어 있습니다.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "무장: 쌍열 절단기, 어뢰 %d발",
+    "briefing.loadout_many": "무장: 쌍열 절단기, 어뢰 %d발",
+    "combat.no_secondary": "어뢰 없음",
+    "combat.out_of_range": "표적이 어뢰 사거리 밖에 있음",
+    "mission.objective.ash_patrol.patrol": "NAV 1, 2, 3을 순서대로 순찰",
+    "mission.objective.ash_patrol.raiders": "Jackal 약탈기 3기 파괴",
+    "mission.objective.ash_patrol.rtb": "Hearth Station으로 귀환",
+    "mission.objective.ore_convoy.protect": "Cinder 보호",
+    "mission.objective.ore_convoy.escort": "Cinder를 Reach Relay까지 호위",
+    "mission.objective.ore_convoy.raiders": "화물선을 공격하는 약탈기 파괴",
+    "game.weapon.torpedo": "어뢰",
+    "game.weapon.torpedo_short": "어뢰",
+    "radio.mission.ash_patrol.line_1": "신호를 순서대로 지나가, Kite 1. 하나씩 기록해.",
+    "radio.mission.ash_patrol.line_2": "잿구름 근처에 Jackal 3기. 교전하라.",
+    "radio.mission.ash_patrol.line_3": "레이더 이상 없음. 돌아와, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder 출발, 광석 봉인 완료. 가까이 있어, 민병대.",
+    "radio.mission.ore_convoy.line_2": "두 번째 약탈대가 항로를 가로질러 화물선으로 간다!",
+    "radio.mission.ore_convoy.line_3": "중계소 잠금 완료. 광석은 안전해. Cinderfall에서 내가 한잔 사지."
+  }
+}

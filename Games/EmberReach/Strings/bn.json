@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / উড়ান দল",
+    "loading.mission_kicker": "EMBER REACH / মিশন %02lu",
+    "browser.kicker": "EMBER REACH / একাধিক খেলোয়াড়",
+    "controls.kicker": "EMBER REACH / উড়ানের নির্দেশিকা",
+    "menu.unit": "HEARTH / KITE / উড়ান দল",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / টহলযান",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / উড়ান নিয়ন্ত্রণ",
+    "briefing.orders_line": "আপনার নির্দেশ বোর্ডে রয়েছে।",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "অস্ত্রসজ্জা: জোড়া কাটার, %d টর্পেডো",
+    "briefing.loadout_many": "অস্ত্রসজ্জা: জোড়া কাটার, %d টর্পেডো",
+    "combat.no_secondary": "টর্পেডো শেষ",
+    "combat.out_of_range": "লক্ষ্য টর্পেডোর পাল্লার বাইরে",
+    "mission.objective.ash_patrol.patrol": "NAV 1, 2, 3-এ ক্রমানুসারে টহল দিন",
+    "mission.objective.ash_patrol.raiders": "3টি Jackal আক্রমণকারী ধ্বংস করুন",
+    "mission.objective.ash_patrol.rtb": "Hearth Station-এ ফিরুন",
+    "mission.objective.ore_convoy.protect": "Cinder রক্ষা করুন",
+    "mission.objective.ore_convoy.escort": "Cinder-কে Reach Relay পর্যন্ত পাহারা দিন",
+    "mission.objective.ore_convoy.raiders": "মালবাহী জাহাজে হামলাকারীদের ধ্বংস করুন",
+    "game.weapon.torpedo": "টর্পেডো",
+    "game.weapon.torpedo_short": "টর্পেডো",
+    "radio.mission.ash_patrol.line_1": "সংকেতগুলো ক্রমানুসারে পার হও, Kite 1। প্রতিটি নথিভুক্ত করো।",
+    "radio.mission.ash_patrol.line_2": "ছাইয়ের মেঘের পাশে তিনটি Jackal। আক্রমণ করো।",
+    "radio.mission.ash_patrol.line_3": "রাডার পরিষ্কার। বাড়ি ফেরো, Kite।",
+    "radio.mission.ore_convoy.line_1": "Cinder রওনা হয়েছে, আকরিক সিল করা। কাছে থাকো, মিলিশিয়া।",
+    "radio.mission.ore_convoy.line_2": "দ্বিতীয় আক্রমণকারী দল মালবাহী জাহাজের দিকে পথ কাটছে!",
+    "radio.mission.ore_convoy.line_3": "রিলে লক। আকরিক নিরাপদ। Cinderfall-এ পানীয় আমার তরফ থেকে।"
+  }
+}

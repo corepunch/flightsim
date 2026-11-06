@@ -1,5 +1,5 @@
 {
-  "className": "Tanker",
+  "className": "{#game.class.tanker}",
   "hp": 22,
   "style": "civil"
 }

@@ -12,6 +12,8 @@
     CGPoint _click;
     CGSize _laidOut;
     ScreenInsets _usedInsets;
+    TitleBar *_bar;
+    InputAction _barInput;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -44,6 +46,7 @@
     label.preferredMaxLayoutWidth = MAX(1, width);
     label.lineBreakMode = NSLineBreakByTruncatingTail;
     label.position = point;
+    UIFitControlLabel(label, width);
     [_root addChild:label];
 }
 
@@ -51,15 +54,22 @@
     [_root removeAllChildren]; [_hover reset];
     _laidOut = self.size; _usedInsets = self.contentInsets;
     [_root addChild:[self motionBackdropWithSize:self.size]];
-    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets, 36);
-    TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact];
-    _backRect = [bar addBack:L10n(@"browser.back") accent:UIInk];
+    BOOL compact = ScreenRegionsMake(self.size, self.contentInsets, 0).compact;
+    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets, [UIInfoBar heightCompact:compact]);
     BOOL enabled = _stage == LANGameSetup || (_stage == LANGameLobby && _lines.count >= 2) || (_stage == LANGameResults && _hosting);
     NSString *action = L10n(_stage == LANGameSetup ? @"browser.create" : _stage == LANGameLobby ? @"browser.start" : @"browser.again");
-    _confirmRect = enabled ? [bar addAction:action accent:UIAmber minWidth:130] : CGRectZero;
-    [bar setTitle:L10n(_stage == LANGameSetup ? @"browser.setup" : _stage == LANGameLobby ? @"browser.lobby" : @"browser.results")
-           kicker:L10n(@"browser.kicker")];
-    [_root addChild:bar]; [bar registerHover:_hover];
+    __weak LANGame *owner = self;
+    UIBarAction *back = [UIBarAction title:L10n(@"browser.back") accent:UIInk handler:^{
+        LANGame *screen = owner; if (screen) screen->_barInput |= InputActionBack;
+    }];
+    UIBarAction *confirm = [UIBarAction title:action accent:UIAmber handler:^{
+        LANGame *screen = owner; if (screen) screen->_barInput |= InputActionConfirm;
+    }];
+    _bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact back:back
+        title:L10n(_stage == LANGameSetup ? @"browser.setup" : _stage == LANGameLobby ? @"browser.lobby" : @"browser.results")
+        kicker:L10n(@"browser.kicker") actions:enabled ? @[confirm] : @[]];
+    _backRect = [_bar rectForAction:back]; _confirmRect = [_bar rectForAction:confirm];
+    [_root addChild:_bar]; [_bar registerHover:_hover];
     _bodyRect = regions.body;
     CGFloat width = CGRectGetWidth(_bodyRect), x = CGRectGetMinX(_bodyRect), top = CGRectGetMaxY(_bodyRect);
     [self addLine:L10n(@"browser.dogfight") at:CGPointMake(x, top) width:width size:regions.compact ? 18 : 26 accent:YES];
@@ -78,8 +88,7 @@
                     width:columnWidth - 12 size:regions.compact ? 14 : 18 accent:i == 0];
     }
     NSString *help = L10n(_stage == LANGameLobby ? (_lines.count < 2 ? @"browser.waiting" : @"browser.ready") : @"browser.wifi");
-    [self addLine:help at:CGPointMake(CGRectGetMinX(regions.footer), CGRectGetMaxY(regions.footer))
-            width:CGRectGetWidth(regions.footer) size:12 accent:NO];
+    [_root addChild:[[UIInfoBar alloc] initWithRegion:regions.footer compact:regions.compact console:NO info:help action:nil]];
 }
 
 - (SKNode *)motionBackdropWithSize:(CGSize)size {
@@ -98,8 +107,7 @@
     [_hover updateInScene:self];
     if (_clicked) {
         CGPoint at = CGPointMake(_click.x * self.size.width, _click.y * self.size.height); _clicked = NO;
-        if (CGRectContainsPoint(_backRect, at)) actions |= InputActionBack;
-        if (!CGRectIsEmpty(_confirmRect) && CGRectContainsPoint(_confirmRect, at)) actions |= InputActionConfirm;
+        _barInput = 0; [_bar activateAt:at]; actions |= _barInput;
     }
     if (actions & InputActionBack) { [[GameAudio shared] play:@"ui-back"]; return LANGameCommandBack; }
     if ((actions & InputActionConfirm) && !CGRectIsEmpty(_confirmRect)) {

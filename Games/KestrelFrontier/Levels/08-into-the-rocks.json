@@ -55,20 +55,20 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["halcyon"], "text": "Protect Survey Ship Halcyon" },
+    { "id": "protect", "type": "protect", "targets": ["halcyon"], "text": "{#mission.objective.into_the_rocks.protect}" },
     {
       "id": "escort",
       "type": "escort",
       "targets": ["halcyon"],
       "navs": ["survey"],
-      "text": "Escort Halcyon to SURVEY POINT"
+      "text": "{#mission.objective.into_the_rocks.escort}"
     },
     {
       "id": "survey",
       "type": "survive",
       "seconds": 40,
       "after": ["escort"],
-      "text": "Cover Halcyon's 40-second scan"
+      "text": "{#mission.objective.into_the_rocks.survey}"
     }
   ],
   "events": [
@@ -79,20 +79,20 @@
       "when": { "time": 3 },
       "do": [
         {
-          "radio": { "from": "Halcyon", "text": "Entering the field. Please keep the rocks and the corsairs off us." }
+          "radio": { "from": "Halcyon", "text": "{#radio.mission.into_the_rocks.line_1}" }
         }
       ]
     },
     {
       "when": { "objective": "escort" },
       "do": [
-        { "radio": {"from": "Halcyon", "text": "On station. Starting deep scan."} }
+        { "radio": {"from": "Halcyon", "text": "{#radio.mission.into_the_rocks.line_2}"} }
       ]
     },
     {
       "when": { "objective": "survey" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "That is a shipyard. A Skarn shipyard, inside our space."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.into_the_rocks.line_3}"} }
       ]
     }
   ]

@@ -26,6 +26,10 @@ for directory in Audio Fonts Shaders Particles Strings UI; do
         cp -cR "Resources/$directory" "$destination/"
     fi
 done
+for localized in Resources/Localizations/*.lproj(N/); do
+    mkdir -p "$destination/${localized:t}"
+    rsync -a --delete "$localized/" "$destination/${localized:t}/"
+done
 cp -p CREDITS.md "$destination/"
 
 # Each game's folder, as Games/<name>/ (Sources/Shared/Shared.h): its data,

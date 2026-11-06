@@ -1,5 +1,5 @@
 {
-  "className": "Prison Barge",
+  "className": "{#game.class.prison_barge}",
   "hp": 40,
   "style": "skarn"
 }

@@ -100,7 +100,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     // removed in the next frame update, where screens change their node trees.
     NSMutableArray<SKNode *> *_retiredCovers;
 
-    Cvar *_testInput, *_cockpit, *_autoStart;
+    Cvar *_testInput, *_testFire, *_cockpit, *_autoStart;
 
 #if TARGET_OS_OSX
     NSMutableArray<NSString *> *_screenshotPaths;   // render thread: waiting for a readable frame
@@ -195,6 +195,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (void)registerConsole {
     _testInput = [Cvar get:@"cl_testInput" defaultValue:@"0" flags:CVAR_CHEAT
                       help:@"A pilot who weaves and fires, for testing prediction"];
+    _testFire = [Cvar get:@"cl_testFire" defaultValue:@"0" flags:CVAR_CHEAT help:@"Hold the trigger (test drives)"];
     _cockpit = [Cvar get:@"cl_cockpit" defaultValue:@"0" flags:CVAR_ARCHIVE help:@"Fly from the cockpit instead of the chase camera"];
     _autoStart = [Cvar get:@"cl_autoStart" defaultValue:@"0" flags:0 help:@"Skip the loading card's start prompt (scripted runs)"];
     __weak Host *weak = self;
@@ -686,7 +687,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     _precaching = NO;
     [_clientView attachMission];
 #if TARGET_OS_IOS
-    if ([_view isKindOfClass:GameView.class]) [(GameView *)_view setSecondaryLabel:_client.configStrings[CS_SECONDARY_SHORT]];
+    if ([_view isKindOfClass:GameView.class]) [(GameView *)_view setSecondaryLabel:L10nExpand(_client.configStrings[CS_SECONDARY_SHORT])];
 #endif
     [_client begin];
     if (!self.deathmatch) [_frontEnd levelStarted:_missionIndex remote:self.remote];
@@ -830,6 +831,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
         controls.boost = fmodf(t, 9) > 7;
         controls.fire = fmodf(t, 3) > 1.5f;
     }
+    if (_testFire.boolValue) controls.fire = YES;
     [_client readPackets];
     if (_state != HostStateFlying) {
         // Keep both ends of the connection alive while nothing is flown.

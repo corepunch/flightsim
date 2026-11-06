@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / PHI ĐỘI",
+    "loading.mission_kicker": "EMBER REACH / NHIỆM VỤ %02lu",
+    "browser.kicker": "EMBER REACH / NHIỀU NGƯỜI CHƠI",
+    "controls.kicker": "EMBER REACH / SỔ TAY BAY",
+    "menu.unit": "HEARTH / KITE / PHI ĐỘI",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / TÀU TUẦN TRA",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Kiểm soát bay",
+    "briefing.orders_line": "Mệnh lệnh của bạn ở trên bảng.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Trang bị: máy cắt đôi, %d ngư lôi",
+    "briefing.loadout_many": "Trang bị: máy cắt đôi, %d ngư lôi",
+    "combat.no_secondary": "Đã hết ngư lôi",
+    "combat.out_of_range": "Mục tiêu ngoài tầm ngư lôi",
+    "mission.objective.ash_patrol.patrol": "Tuần tra NAV 1, 2, 3 theo thứ tự",
+    "mission.objective.ash_patrol.raiders": "Phá hủy 3 tàu đột kích Jackal",
+    "mission.objective.ash_patrol.rtb": "Trở về Hearth Station",
+    "mission.objective.ore_convoy.protect": "Bảo vệ Cinder",
+    "mission.objective.ore_convoy.escort": "Hộ tống Cinder đến Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Phá hủy các tàu đột kích đang bắn tàu hàng",
+    "game.weapon.torpedo": "NGƯ LÔI",
+    "game.weapon.torpedo_short": "NGƯ LÔI",
+    "radio.mission.ash_patrol.line_1": "Bay qua các tín hiệu theo thứ tự, Kite 1. Ghi nhận từng mốc.",
+    "radio.mission.ash_patrol.line_2": "Ba Jackal ngoài đám mây tro. Giao chiến.",
+    "radio.mission.ash_patrol.line_3": "Radar an toàn. Về nhà thôi, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder đang đi, quặng đã niêm phong. Ở gần nhé, dân quân.",
+    "radio.mission.ore_convoy.line_2": "Nhóm đột kích thứ hai đang cắt ngang đường tới tàu hàng!",
+    "radio.mission.ore_convoy.line_3": "Đã khóa trạm tiếp sóng. Quặng an toàn. Tôi mời chầu ở Cinderfall."
+  }
+}

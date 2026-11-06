@@ -60,38 +60,38 @@
     }
   ],
   "objectives": [
-    { "id": "platforms", "type": "destroy", "targets": ["platforms"], "text": "Hit all 3 platform cores" },
+    { "id": "platforms", "type": "destroy", "targets": ["platforms"], "text": "{#mission.objective.teeth_of_the_line.platforms}" },
     {
       "id": "carrier",
       "type": "destroy",
       "targets": ["carrier"],
       "optional": true,
-      "text": "Sink Carrier Dagger to stop the Wasp launches"
+      "text": "{#mission.objective.teeth_of_the_line.carrier}"
     }
   ],
   "events": [
     {
       "when": { "spawned": "patrol" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Carrier Dagger is launching Wasps from behind the platforms. Sink her and the patrols stop coming."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.teeth_of_the_line.line_1}"} }
       ]
     },
     {
       "when": { "objective": "carrier" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Dagger is gone. No more launches."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.teeth_of_the_line.line_2}"} }
       ]
     },
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Platforms ahead. Cores, Lancer, aim for the cores."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.teeth_of_the_line.line_3}"} }
       ]
     },
     {
       "when": { "objective": "platforms" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "The way into Corvid is open."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.teeth_of_the_line.line_4}"} }
       ]
     }
   ]

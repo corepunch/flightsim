@@ -1,5 +1,5 @@
 {
-  "className": "Orbital Station",
+  "className": "{#game.class.orbital_station}",
   "hp": 90,
   "style": "concord"
 }

@@ -1,5 +1,5 @@
 {
-  "className": "Mine",
+  "className": "{#game.class.mine}",
   "hp": 0.15,
   "style": "skarn",
   "prop": true,

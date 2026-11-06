@@ -1,5 +1,5 @@
 {
-  "className": "Comm Relay",
+  "className": "{#game.class.comm_relay}",
   "hp": 30,
   "style": "concord"
 }

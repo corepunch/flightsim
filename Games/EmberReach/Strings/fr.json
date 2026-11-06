@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / ESCADRILLE",
+    "loading.mission_kicker": "EMBER REACH / MISSION %02lu",
+    "browser.kicker": "EMBER REACH / MULTIJOUEUR",
+    "controls.kicker": "EMBER REACH / MANUEL DE VOL",
+    "menu.unit": "HEARTH / KITE / ESCADRILLE",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / PATROUILLEUR",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Contrôle de vol",
+    "briefing.orders_line": "Vos ordres sont affichés au tableau.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Armement : découpeurs jumelés, %d torpille",
+    "briefing.loadout_many": "Armement : découpeurs jumelés, %d torpilles",
+    "combat.no_secondary": "Plus de torpilles",
+    "combat.out_of_range": "Cible hors de portée des torpilles",
+    "mission.objective.ash_patrol.patrol": "Patrouiller NAV 1, 2, 3 dans l'ordre",
+    "mission.objective.ash_patrol.raiders": "Détruire 3 pillards Jackal",
+    "mission.objective.ash_patrol.rtb": "Retourner à Hearth Station",
+    "mission.objective.ore_convoy.protect": "Protéger le Cinder",
+    "mission.objective.ore_convoy.escort": "Escorter le Cinder jusqu'à Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Détruire les pillards attaquant le cargo",
+    "game.weapon.torpedo": "TORPILLE",
+    "game.weapon.torpedo_short": "TORP",
+    "radio.mission.ash_patrol.line_1": "Passe les balises dans l'ordre, Kite 1. Enregistre chacune.",
+    "radio.mission.ash_patrol.line_2": "Trois Jackal près du nuage de cendres. Engagez.",
+    "radio.mission.ash_patrol.line_3": "Radar dégagé. Rentre, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder en route, minerai scellé. Restez près de nous, milice.",
+    "radio.mission.ore_convoy.line_2": "Deuxième groupe de pillards, ils traversent la voie vers le cargo !",
+    "radio.mission.ore_convoy.line_3": "Verrouillage du relais. Le minerai est sauf. Je paie les verres à Cinderfall."
+  }
+}

@@ -52,14 +52,14 @@
       "type": "reach",
       "navs": ["scanA", "scanB", "scanC"],
       "range": 200,
-      "text": "Pass SENSOR A/B/C (200 m)"
+      "text": "{#mission.objective.shipyard_recon.recon}"
     },
     {
       "id": "exit",
       "type": "reach",
       "navs": ["exit"],
       "after": ["recon"],
-      "text": "Fly to EXIT after the scan"
+      "text": "{#mission.objective.shipyard_recon.exit}"
     }
   ],
   "events": [
@@ -68,19 +68,19 @@
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Fly within 200 metres of A, B, then C. Keep moving."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.shipyard_recon.line_1}"} }
       ]
     },
     {
       "when": { "nav": "scanA" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "You have been spotted! Keep going!"} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.shipyard_recon.line_2}"} }
       ]
     },
     {
       "when": { "objective": "recon" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Got it all. That hull is a dreadnought. Get out of there!"} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.shipyard_recon.line_3}"} }
       ]
     }
   ]

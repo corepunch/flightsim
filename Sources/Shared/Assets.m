@@ -188,6 +188,7 @@ const CapitalDef *CapitalDefNamed(NSString *asset) {
         c->invulnerable = [d[@"invulnerable"] boolValue];
         c->prop = [d[@"prop"] boolValue];
         c->mine = [d[@"mine"] boolValue];
+        c->asteroid = JSONBool(d, @"asteroid", false);
         return c;
     });
 }

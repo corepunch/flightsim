@@ -68,13 +68,13 @@
     }
   ],
   "objectives": [
-    { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "Keep the Cinder intact" },
+    { "id": "protect", "type": "protect", "targets": ["convoy"], "text": "{#mission.objective.ore_convoy.protect}" },
     {
       "id": "escort",
       "type": "escort",
       "targets": ["convoy"],
       "navs": ["dock"],
-      "text": "Escort the Cinder to Reach Relay",
+      "text": "{#mission.objective.ore_convoy.escort}",
       "depart": true
     },
     {
@@ -82,14 +82,14 @@
       "type": "destroy",
       "targets": ["strike"],
       "optional": true,
-      "text": "Destroy the raiders hitting the hauler"
+      "text": "{#mission.objective.ore_convoy.raiders}"
     }
   ],
   "events": [
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Cinder", "text": "Cinder under way, ore sealed. Stay close, militia."} }
+        { "radio": {"from": "Cinder", "text": "{#radio.mission.ore_convoy.line_1}"} }
       ]
     },
     { "when": {"time": 20}, "do": [{"spawn": "pickets"}] },
@@ -97,13 +97,13 @@
     {
       "when": { "spawned": "strike" },
       "do": [
-        { "radio": {"from": "Kite 3", "text": "Second raider group, cutting across the lane for the hauler!"} }
+        { "radio": {"from": "Kite 3", "text": "{#radio.mission.ore_convoy.line_2}"} }
       ]
     },
     {
       "when": { "objective": "escort" },
       "do": [
-        { "radio": {"from": "Cinder", "text": "Relay lock. Ore's safe. Drinks in Cinderfall are on me."} }
+        { "radio": {"from": "Cinder", "text": "{#radio.mission.ore_convoy.line_3}"} }
       ]
     }
   ]

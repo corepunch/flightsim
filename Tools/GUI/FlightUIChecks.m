@@ -212,6 +212,13 @@ static int CheckHUD(void) {
         CHECK(CGRectContainsRect(safe, hud.helpRect));
         Save(hud, [prefix stringByAppendingString:@"-help.png"]);
         [hud toggleHelp]; CHECK(!hud.helpVisible);
+        [hud setObjectives:@[@"Patrol the relay", @"Keep the convoy intact", @"Scan the freighter", @"Return to base"] states:@[@0,@1,@2,@3]];
+        [hud showMessage:@"Convoy approaching the relay." from:@"OKAFOR"];
+        [hud updateFrame:frame targets:NULL count:0];
+        CHECK(!CGRectIntersectsRect(hud.objectivesRect, hud.messagesRect));
+        frame.respawning = NO;
+        [hud updateFrame:frame targets:NULL count:0];
+        CHECK(!CGRectIntersectsRect(hud.objectivesRect, hud.messagesRect));
         instrument.target = 0;
     }
     return 0;
@@ -244,7 +251,9 @@ static int CheckGrid(void) {
     CHECK(ProgressBestStars(0) == 3);
     ProgressRecordResult(0, @[@"+ Patrol", @"- Escort"]);
     CHECK(ProgressBestStars(0) == 3);
-    for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {
+    for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(568,320)], [NSValue valueWithSize:NSMakeSize(667,375)],
+                           [NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(932,430)],
+                           [NSValue valueWithSize:NSMakeSize(430,932)]]) {
         Briefing *grid = [[Briefing alloc] initWithSize:size.sizeValue];
         if (grid.size.width < 1000) grid.contentInsets = NSEdgeInsetsMake(0,59,21,59);
         [grid showListSelecting:0]; [grid tick:0];
@@ -274,6 +283,58 @@ static int CheckGrid(void) {
     [Cvar set:@"ui_reduceMotion" value:@""];
     return 0;
 }
+static int CheckMultilineButtons(void) {
+    NSArray<NSString *> *titles = @[@"SOUND: MUSIC + EFFECTS", L10n(@"pause.restart_host_only")];
+    for (NSUInteger t = 0; t < titles.count; t++) for (NSUInteger disabled = 0; disabled < 2; disabled++) {
+        CGSize size = CGSizeMake(256, 72);
+        CGRect rect = CGRectMake(12, 12, 232, 48);
+        SKScene *scene = [SKScene sceneWithSize:size]; scene.backgroundColor = SKColor.blackColor;
+        SKShapeNode *button = UIActionButtonWithLines(rect, titles[t], UIAmber, 17, 2);
+        button.alpha = disabled ? .35 : 1;
+        [scene addChild:button];
+        SKLabelNode *label = (SKLabelNode *)button.children.firstObject;
+        CHECK([(label.attributedText.string ?: label.text) isEqualToString:titles[t]]);
+        SKView *view = [[SKView alloc] initWithFrame:RectWithSize(size)];
+        [view presentScene:scene];
+        SKTexture *texture = [view textureFromNode:scene crop:RectWithSize(size)];
+        CHECK(texture.CGImage);
+        NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithCGImage:texture.CGImage];
+        CGFloat scale = bitmap.pixelsWide / size.width;
+        // Inspect rendered mint glyphs, excluding the plate and amber border.
+        // Whole-label bounds can be centred while short lines remain left-aligned.
+        struct { NSInteger left, right; } bands[4];
+        NSUInteger count = 0; BOOL inBand = NO;
+        for (NSInteger y = 16 * scale; y < 56 * scale; y++) {
+            NSInteger left = bitmap.pixelsWide, right = -1;
+            for (NSInteger x = 32 * scale; x < 224 * scale; x++) {
+                NSColor *color = [[bitmap colorAtX:x y:y] colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+                if (color.greenComponent > .18 && color.blueComponent > color.greenComponent * .8 &&
+                    color.greenComponent > color.redComponent * 1.1) { left = MIN(left, x); right = MAX(right, x); }
+            }
+            if (right < 0) { inBand = NO; continue; }
+            if (!inBand) {
+                CHECK(count < 4);
+                bands[count].left = left; bands[count].right = right; count++; inBand = YES;
+            } else {
+                bands[count - 1].left = MIN(bands[count - 1].left, left);
+                bands[count - 1].right = MAX(bands[count - 1].right, right);
+            }
+        }
+        CHECK(count == 2);
+        for (NSUInteger i = 0; i < count; i++) {
+            CGFloat center = (bands[i].left + bands[i].right + 1) / (2 * scale);
+            if (fabs(center - CGRectGetMidX(rect)) >= 1)
+                fprintf(stderr, "Button line %lu of '%s' centres at %.2f, expected %.2f\n",
+                    (unsigned long)i, titles[t].UTF8String, center, CGRectGetMidX(rect));
+            CHECK(fabs(center - CGRectGetMidX(rect)) < 1);
+        }
+        [[bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}]
+            writeToFile:[Output stringByAppendingPathComponent:[NSString stringWithFormat:@"multiline-button-%lu-%lu.png",
+                (unsigned long)t, (unsigned long)disabled]] atomically:YES];
+    }
+    return 0;
+}
+
 static int CheckPause(void) {
     [FlightControls.shared reset];
     for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(1440,900)], [NSValue valueWithSize:NSMakeSize(932,430)], [NSValue valueWithSize:NSMakeSize(430,932)]]) {
@@ -281,19 +342,15 @@ static int CheckPause(void) {
         [menu showRemote:NO cockpit:NO];
         CHECK([menu handle:InputActionBack] == PauseCommandResume);
         CHECK([menu handle:InputActionConfirm] == PauseCommandResume);
-        // The pause panel includes the engine controls alongside flight actions.
-        {
-            CGSize s = size.sizeValue;
-            CGFloat w = MIN(400, s.width - 48), h = MIN(410, s.height - 24);
-            CGFloat x = (s.width - w) / 2, y = (s.height - h) / 2, row = MIN(44, (h - 82) / 6 - 6);
-            id layout = [menu valueForKey:@"_layout"];
-            NSArray *ids = @[@"resume", @"camera", @"controls", @"sound", @"restart", @"missions"];
-            for (NSUInteger i = 0; i < ids.count; i++) {
-                CGRect got = [(UILayoutResult *)layout frame:[@"items." stringByAppendingString:ids[i]]];
-                CGRect want = CGRectMake(x + 22, y + h - 70 - (i + 1) * (row + 6), w - 44, row);
-                CHECK(fabs(got.origin.x - want.origin.x) < 0.01 && fabs(got.origin.y - want.origin.y) < 0.01 &&
-                      fabs(got.size.width - want.size.width) < 0.01 && fabs(got.size.height - want.size.height) < 0.01);
-            }
+        // Responsive pause controls remain readable, reachable and disjoint.
+        UILayoutResult *layout = menu.layout;
+        NSArray *ids = @[@"resume", @"camera", @"controls", @"sound", @"restart", @"missions"];
+        for (NSUInteger i = 0; i < ids.count; i++) {
+            CGRect rect = [layout frame:[@"items." stringByAppendingString:ids[i]]];
+            CHECK(CGRectContainsRect(RectWithSize(menu.size), rect));
+            CHECK(CGRectGetHeight(rect) >= 44);
+            for (NSUInteger j = 0; j < i; j++)
+                CHECK(!CGRectIntersectsRect(rect, [layout frame:[@"items." stringByAppendingString:ids[j]]]));
         }
         Save(menu, [NSString stringWithFormat:@"pause-%.0fx%.0f.png", menu.size.width,menu.size.height]);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandCamera);
@@ -319,6 +376,16 @@ static int CheckPause(void) {
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandRestart);
         [menu handle:InputActionDown]; CHECK([menu handle:InputActionConfirm] == PauseCommandMissions);
         [menu showRemote:YES cockpit:YES];
+        SKLabelNode *restart = (SKLabelNode *)menu.layout.buttons[@"items.restart"].children.firstObject;
+        NSString *restartText = restart.attributedText.string ?: restart.text;
+        if (![restartText isEqualToString:L10n(@"pause.restart_host_only")])
+            fprintf(stderr, "Pause %.0fx%.0f restart '%s' in %s, label %s\n", menu.size.width, menu.size.height,
+                restartText.UTF8String, NSStringFromRect([menu.layout frame:@"items.restart"]).UTF8String,
+                NSStringFromRect(restart.frame).UTF8String);
+        CHECK([restartText isEqualToString:L10n(@"pause.restart_host_only")]);
+        CGRect restartRect = [menu.layout frame:@"items.restart"];
+        CHECK(CGRectContainsRect(CGRectInset(restartRect, 3, 3), restart.frame));
+        CHECK(fabs(CGRectGetMidY(restartRect) - CGRectGetMidY(restart.frame)) < .5);
         for (int i=0;i<4;i++) [menu handle:InputActionDown];
         CHECK([menu handle:InputActionConfirm] == PauseCommandNone);
     }
@@ -556,6 +623,6 @@ static int CheckSimulation(void) {
 int main(int argc, const char **argv) { @autoreleasepool {
     [NSApplication sharedApplication];
     Output = argc>1 ? @(argv[1]) : @"/tmp";
-    if (CheckFrameOwnership() || CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckSettingLayout() || CheckControls() || CheckFrontEnd() || CheckLANLayouts() || CheckProtocol() || CheckSimulation()) return 1;
+    if (CheckFrameOwnership() || CheckMultilineButtons() || CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckSettingLayout() || CheckControls() || CheckFrontEnd() || CheckLANLayouts() || CheckProtocol() || CheckSimulation()) return 1;
     puts("PASS: flight instruments, mission grid, pause, capacitor and cargo protocol.");
 } return 0; }

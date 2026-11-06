@@ -57,14 +57,14 @@
     }
   ],
   "objectives": [
-    { "id": "ghost", "type": "destroy", "targets": ["ghost"], "text": "Destroy the stealth courier" },
+    { "id": "ghost", "type": "destroy", "targets": ["ghost"], "text": "{#mission.objective.ghost.ghost}" },
     {
       "id": "buoys",
       "type": "reach",
       "navs": ["b1", "b2", "b3"],
       "optional": true,
       "range": 250,
-      "text": "Search BUOY 1, 2, 3 in order"
+      "text": "{#mission.objective.ghost.buoys}"
     }
   ],
   "events": [
@@ -72,26 +72,26 @@
       "when": { "time": 3 },
       "do": [
         {
-          "radio": { "from": "Okafor", "text": "Sweep the buoys. The courier only shows up inside 700 metres." }
+          "radio": { "from": "Okafor", "text": "{#radio.mission.ghost.line_1}" }
         }
       ]
     },
     {
       "when": { "time": 300 },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Three minutes, Lancer. Then the courier jumps out to the Hammer."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.ghost.line_2}"} }
       ]
     },
     {
       "when": { "spawned": "aces" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Two more Wasps, flying like aces. The Strix pair came in on the escorts' call."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.ghost.line_3}"} }
       ]
     },
     {
       "when": { "objective": "ghost" },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Got it. Korr has lost her remote trigger."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.ghost.line_4}"} }
       ]
     }
   ]

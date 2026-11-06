@@ -1,5 +1,5 @@
 {
-  "displayName": "Marine Lighter",
+  "displayName": "{#game.class.marine_lighter}",
   "mesh": "Insurgent",
   "texture": "Insurgent_Blue",
   "radius": 4.5,

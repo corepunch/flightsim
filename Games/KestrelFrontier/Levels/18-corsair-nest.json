@@ -81,21 +81,21 @@
       "type": "disable",
       "targets": ["nest"],
       "kind": "Shield",
-      "text": "Destroy both shield generators"
+      "text": "{#mission.objective.corsair_nest.shields}"
     },
     {
       "id": "nest",
       "type": "destroy",
       "targets": ["nest"],
       "after": ["shields"],
-      "text": "Hit the reactor atop the dome"
+      "text": "{#mission.objective.corsair_nest.nest}"
     },
     {
       "id": "cutters",
       "type": "destroy",
       "targets": ["cutters"],
       "optional": true,
-      "text": "Destroy cutters Grist and Maw"
+      "text": "{#mission.objective.corsair_nest.cutters}"
     }
   ],
   "events": [
@@ -104,19 +104,19 @@
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Lancer 2", "text": "Hollow ahead. Hit the shield generators on the surface."} }
+        { "radio": {"from": "Lancer 2", "text": "{#radio.mission.corsair_nest.line_1}"} }
       ]
     },
     {
       "when": { "objective": "shields" },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "Shields are down. Hit the reactor on the dome!"} }
+        { "radio": {"from": "Commander Varn", "text": "{#radio.mission.corsair_nest.line_2}"} }
       ]
     },
     {
       "when": { "objective": "nest" },
       "do": [
-        { "radio": {"from": "Commander Varn", "text": "Hollow is gone. The Skarn just lost their friends."} }
+        { "radio": {"from": "Commander Varn", "text": "{#radio.mission.corsair_nest.line_3}"} }
       ]
     }
   ]

@@ -55,6 +55,7 @@ static SKShader *MenuArtShader(void) {
 
 - (instancetype)initWithSize:(CGSize)size {
     if ((self = [super initWithSize:size])) {
+        _touchNavigationEnabled = TARGET_OS_IOS;
         self.scaleMode = SKSceneScaleModeResizeFill;
         // The backdrop is a sprite rather than the scene colour so the menu
         // can fade as a whole over whatever is behind it.
@@ -98,7 +99,13 @@ static SKShader *MenuArtShader(void) {
 
 - (void)loadLayout {
     _layout = [UILayout named:@"main"] ?: _layout;
-    _items = _layout.items ?: @[];
+    _items = [_layout itemsForTouch:self.touchNavigationEnabled] ?: @[];
+}
+
+- (void)setTouchNavigationEnabled:(BOOL)enabled {
+    if (_touchNavigationEnabled == enabled) return;
+    _touchNavigationEnabled = enabled;
+    [self rebuild];
 }
 
 // A size from main.json; the fallback when the file is missing.
@@ -181,6 +188,7 @@ static SKShader *MenuArtShader(void) {
 
 - (void)drawControlsIn:(CGRect)bounds {
     if (!_controlsPanel) _controlsPanel = [ControlsPanel new];
+    _controlsPanel.touchNavigationEnabled = self.touchNavigationEnabled;
     [_controlsPanel layoutIn:bounds sceneSize:self.size];
     [_root addChild:_controlsPanel];
 }
@@ -304,7 +312,7 @@ static SKShader *MenuArtShader(void) {
                                selected:i == _selected compact:compact labels:_rowLabels[i]];
     }
     if (!compact) {
-        [_footerLabels addObject:[self label:L10n(TARGET_OS_IOS ? @"menu.footer_touch" : @"menu.footer") size:[self metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
+        [_footerLabels addObject:[self label:L10n(self.touchNavigationEnabled ? @"menu.footer_touch" : @"menu.footer") size:[self metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
                                            x:left y:bottom]];
         SKLabelNode *caption = [self label:L10n(@"menu.caption") size:[self metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
                                         x:self.size.width - _usedInsets.right - margin y:bottom];

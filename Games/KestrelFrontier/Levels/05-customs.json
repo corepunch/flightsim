@@ -8,7 +8,7 @@
     {
       "id": "c1",
       "asset": "Container",
-      "cargo": "Civilian supplies",
+      "cargo": "{#game.cargo.civilian_supplies}",
       "team": "neutral",
       "name": "Container 1",
       "pos": [-120, 10, -1400],
@@ -18,7 +18,7 @@
     {
       "id": "c2",
       "asset": "Container",
-      "cargo": "Civilian supplies",
+      "cargo": "{#game.cargo.civilian_supplies}",
       "team": "neutral",
       "name": "Container 2",
       "pos": [60, -30, -1520],
@@ -28,7 +28,7 @@
     {
       "id": "c3",
       "asset": "Container",
-      "cargo": "Skarn munitions",
+      "cargo": "{#game.cargo.skarn_munitions}",
       "team": "neutral",
       "name": "Container 3",
       "pos": [200, 40, -1650],
@@ -38,7 +38,7 @@
     {
       "id": "c4",
       "asset": "Container",
-      "cargo": "Civilian supplies",
+      "cargo": "{#game.cargo.civilian_supplies}",
       "team": "neutral",
       "name": "Container 4",
       "pos": [-40, 80, -1780],
@@ -48,7 +48,7 @@
     {
       "id": "c5",
       "asset": "Container",
-      "cargo": "Skarn munitions",
+      "cargo": "{#game.cargo.skarn_munitions}",
       "team": "neutral",
       "name": "Container 5",
       "pos": [-220, -60, -1700],
@@ -58,7 +58,7 @@
     {
       "id": "c6",
       "asset": "Container",
-      "cargo": "Civilian supplies",
+      "cargo": "{#game.cargo.civilian_supplies}",
       "team": "neutral",
       "name": "Container 6",
       "pos": [110, 120, -1900],
@@ -97,21 +97,21 @@
       "type": "scan",
       "targets": ["containers"],
       "range": 60,
-      "text": "Scan 6 containers (60 m, 2 s)"
+      "text": "{#mission.objective.customs.scan}"
     },
     {
       "id": "contraband",
       "type": "destroy",
       "targets": ["c3", "c5"],
       "after": ["scan"],
-      "text": "Destroy only containers 3 & 5"
+      "text": "{#mission.objective.customs.contraband}"
     },
     {
       "id": "cutter",
       "type": "destroy",
       "targets": ["cutter"],
       "after": ["scan"],
-      "text": "Destroy Corsair Cutter Rask"
+      "text": "{#mission.objective.customs.cutter}"
     }
   ],
   "events": [
@@ -120,7 +120,7 @@
     {
       "when": { "time": 3 },
       "do": [
-        { "radio": {"from": "Okafor", "text": "Fly close for two seconds per scan. Hold fire for now."} }
+        { "radio": {"from": "Okafor", "text": "{#radio.mission.customs.line_1}"} }
       ]
     },
     {
@@ -129,7 +129,7 @@
         {
           "radio": {
             "from": "Okafor",
-            "text": "Containers 3 and 5 are full of Skarn munitions. Burn them. And - incoming cutter!"
+            "text": "{#radio.mission.customs.line_2}"
           }
         }
       ]

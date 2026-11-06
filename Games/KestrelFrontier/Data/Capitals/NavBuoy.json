@@ -1,5 +1,5 @@
 {
-  "className": "Nav Buoy",
+  "className": "{#game.class.nav_buoy}",
   "hp": 1,
   "style": "concord",
   "prop": true

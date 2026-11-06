@@ -1,5 +1,5 @@
 {
-  "className": "Frigate",
+  "className": "{#game.class.frigate}",
   "hp": 30,
   "style": "concord"
 }

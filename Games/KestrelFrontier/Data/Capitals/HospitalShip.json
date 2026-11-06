@@ -1,5 +1,5 @@
 {
-  "className": "Hospital Ship",
+  "className": "{#game.class.hospital_ship}",
   "hp": 28,
   "style": "medical"
 }

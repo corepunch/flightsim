@@ -1,5 +1,5 @@
 {
-  "className": "Destroyer",
+  "className": "{#game.class.destroyer}",
   "hp": 28,
   "style": "skarn"
 }

@@ -1,0 +1,37 @@
+{
+  "strings": {
+    "game.title": "Ember Reach",
+    "game.unit": "HEARTH / KITE / SKUADRON",
+    "loading.mission_kicker": "EMBER REACH / MISI %02lu",
+    "browser.kicker": "EMBER REACH / MULTIPEMAIN",
+    "controls.kicker": "EMBER REACH / PANDUAN PENERBANGAN",
+    "menu.unit": "HEARTH / KITE / SKUADRON",
+    "menu.wordmark": [
+      "EMBER",
+      "REACH"
+    ],
+    "menu.caption": "KITE 01 / KAPAL PATROLI",
+    "missions.kicker": "EMBER REACH  /  HEARTH STATION",
+    "briefing.default_speaker": "HEARTH / Kontrol Penerbangan",
+    "briefing.orders_line": "Perintahmu ada di papan.",
+    "briefing.map_player": "KITE 1",
+    "briefing.loadout_one": "Persenjataan: pemotong kembar, %d torpedo",
+    "briefing.loadout_many": "Persenjataan: pemotong kembar, %d torpedo",
+    "combat.no_secondary": "Torpedo habis",
+    "combat.out_of_range": "Target di luar jangkauan torpedo",
+    "mission.objective.ash_patrol.patrol": "Patroli NAV 1, 2, 3 secara berurutan",
+    "mission.objective.ash_patrol.raiders": "Hancurkan 3 penyerbu Jackal",
+    "mission.objective.ash_patrol.rtb": "Kembali ke Hearth Station",
+    "mission.objective.ore_convoy.protect": "Lindungi Cinder",
+    "mission.objective.ore_convoy.escort": "Kawal Cinder ke Reach Relay",
+    "mission.objective.ore_convoy.raiders": "Hancurkan penyerbu yang menyerang kapal kargo",
+    "game.weapon.torpedo": "TORPEDO",
+    "game.weapon.torpedo_short": "TORP",
+    "radio.mission.ash_patrol.line_1": "Lewati suar secara berurutan, Kite 1. Catat semuanya.",
+    "radio.mission.ash_patrol.line_2": "Tiga Jackal di dekat awan abu. Serang.",
+    "radio.mission.ash_patrol.line_3": "Radar bersih. Pulanglah, Kite.",
+    "radio.mission.ore_convoy.line_1": "Cinder berangkat, bijih tersegel. Tetap dekat, milisi.",
+    "radio.mission.ore_convoy.line_2": "Kelompok penyerbu kedua, melintasi jalur menuju kapal kargo!",
+    "radio.mission.ore_convoy.line_3": "Relai terkunci. Bijih aman. Minuman di Cinderfall kutraktir."
+  }
+}
