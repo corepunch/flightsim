@@ -114,7 +114,7 @@ static BOOL Inside(CGPoint fraction) {
 
 #pragma mark - Layout
 
-- (SKNode *)backdropWithSize:(CGSize)s {
+- (SKNode *)motionBackdropWithSize:(CGSize)s {
     SKNode *backdrop = [SKNode node];
     SKSpriteNode *bg = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBackground, 1) size:s];
     bg.anchorPoint = CGPointZero;
@@ -139,7 +139,7 @@ static BOOL Inside(CGPoint fraction) {
     [_stars removeAllObjects];
     CGSize s = self.size;
     _laidOut = s;
-    [_root addChild:[self backdropWithSize:s]];
+    [_root addChild:[self motionBackdropWithSize:s]];
 
     if (_hangarTexture) {
         SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_hangarTexture];

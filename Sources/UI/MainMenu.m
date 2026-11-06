@@ -263,8 +263,7 @@ static SKShader *MenuArtShader(void) {
         _artNode = nil;
         _sceneryLaidOut = self.size;
         _sceneryPortrait = portrait;
-        SKSpriteNode *backdrop = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIMenuNight, 1) size:self.size];
-        backdrop.anchorPoint = CGPointZero;
+        SKSpriteNode *backdrop = (SKSpriteNode *)[self motionBackdropWithSize:self.size];
         backdrop.zPosition = -2;
         [_scenery addChild:backdrop];
         _backdropNode = backdrop;
@@ -361,8 +360,6 @@ static SKShader *MenuArtShader(void) {
     _boot = NO;
     NSTimeInterval t = 0;
     if (boot) {
-        _backdropNode.alpha = 0;
-        [_backdropNode runAction:[SKAction fadeInWithDuration:0.25]];
         if (_artNode && UIMotionCurrentStyle() != UIMotionStyleNone) {
             // The fade style keeps the art's fade and drops its settle.
             BOOL settle = !UIMotionReduced();
@@ -497,6 +494,13 @@ static SKShader *MenuArtShader(void) {
     _transition = UITransitionIntro;
     [self rebuild];
     _presented = YES;
+}
+
+// The night behind the art; the art resolves out of it as the menu enters.
+- (SKNode *)motionBackdropWithSize:(CGSize)size {
+    SKSpriteNode *backdrop = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIMenuNight, 1) size:size];
+    backdrop.anchorPoint = CGPointZero;
+    return backdrop;
 }
 
 - (NSTimeInterval)motionExit {

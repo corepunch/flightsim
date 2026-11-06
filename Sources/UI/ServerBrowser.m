@@ -88,9 +88,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     // Sizes and spacing from Resources/UI/menus/browser.json.
     UILayout *layout = [UILayout named:@"browser"];
     CGFloat (^M)(NSString *, CGFloat) = ^CGFloat(NSString *name, CGFloat fallback) { return layout ? [layout metric:name flags:nil fallback:fallback] : fallback; };
-    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:M(@"shade", 0.72)] size:s];
-    shade.anchorPoint = CGPointZero;
-    [_root addChild:shade];
+    [_root addChild:[self motionBackdropWithSize:s]];
 
     // Title bar on top, servers in the body, status and notes in the footer.
     ScreenInsets safe = self.contentInsets;
@@ -153,7 +151,6 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
         [notes addObject:l];
     }
     if (!intro) return;
-    UIMotionFlickerIn(shade, 0);
     for (NSUInteger i = 0; i < rows.count; i++) {
         UIMotionSlideIn(rows[i], CGVectorMake(-24, 0), 0.25 + i * 0.04, 0.28);
         UIMotionDecode(rows[i], 0.25 + i * 0.04, 0.35);
@@ -177,6 +174,15 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     _transition = UITransitionIntro;
     _entering = YES;
     [self rebuild];
+}
+
+// The shade over whatever is behind the front end.
+- (SKNode *)motionBackdropWithSize:(CGSize)size {
+    UILayout *layout = [UILayout named:@"browser"];
+    CGFloat opacity = layout ? [layout metric:@"shade" flags:nil fallback:0.72] : 0.72;
+    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[SKColor colorWithWhite:0 alpha:opacity] size:size];
+    shade.anchorPoint = CGPointZero;
+    return shade;
 }
 
 - (NSTimeInterval)motionExit {

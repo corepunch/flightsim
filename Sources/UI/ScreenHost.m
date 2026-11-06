@@ -18,11 +18,12 @@
 
 - (BOOL)changing { return _deadline > 0; }
 
-- (void)present:(SKScene *)next cover:(SKNode *)cover time:(double)now {
+- (void)present:(SKScene *)next time:(double)now {
     if (next == _shown && _deadline == 0) return;
-    if (cover && _shown && _shown != next && !_cover) {
-        _cover = cover;
-        _cover.zPosition = -1;
+    if (_shown && _shown != next && !_cover && [next respondsToSelector:@selector(motionBackdropWithSize:)]) {
+        _cover = [(id<UIMotionScene>)next motionBackdropWithSize:_shown.size];
+        // Below everything the outgoing screen draws, its own backdrops included.
+        _cover.zPosition = -1000;
         [_shown addChild:_cover];
     }
     __weak ScreenHost *weak = self;

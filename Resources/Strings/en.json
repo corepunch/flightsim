@@ -265,6 +265,7 @@
     "briefing.intel_line": "Check the intel and your loadout. Launch when ready.",
     "briefing.channel_intel": "INTEL / LOADOUT",
     "briefing.title": "%02lu  /  %@",
+    "briefing.kicker": "MISSION %02lu",
     "briefing.location": "%@  /  SD %@",
     "briefing.map_player": "YOU",
     "briefing.map_minefield": "MINEFIELD",

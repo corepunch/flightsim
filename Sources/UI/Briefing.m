@@ -883,8 +883,8 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 - (ScreenRegions)listRegions { return ScreenRegionsMake(self.size, self.contentInsets, [self listHasHint] ? 20 : 0); }
 
 // The story screens' title bar for touch: back to the missions, then the
-// previous page and the action in the top-right corner. The monitor carries
-// the mission's title, so the bar has none of its own.
+// previous page and the action in the top-right corner, with the mission's
+// name between them.
 - (TitleBar *)storyBar:(NSString *)action rects:(FooterButtons *)rects {
     ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets, 0);
     BOOL compact = regions.compact;
@@ -893,6 +893,8 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     if (action) b.confirm = [bar addAction:[self footerActionLabel:action] accent:UIAmber minWidth:compact ? 132 : 144];
     BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
     if (hasPrevious) b.previous = [bar addAction:L10n(@"story.previous") accent:UIAmber minWidth:0];
+    [bar setTitle:CampaignMissionAt(_index).title.uppercaseString
+           kicker:L10nFormat(@"briefing.kicker", (unsigned long)_index + 1)];
     if (rects) *rects = b;
     return bar;
 }
@@ -976,16 +978,10 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     _grid = (MissionGrid){0};
     _map = nil;
     _laidOut = self.size;
-    BOOL illustrated = [self illustrated];
-    // Backgrounds are sprites, not the scene colour, so the screen can fade as a whole.
-    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:illustrated ? UIColorWithOpacity(UIBackground, 1)
-                                                           : UIColorWithOpacity(UIBlack, 0.72) size:self.size];
-    shade.anchorPoint = CGPointZero;
-    [_root addChild:shade];
-    if ([self intro] && (_shown.mode != _mode || !illustrated || !_presented) && !UIMotionReduced()) {
-        shade.alpha = 0;
-        [shade runAction:[SKAction fadeInWithDuration:0.25]];
-    }
+    // The backdrop is up at full opacity from the first frame: the screen
+    // that was here, or the outgoing layout, dissolves over it, so the view
+    // behind the overlay never shows through.
+    [_root addChild:[self motionBackdropWithSize:self.size]];
     switch (_mode) {
         case ModeList: [self buildList]; break;
         case ModeBriefing: [self buildBriefing]; break;
@@ -1475,8 +1471,9 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     TitleBar *bar = topBar ? [self storyBar:action rects:NULL] : nil;
     CGFloat floor = self.contentInsets.bottom + (topBar ? (compact ? 10 : 16) : 70);
 
-    NSMutableArray<NSValue *> *clear = [NSMutableArray array];
-    for (SKShapeNode *control in bar.controls) [clear addObject:BoxRect(control.frame)];
+    // The monitor clears the whole bar, not just today's controls, so it stays
+    // put when PREV appears after the first page.
+    NSArray<NSValue *> *clear = bar ? @[BoxRect(bar.row)] : nil;
     CGRect screen = [self addBackdrop:mission.briefingRoom raiseBoard:compact && !narrow clear:clear];
     BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
     if (!paintedBoard) {
@@ -1512,7 +1509,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     CGFloat captionHeight = [self captionTextHeightForLines:@[page] width:captionWidth fontSize:textSize] + captionPadding;
     CGFloat captionBottom = MAX(floor, captionTop - captionHeight);
 
-    [self buildMonitor:screen mission:mission page:page];
+    [self buildMonitor:screen mission:mission page:page titled:!bar];
 
     CGFloat wing = CGRectGetMinX(screen);
     CGRect speakerArea, playerArea;
@@ -1542,7 +1539,9 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     [self footer:L10n(@"briefing.hint") action:action];
 }
 
-- (void)buildMonitor:(CGRect)screen mission:(CampaignMission *)mission page:(BriefingPage *)page {
+// titled: the monitor heads its readouts with the mission's name; screens with
+// a title bar carry the name there instead.
+- (void)buildMonitor:(CGRect)screen mission:(CampaignMission *)mission page:(BriefingPage *)page titled:(BOOL)titled {
     SKNode *display = _root;
     if (!CGRectIsEmpty(screen)) {
         CGPoint center = RectCenter(screen);
@@ -1593,15 +1592,18 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     CGFloat top = CGRectGetMaxY(screen) - 5;
     CGFloat width = MAX(1, right - left);
     CGFloat titleSize = MIN(21, MAX(12, width / 29));
-    SKLabelNode *title = Para(titleSize, UIColorWithOpacity(UIInk, 1), width);
-    title.fontName = UIInterfaceBoldFont;
-    title.text = L10nFormat(@"briefing.title", (unsigned long)_index + 1, mission.title.uppercaseString);
-    title.position = CGPointMake(left, top);
-    [display addChild:title];
+    SKLabelNode *title = nil;
+    if (titled) {
+        title = Para(titleSize, UIColorWithOpacity(UIInk, 1), width);
+        title.fontName = UIInterfaceBoldFont;
+        title.text = L10nFormat(@"briefing.title", (unsigned long)_index + 1, mission.title.uppercaseString);
+        title.position = CGPointMake(left, top);
+        [display addChild:title];
+    }
 
     SKLabelNode *location = Para(MIN(13, MAX(9, width / 45)), UIColorWithOpacity(UIInk, 0.75), width);
     location.text = L10nFormat(@"briefing.location", brief.location, brief.stardate);
-    location.position = CGPointMake(left, CGRectGetMinY(title.frame) - 4);
+    location.position = CGPointMake(left, title ? CGRectGetMinY(title.frame) - 4 : top);
     [display addChild:location];
 
     CGFloat channelY = CGRectGetMinY(location.frame) - 10;
@@ -1627,7 +1629,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
     if ([self intro]) {
         UIMotionSweep(_root, screen, UIColorWithOpacity(UIInk, 0.5), YES, 0.1, 0.6);
-        UIMotionDecode(title, 0.25, 0.5);
+        if (title) UIMotionDecode(title, 0.25, 0.5);
         UIMotionDecode(location, 0.32, 0.45);
         UIMotionDecode(channel, 0.4, 0.35);
         UIMotionDecode(counter, 0.4, 0.35);
@@ -1920,6 +1922,14 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     _presented = NO;
     [self rebuild];
     _presented = YES;
+}
+
+// A sprite, not the scene colour, so the screen can fade as a whole.
+- (SKNode *)motionBackdropWithSize:(CGSize)size {
+    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[self illustrated] ? UIColorWithOpacity(UIBackground, 1)
+                                                           : UIColorWithOpacity(UIBlack, 0.72) size:size];
+    shade.anchorPoint = CGPointZero;
+    return shade;
 }
 
 - (NSTimeInterval)motionExit {

@@ -703,14 +703,9 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 
 #pragma mark - Overlays
 
-// Render thread. Show next once the current screen has played its exit; if
+// Frame thread. Show next once the current screen has played its exit; if
 // another change arrives meanwhile, the newest one wins.
-// Render thread. The loading card keeps the outgoing screen opaque with its
-// own art while that screen animates away.
-- (void)presentOverlay:(SKScene *)next {
-    SKNode *cover = next == _loading ? [_loading backdropWithSize:_screens.shown.size] : nil;
-    [_screens present:next cover:cover time:_time];
-}
+- (void)presentOverlay:(SKScene *)next { [_screens present:next time:_time]; }
 
 #pragma mark - Loop
 
