@@ -31,7 +31,8 @@ static void SizeTarget(CGSize size) {
     view = [[SKView alloc] initWithFrame:(NSRect){.size = size}];
     view.preferredFramesPerSecond = 120;
     window.contentView = view;
-    [window orderBack:nil];
+    // SpriteKit suspends fully occluded views; typing needs real frames.
+    [window orderFrontRegardless];
     previousTime = 0;
 }
 

@@ -36,18 +36,20 @@ jobs:
         run: ./Tools/run-unit-checks.sh
 
   network-checks:
-    name: Deterministic two-client network checks
+    name: Network and campaign flow checks
     runs-on: macos-15
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Server and two clients (simulated transport)
+      - name: Server, clients, Bonjour and campaign flows
         run: ./Tools/run-network-checks.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: network-checks
-          path: build/network-checks.*/results.log
+          path: |
+            build/network-checks.*/results.log
+            build/network-checks.*/campaign-*.log
           if-no-files-found: ignore
 
   gui-checks:

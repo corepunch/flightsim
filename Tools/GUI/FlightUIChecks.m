@@ -130,6 +130,19 @@ static int CheckHUD(void) {
         instrument.target = -1; [hud updateInstruments:instrument contacts:NULL count:0 cockpit:NO];
         CHECK(![[(SKLabelNode *)[readout valueForKey:@"empty"] text] isEqualToString:@""]);
         Save(hud, [prefix stringByAppendingString:@"-no-target.png"]);
+        [hud setObjectives:@[] states:@[]];
+        frame.respawning = YES; frame.kills = 3; frame.deaths = 2;
+        [hud updateFrame:frame targets:NULL count:0];
+        CHECK(!hud.scoreLabel.hidden && [hud.scoreLabel.text containsString:@"3"]);
+        CHECK(!CGRectIntersectsRect(hud.scoreLabel.frame, forward.frame) && !CGRectIntersectsRect(hud.scoreLabel.frame, rear.frame));
+        Save(hud, [prefix stringByAppendingString:@"-dogfight.png"]);
+        [hud toggleHelp]; CHECK(hud.helpVisible);
+        [hud updateFrame:frame targets:NULL count:0];
+        CGRect safe = RectInsetEdges((CGRect){.size=hud.size}, hud.contentInsets.left, hud.contentInsets.top,
+            hud.contentInsets.right, hud.contentInsets.bottom);
+        CHECK(CGRectContainsRect(safe, hud.helpRect));
+        Save(hud, [prefix stringByAppendingString:@"-help.png"]);
+        [hud toggleHelp]; CHECK(!hud.helpVisible);
         instrument.target = 0;
     }
     return 0;
@@ -229,11 +242,17 @@ static int CheckPause(void) {
 @interface FakeServices : NSObject <UIServices>
 @property (nonatomic) SKScene *presented;
 @property (nonatomic) NSInteger started, cancels;
+@property (nonatomic) NSInteger created, matches, closed;
+@property (nonatomic) NSArray<NSString *> *hostedPilots;
 @end
 @implementation FakeServices
 - (void)startLevel:(NSUInteger)index { _started = (NSInteger)index; }
 - (void)joinServer:(NetAddress *)address {}
 - (void)cancelJoin { _cancels++; }
+- (BOOL)createLANGame { _created++; return YES; }
+- (void)startLANMatch { _matches++; }
+- (void)closeLANGame { _closed++; }
+- (BOOL)hostingFailed { return NO; }
 - (void)present:(SKScene *)screen { _presented = screen; }
 - (void)quitAfter:(NSTimeInterval)seconds {}
 - (void)drawMenuBackdrop {}
@@ -262,6 +281,66 @@ static int CheckFrontEnd(void) {
     [front levelEnded:0 success:NO results:@[@"x Objective"] remote:YES];
     CHECK([services.presented isKindOfClass:Briefing.class]);
     CHECK(services.started == -1 && front.levelCount >= 1);
+    NSUInteger unlocked = ProgressUnlockedCount(), stars = ProgressBestStars(0);
+    BOOL completed = ProgressCampaignCompleted();
+    [front levelEnded:0 success:YES results:@[@"+ Objective"] remote:YES];
+    CHECK(ProgressUnlockedCount() == unlocked && ProgressBestStars(0) == stars && ProgressCampaignCompleted() == completed);
+    [front showBrowser];
+    ServerBrowser *browser = (ServerBrowser *)front.currentScreen;
+    CGPoint create = RectCenter(browser.createRect);
+    [browser pointerClick:CGPointMake(create.x / browser.size.width, create.y / browser.size.height)];
+    [front frame:0];
+    CHECK([front.currentScreen isKindOfClass:LANGame.class]);
+    LANGame *game = (LANGame *)front.currentScreen;
+    CHECK(game.stage == LANGameSetup);
+    services.hostedPilots = @[@"Host"];
+    [front frame:InputActionConfirm];
+    CHECK(services.created == 1 && game.stage == LANGameLobby);
+    [front frame:InputActionConfirm]; CHECK(services.matches == 0);
+    services.hostedPilots = @[@"Host", @"Friend"];
+    [front frame:InputActionConfirm]; CHECK(services.matches == 1);
+    [front showLANResults:@[@"Host 10 / 2", @"Friend 2 / 10"] hosting:YES];
+    CHECK(game.stage == LANGameResults);
+    [front frame:InputActionConfirm]; CHECK(game.stage == LANGameLobby);
+    [front frame:InputActionBack]; CHECK(services.closed == 1 && [front.currentScreen isKindOfClass:ServerBrowser.class]);
+    CHECK(ProgressUnlockedCount() == unlocked && ProgressBestStars(0) == stars);
+    return 0;
+}
+
+static int CheckLANLayouts(void) {
+    NSArray *names = @[@"Host", @"Mira", @"Soren", @"A very long pilot name that needs truncating", @"Lancer 5", @"Lancer 6", @"Lancer 7", @"Lancer 8"];
+    for (NSValue *size in @[[NSValue valueWithSize:NSMakeSize(667,375)], [NSValue valueWithSize:NSMakeSize(852,393)],
+        [NSValue valueWithSize:NSMakeSize(1194,834)], [NSValue valueWithSize:NSMakeSize(1440,900)]]) {
+        LANGame *game = [[LANGame alloc] initWithSize:size.sizeValue];
+        game.contentInsets = game.size.width == 852 ? NSEdgeInsetsMake(0,59,21,59) : NSEdgeInsetsMake(0,0,20,0);
+        [game handle:0];
+        CHECK(CGRectGetHeight(game.confirmRect) >= 44 && !CGRectIntersectsRect(game.confirmRect, game.backRect));
+        Save(game, [NSString stringWithFormat:@"lan-setup-%.0f.png", game.size.width]);
+        [game showPilots:names];
+        CHECK(CGRectGetMinY(game.bodyRect) > game.contentInsets.bottom);
+        CHECK(CGRectGetHeight(game.confirmRect) >= 44);
+        Save(game, [NSString stringWithFormat:@"lan-lobby-%.0f.png", game.size.width]);
+        [game showResults:names hosting:NO];
+        CHECK(CGRectIsEmpty(game.confirmRect) && [game handle:InputActionConfirm] == LANGameCommandNone);
+        CHECK([game handle:InputActionBack] == LANGameCommandBack);
+        ServerBrowser *browser = [[ServerBrowser alloc] initWithSize:size.sizeValue];
+        browser.contentInsets = game.contentInsets;
+        NSMutableArray *servers = [NSMutableArray array];
+        for (int i = 0; i < 12; i++) {
+            LANServer *server = [LANServer new]; server.name = names[i % names.count];
+            server.address = [NetAddress loopback:100+i]; server.players = 2; server.maxPlayers = 8;
+            [servers addObject:server];
+        }
+        [browser showServers:servers];
+        [browser handle:InputActionDown];
+        CHECK(CGRectGetHeight(browser.createRect) >= 44 && CGRectGetHeight(browser.joinRect) >= 44);
+        CHECK(!CGRectIntersectsRect(browser.createRect, browser.serverRows));
+        LANServer *selected = browser.selected;
+        [browser showServers:servers]; CHECK(browser.selected == selected);
+        for (int i = 0; i < 11; i++) [browser handle:InputActionDown];
+        CHECK(browser.selected == servers.lastObject);
+        Save(browser, [NSString stringWithFormat:@"lan-browser-%.0f.png", game.size.width]);
+    }
     return 0;
 }
 
@@ -314,6 +393,6 @@ static int CheckSimulation(void) {
 int main(int argc, const char **argv) { @autoreleasepool {
     [NSApplication sharedApplication];
     Output = argc>1 ? @(argv[1]) : @"/tmp";
-    if (CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckFrontEnd() || CheckProtocol() || CheckSimulation()) return 1;
+    if (CheckSensors() || CheckHUD() || CheckGrid() || CheckPause() || CheckFrontEnd() || CheckLANLayouts() || CheckProtocol() || CheckSimulation()) return 1;
     puts("PASS: flight instruments, mission grid, pause, capacitor and cargo protocol.");
 } return 0; }

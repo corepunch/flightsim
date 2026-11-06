@@ -74,6 +74,12 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)joinServer:(NetAddress *)address;
 // Backs out of a join that has not reached the game yet.
 - (void)cancelJoin;
+// Explicit LAN hosting: a lobby first, then a match once friends have joined.
+- (BOOL)createLANGame;
+- (void)startLANMatch;
+- (void)closeLANGame;
+@property (nonatomic, readonly) NSArray<NSString *> *hostedPilots;
+@property (nonatomic, readonly) BOOL hostingFailed;
 // Shows a screen once the current one has played its exit animation.
 - (void)present:(SKScene *)screen;
 // Plays an exit of `seconds` (e.g. the main menu powering down), then quits.
@@ -105,6 +111,7 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)showMissionsSelecting:(NSUInteger)index;
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)page;
 - (void)showBrowser;
+- (void)showLANResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting;
 // Set up after boot, without presenting: the main menu, with the mission
 // list ready behind it.
 - (void)prepareAfterBoot;
@@ -245,14 +252,15 @@ void ProgressRecordResult(NSUInteger missionIndex, NSArray<NSString *> *results)
 
 // MARK: - ServerBrowser
 
-typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJoin, BrowserCommandBack };
+typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJoin, BrowserCommandBack, BrowserCommandCreate };
 
-// The multiplayer screen: games found on the local network, plus how to
-// join one by address. Up/Down pick, Return joins, Esc goes back.
+// The multiplayer screen: create a game or select a discovered host.
+// Up/Down pick, Return confirms, Esc goes back.
 // Takes pointer input through <ScreenInput>.
 @interface ServerBrowser : SKScene <ScreenInput>
 
 @property (nonatomic, readonly) LANServer *selected;
+@property (nonatomic, readonly) CGRect createRect, joinRect, serverRows;
 @property (nonatomic, copy) NSString *hostLine;     // "Hosting on port 27910", shown at the bottom
 // The safe area in scene points, from the host; a standalone SKView's own wins.
 @property (atomic) ScreenInsets contentInsets;
@@ -261,6 +269,22 @@ typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJ
 - (BrowserCommand)handle:(InputAction)actions;
 - (void)setStatus:(NSString *)status;
 
+@end
+
+// MARK: - LANGame
+
+typedef NS_ENUM(NSInteger, LANGameStage) { LANGameSetup, LANGameLobby, LANGameResults };
+typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandConfirm, LANGameCommandBack };
+
+// Creation, waiting for friends and results use the same responsive screen.
+@interface LANGame : SKScene <ScreenInput>
+@property (atomic) ScreenInsets contentInsets;
+@property (nonatomic, readonly) LANGameStage stage;
+@property (nonatomic, readonly) CGRect confirmRect, backRect, bodyRect;
+- (void)showSetup;
+- (void)showPilots:(NSArray<NSString *> *)pilots;
+- (void)showResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting;
+- (LANGameCommand)handle:(InputAction)actions;
 @end
 
 // MARK: - UILayout

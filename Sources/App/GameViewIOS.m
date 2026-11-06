@@ -73,6 +73,7 @@
     if ([scene isKindOfClass:HUD.class]) ((HUD *)scene).contentInsets = safe;
     if ([scene isKindOfClass:Briefing.class]) ((Briefing *)scene).contentInsets = safe;
     if ([scene isKindOfClass:ServerBrowser.class]) ((ServerBrowser *)scene).contentInsets = safe;
+    if ([scene isKindOfClass:LANGame.class]) ((LANGame *)scene).contentInsets = safe;
 }
 
 - (void)safeAreaInsetsDidChange {

@@ -28,6 +28,7 @@
         if (!bound) {
             NSLog(@"UDP: cannot bind port %d: %s", port, strerror(errno));
             close(_fd);
+            _fd = -1;
             return nil;
         }
         struct sockaddr_in actual;

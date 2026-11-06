@@ -8,6 +8,7 @@
 #import "Game.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 static double clockNow = 100;
 double NetworkCheckTime(void) { return clockNow; }
@@ -514,6 +515,7 @@ static void UDPSmoke(void) {
     assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
     Server *server = [[Server alloc] initWithName:@"UDP localhost"]; CHECK(server);
+    server.publicHosting = YES;
     UDPTransport *host = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(host);
     [server addTransport:host]; [server spawnLevel:@"check-1"];
     NetAddress *address = [NetAddress addressWithString:@"127.0.0.1" port:host.port];
@@ -533,7 +535,142 @@ static void UDPSmoke(void) {
     [server frame:0]; CHECK(server.clientCount == 0); [server stop];
     puts("PASS real IPv4 UDP sockets on localhost, one process, two clients");
 }
+
+static void DeathmatchRun(void) {
+    routes = [NSMutableDictionary dictionary]; delay = 0; dropEvery = 0; blackout = NO;
+    assertPendingPrediction = NO;
+    Server *server = [[Server alloc] initWithName:@"Dogfight"]; CHECK(server);
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-dogfight"];
+    NSMutableArray<Client *> *clients = [NSMutableArray array];
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        Client *client = [[Client alloc] initWithView:(ClientView *)[Spy new]];
+        __weak Client *weak = client; client.gamestateHandler = ^{ [weak begin]; };
+        [client connectTo:[NetAddress loopback:1] transport:[Link port:10+i] name:[NSString stringWithFormat:@"Pilot %d", i+1]];
+        [clients addObject:client];
+    }
+    Steps(server, clients, (ControlState){0}, 60);
+    CHECK(server.clientCount == MAX_CLIENTS && server.clientNames.count == MAX_CLIENTS);
+    CHECK(GIsDeathmatch() && !level->_runner && !server.missionEnded);
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        Snapshot *snapshot = Latest(clients[i]); CHECK(snapshot && snapshot.ps.alive);
+        CHECK([clients[i].configStrings[CS_MODE] isEqualToString:@"deathmatch"]);
+        CHECK(snapshot.ps.team == i);
+        for (int j = 0; j < MAX_CLIENTS; j++) if (i != j) {
+            CHECK(TeamRelationIn([clients[i].configStrings[CS_TEAMS] UTF8String], i, j) == RelationHostile);
+            CHECK(simd_distance(snapshot.ps.move.origin, Latest(clients[j]).ps.move.origin) > 200);
+        }
+    }
+    GClient *a = level->_clients[0], *b = level->_clients[MAX_CLIENTS-1];
+    [level cycleTargetFor:a]; CHECK(a.selected && a.selected != a.ship);
+    b.selected = a.ship; [level fireTorpedoFor:b];
+    CHECK(level->_torpedoes.lastObject.team == b.ship.team);
+    [level->_torpedoes removeAllObjects];
+    uint16_t oldEntity = b.ship.number;
+    [level fireFrom:b.ship.position + b.ship.forward * 50 velocity:simd_make_float3(0,0,0) direction:-b.ship.forward
+        speed:500 life:1 team:a.ship.team damage:100 capDamage:0 ion:NO owner:a];
+    [level updateBolts:0.1f];
+    CHECK(a.kills == 1 && b.deaths == 1 && !b.ship.alive);
+    Steps(server, clients, (ControlState){0}, 30);
+    CHECK(!b.ship.alive && Latest(clients[MAX_CLIENTS-1]).ps.stats[STAT_DEATHS] == 1);
+    Steps(server, clients, (ControlState){0}, 75);
+    CHECK(b.ship.alive && b.ship.number != oldEntity && b.deaths == 1 && a.kills == 1);
+    CHECK(Latest(clients[0]).ps.stats[STAT_KILLS] == 1);
+    CHECK(!server.missionEnded);
+    for (int i = 1; i < level->_level->rules.fragLimit; i++) {
+        [level damageShip:b.ship amount:100 by:a shake:0];
+        Steps(server, clients, (ControlState){0}, i + 1 < level->_level->rules.fragLimit ? 100 : 2);
+    }
+    CHECK(server.missionEnded && a.kills == level->_level->rules.fragLimit);
+    [server spawnLevel:@"check-dogfight"];
+    Steps(server, clients, (ControlState){0}, 60);
+    CHECK(!server.missionEnded && a.kills == 0 && b.deaths == 0 && b.ship.alive);
+    // Leaving a solo host waiting must never finish an empty-objective mission.
+    GClient *departing = level->_clients[1]; departing.selected = a.ship;
+    [level fireTorpedoFor:departing];
+    GTorpedo *orphan = level->_torpedoes.lastObject; CHECK(orphan.owner == departing);
+    for (NSUInteger i = 1; i < clients.count; i++) [clients[i] disconnect];
+    [server frame:0]; CHECK(orphan.owner == nil);
+    Steps(server, @[clients[0]], (ControlState){0}, 1000);
+    CHECK(!server.missionEnded && level->_missionTime == 0);
+    [clients[1] connectTo:[NetAddress loopback:1] transport:routes[@11] name:@"Returned"];
+    Steps(server, @[clients[0], clients[1]], (ControlState){0}, 60);
+    level->_missionTime = level->_level->rules.matchSeconds - TICK_DT;
+    Steps(server, @[clients[0], clients[1]], (ControlState){0}, 2);
+    CHECK(server.missionEnded);
+    for (Client *client in clients) [client disconnect];
+    [server stop];
+    puts("PASS dogfight: eight opponents, targeting, secondary team, score, respawn, frag/time limits, rematch and solo waiting");
+}
+
+static void ConnectTimeoutCheck(void) {
+    routes = [NSMutableDictionary dictionary];
+    Client *client = [[Client alloc] initWithView:nil];
+    __block BOOL timedOut = NO;
+    client.disconnectHandler = ^(NSString *reason) { timedOut = YES; };
+    [client connectTo:[NetAddress loopback:1] transport:[Link port:10] name:@"No host"];
+    [client readPackets];
+    CHECK(client.state == ClientConnecting);
+    clockNow += NET_TIMEOUT + 1;
+    [client readPackets];
+    CHECK(timedOut && client.state == ClientDisconnected);
+    puts("PASS missing host: connection attempts time out instead of retrying forever");
+}
+
+static void DiscoveryCheck(void) {
+    Server *server = [[Server alloc] initWithName:@"Bonjour check"]; CHECK(server);
+    UDPTransport *socket = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(socket);
+    [server addTransport:socket];
+    UDPTransport *probe = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(probe);
+    NetAddress *address = [NetAddress addressWithString:@"127.0.0.1" port:socket.port];
+    [NetChannel sendOutOfBand:@"info" transport:probe to:address];
+    [server frame:0]; NetAddress *from;
+    CHECK(![probe receiveFrom:&from]);
+    server.publicHosting = YES;
+    for (int i = 0; i < 50 && !server.clientCount; i++) {
+        [NetChannel sendOutOfBand:[NSString stringWithFormat:@"connect %d Guest", PROTOCOL_VERSION] transport:probe to:address];
+        usleep(1000); [server frame:0];
+    }
+    CHECK(server.clientCount == 1 && [probe receiveFrom:&from]);
+    LANAdvertisement *advertisement = [[LANAdvertisement alloc] initWithName:server.name port:socket.port];
+    LANBrowser *browser = [LANBrowser new];
+    BOOL found = NO;
+    double until = CFAbsoluteTimeGetCurrent() + 10;
+    while (!found && CFAbsoluteTimeGetCurrent() < until) @autoreleasepool {
+        [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
+        clockNow += 0.02;
+        [browser poll]; [server frame:0]; [browser poll];
+        for (LANServer *entry in browser.servers) if (entry.address.port == socket.port) found = YES;
+    }
+    CHECK(!advertisement.failed && !browser.discoveryFailed && found);
+    [server closeSession]; CHECK(server.clientCount == 0 && !server.publicHosting);
+    BOOL closed = NO; NSData *packet;
+    while ((packet = [probe receiveFrom:&from])) if (![NetChannel outOfBandText:packet]) closed = YES;
+    CHECK(closed);
+    puts("PASS Bonjour: ephemeral-port host discovered without port scanning; private sessions hidden; host closure notifies peers");
+}
+
+static int LivePeer(NSString *host) {
+    FSSetGame(@"KestrelFrontier");
+    UDPTransport *socket = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(socket);
+    Client *client = [[Client alloc] initWithView:(ClientView *)[Spy new]];
+    __weak Client *weak = client; client.gamestateHandler = ^{ [weak begin]; puts("PEER entered match"); fflush(stdout); };
+    __block BOOL disconnected = NO;
+    client.disconnectHandler = ^(NSString *reason) { printf("PEER disconnected: %s\n", reason.UTF8String); disconnected = YES; };
+    [client connectTo:[NetAddress addressWithString:host port:PORT_SERVER] transport:socket name:@"Release check peer"];
+    printf("PEER joining %s\n", host.UTF8String); fflush(stdout);
+    BOOL active = NO;
+    for (int i = 0; i < 60 * 180 && !disconnected; i++) @autoreleasepool {
+        clockNow += 1.0 / 60;
+        [client readPackets]; [client sendInput:(ControlState){.throttle=.4, .yaw=.1, .fire=YES} actions:0 dt:1.0f/60];
+        if (!active && Latest(client)) { active = YES; puts("PEER receiving live snapshots"); fflush(stdout); }
+        usleep(16667);
+    }
+    [client disconnect]; return active ? 0 : 1;
+}
+#include "CampaignChecks.h"
 int main(int argc, const char **argv) { @autoreleasepool {
+    if (argc > 2 && !strcmp(argv[1], "--campaign")) return CampaignAudit(@(argv[2]));
+    if (argc > 2 && !strcmp(argv[1], "--peer")) return LivePeer(@(argv[2]));
     if (argc > 1 && !strcmp(argv[1], "--identity")) { puts(ShipDataIdentity().UTF8String); return 0; }
     for (int mission = 0; mission < 2; mission++) for (int loss = 0; loss < 2; loss++) Scenario(mission, loss);
     CHECK(predictionChecks > 1000);
@@ -544,6 +681,9 @@ int main(int argc, const char **argv) { @autoreleasepool {
     OrdersRun();
     BoardRun();
     UDPSmoke();
+    DeathmatchRun();
+    ConnectTimeoutCheck();
+    DiscoveryCheck();
     puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;
 } }

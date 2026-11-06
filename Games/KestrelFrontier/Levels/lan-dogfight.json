@@ -1,0 +1,8 @@
+{
+  "name": "lan-dogfight",
+  "title": "LAN Dogfight",
+  "seed": 42,
+  "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
+  "loadout": { "torpedoes": 4 },
+  "rules": { "deathmatch": true, "fragLimit": 10, "matchSeconds": 300, "respawnSeconds": 3 }
+}

@@ -451,6 +451,10 @@ LevelDef *LevelCreate(NSDictionary *json) {
         .succeedWhenObjectivesDone = JSONBool(rules, @"succeedWhenObjectivesDone", true),
         .failOnObjectiveFailed = JSONBool(rules, @"failOnObjectiveFailed", true),
         .failWhenPlayersDown = JSONBool(rules, @"failWhenPlayersDown", true),
+        .deathmatch = JSONBool(rules, @"deathmatch", false),
+        .fragLimit = MAX(1, JSONInt(rules, @"fragLimit", 10)),
+        .matchSeconds = fmaxf(30, JSONFloat(rules, @"matchSeconds", 300)),
+        .respawnSeconds = fmaxf(1, JSONFloat(rules, @"respawnSeconds", 3)),
     };
     level->timeLimit = JSONFloat(json, @"timeLimit", 0);
     if (json[@"timeLimit"] && !(level->timeLimit > 0)) {

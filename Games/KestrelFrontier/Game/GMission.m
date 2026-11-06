@@ -144,6 +144,7 @@ static NSString *PartKindName(SubsystemKind kind) {
     uint32_t seed = 1337 + (uint32_t)level->seed * 7919;
     gi.configString(CS_SKY, [NSString stringWithFormat:@"%u", seed].UTF8String);
     gi.configString(CS_GAME, ShipDataIdentity().UTF8String);
+    gi.configString(CS_MODE, level->rules.deathmatch ? "deathmatch" : "campaign");
     gi.configString(CS_TEAMS, GTeamRelations().UTF8String);
     // Every player flies the level's ship, so its secondary names the readouts.
     const ShipDef *playerShip = ShipDefNamed(level->playerShip ?: DefaultPlayerShip()) ?: ShipDefNamed(DefaultPlayerShip());
@@ -161,7 +162,7 @@ static NSString *PartKindName(SubsystemKind kind) {
                         [NSString stringWithFormat:@"%@|%g|%g|%g", n->name ?: @"", n->pos.x, n->pos.y, n->pos.z].UTF8String);
         [_navOrder addObject:n->identifier];
     }
-    _runner = [[MissionRunner alloc] initWithLevel:level world:self];
+    _runner = level->rules.deathmatch ? nil : [[MissionRunner alloc] initWithLevel:level world:self];
     _heldEntities = [NSMutableDictionary dictionary];
     _heldWaves = [NSMutableDictionary dictionary];
 
@@ -196,15 +197,30 @@ static NSString *PartKindName(SubsystemKind kind) {
     simd_quatf q = LookRotation(_level->playerFacing, simd_make_float3(0, 1, 0));
     // Wingmen form up to the right of the start point.
     simd_float3 pos = _level->playerPos + QuatRight(q) * 30.0f * cl.index;
+    if (GIsDeathmatch()) {
+        // Choose the slot furthest from live opponents, including late arrivals.
+        float best = -1;
+        for (int i = 0; i < MAX_CLIENTS; i++) {
+            float angle = (float)(2 * M_PI * i / MAX_CLIENTS);
+            simd_float3 candidate = _level->playerPos + simd_make_float3(cosf(angle) * 700, (i % 2 ? 1 : -1) * 100, sinf(angle) * 700);
+            float nearest = FLT_MAX;
+            for (GFighter *other in self.playerShips)
+                if (other != cl.ship && other.alive) nearest = fminf(nearest, simd_distance(candidate, other.position));
+            if (nearest > best) { best = nearest; pos = candidate; }
+        }
+        q = LookRotation(_level->playerPos - pos, simd_make_float3(0, 1, 0));
+    }
     GFighter *s = [GFighter fighterWithShip:_level->playerShip ?: DefaultPlayerShip() ai:NO] ?: [GFighter fighterWithShip:DefaultPlayerShip() ai:NO];
     s.number = [self allocEntity];
-    s.team = TeamFriend;
+    s.team = GIsDeathmatch() ? (Team)cl.index : TeamFriend;
     s.client = cl;
+    s.nameIndex = gi.stringIndex(cl.name.UTF8String ?: "");
     [s resetAt:pos facing:q];
     s->move.throttle = 0.5f;
     cl.ship = s;
     cl.torpedoes = _startTorpedoes;
-    cl.kills = 0;
+    cl.selected = nil;
+    cl.aimSubsystem = nil;
     cl.cmdTime = 0;
     cl.lastBump = -1;
 
@@ -431,6 +447,33 @@ static simd_float3 FormationSlot(LevelFormation f, int i) {
 #pragma mark - Update
 
 - (void)updateMission:(float)dt {
+    if (GIsDeathmatch()) {
+        _missionTime += dt;
+        NSMutableArray<GClient *> *pilots = [NSMutableArray array];
+        for (GClient *c in _clients) if (c.inGame) [pilots addObject:c];
+        [pilots sortUsingComparator:^NSComparisonResult(GClient *a, GClient *b) {
+            if (a.kills != b.kills) return a.kills > b.kills ? NSOrderedAscending : NSOrderedDescending;
+            if (a.deaths != b.deaths) return a.deaths < b.deaths ? NSOrderedAscending : NSOrderedDescending;
+            return [a.name compare:b.name];
+        }];
+        GClient *leader = pilots.firstObject;
+        // The match clock starts with an opponent; the host can wait safely.
+        if (pilots.count < 2 && !leader.kills) _missionTime = 0;
+        NSString *status = MissionText(@"combat.lan_score", @[@(leader.kills).stringValue, @(_level->rules.fragLimit).stringValue,
+            @((int)fmaxf(0, _level->rules.matchSeconds - _missionTime)).stringValue]);
+        for (GClient *c in pilots) {
+            NSString *shown = pilots.count < 2 ? MissionText(@"combat.lan_waiting", nil) : status;
+            if (![shown isEqualToString:c.sentStatus]) { c.sentStatus = shown; GCommand(c, SVC_STATUS, shown, nil, nil); }
+        }
+        if (leader && (leader.kills >= _level->rules.fragLimit || _missionTime >= _level->rules.matchSeconds)) {
+            NSMutableArray *results = [NSMutableArray array];
+            for (GClient *c in pilots) [results addObject:MissionText(@"combat.lan_result", @[c.name,
+                @(c.kills).stringValue, @(c.deaths).stringValue])];
+            _over = YES;
+            GCommand(nil, SVC_LEVEL_END, @"1", [results componentsJoinedByString:@"\n"], nil);
+        }
+        return;
+    }
     for (GClient *c in _clients) c.status = nil;
     [_runner update:dt];
     _missionTime = _runner.time;

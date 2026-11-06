@@ -568,7 +568,7 @@
         "speaker": "Commander Ilse Varn, CO, CNS Bastion",
         "officer": "Varn",
         "text": [
-          "The transport Ondine was ambushed an hour ago. Her crew got away in escape pods, and the pods' beacons are calling for help - which tells the Skarn exactly where they are.",
+          "The transport Ondine was ambushed an hour ago. Five escape pods cleared the wreck, and their beacons are calling for help - which tells the Skarn exactly where they are.",
           "The hospital ship Mercy is on station. Fly to each pod and pick it up with your tractor - just get within thirty metres.",
           "Skarn fighters are hunting the pods. Get there first."
         ],
@@ -597,7 +597,7 @@
         ]
       },
       "debrief": {
-        "win": "All of the Ondine's crew are aboard the Mercy. Every one of them.",
+        "win": "All five escape pods are aboard the Mercy. Their survivors are safe.",
         "lose": "We did not get everyone out.",
         "dialogue": [
           {

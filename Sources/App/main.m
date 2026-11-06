@@ -26,6 +26,9 @@ static int RunDedicated(int mission) {
     UDPTransport *udp = [[UDPTransport alloc] initWithPort:port > 0 ? port : PORT_SERVER attempts:4];
     if (!server || !udp) return 1;
     [server addTransport:udp];
+    server.publicHosting = YES;
+    __attribute__((objc_precise_lifetime)) LANAdvertisement *advertisement = [[LANAdvertisement alloc] initWithName:server.name port:udp.port];
+    (void)advertisement;
     // Rotate through the campaign's levels, or every level in the game
     // folder when the game has no campaign.
     NSMutableArray<NSString *> *rotation = [NSMutableArray array];
@@ -64,6 +67,7 @@ static int RunDedicated(int mission) {
                 [server spawnLevel:rotation[index]];
             }
             usleep(2000);
+            [NSRunLoop.currentRunLoop runUntilDate:NSDate.date];
         }
     }
 }

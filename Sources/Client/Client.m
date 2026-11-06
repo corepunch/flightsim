@@ -140,7 +140,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
         NSData *payload = [_channel process:packet];
         if (payload) [self parseServer:payload];
     }
-    if (_state >= ClientConnected && now - _channel.lastReceived > NET_TIMEOUT) [self dropWithReason:L10n(@"net.timed_out")];
+    if (_state >= ClientConnecting && now - _channel.lastReceived > NET_TIMEOUT) [self dropWithReason:L10n(@"net.timed_out")];
 }
 
 - (void)connectionless:(NSString *)text {

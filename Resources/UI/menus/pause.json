@@ -19,7 +19,7 @@
             { "id": "camera", "text": "pause.camera_chase", "when": { "cockpit": { "text": "pause.camera_cockpit" } } },
             { "id": "sound", "text": "$sound" },
             { "id": "restart", "text": "pause.restart", "when": { "online": { "text": "pause.restart_host_only", "disabled": true } } },
-            { "id": "missions", "text": "pause.missions" }
+            { "id": "missions", "text": "pause.missions", "when": { "online": { "text": "pause.leave" } } }
           ]
         }
       ]

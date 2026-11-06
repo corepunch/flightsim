@@ -4,6 +4,7 @@
 
 GameImport gi;
 GWorld *level;
+BOOL GIsDeathmatch(void) { return level && level->_level && level->_level->rules.deathmatch; }
 static GameExport ge;
 
 void GPrint(NSString *format, ...) {
@@ -63,6 +64,7 @@ static EntityState FighterState(GFighter *s, GPilot *p) {
     e.model = s.model;
     e.name = s.nameIndex;
     e.className = s.team < TeamCount ? level->_fighterClassNames[s.team] : 0;
+    if (GIsDeathmatch()) e.className = gi.stringIndex(s.definition->displayName);
     e.flags = (s.boosting ? EF_BOOST : 0) | (s.disabled ? EF_DISABLED : 0);
     id target = p.target;
     if (p && p.mode == AIModeAttack && [target isKindOfClass:[GFighter class]]) {
@@ -165,6 +167,10 @@ static void RunFrame(void) {
     w->_time += dt;
     if (w->_over) return;
 
+    if (GIsDeathmatch()) for (GClient *cl in w->_clients)
+        if (cl.inGame && cl.ship && !cl.ship.alive && w->_time - cl.ship.deathTime >= w->_level->rules.respawnSeconds)
+            [w spawnPlayer:cl];
+
     for (GClient *cl in w->_clients) {
         if (!cl.inGame || !cl.autopilot || !cl.ship.alive) continue;
         simd_float3 before = cl.ship.position;
@@ -237,6 +243,7 @@ static void ClientBegin(int index) {
     GWorld *w = level;
     GClient *cl = w->_clients[index];
     cl.inGame = YES;
+    cl.kills = cl.deaths = 0;
     memset(&cl->ps, 0, sizeof cl->ps);
     [w spawnPlayer:cl];
     BuildPlayerState(cl);
@@ -248,6 +255,7 @@ static void ClientDisconnect(int index) {
     GWorld *w = level;
     GClient *cl = w->_clients[index];
     for (int i = 0; i < MAX_BOLTS; i++) if (w->_bolts[i].owner == cl) w->_bolts[i].owner = nil;
+    for (GTorpedo *torpedo in w->_torpedoes) if (torpedo.owner == cl) torpedo.owner = nil;
     GPrint(@"%@ disconnected", cl.name);
     [cl leaveLevel];
     [w buildEntityStates];
