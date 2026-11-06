@@ -187,14 +187,21 @@ static NSString *Short(NSString *text, NSUInteger length) {
     SKShapeNode *_selected;
     SKLabelNode *_range;
 }
+static const CGFloat ScopeRadius = 64;
+
+- (CGRect)discFrame {
+    CGPoint half = CGPointMake(ScopeRadius * self.xScale, ScopeRadius * self.yScale);
+    return RectFromEdges(self.position.x - half.x, self.position.y - half.y, self.position.x + half.x, self.position.y + half.y);
+}
+
 - (instancetype)initRear:(BOOL)rear {
     if ((self = [super init])) {
         _rear = rear; self.name = rear ? @"Rear scanner" : @"Forward scanner";
-        SKShapeNode *disc = [SKShapeNode shapeNodeWithCircleOfRadius:64];
+        SKShapeNode *disc = [SKShapeNode shapeNodeWithCircleOfRadius:ScopeRadius];
         disc.fillColor = UIColorWithOpacity(UIPanel, 0.9); disc.strokeColor = UIColorWithOpacity(UIInk, 0.65);
         [self addChild:disc];
         for (int i = 1; i < 3; i++) {
-            SKShapeNode *ring = [SKShapeNode shapeNodeWithCircleOfRadius:64 * i / 3.0];
+            SKShapeNode *ring = [SKShapeNode shapeNodeWithCircleOfRadius:ScopeRadius * i / 3.0];
             ring.strokeColor = UIColorWithOpacity(UIInk, 0.18); [self addChild:ring];
         }
         SKShapeNode *cross = [SKShapeNode node];

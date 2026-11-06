@@ -405,11 +405,7 @@ static SKShapeNode *Bracket(void) {
     _inputLabel.position = CGPointMake(right - 100, top - 44);
     }
     BOOL phoneLayout = _touchLayout && MIN(s.width, s.height) < 550 && MAX(s.width, s.height) < 1100;
-    CGFloat edgeLeft = 12;
     CGFloat edgeBottom = phoneLayout ? 2 : (_touchLayout ? insets.bottom + 24 : 40);
-    if (_touchLayout) {
-    edgeLeft = insets.left + 4;
-    }
     BOOL compact = s.height < 550;
     CGFloat scopeScale = compact ? 0.56 : 0.86;
     [_forwardScope setScale:scopeScale]; [_rearScope setScale:scopeScale];
@@ -438,7 +434,9 @@ static SKShapeNode *Bracket(void) {
     }
     CGFloat topMargin = phoneLayout ? MAX(insets.top, bottomMargin) : (_touchLayout ? insets.top + 30 : 36);
     CGFloat headingTop = heading ? CGRectGetMaxY(heading.frame) : 7;
-    _objectivePanel.position = CGPointMake(edgeLeft + 128 * scopeScale + 16,
+    // Clear of the forward scope's drawn edge, whatever its scale.
+    CGFloat scopeRight = CGRectGetMaxX(_forwardScope.discFrame);
+    _objectivePanel.position = CGPointMake(scopeRight + (compact ? 20 : 28),
                                            s.height - topMargin - headingTop);
     CGFloat helpWidth = MAX(1, MIN(760, s.width - insets.left - insets.right - 48));
     CGFloat helpY = 0;
