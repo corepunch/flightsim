@@ -53,6 +53,14 @@ static inline PlatformImage *PlatformImageFromCGImage(CGImageRef image) {
 #endif
 }
 
+static inline CGImageRef PlatformImageCGImage(PlatformImage *image) {
+#if TARGET_OS_IOS
+    return image.CGImage;
+#else
+    return [image CGImageForProposedRect:NULL context:nil hints:nil];
+#endif
+}
+
 static inline PlatformImage *PlatformDrawImage(CGSize size, void (^draw)(CGContextRef, CGRect)) {
 #if TARGET_OS_IOS
     UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat defaultFormat];
@@ -89,6 +97,11 @@ static inline PlatformImage *PlatformDrawImage(CGSize size, void (^draw)(CGConte
 + (PlatformImage *)softDotImage;
 + (PlatformImage *)streakImage;      // anamorphic streak, zero alpha on all edges
 + (PlatformImage *)particleTexture:(NSString *)name;  // Resources/Particles/<name>.png
+// The texture for alpha-blended particle systems: straight (unpremultiplied)
+// alpha, since SceneKit multiplies their colour by alpha again, and coverage
+// that fades out with brightness, since sprites drawn on opaque black would
+// otherwise carry a black fringe. Brightness stays as shading.
++ (PlatformImage *)straightAlphaParticleTexture:(NSString *)name;
 
 @end
 
@@ -144,10 +157,9 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 // Film-style space combat effects, layered the way Star Wars games and films
 // build them: blaster bolts with a white-hot core inside a coloured HDR glow
-// (the bloom carries the colour), pooled muzzle flashes, and explosions made of
-// a few shader-driven "hot spheres" (white-hot core, cooler outer fireball,
-// one secondary blast), an anamorphic glint, a planar shockwave ring and a few
-// glowing debris chunks. No particle clouds.
+// (the bloom carries the colour), pooled muzzle flashes, shader-driven "hot
+// sphere" impacts, and explosions built from layered sprite particles (flash,
+// fire, a smoke shroud, and burning fragments that trail fire and smoke).
 @interface Effects : NSObject
 
 - (instancetype)initWithScene:(SCNScene *)scene;

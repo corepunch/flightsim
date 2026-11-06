@@ -33,46 +33,14 @@ static SKColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [SKCol
     SCNMaterial *_playerCore, *_playerGlow, *_enemyCore, *_enemyGlow;
     SCNMaterial *_ionCore, *_ionGlow;
     SCNGeometry *_coreGeo, *_glowGeo;
-    SCNMaterial *_ringMaterial;
     NSMutableDictionary<NSString *, SCNMaterial *> *_streakMaterials;
     SCNNode *_muzzles[MUZZLE_POOL];
     NSUInteger _muzzleIndex;
     SCNMaterial *_muzzlePlayer, *_muzzleEnemy;
     SCNMaterial *_fireTemplate;
+    NSMutableDictionary<NSNumber *, NSDictionary<NSString *, SCNParticleSystem *> *> *_explosionSystems;
     SCNNode *_flashLights[FLASH_LIGHTS];
     NSUInteger _flashIndex;
-}
-
-// Thin bright annulus with a soft inner glow and an empty centre; sprite-pack
-// rings are filled discs that grey out the screen once scaled up.
-+ (PlatformImage *)shockRingImage {
-    static PlatformImage *image;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        const int n = 512;
-        uint8_t *px = calloc(n * n * 4, 1);
-        for (int y = 0; y < n; y++) {
-            for (int x = 0; x < n; x++) {
-                float dx = (x + 0.5f) / n * 2 - 1, dy = (y + 0.5f) / n * 2 - 1;
-                float r = sqrtf(dx * dx + dy * dy);
-                float edge = expf(-powf((r - 0.93f) / 0.025f, 2));            // crisp front
-                float wake = r < 0.93f ? expf(-(0.93f - r) / 0.05f) * 0.25f : 0; // trailing glow
-                float a = fminf(edge + wake, 1) * (r < 1 ? 1 : 0);
-                uint8_t v = (uint8_t)lroundf(a * 255);
-                uint8_t *p = px + (y * n + x) * 4;
-                p[0] = p[1] = p[2] = p[3] = v;
-            }
-        }
-        CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
-        CGContextRef ctx = CGBitmapContextCreate(px, n, n, 8, n * 4, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
-        CGImageRef cg = CGBitmapContextCreateImage(ctx);
-        image = PlatformImageFromCGImage(cg);
-        CGImageRelease(cg);
-        CGContextRelease(ctx);
-        CGColorSpaceRelease(cs);
-        free(px);
-    });
-    return image;
 }
 
 + (SCNMaterial *)additiveTextureMaterial:(NSString *)texture tint:(simd_float3)tint {
@@ -113,8 +81,6 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
         glow.radialSegmentCount = 12;
         _coreGeo = core;
         _glowGeo = glow;
-        _ringMaterial = [Effects additiveTextureMaterial:@"circle_05" tint:simd_make_float3(1.6f, 1.25f, 1.0f)];
-        _ringMaterial.diffuse.contents = [Effects shockRingImage];
         _streakMaterials = [NSMutableDictionary dictionary];
         // Explosion lights live in the scene permanently at zero intensity:
         // changing the number of lights makes SceneKit re-specialise every
@@ -139,6 +105,7 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
         [_fireTemplate setValue:@0.1 forKey:@"turbulence"];
         [_fireTemplate setValue:@1 forKey:@"heat"];
         [_fireTemplate setValue:@1 forKey:@"fade"];
+        _explosionSystems = [NSMutableDictionary dictionary];
         _muzzlePlayer = [Effects additiveTextureMaterial:@"star_06" tint:simd_make_float3(1.5f, 3.0f, 1.8f)];
         _muzzleEnemy = [Effects additiveTextureMaterial:@"star_06" tint:simd_make_float3(3.0f, 1.4f, 1.0f)];
         SCNPlane *plane = [SCNPlane planeWithWidth:1 height:1];
@@ -308,54 +275,254 @@ static NSString *const kFireFragment =
 
 #pragma mark - Explosions
 
+// Explosions are layered sprite particles, the way game VFX build them:
+// a short additive flash, a fireball of staggered clumps where flame pockets
+// burn over dark soot and die first, soot rolling over its outside, and many
+// burning fragments that shoot out, each trailing a short flame and a thin
+// smoke line, so the blast radiates streaks. Particle colours are sRGB but blend in linear space, so a "dark grey" of
+// 0.1 is black and low warm tones turn red: soot here is mid grey so it
+// still reads as smoke against space.
+
+static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray<NSNumber *> *times) {
+    CAKeyframeAnimation *a = [CAKeyframeAnimation animationWithKeyPath:keyPath];
+    a.values = values;
+    a.keyTimes = times;
+    return a;
+}
+
+static SCNParticleSystem *SpriteSystem(NSString *texture, SCNParticleBlendMode blend,
+                                       NSArray<SKColor *> *colors, NSArray<NSNumber *> *colorTimes,
+                                       NSArray<NSNumber *> *sizes, NSArray<NSNumber *> *sizeTimes) {
+    SCNParticleSystem *ps = [SCNParticleSystem particleSystem];
+    ps.particleImage = blend == SCNParticleBlendModeAlpha ? [Exhaust straightAlphaParticleTexture:texture]
+                                                          : [Exhaust particleTexture:texture];
+    ps.blendMode = blend;
+    ps.lightingEnabled = NO;
+    ps.sortingMode = SCNParticleSortingModeNone;
+    ps.birthLocation = SCNParticleBirthLocationVolume;
+    ps.birthDirection = SCNParticleBirthDirectionRandom;
+    ps.particleAngleVariation = 360;
+    ps.loops = NO;
+    ps.propertyControllers = @{
+        SCNParticlePropertyColor : [SCNParticlePropertyController controllerWithAnimation:OverLife(@"color", colors, colorTimes)],
+        SCNParticlePropertySize : [SCNParticlePropertyController controllerWithAnimation:OverLife(@"size", sizes, sizeTimes)],
+    };
+    return ps;
+}
+
+static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
+    NSMutableArray *out = [NSMutableArray arrayWithCapacity:values.count];
+    for (NSNumber *v in values) [out addObject:@(v.floatValue * s)];
+    return out;
+}
+
+// The particle systems for one explosion size. Sizes are absolute in the
+// property controllers, so each scale gets its own set, built once.
+- (NSDictionary<NSString *, SCNParticleSystem *> *)explosionSystemsForScale:(float)s {
+    NSNumber *key = @(roundf(s * 100) / 100);
+    NSDictionary *cached = _explosionSystems[key];
+    if (cached) return cached;
+
+    SCNParticleSystem *flash = SpriteSystem(@"flare_01", SCNParticleBlendModeAdditive,
+        @[RGBA(1, 0.95, 0.85, 1), RGBA(1, 0.6, 0.3, 0)], @[@0, @1],
+        Scaled(@[@4, @10], s), @[@0, @1]);
+    flash.birthRate = 2000; flash.emissionDuration = 0.001;
+    flash.particleLifeSpan = 0.12;
+    flash.particleIntensity = 0.5;
+    flash.emitterShape = nil;
+
+    // The fireball is mottled the way real ones are: bright flame pockets
+    // and dark soot exist at the same time, soot underneath and flame on
+    // top, and the flame burns out first. Both use the shaded smoke sprite
+    // tinted by colour (fire_01 keeps its detail only in alpha, which
+    // flattens to one colour when alpha-blended), with HDR colour rather
+    // than additive blending, so overlapping sprites keep their detail.
+    SCNParticleSystem *flame = SpriteSystem(@"smoke_07", SCNParticleBlendModeAlpha,
+        @[RGBA(1, 0.85, 0.45, 1), RGBA(1, 0.55, 0.12, 1), RGBA(0.9, 0.25, 0.04, 0.9), RGBA(0.4, 0.08, 0.02, 0)],
+        @[@0, @0.2, @0.5, @1],
+        Scaled(@[@2.5, @5, @6], s), @[@0, @0.4, @1]);
+    flame.birthRate = 350; flame.emissionDuration = 0.03;
+    // Hotter and cooler pockets side by side.
+    flame.particleColorVariation = SCNVector4Make(0.02, 0, 0.5, 0);
+    flame.emitterShape = [SCNSphere sphereWithRadius:2 * s];
+    // Speeds spread from zero up, so braked sprites fill the clump instead of
+    // all stopping on one shell.
+    flame.particleVelocity = 12 * s; flame.particleVelocityVariation = 12 * s;
+    flame.dampingFactor = 3;
+    flame.particleLifeSpan = 1.0; flame.particleLifeSpanVariation = 0.4;
+    flame.particleAngularVelocityVariation = 90;
+    flame.particleIntensity = 2.8;
+
+    SCNParticleSystem *soot = SpriteSystem(@"smoke_07", SCNParticleBlendModeAlpha,
+        @[RGBA(0.55, 0.2, 0.06, 0), RGBA(0.22, 0.1, 0.06, 0.9), RGBA(0.15, 0.13, 0.12, 0.85), RGBA(0.26, 0.25, 0.25, 0.7), RGBA(0.28, 0.28, 0.28, 0)],
+        @[@0, @0.06, @0.25, @0.55, @1],
+        Scaled(@[@3, @7, @10, @13], s), @[@0, @0.2, @0.5, @1]);
+    soot.birthRate = 500; soot.emissionDuration = 0.03;
+    soot.emitterShape = [SCNSphere sphereWithRadius:2.5 * s];
+    soot.particleVelocity = 14 * s; soot.particleVelocityVariation = 14 * s;
+    soot.dampingFactor = 2.5;
+    soot.particleLifeSpan = 3.0; soot.particleLifeSpanVariation = 0.8;
+    soot.particleAngularVelocityVariation = 40;
+
+    // Hot glow inside the fireball: additive fire sprites, so the core
+    // burns through the billows for its first half second.
+    SCNParticleSystem *glow = SpriteSystem(@"fire_01", SCNParticleBlendModeAdditive,
+        @[RGBA(1, 0.8, 0.45, 0.35), RGBA(1, 0.45, 0.1, 0.25), RGBA(0.6, 0.12, 0.02, 0)], @[@0, @0.4, @1],
+        Scaled(@[@4, @8, @10], s), @[@0, @0.4, @1]);
+    glow.birthRate = 300; glow.emissionDuration = 0.03;
+    glow.emitterShape = [SCNSphere sphereWithRadius:4 * s];
+    glow.particleVelocity = 10 * s; glow.particleVelocityVariation = 10 * s;
+    glow.dampingFactor = 3;
+    glow.particleLifeSpan = 0.6; glow.particleLifeSpanVariation = 0.2;
+    glow.particleAngularVelocityVariation = 120;
+    glow.particleIntensity = 1.0;
+
+    // Streaks behind the burning fragments, left in world space: a short
+    // bright flame at the head and a thin smoke line that widens and greys.
+    SCNParticleSystem *trailFire = SpriteSystem(@"fire_01", SCNParticleBlendModeAdditive,
+        @[RGBA(1, 0.85, 0.55, 0.8), RGBA(1, 0.45, 0.1, 0.5), RGBA(0.3, 0.05, 0.01, 0)], @[@0, @0.4, @1],
+        Scaled(@[@1.8, @1.2, @0.6], s), @[@0, @0.5, @1]);
+    trailFire.birthRate = 90;
+    trailFire.local = NO;
+    trailFire.particleLifeSpan = 0.18; trailFire.particleLifeSpanVariation = 0.06;
+    trailFire.particleAngularVelocityVariation = 200;
+    trailFire.particleIntensity = 1.6;
+    trailFire.emitterShape = nil;
+
+    SCNParticleSystem *trailSmoke = SpriteSystem(@"smoke_07", SCNParticleBlendModeAlpha,
+        @[RGBA(0.5, 0.2, 0.07, 0), RGBA(0.26, 0.17, 0.13, 0.6), RGBA(0.22, 0.21, 0.21, 0.45), RGBA(0.22, 0.22, 0.22, 0)],
+        @[@0, @0.04, @0.15, @1],
+        Scaled(@[@1.0, @1.8, @2.8], s), @[@0, @0.3, @1]);
+    trailSmoke.birthRate = 240;
+    trailSmoke.local = NO;
+    trailSmoke.particleLifeSpan = 1.4; trailSmoke.particleLifeSpanVariation = 0.5;
+    trailSmoke.particleVelocity = 0.5 * s;
+    trailSmoke.particleAngularVelocityVariation = 60;
+    trailSmoke.emitterShape = [SCNSphere sphereWithRadius:0.15 * s];
+
+    NSDictionary *systems = @{ @"flash" : flash, @"flame" : flame, @"soot" : soot, @"glow" : glow,
+                               @"trailFire" : trailFire, @"trailSmoke" : trailSmoke };
+    _explosionSystems[key] = systems;
+    return systems;
+}
+
 - (void)explosionAt:(simd_float3)p velocity:(simd_float3)v hullMaterial:(SCNMaterial *)hull {
     [self explosionAt:p velocity:v hullMaterial:hull scale:1];
 }
 
 - (void)explosionAt:(simd_float3)p velocity:(simd_float3)v hullMaterial:(SCNMaterial *)hull scale:(float)scale {
+    NSDictionary<NSString *, SCNParticleSystem *> *systems = [self explosionSystemsForScale:scale];
     SCNNode *root = [SCNNode node];
     root.simdPosition = p;
-    root.simdScale = simd_make_float3(scale, scale, scale);
     [_scene.rootNode addChildNode:root];
     // The cloud keeps a little of the ship's momentum.
-    [root runAction:[SCNAction moveBy:V3(v * 0.35f * 2.5f) duration:2.5]];
+    [root runAction:[SCNAction moveBy:V3(v * 0.35f * 4.0f) duration:4.0]];
 
-    // White-hot core, a slower outer fireball, and one late secondary blast.
-    [self fireSphereAt:root offset:0 radius:9.0f duration:0.7 delay:0 heat:1.0f turbulence:0.10f];
-    [self fireSphereAt:root offset:randomUnit() * 1.5f radius:14.0f duration:1.4 delay:0.05 heat:0.75f turbulence:0.22f];
-    [self fireSphereAt:root offset:randomUnit() * 6.0f radius:6.0f duration:0.8 delay:0.3 + frand() * 0.2 heat:0.9f turbulence:0.18f];
+    SCNNode *flash = [SCNNode node];
+    flash.renderingOrder = 90;
+    [root addChildNode:flash];
+    [flash addParticleSystem:[systems[@"flash"] copy]];
+    [flash addParticleSystem:[systems[@"glow"] copy]];
+    // The fireball is several clumps at staggered offsets and times, so its
+    // outline is irregular and it keeps boiling instead of one round ball.
+    // SceneKit draws each particle system as one batch, so mixing comes
+    // from draw order: each clump draws its soot and then its flame, and
+    // the next clump's soot lands over the last one's flame. Overlapping
+    // clumps read as fire pockets divided by dark smoke.
+    int clumps = 6 + (int)lroundf(2 * scale) + (int)arc4random_uniform(3);
+    for (int i = 0; i < clumps; i++) {
+        SCNNode *sootNode = [SCNNode node], *flameNode = [SCNNode node];
+        sootNode.renderingOrder = 60 + 2 * i;
+        flameNode.renderingOrder = 61 + 2 * i;
+        simd_float3 at = i == 0 ? 0 : randomUnit() * (3 + frand() * 6) * scale;
+        sootNode.simdPosition = flameNode.simdPosition = at;
+        [root addChildNode:sootNode];
+        [root addChildNode:flameNode];
+        double delay = i == 0 ? 0 : frand() * 0.25;
+        [flameNode runAction:[SCNAction sequence:@[[SCNAction waitForDuration:delay], [SCNAction runBlock:^(SCNNode *n) {
+            [sootNode addParticleSystem:[systems[@"soot"] copy]];
+            [n addParticleSystem:[systems[@"flame"] copy]];
+        }]]]];
+    }
 
     // Anamorphic glint.
-    SCNNode *glint = [self streakWithColor:RGBA(1, 0.75, 0.5, 1) width:160 height:2.2];
+    SCNNode *glint = [self streakWithColor:RGBA(1, 0.75, 0.5, 1) width:120 * scale height:1.6 * scale];
     [root addChildNode:glint];
-    [glint runAction:[SCNAction sequence:@[[SCNAction fadeOutWithDuration:0.6], [SCNAction removeFromParentNode]]]];
+    [glint runAction:[SCNAction sequence:@[[SCNAction fadeOutWithDuration:0.35], [SCNAction removeFromParentNode]]]];
 
-    // Planar shockwave ring (the "Praxis" ring), tilted at random.
-    SCNPlane *ringPlane = [SCNPlane planeWithWidth:1 height:1];
-    ringPlane.firstMaterial = _ringMaterial;
-    SCNNode *ring = [SCNNode nodeWithGeometry:ringPlane];
-    ring.castsShadow = NO;
-    ring.renderingOrder = 75;
-    ring.simdOrientation = simd_quaternion(simd_make_float3(0, 0, 1), randomUnit());
-    ring.scale = SCNVector3Make(4, 4, 4);
-    [root addChildNode:ring];
-    SCNAction *grow = [SCNAction scaleTo:70 duration:1.0];
-    grow.timingMode = SCNActionTimingModeEaseOut;
-    [ring runAction:[SCNAction group:@[grow, [SCNAction sequence:@[[SCNAction waitForDuration:0.1], [SCNAction fadeOutWithDuration:0.9]]]]]
-         completionHandler:^{ [ring removeFromParentNode]; }];
-
-    // A few glowing hull chunks that cool as they tumble away.
+    int arms = (int)lroundf(8 + 6 * scale) + (int)arc4random_uniform(4);
+    for (int i = 0; i < arms; i++) [self burningFragmentIn:root systems:systems hull:hull scale:scale];
     int pieces = 4 + (int)arc4random_uniform(3) + (int)(scale > 1 ? 4 : 0);
     for (int i = 0; i < pieces; i++) [self debrisFrom:p velocity:v hull:hull];
 
     // Light flash on nearby hulls, from the fixed pool.
-    SCNNode *flash = _flashLights[_flashIndex++ % FLASH_LIGHTS];
-    [flash removeAllActions];
-    flash.simdPosition = p;
-    [flash runAction:[SCNAction customActionWithDuration:0.9 actionBlock:^(SCNNode *node, CGFloat t) {
+    SCNNode *flashLight = _flashLights[_flashIndex++ % FLASH_LIGHTS];
+    [flashLight removeAllActions];
+    flashLight.simdPosition = p;
+    [flashLight runAction:[SCNAction customActionWithDuration:0.9 actionBlock:^(SCNNode *node, CGFloat t) {
         node.light.intensity = 60000 * scale * powf(1.0f - (float)(t / 0.9), 2.0f);
     }]];
-    [root runAction:[SCNAction sequence:@[[SCNAction waitForDuration:2.5], [SCNAction removeFromParentNode]]]];
+    [root runAction:[SCNAction sequence:@[[SCNAction waitForDuration:5.0], [SCNAction removeFromParentNode]]]];
+}
+
+// A burning fragment that shoots out, slows and bends a little while it emits
+// fire and smoke into world space; the thin trail it leaves is one of the
+// streaks radiating from the explosion.
+- (void)burningFragmentIn:(SCNNode *)root systems:(NSDictionary<NSString *, SCNParticleSystem *> *)systems
+                     hull:(SCNMaterial *)hull scale:(float)scale {
+    simd_float3 dir = randomUnit();
+    __block simd_float3 vel = dir * (90 + frand() * 60) * scale;
+    // A slight sideways pull so streaks bend a little instead of ruled spokes.
+    simd_float3 curl = simd_normalize(simd_cross(dir, randomUnit())) * frand() * 15 * scale;
+    const float drag = 2.5f + frand() * 1.0f;
+    const double burn = 0.7 + frand() * 0.4;
+
+    SCNNode *head = [SCNNode node];
+    head.simdPosition = dir * 2 * scale;
+    [root addChildNode:head];
+    SCNBox *box = [SCNBox boxWithWidth:(0.2 + frand() * 0.3) * scale height:(0.15 + frand() * 0.2) * scale
+                                length:(0.3 + frand() * 0.5) * scale chamferRadius:0.03];
+    SCNMaterial *bm = hull ? [hull copy] : [SCNMaterial material];
+    bm.emission.contents = RGBA(1.0, 0.55, 0.2, 1);
+    bm.emission.intensity = 4.0;
+    box.firstMaterial = bm;
+    SCNNode *chunk = [SCNNode nodeWithGeometry:box];
+    [head addChildNode:chunk];
+    simd_float3 spin = randomUnit() * (4 + frand() * 8);
+    [chunk runAction:[SCNAction rotateByX:spin.x * burn y:spin.y * burn z:spin.z * burn duration:burn]];
+
+    SCNNode *smokeNode = [SCNNode node], *fireNode = [SCNNode node];
+    smokeNode.renderingOrder = 74;
+    fireNode.renderingOrder = 77;
+    [head addChildNode:smokeNode];
+    [head addChildNode:fireNode];
+    SCNParticleSystem *smoke = [systems[@"trailSmoke"] copy], *fire = [systems[@"trailFire"] copy];
+    float smokeRate = smoke.birthRate, fireRate = fire.birthRate;
+    [smokeNode addParticleSystem:smoke];
+    [fireNode addParticleSystem:fire];
+
+    __block double last = 0;
+    [head runAction:[SCNAction sequence:@[
+        [SCNAction customActionWithDuration:burn actionBlock:^(SCNNode *node, CGFloat elapsed) {
+            float dt = (float)(elapsed - last);
+            last = elapsed;
+            if (dt <= 0) return;
+            vel += (curl - vel * drag) * dt;
+            node.simdPosition += vel * dt;
+            float t = (float)(elapsed / burn);
+            bm.emission.intensity = 4.0f * (1.0f - t);
+            // The flame dies before the smoke does, so the tips are sooty.
+            fire.birthRate = fireRate * (1.0f - t) * (1.0f - t);
+            smoke.birthRate = smokeRate * (1.0f - 0.5f * t);
+        }],
+        [SCNAction runBlock:^(SCNNode *node) {
+            fire.birthRate = 0;
+            smoke.birthRate = 0;
+            chunk.hidden = YES;
+        }],
+        // Keep the node until its smoke has died; removing it kills its particles.
+        [SCNAction waitForDuration:2.5],
+        [SCNAction removeFromParentNode]]]];
 }
 
 - (void)debrisFrom:(simd_float3)p velocity:(simd_float3)v hull:(SCNMaterial *)hull {
@@ -394,8 +561,6 @@ static NSString *const kFireFragment =
     // instead of hitching on the first explosion.
     SCNNode *fire = [SCNNode nodeWithGeometry:[SCNSphere sphereWithRadius:1]];
     fire.geometry.firstMaterial = [self fireMaterialWithSeed:1];
-    SCNNode *ring = [SCNNode nodeWithGeometry:[SCNPlane planeWithWidth:1 height:1]];
-    ring.geometry.firstMaterial = _ringMaterial;
     SCNNode *streak = [self streakWithColor:RGBA(1, 0.75, 0.5, 1) width:1 height:1];
     SCNNode *bolt = [self makeBoltNode];
     [self styleBolt:bolt player:YES ion:NO];
@@ -403,7 +568,13 @@ static NSString *const kFireFragment =
     [self styleBolt:bolt2 player:NO ion:NO];
     SCNNode *muzzle = [SCNNode nodeWithGeometry:[SCNPlane planeWithWidth:1 height:1]];
     muzzle.geometry.firstMaterial = _muzzlePlayer;
-    return @[fire, ring, streak, bolt, bolt2, muzzle];
+    SCNNode *particles = [SCNNode node];
+    for (SCNParticleSystem *ps in [self explosionSystemsForScale:1].allValues) {
+        SCNParticleSystem *idle = [ps copy];
+        idle.birthRate = 0;
+        [particles addParticleSystem:idle];
+    }
+    return @[fire, particles, streak, bolt, bolt2, muzzle];
 }
 
 @end
