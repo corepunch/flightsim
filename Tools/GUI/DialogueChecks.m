@@ -150,6 +150,7 @@ static int CheckCampaignCaptions(void) {
         Briefing *scene = [[Briefing alloc] initWithSize:value.sizeValue];
         for (NSUInteger mission = 0; mission < CampaignMissions().count; mission++) {
             [scene showBriefing:mission];
+            CHECK([scene.backdropRoom isEqualToString:CampaignMissionAt(mission).briefingRoom]);
             [(id<UIMotionScene>)scene motionEnter];
             NSUInteger pages = [[scene valueForKey:@"_pages"] count];
             for (NSUInteger page = 0; page < pages; page++) {
@@ -189,6 +190,7 @@ static int CheckSharedConversationStage(NSString *output) {
             for (StoryLine *line in CampaignMissionAt(mission).debrief.dialogue) {
                 UIMotionFinishTyping(scene.speech);
                 [scene handle:InputActionConfirm];
+                CHECK([scene.backdropRoom isEqualToString:CampaignMissionAt(mission).debriefRoom]);
                 CHECK(CGRectEqualToRect(player, [scene portraitRectForCharacter:StoryPlayer()]));
                 CHECK(fabs(CGRectGetWidth(caption) - CGRectGetWidth(scene.captionRect)) < 0.01);
                 if (fabs(CGRectGetMaxY(caption) - CGRectGetMaxY(scene.captionRect)) >= 0.01)

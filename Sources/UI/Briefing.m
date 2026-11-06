@@ -801,6 +801,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     NSMutableDictionary<NSString *, SKTexture *> *_art;
     SKNode *_root;
     SKShapeNode *_monitorMask;
+    NSString *_backdropRoom;
     TacticalMap *_map;
     CGSize _laidOut;
 
@@ -845,6 +846,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 - (NSUInteger)selectedIndex { return _index; }
 - (SKLabelNode *)speech { return _caption.speech; }
 - (CGRect)captionRect { return _caption.rect; }
+- (NSString *)backdropRoom { return _backdropRoom; }
 - (CGRect)portraitRectForCharacter:(NSString *)name { return [_portraitLayer childNodeWithName:name].frame; }
 - (BOOL)captionOnRight { return _caption.right; }
 - (CGRect)confirmRect { return _buttons.confirm; }
@@ -978,6 +980,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     _buttons = (FooterButtons){0};
     _grid = (MissionGrid){0};
     _map = nil;
+    _backdropRoom = nil;
     _laidOut = self.size;
     // The backdrop is up at full opacity from the first frame: the screen
     // that was here, or the outgoing layout, dissolves over it, so the view
@@ -1242,20 +1245,15 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     return texture ? [SKSpriteNode spriteNodeWithTexture:texture] : nil;
 }
 
-// A room from Story/rooms.json: the art, cropped to fill the screen, and its
-// wall monitor traced by the room's bezel polygon (source pixels, y down).
-// clear: rects the monitor should stay below, such as a navigation bar's
-// controls; the art moves down as far as it can while still filling the screen.
-- (CGRect)addBackdrop:(NSString *)roomName raiseBoard:(BOOL)raiseBoard clear:(NSArray<NSValue *> *)clear {
+// Frame the room without drawing it, so a different background can reuse the
+// briefing's conversation layout. Room coordinates are source pixels, y down.
+- (CGRect)backdropFrameForRoom:(StoryRoom *)room raiseBoard:(BOOL)raiseBoard clear:(NSArray<NSValue *> *)clear {
     CGSize size = self.size;
-    StoryRoom *room = StoryRoomNamed(roomName);
-    SKSpriteNode *art = room ? [self artNamed:room.image] : nil;
-    if (!art) return CGRectZero;
-    // Room coordinates are source pixels, y down.
-    CGSize source = room.size.x > 0 ? CGSizeMake(room.size.x, room.size.y) : art.size;
+    CGSize source = room.size.x > 0 ? CGSizeMake(room.size.x, room.size.y) : [self artTextureNamed:room.image].size;
+    if (source.width <= 0 || source.height <= 0) return CGRectZero;
     const CGFloat boardBottom = room.boardBottom / source.height, boardHeight = room.boardHeight / source.height;
-    CGFloat scale = MAX(size.width / art.size.width, size.height / art.size.height * (raiseBoard ? 1.15 : 1));
-    CGSize artSize = CGSizeMake(art.size.width * scale, art.size.height * scale);
+    CGFloat scale = MAX(size.width / source.width, size.height / source.height * (raiseBoard ? 1.15 : 1));
+    CGSize artSize = CGSizeMake(source.width * scale, source.height * scale);
     CGFloat centerY = size.height / 2;
     if (raiseBoard && room.hasBoard) {
         // Give the caption more room while keeping the top of the monitor visible.
@@ -1279,9 +1277,32 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     }
     // Never so far that the art's top edge comes into view.
     centerY -= MIN(drop, MAX(0, origin.y + artSize.height - size.height));
+    return (CGRect){ CGPointMake(size.width / 2 - artSize.width / 2, centerY - artSize.height / 2), artSize };
+}
+
+- (SKShapeNode *)monitorForRoom:(StoryRoom *)room frame:(CGRect)frame {
+    NSUInteger count = room.bezelCount;
+    if (count < 3) return nil;
+    CGSize source = room.size.x > 0 ? CGSizeMake(room.size.x, room.size.y) : [self artTextureNamed:room.image].size;
+    CGPoint corners[count];
+    for (NSUInteger i = 0; i < count; i++) {
+        simd_float2 bezel = [room bezelPoint:i];
+        CGPoint fraction = CGPointMake(bezel.x / source.width, 1 - bezel.y / source.height);
+        corners[i] = PointAdd(frame.origin, PointMultiply(fraction, frame.size));
+    }
+    return MonitorMask(corners, count);
+}
+
+// Draw the room's artwork and return its optional wall monitor.
+- (CGRect)addBackdrop:(NSString *)roomName raiseBoard:(BOOL)raiseBoard clear:(NSArray<NSValue *> *)clear {
+    StoryRoom *room = StoryRoomNamed(roomName);
+    SKSpriteNode *art = room ? [self artNamed:room.image] : nil;
+    if (!art) return CGRectZero;
+    _backdropRoom = roomName;
+    CGRect frame = [self backdropFrameForRoom:room raiseBoard:raiseBoard clear:clear];
+    CGFloat scale = CGRectGetWidth(frame) / art.size.width;
     [art setScale:scale];
-    art.position = CGPointMake(size.width / 2, centerY);
-    CGRect frame = art.frame;
+    art.position = RectCenter(frame);
     [_root addChild:art];
     if ([self intro] && !UIMotionReduced()) {
         art.alpha = 0;
@@ -1291,20 +1312,12 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
             UIEased([SKAction scaleTo:scale duration:0.9], UICurveOut),
         ]]];
     }
-    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.12) size:size];
+    SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 0.12) size:self.size];
     shade.anchorPoint = CGPointZero;
     [_root addChild:shade];
 
-    // Counterclockwise once converted to scene coordinates.
-    if (count < 3) return CGRectZero;
-    CGPoint corners[count];
-    for (NSUInteger i = 0; i < count; i++) {
-        simd_float2 bezel = [room bezelPoint:i];
-        CGPoint fraction = CGPointMake(bezel.x / source.width, 1 - bezel.y / source.height);
-        corners[i] = PointAdd(frame.origin, PointMultiply(fraction, frame.size));
-    }
-    _monitorMask = MonitorMask(corners, count);
-    return CGPathGetBoundingBox(_monitorMask.path);
+    _monitorMask = [self monitorForRoom:room frame:frame];
+    return _monitorMask ? CGPathGetBoundingBox(_monitorMask.path) : CGRectZero;
 }
 
 - (void)addPortrait:(NSString *)name expression:(NSString *)expression facingRight:(BOOL)facingRight
@@ -1483,6 +1496,12 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     // put when PREV appears after the first page.
     NSArray<NSValue *> *clear = bar ? @[BoxRect(bar.row)] : nil;
     CGRect screen = [self addBackdrop:room raiseBoard:compact && !narrow clear:clear];
+    if (_mode == ModeDebrief) {
+        StoryRoom *briefingRoom = StoryRoomNamed(mission.briefingRoom);
+        CGRect frame = [self backdropFrameForRoom:briefingRoom raiseBoard:compact && !narrow clear:clear];
+        SKShapeNode *monitor = [self monitorForRoom:briefingRoom frame:frame];
+        screen = monitor ? CGPathGetBoundingBox(monitor.path) : CGRectZero;
+    }
     BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
     if (!paintedBoard) {
         CGFloat margin = size.width * 0.06, panelTop = size.height * 0.93;
@@ -1490,7 +1509,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         screen = RectFromEdges(margin, panelTop - size.height * 0.34, size.width - margin, panelTop);
         SKShapeNode *panel = UIReadoutPanel(screen, UIColorWithOpacity(UIConsoleEdge, 0.95),
                                           UIColorWithOpacity(UIConsoleGlass, 1));
-        [_root addChild:panel];
+        if (_mode == ModeBriefing) [_root addChild:panel];
         CGFloat left = CGRectGetMinX(screen), right = CGRectGetMaxX(screen);
         CGFloat bottom = CGRectGetMinY(screen), top = CGRectGetMaxY(screen);
         CGFloat cut = MIN(UIReadoutChamfer, MIN(screen.size.width, screen.size.height) * 0.25);
