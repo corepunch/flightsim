@@ -61,3 +61,9 @@ typing, intact Unicode characters, carriage returns, and click-to-finish control
 Desktop and phone PNG previews remain in the printed `build/dialogue-checks.*`
 directory. It forces motion on (`ui_reduceMotion 0`), so it runs the same
 whatever the machine's Reduce Motion setting is.
+
+Flight UI checks also render LAN creation, eight-pilot lobbies and server
+selection at compact phone, notched phone, iPad and desktop sizes. They cover
+keyboard creation, waiting for a second pilot, rematch navigation, PvP scores
+and the wrapping H/F1 help panel. See [the release review](../../RELEASE_REVIEW.md)
+for selected previews and the distinction between scene fixtures and device tests.

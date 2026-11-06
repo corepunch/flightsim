@@ -1,4 +1,5 @@
 Run `./Tools/run-network-checks.sh` on macOS with Xcode's command-line tools.
+A missing baked model cache is built automatically for the campaign checks.
 The CI network-checks job runs the same command and retains results.log.
 The normal build, unit, campaign and six GUI suites remain separate CI jobs.
 
@@ -34,11 +35,10 @@ expected under loss; final convergence is checked after delivery recovers.
 The UDP smoke has no injected delay/loss. It is a real kernel socket test, not
 LAN, separate-process or device testing.
 
-Compatibility change: protocol **4** now requires validation of the existing
-CS_GAME configstring before beginning. Version 3 clients never checked it, so
-keeping version 3 would permit old clients to silently bypass the new check.
-Version 4 servers reject them at connect; version 4 clients are rejected by
-version 3 servers. Packet layout otherwise remains unchanged. CS_GAME contains
+Compatibility change: protocol **6** distinguishes competitive matches through
+CS_MODE. Earlier front ends could record a dogfight as a campaign victory, so
+both sides reject older protocol versions. Game API **4** adds typed deathmatch
+rules to the level contract. Rebuild the engine and modules together. CS_GAME contains
 the game/data version plus SHA-256 over sorted, length-delimited ship filenames
 and exact JSON bytes. Both game module and client calculate it from their own
 bundle. Active clients also reject changes to this configstring.
@@ -51,7 +51,7 @@ Remaining coverage and compatibility limits:
 - All peers share a process and definition cache in integration scenarios. Fresh
   process digest probes detect changed files, but do not replace separate app
   bundles connecting over a real network.
-- No physical macOS/iOS peers, LAN discovery, Wi-Fi jitter, NAT, MTU/path issues,
+- No physical macOS/iOS peers, Wi-Fi jitter, NAT, MTU/path issues,
   endian/architecture combinations, background/resume or app lifecycle coverage.
 - The identity covers ship JSON only. Capital collision meshes, missions,
   projectile visuals and other game data still depend on a manually maintained
@@ -64,3 +64,41 @@ Remaining coverage and compatibility limits:
 - Weapon cadence/energy prediction may differ transiently after input loss;
   authoritative damage and ammo remain server controlled. This suite checks
   weapon activity and projectile parameters, not perfect effect deduplication.
+
+## LAN matches and campaign flow
+
+The same executable now also checks an eight-player dogfight: each pilot is
+hostile to every other pilot, targeting includes human opponents, primary
+weapons damage another player, missiles carry the shooter's team, deaths
+increment once, respawns preserve score, and frag/time limits end the match.
+A rematch resets scores; a solo host waits without consuming the match clock.
+A missing host times out during connection attempts as well as after joining.
+
+A real Bonjour smoke publishes an ephemeral UDP port, resolves the declared
+`_kestrel._udp` service and queries its game information. The random port is
+outside the browser's legacy port scan. It also verifies that private sessions
+ignore remote discovery and that closing a public session sends a disconnect.
+This checks local mDNS and UDP on one Mac, not discovery between devices.
+iOS uses Bonjour plus UDP unicast and declares the service in Info.plist;
+it does not send the broadcast packets that require Apple's multicast entitlement.
+
+Separate processes then load the production resources and baked subsystem
+geometry for Kestrel Frontier and Ember Reach. `Tools/CampaignChecks.h` advances
+the real mission runner, arrivals, escort paths and boarding AI. A scripted
+pilot supplies perfect interactions: it moves directly to navigation/scan/collect
+targets, destroys required targets and disables the requested subsystem parts.
+Each mission must reach success and, on a fresh run, fail after player death.
+Combat and ordinary flight are deliberately omitted from this flow check;
+it cannot establish human completion times or casual touch-control difficulty.
+Campaign logs are retained beside `results.log` and uploaded by CI.
+
+For an optional separate-process test against a running app, use the campaign
+resource tree printed by the suite:
+
+```sh
+build/network-checks.<run>/campaign/NetworkChecks --peer 127.0.0.1:27910
+```
+
+Create a game in the app first. Select its actual port if a simulator or another
+app instance holds 27910. The peer announces connection, automatically enters
+when the host starts, receives snapshots and flies for up to three minutes.

@@ -69,6 +69,7 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `g_aimAssist` | 1 | archive | Scales the aim-assist cone of players' guns (ship `gun.assist`, degrees); 0 turns it off |
 | `g_god` | 0 | cheat | Players take no damage |
 | `g_autopilot` | 0 | cheat | The AI flies the first player's ship |
+| `name` | generated on mobile, account name on Mac | archive | Pilot callsign shown in LAN games |
 | `g_warp` | | cheat | Entity id to spawn the first player next to |
 | `g_warpDistance` | 2.2 | cheat | `g_warp` distance, in radii |
 
