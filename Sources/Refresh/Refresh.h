@@ -102,6 +102,7 @@ typedef NSEdgeInsets HUDInsets;
 // laser), then the secondary rack above them.
 @property (nonatomic, readonly) NSArray<SKNode *> *conditionRows;
 @property (nonatomic, readonly) SKLabelNode *scoreLabel;
+@property (nonatomic, readonly) SKNode *forwardScope, *rearScope;
 @property (nonatomic, readonly) BOOL helpVisible;
 @property (nonatomic, readonly) CGRect helpRect;
 

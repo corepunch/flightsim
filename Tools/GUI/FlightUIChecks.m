@@ -69,12 +69,15 @@ static int CheckHUD(void) {
         [hud updateInstruments:instrument contacts:&contact count:1 cockpit:NO];
         SKNode *speed = [hud valueForKey:@"speedLabel"], *throttle = [hud valueForKey:@"throttleLabel"], *input = [hud valueForKey:@"inputLabel"], *target = [hud valueForKey:@"targetReadout"];
         CHECK(!CGRectIntersectsRect(speed.frame, throttle.frame));
+        CHECK(CGRectContainsRect(RectWithSize(hud.size), speed.frame));
+        CHECK(CGRectContainsRect(RectWithSize(hud.size), throttle.frame));
         // The condition rows stack without overlapping, clear of the target
         // readout and inside the right edge.
         NSArray<SKNode *> *rows = hud.conditionRows;
         CHECK(rows.count == 4);
         for (NSUInteger i = 0; i < rows.count; i++) {
             CGRect r = [rows[i] calculateAccumulatedFrame];
+            CHECK(CGRectGetMinY(r) >= 0);
             CHECK(CGRectGetMaxX(r) <= hud.size.width - (hud.touchLayout ? hud.contentInsets.right : 0));
             CHECK(!CGRectIntersectsRect(r, [target calculateAccumulatedFrame]));
             if (i + 1 < rows.count) CHECK(CGRectGetMaxY(r) <= CGRectGetMinY([rows[i + 1] calculateAccumulatedFrame]) + 1);
@@ -84,12 +87,21 @@ static int CheckHUD(void) {
             CHECK(speed.position.x < 90);
             CHECK(rows[1].position.x > hud.size.width - 170);
         }
-        SKNode *forward = [hud valueForKey:@"forwardScope"], *rear = [hud valueForKey:@"rearScope"];
+        SKNode *forward = hud.forwardScope, *rear = hud.rearScope;
         SKNode *objectives = [hud valueForKey:@"objectivePanel"];
         CHECK(fabs(forward.position.y - rear.position.y) < 0.01);
         CHECK(CGRectGetMaxX(forward.frame) + 8 <= CGRectGetMinX([objectives calculateAccumulatedFrame]));
-        CHECK(CGRectGetMinX(forward.frame) >= (hud.touchLayout ? hud.contentInsets.left : 0));
-        CHECK(CGRectGetMaxX(rear.frame) <= hud.size.width - (hud.touchLayout ? hud.contentInsets.right : 0));
+        CHECK(CGRectGetMinX(forward.frame) >= 0);
+        CHECK(CGRectGetMaxX(rear.frame) <= hud.size.width);
+        // The circular scopes have equal top and side margins, even when a
+        // landscape phone reserves a large inset for the mid-edge housing.
+        CGFloat fromTop = hud.size.height - forward.position.y;
+        CHECK(fabs(forward.position.x - fromTop) < 0.01);
+        CHECK(fabs(hud.size.width - rear.position.x - fromTop) < 0.01);
+        if (hud.touchLayout && hud.size.width > hud.size.height) {
+            CHECK(CGRectGetMinY(forward.frame) >= hud.size.height * 2 / 3);
+            CHECK(CGRectGetMaxY(forward.frame) <= hud.size.height - hud.contentInsets.top);
+        }
         if (hud.touchLayout) {
             CGFloat right = hud.size.width - hud.contentInsets.right - 12;
             CGFloat pauseRight = right - 128 * forward.xScale - 8;
