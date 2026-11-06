@@ -182,7 +182,7 @@ static PlatformImage *LuminanceAlphaImage(NSURL *url) {
             // Several sprites are grey shapes on opaque black: the dark pixels
             // are background, not dark smoke. Fade coverage out with
             // brightness and keep the brightness as shading.
-            float k = fminf(fmaxf((lum - 0.03f) / 0.37f, 0), 1);
+            float k = fminf(fmaxf((lum - 0.02f) / 0.6f, 0), 1);
             a *= k * k * (3 - 2 * k);
             for (int c = 0; c < 3; c++) p[c] = (uint8_t)lroundf(fminf(rgb[c] / 0.8f, 1) * 255);
             p[3] = (uint8_t)lroundf(a * 255);
