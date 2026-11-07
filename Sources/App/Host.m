@@ -425,7 +425,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     [self closeLANGame];
     [_clientView clearMission];
     if (!_clientUDP) _clientUDP = [[UDPTransport alloc] initWithPort:0 attempts:1];
-    if (!_clientUDP) { [_frontEnd setBrowserStatus:L10n(@"browser.host_failed")]; return; }
+    if (!_clientUDP) { [_frontEnd setBrowserStatus:L10n(@"browser.socket_failed")]; return; }
     NSLog(@"Host: joining %@", address);
     [_client connectTo:address transport:_clientUDP name:PilotName()];
     [_frontEnd setBrowserStatus:L10nFormat(@"browser.connecting", address)];
@@ -712,7 +712,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     }
     [self connectLocal];   // back to our own server
     [_frontEnd showBrowser];
-    [_frontEnd setBrowserStatus:L10nExpand(reason)];
+    [_frontEnd setBrowserStatus:L10nFormat(@"browser.connection_failed", L10nExpand(reason))];
 }
 
 - (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {

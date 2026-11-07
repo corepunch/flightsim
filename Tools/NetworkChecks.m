@@ -710,6 +710,51 @@ static void ConnectTimeoutCheck(void) {
     puts("PASS missing host: connection attempts time out instead of retrying forever");
 }
 
+// Drive the real delegates without relying on Bonjour daemon timing or permissions.
+@interface DiagnosticService : NSNetService
+@property (nonatomic, copy) NSArray<NSData *> *testAddresses;
+@end
+@implementation DiagnosticService
+- (NSArray<NSData *> *)addresses { return self.testAddresses; }
+@end
+
+@interface LANBrowser (DiagnosticChecks) <NSNetServiceBrowserDelegate, NSNetServiceDelegate>
+@end
+
+static void DiscoveryFailureChecks(void) {
+    LANBrowser *noSocket = [[LANBrowser alloc] initWithSocket:nil];
+    CHECK(noSocket.socketFailed && noSocket.discoveryFailed && !noSocket.searchError);
+    [noSocket stop];
+    LANBrowser *browser = [LANBrowser new];
+    CHECK(!browser.socketFailed);
+    NSDictionary *failure = @{NSNetServicesErrorDomain: @10, NSNetServicesErrorCode: @(-72000)};
+    [browser netServiceBrowser:nil didNotSearch:failure];
+    CHECK(browser.discoveryFailed && browser.searchError.code == -72000);
+    CHECK(!browser.socketFailed && !browser.resolutionError && !browser.accessDenied);
+    [browser netServiceBrowser:nil didNotSearch:@{NSNetServicesErrorDomain: @10, NSNetServicesErrorCode: @(-65570)}];
+    CHECK(browser.accessDenied);
+    [browser netServiceBrowserWillSearch:nil];
+    CHECK(!browser.discoveryFailed && !browser.searchError && !browser.accessDenied);
+    NSNetService *service = [[NSNetService alloc] initWithDomain:@"local." type:@"_kestrel._udp." name:@"Missing" port:12345];
+    [browser netService:service didNotResolve:@{NSNetServicesErrorDomain: @10, NSNetServicesErrorCode: @(-72007)}];
+    CHECK(browser.resolutionError.code == -72007 && !browser.discoveryFailed);
+    [browser netServiceDidResolveAddress:service];
+    CHECK([browser.resolutionError.domain isEqualToString:@"LANAddress"]);
+    DiagnosticService *resolved = [[DiagnosticService alloc] initWithDomain:@"local." type:@"_kestrel._udp." name:@"Silent host" port:12345];
+    NetAddress *address = [NetAddress addressWithString:@"127.0.0.1" port:12345];
+    resolved.testAddresses = @[address.sockaddr];
+    [browser netServiceDidResolveAddress:resolved];
+    CHECK(!browser.resolutionError);
+    clockNow += 7;
+    [browser poll];
+    CHECK(browser.hostUnreachable);
+    [browser netServiceBrowser:nil didRemoveService:resolved moreComing:NO];
+    [browser poll];
+    CHECK(!browser.hostUnreachable);
+    [browser stop];
+    puts("PASS LAN diagnostics: socket failure, Bonjour search error/code and recovery, resolution timeout, no IPv4, silent host and removal");
+}
+
 static void DiscoveryCheck(void) {
     Server *server = [[Server alloc] initWithName:@"Bonjour check"]; CHECK(server);
     UDPTransport *socket = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(socket);
@@ -736,6 +781,10 @@ static void DiscoveryCheck(void) {
         for (LANServer *entry in browser.servers) if (entry.address.port == socket.port) found = YES;
     }
     CHECK(!advertisement.failed && !browser.discoveryFailed && found);
+    [browser netServiceBrowser:nil didNotSearch:@{NSNetServicesErrorDomain: @10, NSNetServicesErrorCode: @(-72000)}];
+    [browser query:address]; [server frame:0]; [browser poll];
+    CHECK(browser.discoveryFailed && browser.servers.count > 0);
+    [browser stop]; [advertisement stop];
     [server closeSession]; CHECK(server.clientCount == 0 && !server.publicHosting);
     BOOL closed = NO; NSData *packet;
     while ((packet = [probe receiveFrom:&from])) if (![NetChannel outOfBandText:packet]) closed = YES;
@@ -778,6 +827,7 @@ int main(int argc, const char **argv) { @autoreleasepool {
     UDPSmoke();
     DeathmatchRun();
     ConnectTimeoutCheck();
+    DiscoveryFailureChecks();
     DiscoveryCheck();
     puts("PASS simulated impairment and localhost UDP; no real LAN/device claim");
     return 0;

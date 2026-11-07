@@ -310,6 +310,7 @@ typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJ
 @interface ServerBrowser : SKScene <ScreenInput>
 
 @property (nonatomic, readonly) LANServer *selected;
+@property (nonatomic, readonly, copy) NSString *status;
 @property (nonatomic, readonly) CGRect createRect, joinRect, serverRows;
 @property (nonatomic, copy) NSString *hostLine;     // "Hosting on port 27910", shown at the bottom
 // The safe area in scene points, from the host; a standalone SKView's own wins.

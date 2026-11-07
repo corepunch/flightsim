@@ -13,6 +13,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     ServerBrowser *_browser;
     LANBrowser *_lan;
     LANGame *_lanGame;
+    NSString *_browserStatus;
     FrontScreen _screen, _browserReturn;
 }
 
@@ -89,7 +90,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     if (_screen != FrontScreenBrowser) _browserReturn = _screen;
     if (!_lan) _lan = [_services makeLANBrowser];
     NSString *server = _services.connectedServer;
-    [_browser setStatus:server ? L10nFormat(@"browser.connected", server) : @""];
+    [self setBrowserStatus:server ? L10nFormat(@"browser.connected", server) : @""];
     [self present:FrontScreenBrowser];
 }
 
@@ -100,7 +101,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     [self present:FrontScreenLAN];
 }
 
-- (void)setBrowserStatus:(NSString *)status { [_browser setStatus:status]; }
+- (void)setBrowserStatus:(NSString *)status { _browserStatus = [status copy]; [_browser setStatus:status]; }
 - (void)setHostLine:(NSString *)line { _browser.hostLine = line; }
 
 #pragma mark - Levels
@@ -176,7 +177,14 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     NSMutableArray *list = [NSMutableArray array];
     for (LANServer *s in _lan.servers) if (![_services isOwnServer:s]) [list addObject:s];
     [_browser showServers:list];
-    if (_lan.discoveryFailed) [_browser setStatus:L10n(@"browser.permission")];
+    NSString *diagnostic = @"";
+    if (_lan.socketFailed) diagnostic = L10n(@"browser.socket_failed");
+    else if (_lan.accessDenied) diagnostic = L10n(@"browser.permission");
+    else if (_lan.searchError) diagnostic = L10nFormat(@"browser.search_failed", @(_lan.searchError.code));
+    else if (!list.count && _lan.resolutionError) diagnostic = L10nFormat(@"browser.resolve_failed", @(_lan.resolutionError.code));
+    else if (!list.count && _lan.hostUnreachable) diagnostic = L10n(@"browser.unreachable");
+    else if (!list.count) diagnostic = L10n(@"browser.network_help");
+    [_browser setStatus:_browserStatus.length ? _browserStatus : diagnostic];
     switch ([_browser handle:actions]) {
         case BrowserCommandJoin: [_services joinServer:_browser.selected.address]; break;
         case BrowserCommandCreate:
@@ -198,7 +206,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 - (void)lanFrame:(InputAction)actions {
     if (_services.hostingFailed) {
         [_services closeLANGame]; [self showBrowser];
-        [_browser setStatus:L10n(@"browser.host_failed")]; return;
+        [self setBrowserStatus:L10n(@"browser.host_failed")]; return;
     }
     if (_lanGame.stage == LANGameLobby) [_lanGame showPilots:_services.hostedPilots];
     switch ([_lanGame handle:actions]) {
@@ -210,7 +218,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
         case LANGameCommandConfirm:
             if (_lanGame.stage == LANGameSetup) {
                 if ([_services createLANGame]) [_lanGame showPilots:_services.hostedPilots];
-                else { [self showBrowser]; [_browser setStatus:L10n(@"browser.host_failed")]; }
+                else { [self showBrowser]; [self setBrowserStatus:L10n(@"browser.host_failed")]; }
             } else if (_lanGame.stage == LANGameResults) {
                 [_lanGame showPilots:_services.hostedPilots];
             } else [_services startLANMatch];
