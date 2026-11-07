@@ -62,7 +62,7 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
     if ([effect isEqualToString:@"all"]) {
         NSString *base = [path stringByDeletingPathExtension];
         int rc = 0;
-        for (NSString *e in @[@"explosion", @"impact", @"shield", @"bolt", @"exhaust"])
+        for (NSString *e in @[@"explosion", @"death", @"damage", @"impact", @"shield", @"bolt", @"exhaust"])
             rc |= [self recordEffect:e toFile:[NSString stringWithFormat:@"%@_%@.mp4", base, e] seconds:seconds];
         return rc;
     }
@@ -94,6 +94,31 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             } else if (frame == (int)(0.4 * kFPS)) {
                 [refresh explosionAt:simd_make_float3(0, 0, 0) velocity:simd_make_float3(20, 0, 0) model:ship scale:1];
             }
+        };
+    } else if ([effect isEqualToString:@"death"]) {
+        // The player's own ship from the chase camera's spot, 14 m behind and
+        // 3 m up, backing away after the blast the way ClientView's camera does.
+        tick = ^(double t, int frame) {
+            float pull = 1.0f - expf(-2.5f * (float)fmax(0, t - 0.4));
+            if (t < 0.4) {
+                RefEntity e = { .key = kShip, .kind = EntityFighter, .model = ship, .orientation = simd_quaternion(0, simd_make_float3(0, 1, 0)),
+                                .throttle = 0.6f, .hull = 0.2f };
+                [refresh addEntity:&e];
+            } else if (frame == (int)(0.4 * kFPS)) {
+                [refresh explosionAt:simd_make_float3(0, 0, 0) velocity:simd_make_float3(0, 0, -20) model:ship scale:1];
+            }
+            simd_float3 eye = simd_make_float3(0, 3.2f, 14.0f) + simd_make_float3(0, 8.0f, 32.0f) * pull;
+            [refresh setCamera:LookAt(eye, simd_make_float3(0, 0, -60))];
+        };
+    } else if ([effect isEqualToString:@"damage"]) {
+        // From near the chase camera: a hit takes the hull to 35% at 0.5 s, the
+        // fire burns out, the smoke thins away after it.
+        simd_quatf q = simd_quaternion((float)M_PI * 0.2f, simd_make_float3(0, 1, 0));
+        camera = LookAt(simd_make_float3(3, 3.2f, 12), simd_make_float3(0, 0, -4));
+        tick = ^(double t, int frame) {
+            RefEntity e = { .key = kShip, .kind = EntityFighter, .model = ship, .orientation = q,
+                            .throttle = 0.5f, .hull = t < 0.5 ? 1.0f : 0.35f };
+            [refresh addEntity:&e];
         };
     } else if ([effect isEqualToString:@"impact"]) {
         tick = ^(double t, int frame) {
@@ -142,7 +167,7 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             [refresh addEntity:&e];
         };
     } else {
-        fprintf(stderr, "unknown effect '%s' (explosion, impact, shield, bolt, exhaust, all)\n", effect.UTF8String);
+        fprintf(stderr, "unknown effect '%s' (explosion, death, damage, impact, shield, bolt, exhaust, all)\n", effect.UTF8String);
         return 2;
     }
     [refresh setCamera:camera];

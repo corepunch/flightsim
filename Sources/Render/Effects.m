@@ -353,7 +353,7 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
 
     SCNParticleSystem *flash = SpriteSystem(@"flare_01", SCNParticleBlendModeAdditive,
         @[RGBA(1, 0.95, 0.85, 1), RGBA(1, 0.6, 0.3, 0)], @[@0, @1],
-        Scaled(@[@4, @10], s), @[@0, @1]);
+        Scaled(@[@3, @7], s), @[@0, @1]);
     flash.birthRate = 2000; flash.emissionDuration = 0.001;
     flash.particleLifeSpan = 0.12;
     flash.particleIntensity = 0.5;
@@ -368,7 +368,7 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     billow.loops = NO;
     billow.particleImage = ExplosionTexture();
     billow.particleColor = RGBA(1, 1, 1, 1);
-    billow.particleSize = 34 * s;
+    billow.particleSize = 16 * s;
     billow.local = YES;
     billow.birthRate = 1; billow.emissionDuration = 0;
     billow.particleLifeSpan = 25.0 / 15.0;
@@ -384,7 +384,7 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     SCNParticleSystem *trailFire = SpriteSystem(@"fire_01", SCNParticleBlendModeAdditive,
         @[RGBA(1, 0.88, 0.6, 0.7), RGBA(1, 0.5, 0.12, 0.4), RGBA(0.4, 0.08, 0.01, 0)], @[@0, @0.3, @1],
         Scaled(@[@0.9, @0.55, @0.15], s), @[@0, @0.4, @1]);
-    trailFire.birthRate = 100;
+    trailFire.birthRate = 60;
     trailFire.local = NO;
     trailFire.particleLifeSpan = 0.12; trailFire.particleLifeSpanVariation = 0.04;
     trailFire.particleAngularVelocityVariation = 120;
@@ -397,8 +397,8 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     SCNParticleSystem *trailSmoke = SpriteSystem(@"smoke_07", SCNParticleBlendModeAlpha,
         @[RGBA(0.8, 0.55, 0.32, 0), RGBA(0.6, 0.48, 0.38, 0.65), RGBA(0.45, 0.44, 0.43, 0.5), RGBA(0.4, 0.41, 0.43, 0)],
         @[@0, @0.05, @0.22, @1],
-        Scaled(@[@0.3, @0.7, @1.6], s), @[@0, @0.25, @1]);
-    trailSmoke.birthRate = 140;
+        Scaled(@[@0.3, @0.8, @1.8], s), @[@0, @0.25, @1]);
+    trailSmoke.birthRate = 55;
     trailSmoke.local = NO;
     trailSmoke.loops = YES;
     trailSmoke.particleLifeSpan = 1.7; trailSmoke.particleLifeSpanVariation = 0.3;
@@ -460,7 +460,7 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
         ]]];
     }
 
-    SCNNode *glint = [self streakWithColor:RGBA(1, 0.8, 0.55, 1) width:85 * scale height:0.7 * scale];
+    SCNNode *glint = [self streakWithColor:RGBA(1, 0.8, 0.55, 1) width:40 * scale height:0.5 * scale];
     [root addChildNode:glint];
     [glint runAction:[SCNAction sequence:@[[SCNAction fadeOutWithDuration:0.16], [SCNAction removeFromParentNode]]]];
 

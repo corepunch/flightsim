@@ -50,6 +50,7 @@ typedef struct {
     float boost;                // boost effects, 0..1
     float fov;
     float shake;                // hits and explosions, decaying
+    float dead;                 // pull-back after the ship is destroyed, 0..1
 } ChaseCam;
 
 // Banks the ship into a yaw turn so it leans like an aircraft instead of
@@ -497,12 +498,17 @@ static float Ease(float value, float target, float rate, float dt) {
     // Ease boost effects in and out so toggling boost never pops the camera.
     chase.boost = Ease(chase.boost, ps->move.boosting ? 1 : 0, 4, dt);
     float boostFx = chase.boost;
+    // Once the ship is destroyed the chase view backs away, so its own
+    // explosion is seen whole instead of from inside the fireball.
+    chase.dead = Ease(chase.dead, ps->alive ? 0 : 1, ps->alive ? 8 : 2.5f, dt);
+    simd_float3 deathPull = simd_make_float3(0, 8.0f, 32.0f) * chase.dead;
     // Dynamic: low and close behind the ship, which sits in the lower part of
     // the frame with the reticle and whatever it is chasing above it. Fixed:
     // farther back, looking along the ship's nose.
     simd_float3 offset = _cockpit ? RefCockpitEye
                        : dynamic ? simd_make_float3(0, 3.2f, 14.0f + speed * 0.008f + boostFx * 3.0f)
                                  : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
+    offset += deathPull;
     simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : chase.orientation, simd_act(look, offset));
     if (_cockpit) pos = ps->move.origin + simd_act(BankedOrientation(&ps->move), offset);
     // Aim down the line of fire at the farthest reticle ring, which puts it
