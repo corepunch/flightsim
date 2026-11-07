@@ -67,7 +67,6 @@ static const double kNetInterpDelay = TICK_DT * 3;
 
 - (NSArray<NSString *> *)configStrings { return _cs; }
 - (NSString *)levelName { return _cs[CS_LEVEL] ?: @""; }
-- (Snapshot *)latestSnapshot { return _snapshots.lastObject; }
 - (NetAddress *)serverAddress { return _channel.address; }
 
 #pragma mark - Connection

@@ -47,7 +47,7 @@ typedef NSEdgeInsets BriefingInsets;
 - (BriefingCommand)handle:(InputAction)actions;
 - (void)tick:(double)time;
 
-// Layout as last built, for Tools/GUI checks.
+// Geometry of the current screen for inspection and interaction.
 @property (nonatomic, readonly) SKLabelNode *speech;            // the caption's line, if one is up
 @property (nonatomic, readonly) CGRect captionRect;
 @property (nonatomic, readonly) NSString *backdropRoom;

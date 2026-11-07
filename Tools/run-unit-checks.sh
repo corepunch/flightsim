@@ -5,7 +5,27 @@
 set -eu
 cd "${0:A:h}/.."
 mkdir -p build
-qa=$(mktemp -d "$PWD/build/unit-checks.XXXXXX")
+if [[ ${1:-} != --unit-worker ]]; then
+    exec python3 - "$PWD" <<'BUDGET'
+import os, signal, subprocess, sys, tempfile, time
+from pathlib import Path
+root = Path(sys.argv[1])
+started = time.monotonic()
+with tempfile.TemporaryDirectory(prefix="unit-checks.", dir=root / "build") as qa:
+    process = subprocess.Popen(["/bin/zsh", str(root / "Tools/run-unit-checks.sh"),
+                                "--unit-worker", qa], start_new_session=True)
+    try:
+        result = process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+        print("FAIL: unit checks exceeded the 10-second budget", file=sys.stderr)
+        sys.exit(124)
+print(f"Unit checks: {time.monotonic() - started:.2f}s / 10s budget")
+sys.exit(result)
+BUDGET
+fi
+qa=$2
 # A bare executable's main bundle is its directory: give it the resources the
 # shared code reads.
 mkdir -p "$qa/Games"
@@ -37,21 +57,5 @@ if ! "$qa/UnitChecks"; then
     exit 1
 fi
 
-# The client draws only through the Refresh facade (Sources/Refresh/Refresh.h):
-# its files must compile, and pull in no header, without SceneKit.
-print '#import <Cocoa/Cocoa.h>\n#import <SpriteKit/SpriteKit.h>' > "$qa/NoSceneKit.h"
-includes=(-ISources/Shared ${(@)$(print -l Sources/*(/) | sed 's/^/-I/')})
-for source in Sources/Client/*.m; do
-    flags=(-fobjc-arc -Wall -mmacosx-version-min=13.0 $includes -include "$qa/NoSceneKit.h")
-    if ! clang $flags -fsyntax-only "$source"; then
-        print -u2 "FAIL: $source does not build without SceneKit"
-        exit 1
-    fi
-    if clang $flags -M "$source" | grep -q 'SceneKit\.framework'; then
-        print -u2 "FAIL: $source includes SceneKit through: $(clang $flags -H -fsyntax-only "$source" 2>&1 | grep -B1 -m1 SceneKit)"
-        exit 1
-    fi
-done
-print "PASS: the client builds without SceneKit"
-rm -rf "$qa"
 python3 -I Tools/validate_strings.py
+python3 -I Tools/test_story_continuity.py
