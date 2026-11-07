@@ -42,11 +42,26 @@ static NSArray<NSString *> *Tips(void) {
         _tip = arc4random_uniform((uint32_t)Tips().count);
         _title = _kicker = _detail = @"";
         _status = L10n(@"loading.loading_mission");
+    }
+    return self;
+}
+
+// The hangar art is a full-screen image; the card keeps it only while it is
+// on screen and decodes it again the next time it is shown.
+- (SKTexture *)hangarTexture {
+    if (!_hangarTexture) {
         NSURL *hangar = FSURL(@"Menu", @"loading", @"png");
         PlatformImage *image = hangar ? [[PlatformImage alloc] initWithContentsOfFile:hangar.path] : nil;
         if (image) _hangarTexture = [SKTexture textureWithImage:image];
     }
-    return self;
+    return _hangarTexture;
+}
+
+- (void)unload {
+    [_root removeAllChildren];
+    [_stars removeAllObjects];
+    _laidOut = CGSizeZero;
+    _hangarTexture = nil;
 }
 
 - (void)showTitle:(NSString *)title kicker:(NSString *)kicker detail:(NSString *)detail {
@@ -120,9 +135,10 @@ static BOOL Inside(CGPoint fraction) {
     bg.anchorPoint = CGPointZero;
     [backdrop addChild:bg];
 
-    if (_hangarTexture) {
-        SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_hangarTexture];
-        CGSize image = _hangarTexture.size;
+    SKTexture *hangar = self.hangarTexture;
+    if (hangar) {
+        SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:hangar];
+        CGSize image = hangar.size;
         CGFloat scale = MAX(s.width / MAX(image.width, 1), s.height / MAX(image.height, 1));
         art.size = CGSizeMake(image.width * scale, image.height * scale);
         art.position = CGPointMake(s.width * 0.5, s.height * 0.5);
@@ -141,9 +157,10 @@ static BOOL Inside(CGPoint fraction) {
     _laidOut = s;
     [_root addChild:[self motionBackdropWithSize:s]];
 
-    if (_hangarTexture) {
-        SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_hangarTexture];
-        CGSize image = _hangarTexture.size;
+    SKTexture *hangar = self.hangarTexture;
+    if (hangar) {
+        SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:hangar];
+        CGSize image = hangar.size;
         CGFloat scale = MAX(s.width / MAX(image.width, 1), s.height / MAX(image.height, 1));
         art.size = CGSizeMake(image.width * scale, image.height * scale);
         art.position = CGPointMake(s.width * 0.5, s.height * 0.5);
@@ -155,7 +172,7 @@ static BOOL Inside(CGPoint fraction) {
 
     // A slow parallax star drift: bigger stars are "nearer" and move faster.
     srand48(4242);
-    for (int i = 0; i < (_hangarTexture ? 0 : 220); i++) {
+    for (int i = 0; i < (hangar ? 0 : 220); i++) {
         CGFloat z = drand48();
         CGFloat r = 0.6 + z * z * 1.8;
         SKSpriteNode *st = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIWhite, 1) size:CGSizeMake(r, r)];
@@ -316,6 +333,7 @@ static BOOL Inside(CGPoint fraction) {
         if (_fadeStart < 0) _fadeStart = time;
         double k = fmin(1, (time - _fadeStart) / _fadeLength);
         _root.alpha = 1 - k * k * (3 - 2 * k);
+        if (k >= 1 && _root.children.count) [self unload];
     }
 }
 

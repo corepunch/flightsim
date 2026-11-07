@@ -48,6 +48,7 @@ void ApplyHullRolloff(SCNMaterial *m) {
     float _sinceHit;    // seconds since the hull last dropped; drives the burn-out
     BOOL _alive;
     SCNNode *_propeller;
+    SCNNode *_damageSpot;    // the fire and smoke stream's node, from the pool below
     SCNParticleSystem *_damageFire, *_damageCore, *_damageSmoke;
 }
 
@@ -156,6 +157,42 @@ void ApplyHullRolloff(SCNMaterial *m) {
     [_node addChildNode:_shieldNode];
 }
 
+// MARK: - Damage fire and smoke
+
+// SceneKit builds a colour ramp for every particle system with property
+// controllers and never frees it (macOS 26, iOS 26; the explosion kits in
+// Effects say more), so a view does not take its burning stream with it: it
+// hands the stream's node back here, and the next view of a ship the same
+// size takes it over instead of building another. Only the birth rate is
+// set on these systems after they are built; that keeps the ramp as it is.
+static NSMutableDictionary<NSNumber *, NSMutableArray<SCNNode *> *> *DamageSpots(void) {
+    static NSMutableDictionary<NSNumber *, NSMutableArray<SCNNode *> *> *spots;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ spots = [NSMutableDictionary dictionary]; });
+    return spots;
+}
+
+static NSNumber *DamageSpotKey(float radius) { return @(lroundf(radius * 1000)); }
+
+static SCNNode *TakeDamageSpot(float radius) {
+    NSMutableDictionary *spots = DamageSpots();
+    @synchronized (spots) {
+        NSMutableArray<SCNNode *> *spare = spots[DamageSpotKey(radius)];
+        SCNNode *spot = spare.lastObject;
+        if (spot) [spare removeLastObject];
+        return spot;
+    }
+}
+
+static void ReturnDamageSpot(SCNNode *spot, float radius) {
+    NSMutableDictionary *spots = DamageSpots();
+    @synchronized (spots) {
+        NSMutableArray<SCNNode *> *spare = spots[DamageSpotKey(radius)];
+        if (!spare) spots[DamageSpotKey(radius)] = spare = [NSMutableArray array];
+        [spare addObject:spot];
+    }
+}
+
 static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray<NSNumber *> *times) {
     CAKeyframeAnimation *a = [CAKeyframeAnimation animationWithKeyPath:keyPath];
     a.values = values;
@@ -173,6 +210,15 @@ static void RandomSpriteOf4(SCNParticleSystem *ps) {
 }
 
 - (void)buildDamageFx {
+    _damageSpot = TakeDamageSpot(_radius);
+    if (_damageSpot) {
+        NSArray<SCNParticleSystem *> *fire = [_damageSpot childNodeWithName:@"fire" recursively:NO].particleSystems;
+        _damageFire = fire[0];
+        _damageCore = fire[1];
+        _damageSmoke = [_damageSpot childNodeWithName:@"smoke" recursively:NO].particleSystems[0];
+        [_node addChildNode:_damageSpot];
+        return;
+    }
     // A damaged ship streams fire off its hull like a burning wing: a narrow
     // flame that leaves the hull fast, widens and cools into dark smoke. Both
     // are in the ship's frame and end about 10 m aft, short of the chase
@@ -180,7 +226,10 @@ static void RandomSpriteOf4(SCNParticleSystem *ps) {
     SCNNode *spot = [SCNNode node], *fireNode = [SCNNode node], *smokeNode = [SCNNode node];
     spot.position = SCNVector3Make(_radius * 0.3f, 0.2f, 0.6f);
     [_node addChildNode:spot];
+    _damageSpot = spot;
     // Smoke trails the flame toward the chase camera, so it draws over it.
+    fireNode.name = @"fire";
+    smokeNode.name = @"smoke";
     fireNode.renderingOrder = 76;
     smokeNode.renderingOrder = 77;
     [spot addChildNode:fireNode];
@@ -265,6 +314,16 @@ static void RandomSpriteOf4(SCNParticleSystem *ps) {
     [smokeNode addParticleSystem:_damageSmoke];
 }
 
+- (void)dealloc {
+    if (!_damageSpot) return;
+    [_damageSpot removeFromParentNode];
+    for (SCNParticleSystem *ps in @[_damageFire, _damageCore, _damageSmoke]) {
+        ps.birthRate = 0;
+        [ps reset];
+    }
+    ReturnDamageSpot(_damageSpot, _radius);
+}
+
 // A hit below 60% hull sets the ship alight. The fire burns for a few seconds
 // and goes out, leaving smoke that thins away after it; the next hit reignites
 // both. Returns how hard each burns now, 0..1.
@@ -290,9 +349,10 @@ static void BurnLevels(float sinceHit, float *fire, float *smoke) {
     _sinceHit += dt;
     float dmg = _alive ? fmaxf(0, 0.6f - _hull) / 0.6f : 0, fire, smoke;
     BurnLevels(_sinceHit, &fire, &smoke);
-    _damageFire.birthRate = dmg > 0 ? (60 + 50 * dmg) * fire : 0;
-    _damageCore.birthRate = _damageFire.birthRate * 0.5f;
-    _damageSmoke.birthRate = dmg > 0 ? (18 + 18 * dmg) * smoke : 0;
+    float fireRate = dmg > 0 ? (60 + 50 * dmg) * fire : 0;
+    ParticleSet(_damageFire, @"birthRate", fireRate);
+    ParticleSet(_damageCore, @"birthRate", fireRate * 0.5f);
+    ParticleSet(_damageSmoke, @"birthRate", dmg > 0 ? (18 + 18 * dmg) * smoke : 0);
 }
 
 - (void)updateThrottle:(float)throttle boost:(BOOL)boost hull:(float)hull alive:(BOOL)alive dt:(float)dt {

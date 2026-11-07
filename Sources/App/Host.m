@@ -235,11 +235,10 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         if ([view isKindOfClass:GameView.class])
             _screens.prepare = ^(SKScene *screen) { [(GameView *)weakSCNView applySafeAreaTo:screen]; };
         view.preferredFramesPerSecond = 60;
-        view.antialiasingMode = SCNAntialiasingModeMultisampling2X;
 #else
         view.preferredFramesPerSecond = 120;
-        view.antialiasingMode = SCNAntialiasingModeMultisampling4X;
 #endif
+        view.antialiasingMode = SCNAntialiasingModeNone;
         view.backgroundColor = [SKColor blackColor];
         _loadStartedAt = 0;
         dispatch_async(_loadQueue, ^{ [self bootInBackground]; });
@@ -262,6 +261,14 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         Host *host = weak;
         if (!host) return;
         [host->_refresh printStats];
+#if TARGET_OS_IOS
+        if ([host->_view isKindOfClass:GameView.class]) {
+            SKView *hud = ((GameView *)host->_view).overlayView;
+            CALayer *layer = hud.layer;
+            CGSize drawable = [layer isKindOfClass:CAMetalLayer.class] ? ((CAMetalLayer *)layer).drawableSize : CGSizeZero;
+            NSLog(@"HUD overlay: %@ pixels, %.2f pixels/point", NSStringFromCGSize(drawable), hud.contentScaleFactor);
+        }
+#endif
         BOOL reset = a.count > 1 && [a[1] isEqualToString:@"reset"];
         [host->_hostTimings report:@"host/HUD" reset:reset];
         [host->_renderTimings report:@"SceneKit" reset:reset];
@@ -770,6 +777,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 #endif
     [_client begin];
     if (!self.deathmatch) [_frontEnd levelStarted:_missionIndex remote:self.remote];
+    [_frontEnd flightStarted];
     _state = HostStateFlying;
     [self reveal:0.6];
 }
