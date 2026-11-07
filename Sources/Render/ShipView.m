@@ -38,7 +38,7 @@ void ApplyHullRolloff(SCNMaterial *m) {
     float _hull;
     float _sinceHit;    // seconds since the hull last dropped; drives the burn-out
     BOOL _alive;
-    SCNParticleSystem *_damageFire, *_damageSmoke;
+    SCNParticleSystem *_damageFire, *_damageCore, *_damageSmoke;
 }
 
 // One geometry per definition, shared by every view of it. The load queue
@@ -122,73 +122,120 @@ void ApplyHullRolloff(SCNMaterial *m) {
     [_node addChildNode:_shieldNode];
 }
 
+static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray<NSNumber *> *times) {
+    CAKeyframeAnimation *a = [CAKeyframeAnimation animationWithKeyPath:keyPath];
+    a.values = values;
+    a.keyTimes = times;
+    return a;
+}
+
+// Each particle shows one sprite of a 2 x 2 atlas, picked at random, held for its life.
+static void RandomSpriteOf4(SCNParticleSystem *ps) {
+    ps.imageSequenceColumnCount = ps.imageSequenceRowCount = 2;
+    ps.imageSequenceFrameRate = 0;
+    ps.imageSequenceInitialFrame = 0;
+    ps.imageSequenceInitialFrameVariation = 4;
+    ps.imageSequenceAnimationMode = SCNParticleImageSequenceAnimationModeRepeat;
+}
+
 - (void)buildDamageFx {
-    // A damaged ship licks small flames and a thin smoke plume off its hull.
-    // Both are in the ship's frame and drift back over a few metres only, so
-    // the plume trails the hull without reaching the chase camera 14 m behind.
-    SCNNode *spot = [SCNNode node];
-    spot.position = SCNVector3Make(_radius * 0.3f, 0.35f, 0.6f);
+    // A damaged ship streams fire off its hull like a burning wing: a narrow
+    // flame that leaves the hull fast, widens and cools into dark smoke. Both
+    // are in the ship's frame and end about 10 m aft, short of the chase
+    // camera 14 m behind, so the stream trails the ship without covering the view.
+    SCNNode *spot = [SCNNode node], *fireNode = [SCNNode node], *smokeNode = [SCNNode node];
+    spot.position = SCNVector3Make(_radius * 0.3f, 0.2f, 0.6f);
     [_node addChildNode:spot];
-    SCNVector3 aft = SCNVector3Make(0, 0.35f, 1);
+    // Smoke trails the flame toward the chase camera, so it draws over it.
+    fireNode.renderingOrder = 76;
+    smokeNode.renderingOrder = 77;
+    [spot addChildNode:fireNode];
+    [spot addChildNode:smokeNode];
+    // Aft, angled a little outboard and down, so from the chase camera the
+    // stream streaks off the wing rather than pointing into the lens.
+    SCNVector3 aft = SCNVector3Make(0.28f, -0.22f, 1);
+    float r = _radius;
 
     _damageFire = [SCNParticleSystem particleSystem];
-    _damageFire.particleImage = [Exhaust particleTexture:@"flame_02"];
-    _damageFire.blendMode = SCNParticleBlendModeAdditive;
+    // Alpha-blended so the flame reads as a body of fire rather than adding up
+    // to a glare, and each particle a different tongue of flame.
+    _damageFire.particleImage = [Exhaust straightAlphaParticleTexture:@"flame_01+flame_02+flame_03+flame_04"];
+    _damageFire.blendMode = SCNParticleBlendModeAlpha;
+    _damageFire.lightingEnabled = NO;
+    _damageFire.sortingMode = SCNParticleSortingModeProjectedDepth;
+    RandomSpriteOf4(_damageFire);
     _damageFire.local = YES;
     _damageFire.birthRate = 0;
-    _damageFire.particleLifeSpan = 0.28;
-    _damageFire.particleLifeSpanVariation = 0.08;
-    _damageFire.particleSize = _radius * 0.16f;
-    _damageFire.particleSizeVariation = _radius * 0.05f;
+    _damageFire.particleLifeSpan = 0.45;
+    _damageFire.particleLifeSpanVariation = 0.12;
     _damageFire.particleAngleVariation = 180;
-    _damageFire.particleAngularVelocityVariation = 160;
-    _damageFire.particleIntensity = 1.2;
-    _damageFire.particleVelocity = 2.5;
-    _damageFire.spreadingAngle = 25;
+    _damageFire.particleAngularVelocityVariation = 90;
+    _damageFire.particleIntensity = 4.0;
+    _damageFire.particleVelocity = 13;
+    _damageFire.particleVelocityVariation = 3;
+    _damageFire.spreadingAngle = 5;
     _damageFire.emittingDirection = aft;
-    CAKeyframeAnimation *fc = [CAKeyframeAnimation animationWithKeyPath:@"color"];
-    fc.values = @[[SKColor colorWithRed:1 green:0.85 blue:0.55 alpha:0.9], [SKColor colorWithRed:1 green:0.45 blue:0.1 alpha:0.6],
-                  [SKColor colorWithRed:0.6 green:0.12 blue:0.02 alpha:0]];
-    fc.keyTimes = @[@0, @0.4, @1];
-    CAKeyframeAnimation *fs = [CAKeyframeAnimation animationWithKeyPath:@"size"];
-    fs.values = @[@0.7, @1.0, @0.4];
-    fs.keyTimes = @[@0, @0.3, @1];
-    _damageFire.propertyControllers = @{ SCNParticlePropertyColor : [SCNParticlePropertyController controllerWithAnimation:fc],
-                                         SCNParticlePropertySize : [SCNParticlePropertyController controllerWithAnimation:fs] };
-    [spot addParticleSystem:_damageFire];
+    _damageFire.stretchFactor = 0.02;
+    _damageFire.propertyControllers = @{
+        SCNParticlePropertyColor : [SCNParticlePropertyController controllerWithAnimation:OverLife(@"color",
+            @[[SKColor colorWithRed:1 green:0.95 blue:0.7 alpha:1], [SKColor colorWithRed:1 green:0.78 blue:0.32 alpha:0.95],
+              [SKColor colorWithRed:1 green:0.45 blue:0.1 alpha:0.7], [SKColor colorWithRed:0.35 green:0.1 blue:0.04 alpha:0]],
+            @[@0, @0.35, @0.7, @1])],
+        SCNParticlePropertySize : [SCNParticlePropertyController controllerWithAnimation:OverLife(@"size",
+            @[@(r * 0.1f), @(r * 0.26f), @(r * 0.36f)], @[@0, @0.35, @1])],
+    };
+    [fireNode addParticleSystem:_damageFire];
 
+    // The hot root: a few short additive tongues where the stream leaves the
+    // hull. Too few and too brief to add up to a glare.
+    _damageCore = [_damageFire copy];
+    _damageCore.particleImage = [Exhaust particleTexture:@"flame_01+flame_02+flame_03+flame_04"];
+    _damageCore.blendMode = SCNParticleBlendModeAdditive;
+    _damageCore.sortingMode = SCNParticleSortingModeNone;
+    _damageCore.particleLifeSpan = 0.14;
+    _damageCore.particleLifeSpanVariation = 0.04;
+    _damageCore.particleIntensity = 3.0;
+    _damageCore.propertyControllers = @{
+        SCNParticlePropertyColor : [SCNParticlePropertyController controllerWithAnimation:OverLife(@"color",
+            @[[SKColor colorWithRed:1 green:0.9 blue:0.6 alpha:0.9], [SKColor colorWithRed:1 green:0.55 blue:0.15 alpha:0]], @[@0, @1])],
+        SCNParticlePropertySize : [SCNParticlePropertyController controllerWithAnimation:OverLife(@"size",
+            @[@(r * 0.1f), @(r * 0.2f)], @[@0, @1])],
+    };
+    [fireNode addParticleSystem:_damageCore];
+
+    // Slower than the flame, so it fills in behind the flame and carries the stream on.
     _damageSmoke = [SCNParticleSystem particleSystem];
-    _damageSmoke.particleImage = [Exhaust straightAlphaParticleTexture:@"smoke_01"];
+    _damageSmoke.particleImage = [Exhaust straightAlphaParticleTexture:@"smoke_01+smoke_04+smoke_05+smoke_07"];
+    _damageSmoke.sortingMode = SCNParticleSortingModeProjectedDepth;
+    RandomSpriteOf4(_damageSmoke);
     _damageSmoke.blendMode = SCNParticleBlendModeAlpha;
     _damageSmoke.lightingEnabled = NO;
     _damageSmoke.local = YES;
     _damageSmoke.birthRate = 0;
-    _damageSmoke.particleLifeSpan = 1.0;
-    _damageSmoke.particleLifeSpanVariation = 0.25;
-    _damageSmoke.particleSize = _radius * 0.14f;
+    _damageSmoke.particleLifeSpan = 0.9;
+    _damageSmoke.particleLifeSpanVariation = 0.15;
     _damageSmoke.particleAngleVariation = 180;
     _damageSmoke.particleAngularVelocityVariation = 40;
-    _damageSmoke.particleVelocity = 4.5;
-    _damageSmoke.particleVelocityVariation = 1.5;
-    _damageSmoke.spreadingAngle = 12;
+    _damageSmoke.particleVelocity = 10;
+    _damageSmoke.particleVelocityVariation = 2;
+    _damageSmoke.spreadingAngle = 7;
     _damageSmoke.emittingDirection = aft;
-    CAKeyframeAnimation *sc = [CAKeyframeAnimation animationWithKeyPath:@"color"];
-    sc.values = @[[SKColor colorWithRed:0.32 green:0.27 blue:0.24 alpha:0], [SKColor colorWithRed:0.24 green:0.23 blue:0.23 alpha:0.42],
-                  [SKColor colorWithRed:0.2 green:0.2 blue:0.21 alpha:0]];
-    sc.keyTimes = @[@0, @0.15, @1];
-    CAKeyframeAnimation *ss = [CAKeyframeAnimation animationWithKeyPath:@"size"];
-    ss.values = @[@1.0, @3.0];
-    ss.keyTimes = @[@0, @1];
-    _damageSmoke.propertyControllers = @{ SCNParticlePropertyColor : [SCNParticlePropertyController controllerWithAnimation:sc],
-                                          SCNParticlePropertySize : [SCNParticlePropertyController controllerWithAnimation:ss] };
-    [spot addParticleSystem:_damageSmoke];
+    _damageSmoke.propertyControllers = @{
+        SCNParticlePropertyColor : [SCNParticlePropertyController controllerWithAnimation:OverLife(@"color",
+            @[[SKColor colorWithRed:0.1 green:0.08 blue:0.07 alpha:0], [SKColor colorWithRed:0.1 green:0.09 blue:0.09 alpha:0],
+              [SKColor colorWithRed:0.09 green:0.09 blue:0.09 alpha:0.6], [SKColor colorWithRed:0.12 green:0.12 blue:0.13 alpha:0]],
+            @[@0, @0.3, @0.5, @1])],
+        SCNParticlePropertySize : [SCNParticlePropertyController controllerWithAnimation:OverLife(@"size",
+            @[@(r * 0.2f), @(r * 0.4f), @(r * 0.55f)], @[@0, @0.5, @1])],
+    };
+    [smokeNode addParticleSystem:_damageSmoke];
 }
 
 // A hit below 60% hull sets the ship alight. The fire burns for a few seconds
 // and goes out, leaving smoke that thins away after it; the next hit reignites
 // both. Returns how hard each burns now, 0..1.
 static void BurnLevels(float sinceHit, float *fire, float *smoke) {
-    const float fireHold = 2.5f, fireOut = 5.0f, smokeHold = 4.0f, smokeOut = 8.0f;
+    const float fireHold = 3.0f, fireOut = 6.0f, smokeHold = 5.0f, smokeOut = 9.0f;
     *fire = clampf(1.0f - (sinceHit - fireHold) / (fireOut - fireHold), 0, 1);
     *smoke = clampf(1.0f - (sinceHit - smokeHold) / (smokeOut - smokeHold), 0, 1);
 }
@@ -205,8 +252,9 @@ static void BurnLevels(float sinceHit, float *fire, float *smoke) {
     _sinceHit += dt;
     float dmg = _alive ? fmaxf(0, 0.6f - _hull) / 0.6f : 0, fire, smoke;
     BurnLevels(_sinceHit, &fire, &smoke);
-    _damageFire.birthRate = dmg > 0 ? (10 + 20 * dmg) * fire : 0;
-    _damageSmoke.birthRate = dmg > 0 ? (8 + 14 * dmg) * smoke : 0;
+    _damageFire.birthRate = dmg > 0 ? (60 + 50 * dmg) * fire : 0;
+    _damageCore.birthRate = _damageFire.birthRate * 0.5f;
+    _damageSmoke.birthRate = dmg > 0 ? (18 + 18 * dmg) * smoke : 0;
 }
 
 - (void)updateThrottle:(float)throttle boost:(BOOL)boost hull:(float)hull alive:(BOOL)alive dt:(float)dt {

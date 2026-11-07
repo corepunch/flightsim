@@ -111,14 +111,17 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             [refresh setCamera:LookAt(eye, simd_make_float3(0, 0, -60))];
         };
     } else if ([effect isEqualToString:@"damage"]) {
-        // From near the chase camera: a hit takes the hull to 35% at 0.5 s, the
-        // fire burns out, the smoke thins away after it.
-        simd_quatf q = simd_quaternion((float)M_PI * 0.2f, simd_make_float3(0, 1, 0));
-        camera = LookAt(simd_make_float3(3, 3.2f, 12), simd_make_float3(0, 0, -4));
+        // A hit takes the hull to 35% at 0.5 s; the fire burns out and the
+        // smoke thins away after it. The camera starts where the chase view
+        // sits and swings round to the side to show the stream's length.
+        simd_quatf q = simd_quaternion(0, simd_make_float3(0, 1, 0));
         tick = ^(double t, int frame) {
             RefEntity e = { .key = kShip, .kind = EntityFighter, .model = ship, .orientation = q,
                             .throttle = 0.5f, .hull = t < 0.5 ? 1.0f : 0.35f };
             [refresh addEntity:&e];
+            float a = (float)M_PI_2 * simd_smoothstep(1.2f, 2.4f, (float)t);
+            simd_float3 eye = simd_make_float3(18.0f * sinf(a), 3.2f, 6.0f + 8.0f * cosf(a));
+            [refresh setCamera:LookAt(eye, simd_make_float3(0, 0, -30.0f * cosf(a) + 5.0f * sinf(a)))];
         };
     } else if ([effect isEqualToString:@"impact"]) {
         tick = ^(double t, int frame) {

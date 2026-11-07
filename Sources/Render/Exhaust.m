@@ -148,7 +148,10 @@ static PlatformImage *LuminanceAlphaImage(NSURL *url) {
     dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
     @synchronized (cache) {
         PlatformImage *img = cache[name];
-        if (!img) {
+        NSArray<NSString *> *parts = [name componentsSeparatedByString:@"+"];
+        if (!img && parts.count > 1) {
+            cache[name] = img = [self atlasOf:parts];
+        } else if (!img) {
             NSURL *url = FSURL(@"Particles", name, @"png");
             img = url ? LuminanceAlphaImage(url) : nil;
             cache[name] = img ?: [self softDotImage];
@@ -156,6 +159,26 @@ static PlatformImage *LuminanceAlphaImage(NSURL *url) {
         }
         return img;
     }
+}
+
+// The sprites side by side in a square grid, read left to right, top to
+// bottom, for a particle system's image sequence.
++ (PlatformImage *)atlasOf:(NSArray<NSString *> *)names {
+    size_t columns = (size_t)ceil(sqrt((double)names.count));
+    CGImageRef first = PlatformImageCGImage([self particleTexture:names.firstObject]);
+    size_t cell = CGImageGetWidth(first), side = cell * columns;
+    CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+    CGContextRef ctx = CGBitmapContextCreate(NULL, side, side, 8, side * 4, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
+    for (NSUInteger i = 0; i < names.count; i++) {
+        CGRect r = CGRectMake((i % columns) * cell, side - (i / columns + 1) * cell, cell, cell);
+        CGContextDrawImage(ctx, r, PlatformImageCGImage([self particleTexture:names[i]]));
+    }
+    CGImageRef atlas = CGBitmapContextCreateImage(ctx);
+    PlatformImage *img = PlatformImageFromCGImage(atlas);
+    CGImageRelease(atlas);
+    CGContextRelease(ctx);
+    CGColorSpaceRelease(cs);
+    return img;
 }
 
 + (PlatformImage *)straightAlphaParticleTexture:(NSString *)name {

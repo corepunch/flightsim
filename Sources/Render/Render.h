@@ -96,7 +96,9 @@ static inline PlatformImage *PlatformDrawImage(CGSize size, void (^draw)(CGConte
 
 + (PlatformImage *)softDotImage;
 + (PlatformImage *)streakImage;      // anamorphic streak, zero alpha on all edges
-+ (PlatformImage *)particleTexture:(NSString *)name;  // Resources/Particles/<name>.png
+// Resources/Particles/<name>.png. Names joined with "+" ("flame_01+flame_02")
+// give a square atlas of those sprites, for an image sequence.
++ (PlatformImage *)particleTexture:(NSString *)name;
 // The texture for alpha-blended particle systems: straight (unpremultiplied)
 // alpha, since SceneKit multiplies their colour by alpha again, and coverage
 // that fades out with brightness, since sprites drawn on opaque black would
