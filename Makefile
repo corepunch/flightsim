@@ -31,7 +31,7 @@ GAME_MODULES := $(addprefix $(NATIVE)/,$(addsuffix .dylib,$(GAMES)))
 GAME_PCHS := $(addprefix $(NATIVE)/games/,$(addsuffix .pch,$(GAMES)))
 
 .PHONY: all FORCE
-all: $(ENGINE_PCH) $(GAME_PCHS) $(NATIVE)/KestrelFrontier $(GAME_MODULES) $(NATIVE)/libengine.a
+all: $(ENGINE_PCH) $(GAME_PCHS) $(NATIVE)/KestrelFrontier $(GAME_MODULES)
 
 # Reuse objects only while the selected compiler and SDK match.
 $(TOOLCHAIN): FORCE
@@ -44,19 +44,6 @@ $(NATIVE)/KestrelFrontier: $(ENGINE_OBJECTS) Sources Sources/Shared $(ENGINE_DIR
 	@printf '  Linking %s\n' '$(@F)'
 	@clang $(COMMON_FLAGS) $(ENGINE_OBJECTS) $(addprefix -framework ,$(ENGINE_FRAMEWORKS)) -o "$@.tmp"
 	@mv "$@.tmp" "$@"
-
-# The engine without its entry point, for the GUI checks (Tools/engine-library.sh):
-# they link this archive instead of listing the files they need.
-ENGINE_LIBRARY_OBJECTS := $(filter-out %/main.m.o,$(ENGINE_OBJECTS))
-$(NATIVE)/libengine.a: $(ENGINE_LIBRARY_OBJECTS) Makefile
-	@printf '  Archiving %s\n' '$(@F)'
-	@rm -f "$@.tmp"
-	@libtool -static -no_warning_for_no_symbols -o "$@.tmp" $(ENGINE_LIBRARY_OBJECTS)
-	@mv "$@.tmp" "$@"
-
-.PHONY: engine-frameworks
-engine-frameworks:
-	@echo $(ENGINE_FRAMEWORKS)
 
 define compile
 	@printf '  Compiling %s (%s)\n' '$<' '$(1)'

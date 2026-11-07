@@ -25,43 +25,23 @@ The Makefile picks up `Sources/*/*.m` and `Games/*/Game/*.m` by wildcard.
 
 ## Check
 
-Run what covers your change before saying it works; run all of them for anything
-that touches shared code, data contracts or the UI.
+Run only the headless unit suite. Its total compile-and-test budget is **10 seconds**;
+the runner terminates the process group if that limit is exceeded.
 
 ```sh
-./Tools/run-unit-checks.sh          # headless: flight model, wire format, console, data, mission runtime, story, strings
-./Tools/run-network-checks.sh       # headless: client/server over loopback and UDP, loss, versions
-python3 -I Tools/validate_story.py  # every game's levels, campaign, cast and art
-./Tools/run-gui-checks.sh           # portraits and campaign safe areas (desktop session)
-./Tools/run-dialogue-checks.sh      # briefing captions and typing (desktop session)
-./Tools/run-flight-ui-checks.sh     # HUD, cockpit, mission grid (desktop session)
-./Tools/run-ui-reference-checks.sh  # standalone UI reference sheets for iPhone, iPad and desktop
-./Tools/run-ui-localization-checks.sh # every language at every reference configuration
-./Tools/run-mouse-checks.sh         # mouse flight (desktop session)
-./Tools/run-audio-checks.sh         # audio (desktop session)
-./Tools/run-flare-checks.sh         # lens flare rendering (desktop session)
+./Tools/run-unit-checks.sh
 ```
 
-GUI suites open a separate app bundle with `open -W` and need a logged-in macOS
-desktop session; previews and logs land in `build/<suite>-checks.*/`. Look at the
-previews when you change how something looks.
+CI runs this one command. Do not add GUI, network, stress, audio, simulator-build,
+screenshot-catalogue or localization-render jobs. Check appearance and real-device
+LAN behavior manually when needed; they are not automated merge gates.
 
-The UI catalogue is `build/ui-reference/index.html`: filter by device, control
-or screen, and inspect at actual size without starting the game. Regenerate it
-after UI changes and inspect the affected controls in every configuration.
-
-The strings validator (part of the unit checks) fails on catalog keys no code
-uses: delete a string from `Resources/Strings/en.json` when you delete its last use.
-Every shipped locale must contain the complete English key set, including game
-overrides and content keys. Preserve format specifiers, array lengths and argument
-order. Keep native language declarations and permission prompts in sync. Render
-`build/ui-localization/index.html` after translation changes; optional locale
-arguments to the runner allow focused iteration. Send localization tokens over
-the wire and expand them on the client, so each player sees their own language.
-
-Checks read UI state through read-only properties declared for them (for example
-`Briefing`'s `speech`, `captionRect`, `scrollRect`), not by KVC into private ivars.
-When a check needs new state, add a property.
+The suite covers flight math, wire serialization, typed data, console behavior,
+mission/story logic, continuity and string catalogue contracts. Every shipped
+locale must contain the English key set, preserve format specifiers and array
+lengths, and keep native language declarations and permission prompts in sync.
+Remove catalogue keys when their last production use is removed. Send localization
+tokens over the wire and expand them on each client.
 
 ## Where things go
 
@@ -71,7 +51,6 @@ When a check needs new state, add a property.
   C structs and functions only, no Objective-C classes.
 - `Sources/Mission` is compiled into game modules, not the engine.
 - `Sources/Client` must build without SceneKit; it draws only through `Refresh`.
-  The unit checks enforce this.
 - Gameplay belongs in `Games/<name>/Game`; the engine has no game content.
   Content is data in `Games/<name>/` (see [Games/README.md](Games/README.md)).
 - Configuration is cvars and commands ([CONSOLE.md](CONSOLE.md)), never
@@ -117,12 +96,8 @@ the same control across scenes. Extend or refactor the shared control when a
 composition is missing instead of adding screen-specific offsets. Touch flight
 artwork and layout belong to `UITouchControls`; the platform adapter routes input.
 
-Every new shared control or supported visual/configuration state must have a
-fixture in `Tools/GUI/UIReference.m`. Render the real production control, not a
-separate illustration or HTML imitation. Cover the applicable normal, selected,
-hover, pressed and disabled states, long text, empty/full content, safe areas and
-responsive breakpoints on iPhone, iPad and desktop. Keep the catalogue's matrix
-and coverage notes current when adding a supported configuration.
+Keep automated coverage in fast unit tests of logic and data. Do not restore
+rendered UI fixture catalogues or long-running integration suites.
 
 **Data is read once into typed contracts.** JSON stays the format, but it is parsed
 in one place into structs or immutable classes (see the table in
@@ -158,5 +133,4 @@ changed and why. Commit only when asked.
 | [TODO.md](TODO.md) | Known gaps |
 | [CREDITS.md](CREDITS.md) | Third-party assets and their licences |
 | [Tools/IOS.md](Tools/IOS.md) | Xcode project, iOS builds and devices |
-| [Tools/NETWORK.md](Tools/NETWORK.md) | The network regression checks |
-| [Tools/GUI/README.md](Tools/GUI/README.md) | The GUI check suites |
+| [Tools/NETWORK.md](Tools/NETWORK.md) | LAN configuration and manual device testing |

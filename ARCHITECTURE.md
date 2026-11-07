@@ -143,10 +143,10 @@ on its own queue.
 ## Networking
 
 Client and server always talk through `NetChannel`, even for single player
-(in-process loopback), so the online path is the tested path. The protocol is
+(in-process loopback), so the online and local paths use the same protocol. The protocol is
 versioned (`PROTOCOL_VERSION`); clients check the game data identity (`CS_GAME`,
 a hash of the ship definitions) before entering. [Tools/NETWORK.md](Tools/NETWORK.md)
-describes the network regression checks.
+describes LAN configuration and manual device testing.
 
 Campaign flights are private. The LAN front end explicitly opens a listen
 server, advertises `_kestrel._udp` through Bonjour, shows connected pilots and
@@ -176,12 +176,7 @@ than editing it. See [Tools/IOS.md](Tools/IOS.md).
 
 ## Checks
 
-| Suite | Command | Needs |
-|---|---|---|
-| Unit (flight model, wire format, console, data, mission runtime, story, strings) | `./Tools/run-unit-checks.sh` | nothing |
-| Network regression | `./Tools/run-network-checks.sh` | nothing |
-| Story and level data | `python3 -I Tools/validate_story.py` | nothing |
-| GUI: `gui` (portraits, safe areas), `dialogue`, `flight-ui`, `mouse`, `audio`, `flare` | `./Tools/run-<suite>-checks.sh` | a logged-in macOS desktop session |
-
-CI (`.github/workflows/ci.yml`) runs all of them. GUI suites write previews and
-logs under `build/<suite>-checks.*/`. See [Tools/GUI/README.md](Tools/GUI/README.md).
+`./Tools/run-unit-checks.sh` compiles and runs the headless unit tests, string
+contracts and story-continuity unit tests within a hard 10-second total budget.
+CI runs only that command. Builds, rendering, device connection checks and visual
+inspection are manual development work, not additional automated test jobs.

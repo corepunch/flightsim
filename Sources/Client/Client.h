@@ -79,7 +79,6 @@ typedef NS_ENUM(NSInteger, ClientState) {
 @property (nonatomic, readonly) NSArray<NSString *> *configStrings;
 @property (nonatomic, readonly) NSString *levelName;   // CS_LEVEL
 @property (nonatomic, readonly) NetAddress *serverAddress;
-@property (nonatomic, readonly) Snapshot *latestSnapshot;
 
 // All called on the thread that calls -readPackets.
 @property (nonatomic, copy) void (^gamestateHandler)(void);       // precache, then -begin

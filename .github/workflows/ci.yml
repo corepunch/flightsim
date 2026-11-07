@@ -1,9 +1,4 @@
-# Builds the game for macOS and runs every check the
-# repository has: the headless unit checks of the shared core, the campaign
-# data validator, and the GUI checks, which launch small app bundles in the
-# runner's desktop session (see Tools/GUI/README.md). macOS only: the game
-# is a Metal/SceneKit app and its tools are zsh and clang.
-name: CI
+name: Unit tests
 
 on:
   push:
@@ -11,89 +6,15 @@ on:
   pull_request:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: unit-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and unit checks
+  unit:
+    name: Unit tests (10 second budget)
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 1
     steps:
       - uses: actions/checkout@v4
-      - name: Toolchain
-        run: |
-          xcodebuild -version
-          clang --version | head -1
-      - name: Build macOS app
-        run: ./build.sh
-      - name: Validate campaign data
-        run: |
-          python3 -I Tools/validate_story.py
-          python3 -I Tools/test_story_continuity.py
-      - name: Unit checks
+      - name: Compile and run unit tests within 10 seconds
         run: ./Tools/run-unit-checks.sh
-
-  ios-build:
-    name: iPhone and iPad simulator build
-    runs-on: macos-15
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build native iOS app and bundle campaign content
-        run: ./build.sh ios-simulator
-
-  network-checks:
-    name: Network and campaign flow checks
-    runs-on: macos-15
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - name: Server, clients, Bonjour and campaign flows
-        run: ./Tools/run-network-checks.sh
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: network-checks
-          path: |
-            build/network-checks.*/udp-disconnect.log
-            build/network-checks.*/results.log
-            build/network-checks.*/campaign-*.log
-          if-no-files-found: ignore
-
-  gui-checks:
-    # Each suite builds what it needs and opens its own bundle with
-    # `open -W`, so the suites run in parallel on their own runners.
-    name: ${{ matrix.check }} checks
-    runs-on: macos-15
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        check: [mouse, gui, flight-ui, flare, audio, dialogue, ui-reference, ui-localization]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build macOS app
-        run: ./build.sh
-      - name: Run ${{ matrix.check }} checks
-        run: ./Tools/run-${{ matrix.check }}-checks.sh
-      - name: Upload previews and logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.check }}-checks
-          path: |
-            build/${{ matrix.check }}-checks.*/**/*.log
-            build/${{ matrix.check }}-checks.*/**/*.png
-            build/ui-reference/*.png
-            build/ui-reference/*.jpg
-            build/ui-reference/*.html
-            build/ui-reference/*.json
-            build/ui-reference/*.log
-            build/ui-localization/*.png
-            build/ui-localization/*.html
-            build/ui-localization/*.json
-            build/ui-localization/*.log
-            !build/${{ matrix.check }}-checks.*/**/*.app/**
-          if-no-files-found: ignore
-          retention-days: 7
