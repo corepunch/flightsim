@@ -681,6 +681,7 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
 @implementation UIHover {
     NSMutableArray<NSValue *> *_rects;
     NSMutableArray<SKNode *> *_overlays;
+    NSMutableArray<void (^)(BOOL)> *_hoverChanges;
     NSInteger _current;
     CGPoint _fraction, _pending;
     BOOL _hasPending;
@@ -690,6 +691,7 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
     if ((self = [super init])) {
         _rects = [NSMutableArray array];
         _overlays = [NSMutableArray array];
+        _hoverChanges = [NSMutableArray array];
         _current = -1;
         _fraction = CGPointMake(-1, -1);
     }
@@ -704,6 +706,7 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
 - (void)reset {
     [_rects removeAllObjects];
     [_overlays removeAllObjects];
+    [_hoverChanges removeAllObjects];
     _current = -1;
 }
 
@@ -717,6 +720,10 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
 }
 
 - (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent outline:(CGPathRef)outline {
+    [self addButton:button rect:rect accent:accent outline:outline hoverChanged:nil];
+}
+- (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent outline:(CGPathRef)outline
+    hoverChanged:(void (^)(BOOL))changed {
     if (!button || CGRectIsEmpty(rect)) return;
     // A brighter edge and a lit face, extending out of the left edge.
     CGPoint pivot = CGPointMake(CGRectGetMinX(rect), CGRectGetMidY(rect));
@@ -735,11 +742,14 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
     [_rects addObject:[NSValue valueWithRect:rect]];
 #endif
     [_overlays addObject:overlay];
+    void (^callback)(BOOL)=changed ?: ^(BOOL hovered) {};
+    [_hoverChanges addObject:[callback copy]];
     // A rebuild under a resting pointer keeps the button lit without replaying the animation.
     SKScene *scene = button.scene;
     if (scene && _current < 0 && CGRectContainsPoint(rect, [self pointIn:scene])) {
         _current = (NSInteger)_overlays.count - 1;
         overlay.alpha = 1;
+        _hoverChanges.lastObject(YES);
     }
 }
 
@@ -757,6 +767,7 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
 #endif
     if (hit == _current) return;
     if (_current >= 0 && _current < (NSInteger)_overlays.count) {
+        _hoverChanges[_current](NO);
         SKNode *out = _overlays[_current];
         [out removeAllActions];
         [out runAction:UIMotionCurrentStyle() == UIMotionStyleNone ? [SKAction fadeOutWithDuration:0]
@@ -764,6 +775,7 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size) {
     }
     _current = hit;
     if (hit < 0) return;
+    _hoverChanges[hit](YES);
     [[GameAudio shared] play:@"ui-hover"];
     SKNode *in = _overlays[hit];
     [in removeAllActions];

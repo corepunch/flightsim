@@ -1,0 +1,24 @@
+Use case: ui-mockup. Asset type: production transparent PNG icon atlas for a sci-fi flight game's native title-bar controls. Generate EVERY icon and EVERY authored interaction state together in this ONE image.
+Composition: exactly 14 columns by 5 rows, evenly spaced equal square cells, full-bleed grid with NO outside margin. Target canvas 1792 x 640 pixels, each cell 128 x 128. Each glyph centered in its cell, same visual size, fills about 70% of the cell. Actual transparent background throughout, no visible checkerboard, no cell borders, no labels, no text, no panels, no shadows spilling into neighboring cells.
+Columns left to right, same column meaning in every row:
+1 back: single left arrow;
+2 home: house silhouette;
+3 missions: four-square grid;
+4 previous: left-pointing triangle with a vertical stop bar on its left;
+5 continue/next: single right arrow;
+6 skip: two right-pointing triangles with a vertical stop bar on their right;
+7 launch: simple unmistakable upward rocket;
+8 rematch/retry: clockwise circular arrow;
+9 create game: bold plus sign;
+10 join game: arrow entering an open doorway;
+11 start match: right-pointing play triangle;
+12 settings: six-tooth gear with central hole;
+13 save/apply: large check mark;
+14 controls/bindings: game controller with a D-pad and two face buttons.
+Rows top to bottom are authored states:
+1 normal: luminous mint/cyan (#83d8ca), clean solid strokes;
+2 selected: warm amber (#ffbc55), subtly emphasized solid strokes;
+3 hover: bright ice-cyan/white (#d5fff6), very small tight halo contained inside cell;
+4 pressed: deeper warm amber (#d68b31), inset-like inner highlight, glyph stays same position;
+5 disabled: subdued dark teal (#355d58), restrained but fully opaque glyph artwork.
+Style: cohesive minimal geometric avionics glyphs, clear silhouettes at 24 screen pixels, cut corners and clean precise medium-weight strokes. Raster art with crisp antialiased edges. All icons must be visually distinct, all five rows must contain all fourteen icons. Transparent negative spaces and holes. No decorative stars, lettering, characters, gradients outside the glyphs, or duplicate/missing columns.

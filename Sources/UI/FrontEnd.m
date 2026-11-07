@@ -15,6 +15,8 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     LANGame *_lanGame;
     NSString *_browserStatus;
     FrontScreen _screen, _browserReturn;
+    LANServer *_joinedGame;
+    double _lastJoinedQuery;
 }
 
 - (instancetype)initWithSize:(CGSize)size services:(id<UIServices>)services {
@@ -90,6 +92,10 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     if (_screen != FrontScreenBrowser) _browserReturn = _screen;
     if (!_lan) _lan = [_services makeLANBrowser];
     NSString *server = _services.connectedServer;
+    if (server && ![_joinedGame.address.string isEqualToString:server]) {
+        _joinedGame=[LANServer new]; _joinedGame.address=[NetAddress addressWithString:server port:PORT_SERVER];
+        _joinedGame.settings=LANMatchSettingsDefault(); _lastJoinedQuery=-100;
+    }
     [self setBrowserStatus:server ? L10nFormat(@"browser.connected", server) : @""];
     [self present:FrontScreenBrowser];
 }
@@ -100,9 +106,9 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     [_lanGame showResults:shown hosting:hosting];
     [self present:FrontScreenLAN];
 }
+- (void)showLANHost { [_lanGame showPilots:_services.hostedPilots]; [self present:FrontScreenLAN]; }
 
 - (void)setBrowserStatus:(NSString *)status { _browserStatus = [status copy]; [_browser setStatus:status]; }
-- (void)setHostLine:(NSString *)line { _browser.hostLine = line; }
 
 #pragma mark - Levels
 
@@ -174,9 +180,16 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 
 - (void)browserFrame:(InputAction)actions {
     [_lan poll];
+    if (_joinedGame && _services.connectedServer && _services.time-_lastJoinedQuery>=2) {
+        _lastJoinedQuery=_services.time; [_lan query:_joinedGame.address];
+    }
     NSMutableArray *list = [NSMutableArray array];
     for (LANServer *s in _lan.servers) if (![_services isOwnServer:s]) [list addObject:s];
     [_browser showServers:list];
+    if (_joinedGame && _services.waitingForLANMatch) {
+        for (LANServer *server in list) if ([server.address isEqual:_joinedGame.address]) _joinedGame=server;
+        [_lanGame showGuestLobby:_joinedGame]; [self present:FrontScreenLAN]; return;
+    }
     NSString *diagnostic = @"";
     if (_lan.socketFailed) diagnostic = L10n(@"browser.socket_failed");
     else if (_lan.accessDenied) diagnostic = L10n(@"browser.permission");
@@ -186,7 +199,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     else if (!list.count) diagnostic = L10n(@"browser.network_help");
     [_browser setStatus:_browserStatus.length ? _browserStatus : diagnostic];
     switch ([_browser handle:actions]) {
-        case BrowserCommandJoin: [_services joinServer:_browser.selected.address]; break;
+        case BrowserCommandJoin: _joinedGame=_browser.selected; [_services joinServer:_joinedGame.address]; break;
         case BrowserCommandCreate:
             [_services cancelJoin];
             [_lanGame showSetup];
@@ -204,25 +217,38 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 }
 
 - (void)lanFrame:(InputAction)actions {
+    if (!_lanGame.hosting && _lanGame.stage==LANGameLobby) {
+        [_lan poll];
+        if (_services.time-_lastJoinedQuery>=2) { _lastJoinedQuery=_services.time; [_lan query:_joinedGame.address]; }
+        for (LANServer *server in _lan.servers) if ([server.address isEqual:_joinedGame.address]) _joinedGame=server;
+        if (!_services.connectedServer) { _joinedGame=nil; [self showBrowser]; return; }
+        [_lanGame showGuestLobby:_joinedGame];
+    }
     if (_services.hostingFailed) {
         [_services closeLANGame]; [self showBrowser];
         [self setBrowserStatus:L10n(@"browser.host_failed")]; return;
     }
-    if (_lanGame.stage == LANGameLobby) [_lanGame showPilots:_services.hostedPilots];
+    if (_lanGame.stage == LANGameLobby && _lanGame.hosting) [_lanGame showPilots:_services.hostedPilots];
     switch ([_lanGame handle:actions]) {
         case LANGameCommandBack:
+            if (_lanGame.editingLobby && _lanGame.stage==LANGameSetup) { [_lanGame showPilots:_services.hostedPilots]; break; }
+            _joinedGame=nil;
             [_services closeLANGame];
             [self showBrowser];
             _browserReturn = FrontScreenMainMenu;
             break;
         case LANGameCommandConfirm:
             if (_lanGame.stage == LANGameSetup) {
+                LANMatchSettings settings=_lanGame.settings;
+                settings.maxPilots=MAX(settings.maxPilots,(int)_services.hostedPilots.count);
+                LANMatchSettingsSave(settings);
                 if ([_services createLANGame]) [_lanGame showPilots:_services.hostedPilots];
                 else { [self showBrowser]; [self setBrowserStatus:L10n(@"browser.host_failed")]; }
             } else if (_lanGame.stage == LANGameResults) {
                 [_lanGame showPilots:_services.hostedPilots];
             } else [_services startLANMatch];
             break;
+        case LANGameCommandSettings: [_lanGame showSetup]; break;
         case LANGameCommandNone: break;
     }
     [_services drawMenuBackdrop];

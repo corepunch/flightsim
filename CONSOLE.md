@@ -37,6 +37,9 @@ process modes and stay as flags.
 | `briefing <n> [page]` | Opens that mission's briefing, optionally on a page |
 | `connect <host[:port]>` | Joins that server |
 | `disconnect` | Leaves the server or mission |
+| `lan_browse` | Opens Multiplayer discovery |
+| `lan_host` | Hosts a lobby using the saved match settings |
+| `lan_start` | Starts the hosted match after another pilot joins |
 | `screenshot <file.png>` | Saves the next frame |
 | `quit` | Exits |
 
@@ -77,6 +80,12 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `g_god` | 0 | cheat | Players take no damage |
 | `g_autopilot` | 0 | cheat | The AI flies the first player's ship |
 | `name` | generated on mobile, account name on Mac | archive | Pilot callsign shown in LAN games |
+| `g_lanArena` | first dogfight arena | archive | LAN arena level name |
+| `g_lanShip` | arena default | archive | Ship definition shared by all pilots |
+| `g_lanMaxPilots` | 0 | archive | Capacity (2–8); 0 uses 8 |
+| `g_lanFragLimit` | 0 | archive | Kills to win (1–100); 0 uses arena rules |
+| `g_lanMatchSeconds` | 0 | archive | Duration (60–3600 seconds); 0 uses arena rules |
+| `g_lanRespawnSeconds` | 0 | archive | Respawn delay (1–15 seconds); 0 uses arena rules |
 | `g_warp` | | cheat | Entity id to spawn the first player next to |
 | `g_warpDistance` | 2.2 | cheat | `g_warp` distance, in radii |
 

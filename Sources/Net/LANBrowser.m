@@ -20,12 +20,16 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
             if (!owner) return;
             owner->_service = [[NSNetService alloc] initWithDomain:@"local." type:LANServiceType name:name port:port];
             owner->_service.delegate = owner;
+            NSLog(@"LAN: publishing %@ on UDP %d", name, port);
             [owner->_service publish];
         });
     }
     return self;
 }
-- (void)netService:(NSNetService *)sender didNotPublish:(NSDictionary *)errorDict { self.failed = YES; }
+- (void)netServiceDidPublish:(NSNetService *)sender { NSLog(@"LAN: published %@", sender.name); }
+- (void)netService:(NSNetService *)sender didNotPublish:(NSDictionary *)errorDict {
+    NSLog(@"LAN: publication failed: %@", errorDict); self.failed = YES;
+}
 - (void)stop {
     if (!NSThread.isMainThread) { dispatch_async(dispatch_get_main_queue(), ^{ [self stop]; }); return; }
     _service.delegate = nil;
@@ -55,7 +59,8 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
     double _lastBroadcast, _firstResolved;
     NSNetServiceBrowser *_browser;
     NSMutableArray<NSNetService *> *_services;
-    NSMutableDictionary<NSString *, NetAddress *> *_resolved;
+    NSMutableDictionary<NSString *, NSArray<NetAddress *> *> *_resolved;
+    NSMutableDictionary<NetAddress *, NSString *> *_instances;
 }
 
 - (instancetype)init {
@@ -70,6 +75,7 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
         _lastBroadcast = -100;
         _services = [NSMutableArray array];
         _resolved = [NSMutableDictionary dictionary];
+        _instances = [NSMutableDictionary dictionary];
         __weak LANBrowser *weak = self;
         dispatch_async(dispatch_get_main_queue(), ^{
             LANBrowser *owner = weak;
@@ -89,7 +95,7 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
     [_browser stop]; _browser = nil;
     for (NSNetService *service in _services) { service.delegate = nil; [service stop]; }
     [_services removeAllObjects];
-    @synchronized (self) { [_resolved removeAllObjects]; }
+    @synchronized (self) { [_resolved removeAllObjects]; [_instances removeAllObjects]; }
 }
 
 - (void)dealloc {
@@ -104,6 +110,7 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
 }
 
 - (void)netServiceBrowser:(NSNetServiceBrowser *)browser didFindService:(NSNetService *)service moreComing:(BOOL)more {
+    NSLog(@"LAN: discovered %@", service.name);
     [_services addObject:service];
     service.delegate = self;
     [service resolveWithTimeout:5];
@@ -134,28 +141,37 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
 }
 - (void)netServiceDidResolveAddress:(NSNetService *)service {
     self.resolutionError = nil;
+    NSMutableArray<NetAddress *> *addresses = [NSMutableArray array];
     for (NSData *data in service.addresses) {
         if (data.length < sizeof(struct sockaddr_in) || ((const struct sockaddr *)data.bytes)->sa_family != AF_INET) continue;
         NetAddress *address = [NetAddress addressWithSockaddr:data.bytes length:(unsigned)data.length];
-        @synchronized (self) {
-            if (!_resolved.count) _firstResolved = CACurrentMediaTime();
-            _resolved[service.name] = address;
-        }
+        if (![addresses containsObject:address]) [addresses addObject:address];
+    }
+    if (!addresses.count) {
+        self.resolutionError = [NSError errorWithDomain:@"LANAddress" code:1 userInfo:nil];
+        NSLog(@"LAN: %@ resolved without a usable IPv4 address", service.name);
         return;
     }
-    // The transport currently supports IPv4 only; IPv6 discovery alone cannot join.
-    self.resolutionError = [NSError errorWithDomain:@"LANAddress" code:1 userInfo:nil];
-    NSLog(@"LAN: %@ resolved without a usable IPv4 address", service.name);
+    NSLog(@"LAN: resolved %@: %@", service.name, addresses);
+    @synchronized (self) {
+        if (!_resolved.count) _firstResolved = CACurrentMediaTime();
+        _resolved[service.name] = addresses;
+        for (NetAddress *address in addresses) _instances[address] = service.name;
+    }
 }
 
 - (NSArray<LANServer *> *)servers {
-    return [_found.allValues sortedArrayUsingComparator:^NSComparisonResult(LANServer *a, LANServer *b) {
+    NSArray *servers = [_found.allValues filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(LANServer *server, NSDictionary *bindings) { return server.name.length > 0; }]];
+    return [servers sortedArrayUsingComparator:^NSComparisonResult(LANServer *a, LANServer *b) {
         return [a.name compare:b.name];
     }];
 }
 
 - (void)query:(NetAddress *)address {
-    if (address.sockaddr) [NetChannel sendOutOfBand:@"info" transport:_socket to:address];
+    if (address.sockaddr) {
+        [NetChannel sendOutOfBand:@"info" transport:_socket to:address];
+        [NetChannel sendOutOfBand:@"lobby" transport:_socket to:address];
+    }
 }
 
 - (void)poll {
@@ -164,7 +180,7 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
         _lastBroadcast = now;
         NSArray *resolved;
         @synchronized (self) { resolved = [_resolved.allValues copy]; }
-        for (NetAddress *address in resolved) [self query:address];
+        for (NSArray<NetAddress *> *addresses in resolved) for (NetAddress *address in addresses) [self query:address];
 #if !TARGET_OS_IOS
         MsgWriter *w = [MsgWriter new];
         [w u32:0xFFFFFFFF];
@@ -181,6 +197,24 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
     NSData *packet;
     while ((packet = [_socket receiveFrom:&from])) {
         NSString *text = [NetChannel outOfBandText:packet];
+        // Several interfaces can answer for one service. Keep its first live
+        // route stable, and try alternatives after that route stops replying.
+        NSString *instance;
+        NSDictionary *instances;
+        @synchronized (self) { instance=_instances[from]; instances=[_instances copy]; }
+        BOOL duplicate=NO;
+        if (instance) for (NetAddress *address in _found)
+            if (![address isEqual:from] && [instances[address] isEqualToString:instance] && now-_found[address].lastSeen<6) { duplicate=YES; break; }
+        if (duplicate) continue;
+        if ([text hasPrefix:@"lobby_response "]) {
+            LANLobbyInfo lobby;
+            if (LANLobbyDecode([text substringFromIndex:@"lobby_response ".length], &lobby)) {
+                LANServer *server = _found[from] ?: [LANServer new];
+                server.address = from; server.settings = lobby.settings; server.pilots = lobby.pilots;
+                server.lastSeen = now; _found[from] = server;
+            }
+            continue;
+        }
         if (![text hasPrefix:@"info_response "]) continue;
         // info_response <players> <max> <level or -> <name...>
         NSArray *f = [text componentsSeparatedByString:@" "];
@@ -191,6 +225,7 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
         s.maxPlayers = [f[2] intValue];
         s.levelName = [f[3] isEqualToString:@"-"] ? nil : f[3];
         s.name = [[f subarrayWithRange:NSMakeRange(4, f.count - 4)] componentsJoinedByString:@" "];
+        if (!s.pilots) s.settings = LANMatchSettingsDefault();
         s.lastSeen = now;
         _found[from] = s;
         self.hostUnreachable = NO;

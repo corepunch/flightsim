@@ -1,5 +1,10 @@
 #import "UI.h"
 
+CGPoint UIScrollContentPosition(CGRect region, CGSize contentSize, CGFloat offset) {
+    CGFloat inset=MAX(0,(CGRectGetHeight(region)-contentSize.height)/2);
+    return CGPointMake(CGRectGetMidX(region)-contentSize.width/2,CGRectGetMaxY(region)-inset+offset);
+}
+
 typedef NS_ENUM(NSInteger, SettingKind) { SettingChoice, SettingSlider, SettingAction };
 
 @interface UISettingItem ()
@@ -14,12 +19,14 @@ typedef NS_ENUM(NSInteger, SettingKind) { SettingChoice, SettingSlider, SettingA
 @implementation UISettingItem
 + (instancetype)choice:(NSString *)title value:(NSString *)value detail:(NSString *)detail action:(void (^)(void))action {
     UISettingItem *item = [self new];
+    item.enabled = YES;
     item.kind = SettingChoice; item.title = title; item.valueTitle = value; item.detail = detail; item.action = action;
     return item;
 }
 + (instancetype)slider:(NSString *)title value:(float)value minimum:(float)minimum maximum:(float)maximum
                  step:(float)step text:(NSString *(^)(float))text change:(void (^)(float))change {
     UISettingItem *item = [self new];
+    item.enabled = YES;
     item.kind = SettingSlider; item.title = title; item.value = value; item.minimum = minimum; item.maximum = maximum;
     item.step = step; item.text = text; item.change = change;
     return item;
@@ -35,7 +42,7 @@ typedef NS_ENUM(NSInteger, SettingKind) { SettingChoice, SettingSlider, SettingA
 static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 10;
 
 @interface UISettingRow : SKNode
-- (instancetype)initWithItem:(UISettingItem *)item width:(CGFloat)width;
+- (instancetype)initWithItem:(UISettingItem *)item width:(CGFloat)width compact:(BOOL)compact;
 @property (nonatomic, readonly) CGRect rowRect, controlRect, titleRect;
 @property (nonatomic, readonly) CGFloat height;
 @property (nonatomic) BOOL selected;
@@ -49,20 +56,20 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
     SKLabelNode *_valueLabel;
     SKCropNode *_progress;
 }
-- (instancetype)initWithItem:(UISettingItem *)item width:(CGFloat)width {
+- (instancetype)initWithItem:(UISettingItem *)item width:(CGFloat)width compact:(BOOL)compact {
     if ((self = [super init])) {
         _item = item;
-        BOOL stacked = width < 540;
+        BOOL stacked = !compact && width < 540;
         CGFloat innerWidth = MAX(1, width - 2 * SettingInset);
-        CGFloat controlWidth = stacked ? innerWidth : MIN(260, innerWidth * 0.47);
-        SKLabelNode *title = UIInterfaceLabel(16, UIColorWithOpacity(UIMenuTitle, 1), SKLabelHorizontalAlignmentModeLeft,
+        CGFloat controlWidth = stacked ? innerWidth : MIN(compact ? 160 : 260, innerWidth * 0.47);
+        SKLabelNode *title = UIInterfaceLabel(compact ? 14 : 16, UIColorWithOpacity(UIMenuTitle, 1), SKLabelHorizontalAlignmentModeLeft,
                                               SKLabelVerticalAlignmentModeCenter);
         title.text = item.title;
         title.numberOfLines = 0;
         title.preferredMaxLayoutWidth = stacked ? innerWidth : MAX(1, innerWidth - controlWidth - SettingInset);
         title.lineBreakMode = NSLineBreakByWordWrapping;
         CGFloat titleHeight = CGRectGetHeight(title.frame);
-        CGFloat rowHeight = stacked ? MAX(112, 2 * SettingInset + titleHeight + 12 + SettingControlHeight) :
+        CGFloat rowHeight = compact ? MAX(56, titleHeight + 16) : stacked ? MAX(112, 2 * SettingInset + titleHeight + 12 + SettingControlHeight) :
                                      2 * SettingInset + MAX(SettingControlHeight, titleHeight);
         _rowRect = CGRectMake(0, -rowHeight, width, rowHeight);
         _height = rowHeight;
@@ -95,10 +102,14 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
         _valueLabel.fontColor = UIColorWithOpacity(UIAmber, 1);
         [self addChild:_valueLabel];
         [self updateValue];
+        if (!item.enabled) {
+            _rail.alpha=0.35; _valueLabel.alpha=0.45; title.alpha=0.55;
+        }
     }
     return self;
 }
 - (void)setSelected:(BOOL)selected {
+    selected = selected && _item.enabled;
     _selected = selected;
     _background.fillColor = UIColorWithOpacity(UIInk, selected ? 0.13 : 0.04);
     _background.strokeColor = UIColorWithOpacity(selected ? UIAmber : UIInk, 0.35);
@@ -136,33 +147,41 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
     NSInteger _draggingIndex;
 }
 - (instancetype)initWithItems:(NSArray<UISettingItem *> *)items width:(CGFloat)width {
+    return [self initWithItems:items width:width compact:NO];
+}
+- (instancetype)initWithItems:(NSArray<UISettingItem *> *)items width:(CGFloat)width compact:(BOOL)compact {
     if ((self = [super init])) {
         _items = [items copy];
         _draggingIndex = -1;
         NSMutableArray *rows = [NSMutableArray array], *rects = [NSMutableArray array];
         NSMutableArray *controls = [NSMutableArray array], *titles = [NSMutableArray array];
-        CGFloat y = 0;
+        NSUInteger columns=compact && width>=600 ? 2 : 1, index=0;
+        CGFloat columnWidth=(width-SettingGap*(columns-1))/columns;
+        CGFloat y = 0, groupHeight=0;
         for (UISettingItem *item in items) {
-            UISettingRow *row = [[UISettingRow alloc] initWithItem:item width:width];
-            row.position = CGPointMake(0, y);
+            CGFloat x=(index%columns)*(columnWidth+SettingGap);
+            UISettingRow *row = [[UISettingRow alloc] initWithItem:item width:columnWidth compact:compact];
+            row.position = CGPointMake(x, y);
             [self addChild:row];
             [rows addObject:row];
-            CGAffineTransform offset = CGAffineTransformMakeTranslation(0, y);
+            CGAffineTransform offset = CGAffineTransformMakeTranslation(x, y);
             [rects addObject:BoxRect(CGRectApplyAffineTransform(row.rowRect, offset))];
             [controls addObject:BoxRect(CGRectApplyAffineTransform(row.controlRect, offset))];
             [titles addObject:BoxRect(CGRectApplyAffineTransform(row.titleRect, offset))];
-            y -= row.height + SettingGap;
+            CGFloat cellHeight=row.height+SettingGap;
             if (item.detail.length) {
                 SKLabelNode *detail = UIInterfaceLabel(14, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeLeft,
                                                        SKLabelVerticalAlignmentModeTop);
                 detail.text = item.detail;
                 detail.numberOfLines = 0;
-                detail.preferredMaxLayoutWidth = MAX(1, width - 2 * SettingInset);
+                detail.preferredMaxLayoutWidth = MAX(1, columnWidth - 2 * SettingInset);
                 detail.lineBreakMode = NSLineBreakByWordWrapping;
-                detail.position = CGPointMake(SettingInset, y);
+                detail.position = CGPointMake(x+SettingInset, y-cellHeight);
                 [self addChild:detail];
-                y -= CGRectGetHeight(detail.frame) + SettingInset;
+                cellHeight += CGRectGetHeight(detail.frame) + SettingInset;
             }
+            groupHeight=MAX(groupHeight,cellHeight); index++;
+            if(index%columns==0 || index==items.count) { y-=groupHeight; groupHeight=0; }
         }
         _height = -y;
         _rows = rows; _rowRects = rects; _controlRects = controls; _titleRects = titles;
@@ -183,7 +202,7 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
 - (void)beginAt:(CGPoint)point {
     [self endDrag];
     for (NSUInteger i = 0; i < _items.count; i++) {
-        if (_items[i].kind == SettingSlider && CGRectContainsPoint(UnboxRect(_controlRects[i]), point)) {
+        if (_items[i].enabled && _items[i].kind == SettingSlider && CGRectContainsPoint(UnboxRect(_controlRects[i]), point)) {
             _draggingIndex = i;
             self.selectedIndex = i;
             [self dragTo:point];
@@ -198,6 +217,7 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
 - (BOOL)clickAt:(CGPoint)point {
     for (NSUInteger i = 0; i < _items.count; i++) {
         if (!CGRectContainsPoint(UnboxRect(_rowRects[i]), point)) continue;
+        if (!_items[i].enabled) return NO;
         self.selectedIndex = i;
         if (!CGRectContainsPoint(UnboxRect(_controlRects[i]), point)) return NO;
         if (_items[i].kind == SettingSlider) {
@@ -210,7 +230,7 @@ static const CGFloat SettingInset = 16, SettingControlHeight = 44, SettingGap = 
     return NO;
 }
 - (BOOL)adjust:(NSInteger)direction {
-    if (!_items.count) return NO;
+    if (!_items.count || !_items[_selectedIndex].enabled) return NO;
     if (_items[_selectedIndex].kind == SettingSlider) { [_rows[_selectedIndex] adjust:direction]; return NO; }
     if (_items[_selectedIndex].action) _items[_selectedIndex].action();
     return YES;

@@ -137,6 +137,17 @@ static NSString *PartKindName(SubsystemKind kind) {
     CFTimeInterval t0 = CFAbsoluteTimeGetCurrent();
     [self clearWorld];
     _level = LevelNamed(name) ?: EmptyLevel(name);
+    if (_level->rules.deathmatch) {
+        _matchDefinition = *_level;
+        int kills = (int)gi.cvarValue("g_lanFragLimit");
+        float seconds = gi.cvarValue("g_lanMatchSeconds"), respawn = gi.cvarValue("g_lanRespawnSeconds");
+        if (kills > 0) _matchDefinition.rules.fragLimit = MAX(1, MIN(100, kills));
+        if (isfinite(seconds) && seconds > 0) _matchDefinition.rules.matchSeconds = fminf(3600, fmaxf(60, seconds));
+        if (isfinite(respawn) && respawn > 0) _matchDefinition.rules.respawnSeconds = fminf(15, fmaxf(1, respawn));
+        NSString *ship = @(gi.cvarString("g_lanShip") ?: "");
+        if (ship.length && ShipDefNamed(ship)) _matchDefinition.playerShip = ship;
+        _level = &_matchDefinition;
+    }
     const LevelDef *level = _level;
     NSString *levelName = level->name.length ? level->name : name ?: @"";
     for (NSString *p in [MissionRunner problemsWithLevel:level]) GPrint(@"Mission %@: %@", levelName, p);
@@ -145,6 +156,9 @@ static NSString *PartKindName(SubsystemKind kind) {
     gi.configString(CS_SKY, [NSString stringWithFormat:@"%u", seed].UTF8String);
     gi.configString(CS_GAME, ShipDataIdentity().UTF8String);
     gi.configString(CS_MODE, level->rules.deathmatch ? "deathmatch" : "campaign");
+    LANMatchSettings settings = {.arena=levelName, .ship=level->playerShip ?: @"", .fragLimit=level->rules.fragLimit,
+        .maxPilots=(int)gi.cvarValue("g_lanMaxPilots"), .matchSeconds=level->rules.matchSeconds, .respawnSeconds=level->rules.respawnSeconds};
+    gi.configString(CS_LAN_RULES, level->rules.deathmatch ? LANMatchSettingsEncode(settings).UTF8String : "");
     gi.configString(CS_TEAMS, GTeamRelations().UTF8String);
     // Every player flies the level's ship, so its secondary names the readouts.
     const ShipDef *playerShip = ShipDefNamed(level->playerShip ?: DefaultPlayerShip()) ?: ShipDefNamed(DefaultPlayerShip());

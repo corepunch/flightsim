@@ -7,8 +7,9 @@
     SKNode *_body;
     CGFloat _contentHeight;
     NSInteger _selected;
-    BOOL _hasClick, _backRequested;
+    BOOL _hasClick, _backRequested, _showBindings, _bindingsRequested;
     TitleBar *_bar;
+    UIHover *_hover;
     CGPoint _click;
 }
 
@@ -65,21 +66,25 @@
 
 - (void)rebuild {
     [self removeAllChildren];
+    if (!_hover) _hover = [UIHover new];
+    [_hover reset];
     CGFloat width = MIN(760, CGRectGetWidth(_bounds));
-    CGFloat x = CGRectGetMinX(_bounds), top = CGRectGetMaxY(_bounds);
+    CGFloat x = CGRectGetMidX(_bounds)-width/2, top = CGRectGetMaxY(_bounds);
     BOOL narrow = width < 540;
-    CGRect header = RectFromEdges(x, top - [TitleBar heightCompact:narrow], x + width, top);
+    BOOL compact = MIN(_sceneSize.width, _sceneSize.height) <= 500;
+    CGRect header = RectFromEdges(CGRectGetMinX(_bounds), top - [TitleBar heightCompact:compact], CGRectGetMaxX(_bounds), top);
     __weak ControlsPanel *owner = self;
-    UIBarAction *back = [UIBarAction title:L10n(@"controls.back") accent:UIAmber handler:^{
+    UIBarAction *back = [UIBarAction title:L10n(@"controls.back") icon:UICommandBack accent:UIAmber handler:^{
         ControlsPanel *screen = owner; if (screen) screen->_backRequested = YES;
     }];
-    _bar = [[TitleBar alloc] initWithHeader:header compact:narrow back:back
-        title:L10n(@"controls.title") kicker:L10n(@"controls.kicker") actions:@[]];
+    UIBarAction *bindings=[UIBarAction title:L10n(@"controls.bindings") icon:UICommandBindings accent:UIInk handler:^{ ControlsPanel *screen=owner; if(screen) screen->_bindingsRequested=YES; }];
+    _bar = [[TitleBar alloc] initWithHeader:header compact:compact back:back
+        title:L10n(_showBindings ? @"controls.bindings" : @"controls.title") kicker:L10n(@"controls.kicker") actions:_showBindings ? @[] : @[bindings]];
     _backRect = [_bar rectForAction:back];
+    _bindingsRect=[_bar rectForAction:bindings];
     [self addChild:_bar];
-    _scrollRect = RectFromEdges(x, CGRectGetMinY(_bounds) + 24, x + width, CGRectGetMinY(header) - 12);
-    [self label:L10n(@"controls.scroll_hint") at:CGPointMake(x, CGRectGetMinY(_bounds) + 16)
-           size:14 color:UIInk parent:self];
+    [_bar registerHover:_hover];
+    _scrollRect = RectFromEdges(x, CGRectGetMinY(_bounds), x + width, CGRectGetMinY(header) - 12);
     SKCropNode *crop = [SKCropNode node];
     crop.maskNode = [SKShapeNode shapeNodeWithRect:_scrollRect];
     ((SKShapeNode *)crop.maskNode).fillColor = SKColor.whiteColor;
@@ -88,13 +93,15 @@
     _body = [SKNode node];
     [crop addChild:_body];
     _scrollContent = _body;
-    _form = [[UISettingsForm alloc] initWithItems:[self settings] width:width];
-    _form.selectedIndex = _selected;
-    [_body addChild:_form];
-    _settingRects = _form.rowRects;
-    CGFloat y = -_form.height;
-    y -= 18;
-    y -= [self paragraph:L10n(@"controls.bindings") y:y width:width];
+    _form=nil; _settingRects=@[];
+    CGFloat y=0;
+    if (!_showBindings) {
+        _form = [[UISettingsForm alloc] initWithItems:[self settings] width:width compact:compact];
+        _form.selectedIndex = _selected;
+        [_body addChild:_form];
+        _settingRects = _form.rowRects;
+        y=-_form.height;
+    } else {
     NSArray *actions = L10nList(self.touchNavigationEnabled ? @"controls.touch.actions" : @"controls.desktop.actions");
     NSArray *keys = L10nList(self.touchNavigationEnabled ? @"controls.touch.keys" : @"controls.desktop.keys");
     for (NSUInteger i = 0; i < MIN(actions.count, keys.count); i++) {
@@ -110,16 +117,18 @@
     }
     y -= 10;
     y -= [self paragraph:L10n(self.touchNavigationEnabled ? @"controls.touch_tip" : @"controls.trackball_tip") y:y width:width - 12];
+    }
     _contentHeight = -y;
     [self setOffset:_scrollOffset];
 }
 
 - (void)setOffset:(CGFloat)value {
     _scrollOffset = MIN(MAX(0, value), MAX(0, _contentHeight - CGRectGetHeight(_scrollRect)));
-    _body.position = PointAdd(CGPointMake(CGRectGetMinX(_scrollRect), CGRectGetMaxY(_scrollRect)), CGPointMake(0, _scrollOffset));
+    _body.position = UIScrollContentPosition(_scrollRect,CGSizeMake(CGRectGetWidth(_scrollRect),_contentHeight),_scrollOffset);
 }
 
 - (void)revealSelection {
+    if (_contentHeight<=CGRectGetHeight(_scrollRect)) return;
     CGRect row = UnboxRect(_settingRects[_selected]);
     CGFloat bottom = CGRectGetMinY(row) + _scrollOffset, top = CGRectGetMaxY(row) + _scrollOffset;
     CGFloat height = CGRectGetHeight(_scrollRect);
@@ -134,17 +143,26 @@
     [self revealSelection];
 }
 
+- (void)showBindings { _showBindings=YES; _scrollOffset=0; [self rebuild]; }
+
 - (BOOL)handle:(InputAction)actions {
-    if (actions & InputActionBack) { _hasClick = NO; return YES; }
+    if (actions & InputActionToggleHelp) { if(_showBindings) return [self handle:InputActionBack]; [self showBindings]; return NO; }
+    if (actions & InputActionBack) {
+        _hasClick = NO;
+        if(_showBindings) { _showBindings=NO; _scrollOffset=0; [self rebuild]; return NO; }
+        return YES;
+    }
     if (_hasClick) {
         _hasClick = NO;
         [_bar activateAt:_click];
-        if (_backRequested) { _backRequested = NO; return YES; }
+        if (_backRequested) { _backRequested = NO; return [self handle:InputActionBack]; }
+        if (_bindingsRequested) { _bindingsRequested=NO; [self showBindings]; return NO; }
         if (CGRectContainsPoint(_scrollRect, _click)) {
             CGPoint point = PointSub(_click, _body.position);
             if ([_form clickAt:point]) [self refreshSettings];
         }
     }
+    if (!_form) return NO;
     if (actions & (InputActionUp | InputActionDown)) {
         NSInteger count = (NSInteger)_settingRects.count;
         _form.selectedIndex = (_form.selectedIndex + ((actions & InputActionUp) ? count - 1 : 1)) % count;
@@ -164,12 +182,15 @@
 }
 - (void)pointerDown:(CGPoint)at {
     CGPoint point = PointMultiply(at, _sceneSize);
+    [_bar beginAt:point];
     if (CGRectContainsPoint(_scrollRect, point)) [_form beginAt:PointSub(point, _body.position)];
 }
 - (void)pointerDrag:(CGPoint)at { [_form dragTo:PointSub(PointMultiply(at, _sceneSize), _body.position)]; }
-- (void)pointerUp:(CGPoint)at { [_form endDrag]; }
-- (void)pointerCancel { [_form endDrag]; _hasClick = NO; }
+- (void)pointerUp:(CGPoint)at { [_bar endPress]; [_form endDrag]; }
+- (void)pointerCancel { [_bar endPress]; [_form endDrag]; _hasClick = NO; }
 - (void)pointerHover:(CGPoint)at {
+    [_hover queuePointAtFraction:at];
+    if (self.scene) [_hover updateInScene:self.scene];
     CGPoint point = PointMultiply(at, _sceneSize);
     if (CGRectContainsPoint(_scrollRect, point)) [_form hoverAt:PointSub(point, _body.position)];
 }

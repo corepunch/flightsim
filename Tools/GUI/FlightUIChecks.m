@@ -423,6 +423,10 @@ static int CheckControls(void) {
         CHECK(panel && panel.settingRects.count == 6);
         CHECK(CGRectContainsRect(RectWithSize(menu.size), panel.backRect));
         CHECK(CGRectContainsRect(RectWithSize(menu.size), panel.scrollRect));
+        if (panel.form.height <= CGRectGetHeight(panel.scrollRect)) {
+            CGPoint center = [panel convertPoint:CGPointMake(0, -panel.form.height/2) fromNode:panel.form];
+            CHECK(fabs(center.y-CGRectGetMidY(panel.scrollRect)) < 0.1);
+        }
         // Click the actual mode button through the host screen's pointer path.
         CGPoint click = [menu convertPoint:RectCenter(UnboxRect(panel.form.controlRects[0])) fromNode:panel.form];
         [menu pointerClick:CGPointMake(click.x/menu.size.width, click.y/menu.size.height)];
@@ -431,12 +435,18 @@ static int CheckControls(void) {
         Save(menu, [NSString stringWithFormat:@"main-controls-expert-%.0fx%.0f.png", menu.size.width, menu.size.height]);
         CGRect back = panel.backRect;
         CGPoint centre = RectCenter(panel.scrollRect);
+        CGPoint bindings = RectCenter(panel.bindingsRect);
+        [menu pointerClick:PointFractionInRect(bindings, RectWithSize(menu.size))];
+        [menu handle:0];
+        CHECK(!panel.form);
         [menu pointerScroll:10000 at:CGPointMake(centre.x/menu.size.width, centre.y/menu.size.height)];
         CHECK(panel.scrollOffset >= 0 && CGRectEqualToRect(back, panel.backRect));
         if (menu.size.height < 600) CHECK(panel.scrollOffset > 0);
         Save(menu, [NSString stringWithFormat:@"main-controls-bindings-%.0fx%.0f.png", menu.size.width, menu.size.height]);
         [menu pointerScroll:-10000 at:CGPointMake(centre.x/menu.size.width, centre.y/menu.size.height)];
         CHECK(panel.scrollOffset == 0);
+        [menu handle:InputActionBack];
+        CHECK(panel.form && menu.controlsPanel == panel);
         // A slider owns its drag: finger movement adjusts its value without
         // scrolling the form, including clamping beyond either end of the bar.
         [menu handle:InputActionDown];
@@ -495,6 +505,7 @@ static int CheckControls(void) {
 - (void)startLANMatch { _matches++; }
 - (void)closeLANGame { _closed++; }
 - (BOOL)hostingFailed { return NO; }
+- (BOOL)waitingForLANMatch { return NO; }
 - (void)present:(SKScene *)screen { _presented = screen; }
 - (void)quitAfter:(NSTimeInterval)seconds {}
 - (void)drawMenuBackdrop {}
@@ -564,9 +575,22 @@ static int CheckLANLayouts(void) {
         LANGame *game = [[LANGame alloc] initWithSize:size.sizeValue];
         game.contentInsets = game.size.width == 852 ? NSEdgeInsetsMake(0,59,21,59) : NSEdgeInsetsMake(0,0,20,0);
         [game handle:0];
+        CHECK(game.settingsForm.rowRects.count==6);
+        if (game.settingsForm.height <= CGRectGetHeight(game.bodyRect)) {
+            CGPoint center = [game convertPoint:CGPointMake(0, -game.settingsForm.height/2) fromNode:game.settingsForm];
+            CHECK(fabs(center.y-CGRectGetMidY(game.bodyRect)) < 0.1);
+        }
+        int kills=game.settings.fragLimit;
+        for(int i=0;i<4;i++) [game handle:InputActionDown];
+        [game handle:InputActionRight];
+        CHECK(game.settings.fragLimit!=kills);
+        [game handle:InputActionLeft]; CHECK(game.settings.fragLimit==kills);
+        [game showSetup];
         CHECK(CGRectGetHeight(game.confirmRect) >= 44 && !CGRectIntersectsRect(game.confirmRect, game.backRect));
         Save(game, [NSString stringWithFormat:@"lan-setup-%.0f.png", game.size.width]);
         [game showPilots:names];
+        CHECK(game.pilotRects.count==names.count);
+        for(NSValue *value in game.pilotRects) CHECK(CGRectContainsRect(game.bodyRect, UnboxRect(value)));
         CHECK(CGRectGetMinY(game.bodyRect) > game.contentInsets.bottom);
         CHECK(CGRectGetHeight(game.confirmRect) >= 44);
         Save(game, [NSString stringWithFormat:@"lan-lobby-%.0f.png", game.size.width]);
@@ -613,7 +637,7 @@ static void Pump(Client *client, Server *server, ControlState controls, BOOL pau
     [client setValue:@0 forKey:@"lastMoveSent"]; // Virtual-time network fixture, no real-time throttle.
     [client sendInput:controls actions:0 dt:TICK_DT]; [server frame:TICK_DT paused:paused]; [client readPackets];
 }
-static PlayerState Latest(Client *client) { return ((Snapshot *)[[client valueForKey:@"snapshots"] lastObject]).ps; }
+static PlayerState Latest(Client *client) { return client.latestSnapshot.ps; }
 static int CheckSimulation(void) {
     Server *server = [[Server alloc] initWithName:@"Pause fixture"];
     CHECK(server);

@@ -108,6 +108,7 @@ static inline TeamRelation TeamRelationIn(const char *csTeams, int a, int b) {
 #define CS_SECONDARY_NAME 4     // the secondary weapon's name for readouts ("TORPEDO")
 #define CS_SECONDARY_SHORT 5    // and a short form for small buttons ("TORP")
 #define CS_MODE 6               // "campaign" or "deathmatch"
+#define CS_LAN_RULES 7           // serialized LAN match settings
 #define CS_MODELS 16            // "ship:<definition>" or "cap:<Asset>:<style>"
 #define MAX_MODELS 256
 #define CS_STRINGS (CS_MODELS + MAX_MODELS)   // names, class names
@@ -616,6 +617,24 @@ typedef struct {
     int fragLimit;                     // kills to win a deathmatch
     float matchSeconds, respawnSeconds;
 } LevelRules;
+
+// Host-owned match choices, copied at creation and at each rematch.
+typedef struct {
+    NSString *arena, *ship;
+    int fragLimit, maxPilots;
+    float matchSeconds, respawnSeconds;
+} LANMatchSettings;
+LANMatchSettings LANMatchSettingsDefault(void);
+LANMatchSettings LANMatchSettingsNormalize(LANMatchSettings settings);
+NSString *LANMatchSettingsEncode(LANMatchSettings settings);
+BOOL LANMatchSettingsDecode(NSString *text, LANMatchSettings *settings);
+
+typedef struct {
+    NSArray<NSString *> *pilots;
+    LANMatchSettings settings;
+} LANLobbyInfo;
+NSString *LANLobbyEncode(LANLobbyInfo lobby);
+BOOL LANLobbyDecode(NSString *text, LANLobbyInfo *lobby);
 
 typedef struct {
     NSString *name, *title;

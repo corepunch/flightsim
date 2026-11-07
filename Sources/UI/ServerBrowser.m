@@ -4,13 +4,6 @@
 #import "Shared.h"
 #import "Common.h"
 
-static SKColor *Ink(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
-static SKColor *Amber(CGFloat a) { return UIColorWithOpacity(UIAmber, a); }
-
-static SKLabelNode *Text(CGFloat size, SKColor *c) {
-    return UIInterfaceLabel(size, c, SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeTop);
-}
-
 @interface ServerBrowser () <UIMotionScene>
 @end
 
@@ -32,7 +25,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     CGFloat _rowHeight;
     CGPoint _pendingPoint;
     BOOL _hasPendingPoint;
-    BOOL _createSelected;
+    BOOL _createSelected, _createRequested;
     TitleBar *_bar;
     InputAction _barInput;
 }
@@ -64,6 +57,9 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     [self rebuild];
 }
 
+- (void)pointerDown:(CGPoint)point { [_bar beginAt:PointMultiply(point,self.size)]; }
+- (void)pointerUp:(CGPoint)point { [_bar endPress]; }
+- (void)pointerCancel { [_bar endPress]; }
 - (void)pointerHover:(CGPoint)point { [_hover queuePointAtFraction:point]; }
 
 - (void)pointerClick:(CGPoint)point {
@@ -74,6 +70,7 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 - (void)showServers:(NSArray<LANServer *> *)servers {
     NSMutableString *sig = [NSMutableString string];
     for (LANServer *s in servers) [sig appendFormat:@"%@|%@|%d|%@;", s.address, s.name, s.players, s.levelName ?: @"-"];
+    for (LANServer *s in servers) if (s.pilots) [sig appendString:LANMatchSettingsEncode(s.settings)];
     if ([sig isEqualToString:_signature ?: @""] && CGSizeEqualToSize(_laidOut, self.size) && _signature) return;
     _signature = sig;
     LANServer *was = self.selected;
@@ -93,55 +90,49 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     CGSize s = self.size;
     _stage.position = CGPointMake(s.width / 2, s.height / 2);
     _root.position = CGPointMake(-s.width / 2, -s.height / 2);
-    NSMutableArray<SKLabelNode *> *rows = [NSMutableArray array], *notes = [NSMutableArray array];
+    NSMutableArray<SKLabelNode *> *rows = [NSMutableArray array];
     // Sizes and spacing from Resources/UI/menus/browser.json.
     UILayout *layout = [UILayout named:@"browser"];
     CGFloat (^M)(NSString *, CGFloat) = ^CGFloat(NSString *name, CGFloat fallback) { return layout ? [layout metric:name flags:nil fallback:fallback] : fallback; };
     [_root addChild:[self motionBackdropWithSize:s]];
 
-    // Title bar on top, servers in the body, status and notes in the footer.
+    // Commands stay in the title bar; the body owns games and connection status.
     ScreenInsets safe = self.contentInsets;
 #if TARGET_OS_IOS
     if (self.view) safe = self.view.safeAreaInsets;
 #endif
-    NSArray *lines = @[
-        _status ?: @"",
-        _hostLine ?: @"",
-        L10n(s.width >= M(@"wideHelpWidth", 850) ? @"browser.help_wide" : @"browser.help"),
-    ];
-    CGFloat step = M(@"notesStep", 20);
-    CGFloat statusRows = s.width < 600 ? 4 : 2;
-    ScreenRegions regions = ScreenRegionsMake(s, safe, (lines.count + statusRows - 1) * step);
+    ScreenRegions regions = ScreenRegionsMake(s, safe);
     __weak ServerBrowser *owner = self;
-    UIBarAction *back = [UIBarAction title:L10n(@"browser.back") accent:UIInk handler:^{
+    UIBarAction *back = [UIBarAction title:L10n(@"browser.back") icon:UICommandBack accent:UIInk handler:^{
         ServerBrowser *screen = owner; if (screen) screen->_barInput |= InputActionBack;
     }];
-    UIBarAction *join = [UIBarAction title:L10n(@"browser.join") accent:UIAmber handler:^{
+    UIBarAction *join = [UIBarAction title:L10n(@"browser.join") icon:UICommandJoin accent:UIAmber handler:^{
         ServerBrowser *screen = owner; if (screen) screen->_barInput |= InputActionConfirm;
     }];
+    UIBarAction *create = [UIBarAction title:L10n(@"browser.create") icon:UICommandCreate accent:_createSelected ? UIAmber : UIInk handler:^{
+        ServerBrowser *screen = owner; if (screen) screen->_createRequested = YES;
+    }];
     TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact back:back
-        title:L10n(@"browser.title") kicker:L10n(@"browser.kicker") actions:self.selected ? @[join] : @[]];
+        title:L10n(@"browser.title") kicker:L10n(@"browser.kicker") actions:self.selected ? @[join, create] : @[create]];
     _bar = bar;
-    _backRect = [bar rectForAction:back]; _joinRect = [bar rectForAction:join];
+    _backRect = [bar rectForAction:back]; _joinRect = [bar rectForAction:join]; _createRect = [bar rectForAction:create];
     [_root addChild:bar];
     [bar registerHover:_hover];
 
     CGRect body = regions.body;
     CGFloat x = CGRectGetMinX(body), y = CGRectGetMaxY(body), width = body.size.width;
-    _createRect = CGRectMake(x, y - 48, MIN(width, 260), 48);
-    SKShapeNode *create = UIActionButtonSized(_createRect, L10n(@"browser.create"), _createSelected ? UIAmber : UIInk, 17);
-    [_root addChild:create];
-    [_hover addButton:create rect:_createRect accent:UIAmber outline:NULL];
-    y -= 66;
-    body = RectFromEdges(x, CGRectGetMinY(body), CGRectGetMaxX(body), MAX(CGRectGetMinY(body), y));
     if (!_servers.count) {
-        SKLabelNode *none = Text(M(@"emptySize", 17), Ink(0.55));
-        none.text = L10n(@"browser.searching");
-        none.name = @"searching";
-        none.position = CGPointMake(x, y);
-        [_root addChild:none];
+        UIEmptyState *empty = [[UIEmptyState alloc] initWithRegion:body
+            text:_status.length ? _status : L10n(@"browser.searching") compact:regions.compact];
+        [_root addChild:empty];
     }
-    CGFloat rowHeight = _rowHeight = M(@"rowHeight", 36);
+    if (_servers.count && _status.length) {
+        CGRect status = RectFromEdges(x, y - 52, CGRectGetMaxX(body), y);
+        [_root addChild:[[UIEmptyState alloc] initWithRegion:status text:_status compact:YES]];
+        y -= 64;
+        body = RectFromEdges(x, CGRectGetMinY(body), CGRectGetMaxX(body), y);
+    }
+    CGFloat rowHeight = _rowHeight = M(@"rowHeight", 64);
     NSUInteger visible = MIN(_servers.count, (NSUInteger)MAX(1, floor(body.size.height / rowHeight)));
     _firstVisible = visible && _index >= visible ? _index - visible + 1 : 0;
     _serverRows = CGRectMake(x, y - visible * rowHeight, width, visible * rowHeight);
@@ -150,47 +141,21 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
         BOOL sel = !_createSelected && i == _index;
         const LevelDef *level = LevelNamed(srv.levelName);
         NSString *mission = level ? level->title : nil;
-        SKLabelNode *l = Text(M(@"rowSize", 16), sel ? Amber(1) : Ink(0.85));
-        l.text = L10nFormat(@"browser.row", sel ? @">" : @" ", srv.name, srv.players, srv.maxPlayers);
-        l.numberOfLines = 1;
-        l.preferredMaxLayoutWidth = width;
-        l.lineBreakMode = NSLineBreakByTruncatingTail;
-        l.position = CGPointMake(x, y - (i - _firstVisible) * rowHeight);
-        [_root addChild:l];
-        [rows addObject:l];
-        SKLabelNode *detail = Text(12, Ink(0.55));
-        detail.text = L10nFormat(@"browser.row_detail", mission ?: L10n(@"browser.in_menus"), srv.address);
-        detail.numberOfLines = 1; detail.preferredMaxLayoutWidth = width;
-        detail.lineBreakMode = NSLineBreakByTruncatingTail;
-        detail.position = PointAdd(l.position, CGPointMake(0, -22));
-        [_root addChild:detail];
+        CGRect rect = CGRectMake(x, y - (i - _firstVisible + 1) * rowHeight + 6, width, rowHeight - 6);
+        NSString *title = L10nFormat(@"browser.row", @"", srv.name, srv.players, srv.maxPlayers);
+        NSString *detail = srv.pilots ? L10nFormat(@"browser.row_detail", mission ?: L10n(@"browser.in_menus"), LANMatchSummary(srv.settings)) : (mission ?: L10n(@"browser.in_menus"));
+        UIListRow *row = [[UIListRow alloc] initWithRect:rect title:title detail:detail compact:regions.compact selected:sel];
+        [_root addChild:row]; [row registerHover:_hover];
+        [rows addObject:row.titleLabel];
     }
 
-    CGRect footer = regions.footer;
-    for (NSUInteger i = 0; i < lines.count; i++) {
-        SKLabelNode *l = Text(i == 0 ? M(@"statusSize", 14) : M(@"noteSize", 12), i == 0 ? Amber(1) : Ink(0.55));
-        l.text = lines[i];
-        l.numberOfLines = i == 0 ? (NSInteger)statusRows : 1;
-        l.preferredMaxLayoutWidth = footer.size.width;
-        l.lineBreakMode = i == 0 ? NSLineBreakByWordWrapping : NSLineBreakByTruncatingTail;
-        l.position = CGPointMake(CGRectGetMinX(footer), CGRectGetMaxY(footer) - (i == 0 ? 0 : i + statusRows - 1) * step);
-        [_root addChild:l];
-        [notes addObject:l];
-    }
     if (!intro) return;
     for (NSUInteger i = 0; i < rows.count; i++) {
         UIMotionSlideIn(rows[i], CGVectorMake(-24, 0), 0.25 + i * 0.04, 0.28);
         UIMotionDecode(rows[i], 0.25 + i * 0.04, 0.35);
     }
-    for (SKLabelNode *note in notes) UIMotionFlickerIn(note, 0.4);
     [bar revealAfter:0.05];
-    if (!rows.count) for (SKNode *child in _root.children)
-        if ([child isKindOfClass:SKLabelNode.class] && [child.name isEqualToString:@"searching"]) {
-            UIMotionDecode((SKLabelNode *)child, 0.25, 0.5);
-            [child runAction:UIAfter(0.8, [SKAction repeatActionForever:[SKAction sequence:@[
-                [SKAction fadeAlphaTo:0.35 duration:0.8], [SKAction fadeAlphaTo:1 duration:0.8],
-            ]]])];
-        }
+
 }
 
 - (void)motionEnter {
@@ -248,9 +213,9 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     CGPoint click = CGPointMake(-1, -1);
     if (_hasPendingPoint) click = CGPointMake(_pendingPoint.x * self.size.width, _pendingPoint.y * self.size.height);
     _hasPendingPoint = NO;
-    _barInput = 0;
+    _barInput = 0; _createRequested = NO;
     if ([_bar activateAt:click]) actions |= _barInput;
-    else if (CGRectContainsPoint(_createRect, click)) return BrowserCommandCreate;
+    if (_createRequested) return BrowserCommandCreate;
     else if (CGRectContainsPoint(_serverRows, click)) {
         NSUInteger row = _firstVisible + (NSUInteger)((CGRectGetMaxY(_serverRows) - click.y) / MAX(_rowHeight, 1));
         if (row < _servers.count) { _index = row; _createSelected = NO; [[GameAudio shared] play:@"ui-hover"]; [self rebuild]; }

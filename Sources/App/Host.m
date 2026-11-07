@@ -139,7 +139,6 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
             _serverUDP = [[UDPTransport alloc] initWithPort:port attempts:4];
             if (_serverUDP) [_server addTransport:_serverUDP];
         }
-        [_frontEnd setHostLine:L10n(@"browser.private")];
         [self connectLocal];
 
         // Show the loading card over an empty scene right away; the real scene
@@ -224,6 +223,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     [Cmd add:@"disconnect" help:@"Leaves the current server or mission" handler:^(NSArray<NSString *> *a) {
         [weak disconnectCommand];
     }];
+    [Cmd add:@"lan_browse" help:@"Opens LAN discovery" handler:^(NSArray<NSString *> *a) { Host *host=weak; if (host) [host->_frontEnd showBrowser]; }];
+    [Cmd add:@"lan_host" help:@"Hosts a LAN lobby using the g_lan settings" handler:^(NSArray<NSString *> *a) {
+        Host *host=weak; if (host && [host createLANGame]) [host->_frontEnd showLANHost];
+    }];
+    [Cmd add:@"lan_start" help:@"Starts the hosted LAN match once another pilot has joined" handler:^(NSArray<NSString *> *a) { [weak startLANMatch]; }];
     [Cmd add:@"screenshot" help:@"screenshot <file.png>: saves the next frame" handler:^(NSArray<NSString *> *a) {
         if (a.count < 2) { NSLog(@"usage: screenshot <file.png>"); return; }
         [weak saveScreenshot:a[1]];
@@ -437,14 +441,16 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 
 - (NSArray<NSString *> *)hostedPilots { return _server.clientNames; }
 - (BOOL)hostingFailed { return _advertisement.failed; }
+- (BOOL)waitingForLANMatch { return self.remote && _client.state == ClientConnected; }
 
 - (BOOL)createLANGame {
     if (!_serverUDP) return NO;
+    _server.matchSettings = LANMatchSettingsCurrent();
+    if (_server.publicHosting) return YES;
     [self cancelJoin];
     [_server stop];
     _server.publicHosting = YES;
     _advertisement = [[LANAdvertisement alloc] initWithName:_server.name port:_serverUDP.port];
-    [_frontEnd setHostLine:L10nFormat(@"browser.hosting_on", _serverUDP.port)];
     return YES;
 }
 
@@ -453,13 +459,15 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     _advertisement = nil;
     [_server closeSession];
     if (self.remote) { [_client disconnect]; [self connectLocal]; }
-    [_frontEnd setHostLine:L10n(@"browser.private")];
 }
 
 - (void)startLANMatch {
     if (!_server.publicHosting || _server.clientCount < 2 || _state == HostStateLoading) return;
-    NSString *name;
-    for (NSString *candidate in LevelNames()) if (LevelNamed(candidate)->rules.deathmatch) { name = candidate; break; }
+    LANMatchSettings settings = LANMatchSettingsCurrent();
+    _server.matchSettings = settings;
+    NSString *name = settings.arena;
+    const LevelDef *arena = LevelNamed(name);
+    if (!arena || !arena->rules.deathmatch) name = nil;
     if (!name) { [self closeLANGame]; [_frontEnd showBrowser]; [_frontEnd setBrowserStatus:L10n(@"browser.host_failed")]; return; }
     [_server stop]; [_client leaveGame]; [_clientView clearMission];
     [self showLoadingCard:0];
@@ -474,7 +482,9 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 - (BOOL)deathmatch { return [_client.configStrings[CS_MODE] isEqualToString:@"deathmatch"]; }
 
 - (void)showLANLoadingTitle {
-    [_loading showTitle:L10n(@"browser.dogfight") kicker:L10n(@"browser.kicker") detail:L10n(@"browser.rules")];
+    LANMatchSettings settings = _server.matchSettings;
+    if (self.remote) LANMatchSettingsDecode(_client.configStrings[CS_LAN_RULES], &settings);
+    [_loading showTitle:L10n(@"browser.dogfight") kicker:L10n(@"browser.kicker") detail:LANMatchSummary(settings)];
 }
 
 - (double)time { return _time; }

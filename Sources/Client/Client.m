@@ -23,7 +23,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
     id<NetTransport> _transport;
     NetChannel *_channel;
     NSString *_name;
-    double _lastConnectAttempt;
+    struct { double last; NSUInteger attempts; } _connectRetry;
     uint32_t _spawnCount;
 
     NSMutableArray<NSString *> *_cs;
@@ -67,6 +67,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
 
 - (NSArray<NSString *> *)configStrings { return _cs; }
 - (NSString *)levelName { return _cs[CS_LEVEL] ?: @""; }
+- (Snapshot *)latestSnapshot { return _snapshots.lastObject; }
 - (NetAddress *)serverAddress { return _channel.address; }
 
 #pragma mark - Connection
@@ -77,7 +78,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
     _channel = [[NetChannel alloc] initWithTransport:transport address:address];
     _name = [name copy];
     _state = ClientConnecting;
-    _lastConnectAttempt = -100;
+    _connectRetry = (typeof(_connectRetry)){ .last = -100 };
     _interpDelay = address.isLoopback ? kLocalInterpDelay : kNetInterpDelay;
 }
 
@@ -125,8 +126,12 @@ static const double kNetInterpDelay = TICK_DT * 3;
 - (void)readPackets {
     if (_state == ClientDisconnected) return;
     double now = CACurrentMediaTime();
-    if (_state == ClientConnecting && now - _lastConnectAttempt > 1.0) {
-        _lastConnectAttempt = now;
+    // Vary retry spacing so periodic packet loss cannot discard every attempt
+    // at the same phase. The overall connection timeout still bounds retries.
+    double interval = 1.0 + 0.13 * (_connectRetry.attempts % 3);
+    if (_state == ClientConnecting && now - _connectRetry.last > interval) {
+        _connectRetry.last = now;
+        _connectRetry.attempts++;
         [NetChannel sendOutOfBand:[NSString stringWithFormat:@"connect %d %@", PROTOCOL_VERSION, _name]
                         transport:_transport to:_channel.address];
     }

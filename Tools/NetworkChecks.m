@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <netinet/in.h>
 
 static double clockNow = 100;
 double NetworkCheckTime(void) { return clockNow; }
@@ -21,6 +22,61 @@ GetGameAPIFunc GameLoaderOpen(void) { return GetGameAPI; }
 @end
 @interface Server (NetworkChecks)
 - (void)setConfigString:(int)index value:(NSString *)value;
+@end
+
+// Keep the real mDNS smoke observable independently of injected error checks.
+@interface LANAdvertisement (DiscoveryCallbacks) <NSNetServiceDelegate>
+@end
+@interface LANBrowser (DiscoveryCallbacks) <NSNetServiceBrowserDelegate, NSNetServiceDelegate>
+@end
+@interface DiscoveryAdvertisement : LANAdvertisement
+@property BOOL published;
+@end
+@implementation DiscoveryAdvertisement
+- (void)netServiceDidPublish:(NSNetService *)service {
+    self.published = YES;
+    NSLog(@"BONJOUR SMOKE published %@ port %ld", service.name, (long)service.port);
+}
+- (void)netService:(NSNetService *)service didNotPublish:(NSDictionary *)error {
+    NSLog(@"BONJOUR SMOKE publication failed: %@", error);
+    [super netService:service didNotPublish:error];
+}
+@end
+@interface DiscoveryBrowser : LANBrowser
+@property NSUInteger discovered, resolved;
+@end
+@implementation DiscoveryBrowser
+- (void)netServiceBrowser:(NSNetServiceBrowser *)browser didFindService:(NSNetService *)service moreComing:(BOOL)more {
+    self.discovered++;
+    NSLog(@"BONJOUR SMOKE discovered %@", service.name);
+    [super netServiceBrowser:browser didFindService:service moreComing:more];
+}
+- (void)netServiceBrowser:(NSNetServiceBrowser *)browser didNotSearch:(NSDictionary *)error {
+    NSLog(@"BONJOUR SMOKE browse failed: %@", error);
+    [super netServiceBrowser:browser didNotSearch:error];
+}
+- (void)netServiceDidResolveAddress:(NSNetService *)service {
+    self.resolved++;
+    NSMutableArray<NSString *> *addresses = [NSMutableArray array];
+    for (NSData *data in service.addresses) {
+        if (data.length < sizeof(struct sockaddr_in) || ((const struct sockaddr *)data.bytes)->sa_family != AF_INET) continue;
+        NetAddress *address = [NetAddress addressWithSockaddr:data.bytes length:(unsigned)data.length];
+        if (address) [addresses addObject:address.string];
+    }
+    NSLog(@"BONJOUR SMOKE resolved %@: %@", service.name, addresses);
+    [super netServiceDidResolveAddress:service];
+}
+- (void)netService:(NSNetService *)service didNotResolve:(NSDictionary *)error {
+    NSLog(@"BONJOUR SMOKE resolution failed for %@: %@", service.name, error);
+    if ([LANBrowser instancesRespondToSelector:_cmd]) [super netService:service didNotResolve:error];
+}
+@end
+
+@interface ResolvedServiceFixture : NSNetService
+@property NSArray<NSData *> *fixtureAddresses;
+@end
+@implementation ResolvedServiceFixture
+- (NSArray<NSData *> *)addresses { return self.fixtureAddresses; }
 @end
 
 @interface Datagram : NSObject
@@ -95,7 +151,7 @@ static BOOL assertPendingPrediction;
            controls:(ControlState)c time:(double)t dt:(float)dt { self.drawn = ps->move; }
 @end
 
-static Snapshot *Latest(Client *c) { return [[c valueForKey:@"snapshots"] lastObject]; }
+static Snapshot *Latest(Client *c) { return c.latestSnapshot; }
 static void Step(Server *server, NSArray<Client *> *clients, ControlState controls) {
     clockNow += 1.0 / 30;
     NSMutableArray *predictions = [NSMutableArray array];
@@ -626,7 +682,10 @@ static void UDPSmoke(void) {
     CHECK(Latest(clients[0]).ps.entity != Latest(clients[1]).ps.entity);
     CHECK(Latest(clients[0]).ps.lastCommand > 200 && Latest(clients[1]).ps.lastCommand > 200);
     for (Client *c in clients) [c disconnect];
-    [server frame:0]; CHECK(server.clientCount == 0); [server stop];
+    // Kernel delivery is asynchronous even on localhost. Drain real packets
+    // without advancing the virtual timeout clock.
+    for (int i = 0; i < 100 && server.clientCount; i++) { usleep(1000); [server frame:0]; }
+    CHECK(server.clientCount == 0); [server stop];
     puts("PASS real IPv4 UDP sockets on localhost, one process, two clients");
 }
 
@@ -696,6 +755,47 @@ static void DeathmatchRun(void) {
     puts("PASS dogfight: eight opponents, targeting, secondary team, score, respawn, frag/time limits, rematch and solo waiting");
 }
 
+static void LateJoinCheck(void) {
+    routes = [NSMutableDictionary dictionary]; delay = 0; dropEvery = 0; blackout = NO;
+    assertPendingPrediction = NO;
+    [Cvar set:@"g_lanMatchSeconds" value:@"120"];
+    Server *server = [[Server alloc] initWithName:@"Running match"];
+    [server addTransport:[Link port:1]]; [server spawnLevel:@"check-dogfight"];
+    NSMutableArray<Client *> *clients = [NSMutableArray array];
+    for (int i = 0; i < 2; i++) {
+        Client *client = [[Client alloc] initWithView:(ClientView *)[Spy new]];
+        __weak Client *weak = client; client.gamestateHandler = ^{ [weak begin]; };
+        [client connectTo:[NetAddress loopback:1] transport:[Link port:10+i] name:@"Existing pilot"];
+        [clients addObject:client];
+    }
+    Steps(server, clients, (ControlState){0}, 1920);
+    GClient *leader = level->_clients[0]; leader.kills = 1;
+    float elapsed = level->_missionTime;
+    CHECK(elapsed > 25 && !server.missionEnded);
+    delay = 0.1; dropEvery = 11;
+    Client *late = [[Client alloc] initWithView:(ClientView *)[Spy new]];
+    __weak Client *weak = late; late.gamestateHandler = ^{ [weak begin]; };
+    [late connectTo:[NetAddress loopback:1] transport:[Link port:12] name:@"Late pilot"];
+    [clients addObject:late];
+    Steps(server, clients, (ControlState){0}, 240);
+    CHECK(server.clientCount == 3 && late.state == ClientActive && Latest(late).ps.alive);
+    CHECK(Latest(late).ps.missionTime >= elapsed && !server.missionEnded);
+    CHECK(leader.kills == 1 && Latest(clients[0]).ps.stats[STAT_KILLS] == 1);
+    CHECK(Latest(late).ps.stats[STAT_KILLS] == 0);
+    CHECK([late.configStrings[CS_MODE] isEqualToString:@"deathmatch"]);
+    LANMatchSettings rules; CHECK(LANMatchSettingsDecode(late.configStrings[CS_LAN_RULES], &rules));
+    for (Client *observer in clients) for (Client *other in clients) if (observer != other) {
+        BOOL found = NO; Snapshot *snapshot = Latest(observer);
+        for (NSUInteger i = 0; i < snapshot.entityCount; i++)
+            if (snapshot.entityStates[i].number == Latest(other).ps.entity) found = YES;
+        CHECK(found);
+    }
+    for (Client *client in clients) [client disconnect];
+    delay = 0; dropEvery = 0; [server frame:0]; [server stop];
+    [Cvar set:@"g_lanMatchSeconds" value:@"0"];
+    puts("PASS late join: running match, live timer, preserved scores and all peers visible with delay and packet loss");
+}
+
 static void ConnectTimeoutCheck(void) {
     routes = [NSMutableDictionary dictionary];
     Client *client = [[Client alloc] initWithView:nil];
@@ -755,6 +855,60 @@ static void DiscoveryFailureChecks(void) {
     puts("PASS LAN diagnostics: socket failure, Bonjour search error/code and recovery, resolution timeout, no IPv4, silent host and removal");
 }
 
+static void MatchOptionsCheck(void) {
+    const LevelDef *arena=LevelNamed(@"check-dogfight");
+    LevelRules original=arena->rules;
+    [Cvar set:@"g_lanFragLimit" value:@"5"];
+    [Cvar set:@"g_lanMatchSeconds" value:@"600"];
+    [Cvar set:@"g_lanRespawnSeconds" value:@"5"];
+    [Cvar set:@"g_lanMaxPilots" value:@"2"];
+    [Cvar set:@"g_lanShip" value:ShipDefNames().firstObject];
+    routes=[NSMutableDictionary dictionary]; delay=0; dropEvery=0; blackout=NO;
+    assertPendingPrediction=NO;
+    Server *server=[[Server alloc] initWithName:@"Configured match"];
+    LANMatchSettings settings=LANMatchSettingsDefault(); settings.maxPilots=2; server.matchSettings=settings;
+    [server addTransport:[Link port:1]]; [server spawnLevel:arena->name];
+    CHECK(level->_level->rules.fragLimit==5 && level->_level->rules.matchSeconds==600 && level->_level->rules.respawnSeconds==5);
+    CHECK([level->_level->playerShip isEqualToString:ShipDefNames().firstObject]);
+    CHECK(arena->rules.fragLimit==original.fragLimit && arena->rules.matchSeconds==original.matchSeconds && arena->rules.respawnSeconds==original.respawnSeconds);
+    NSMutableArray *clients=[NSMutableArray array];
+    for(int i=0;i<3;i++) {
+        Client *client=[[Client alloc] initWithView:(ClientView *)[Spy new]];
+        __weak Client *weak=client; client.gamestateHandler=^{ [weak begin]; };
+        [client connectTo:[NetAddress loopback:1] transport:[Link port:10+i] name:@"Configured pilot"];
+        [clients addObject:client];
+    }
+    Steps(server,clients,(ControlState){0},60);
+    CHECK(server.clientCount==2 && ((Client *)clients[2]).state==ClientDisconnected);
+    LANMatchSettings advertised;
+    CHECK(LANMatchSettingsDecode(((Client *)clients[0]).configStrings[CS_LAN_RULES],&advertised));
+    CHECK(advertised.fragLimit==5 && advertised.maxPilots==2 && advertised.respawnSeconds==5 && advertised.matchSeconds==600);
+    for(Client *client in clients) [client disconnect];
+    [server frame:0]; [server stop];
+    for(NSString *key in @[@"g_lanFragLimit",@"g_lanMatchSeconds",@"g_lanRespawnSeconds",@"g_lanMaxPilots"]) [Cvar set:key value:@"0"];
+    [Cvar set:@"g_lanShip" value:@""];
+    puts("PASS match options: authoritative rules and ship, unchanged arena data, guest settings and pilot capacity");
+}
+
+static void MultipleAddressCheck(void) {
+    Server *server=[[Server alloc] initWithName:@"Multiple routes"];
+    UDPTransport *socket=[[UDPTransport alloc] initWithPort:0 attempts:1];
+    UDPTransport *silent=[[UDPTransport alloc] initWithPort:0 attempts:1];
+    CHECK(socket && silent); [server addTransport:socket]; server.publicHosting=YES;
+    LANBrowser *browser=[LANBrowser new];
+    ResolvedServiceFixture *service=[[ResolvedServiceFixture alloc] initWithDomain:@"local." type:@"_kestrel._udp." name:@"Multiple routes" port:socket.port];
+    service.fixtureAddresses=@[[NetAddress addressWithString:@"127.0.0.1" port:silent.port].sockaddr,
+        [NetAddress addressWithString:@"127.0.0.1" port:socket.port].sockaddr];
+    [browser netServiceDidResolveAddress:service];
+    BOOL found=NO;
+    for(int i=0;i<100 && !found;i++) {
+        clockNow+=0.03; [browser poll]; usleep(1000); [server frame:0]; [browser poll];
+        for(LANServer *entry in browser.servers) if(entry.address.port==socket.port) found=YES;
+    }
+    CHECK(found); [browser stop]; [server closeSession];
+    puts("PASS discovery queries every IPv4 candidate when the first route is silent");
+}
+
 static void DiscoveryCheck(void) {
     Server *server = [[Server alloc] initWithName:@"Bonjour check"]; CHECK(server);
     UDPTransport *socket = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(socket);
@@ -770,8 +924,8 @@ static void DiscoveryCheck(void) {
         usleep(1000); [server frame:0];
     }
     CHECK(server.clientCount == 1 && [probe receiveFrom:&from]);
-    LANAdvertisement *advertisement = [[LANAdvertisement alloc] initWithName:server.name port:socket.port];
-    LANBrowser *browser = [LANBrowser new];
+    DiscoveryAdvertisement *advertisement = [[DiscoveryAdvertisement alloc] initWithName:server.name port:socket.port];
+    DiscoveryBrowser *browser = [DiscoveryBrowser new];
     BOOL found = NO;
     double until = CFAbsoluteTimeGetCurrent() + 10;
     while (!found && CFAbsoluteTimeGetCurrent() < until) @autoreleasepool {
@@ -780,6 +934,9 @@ static void DiscoveryCheck(void) {
         [browser poll]; [server frame:0]; [browser poll];
         for (LANServer *entry in browser.servers) if (entry.address.port == socket.port) found = YES;
     }
+    NSLog(@"BONJOUR SMOKE result: published=%d publishFailed=%d browseFailed=%d discovered=%lu resolved=%lu UDPReply=%d",
+          advertisement.published, advertisement.failed, browser.discoveryFailed,
+          (unsigned long)browser.discovered, (unsigned long)browser.resolved, found);
     CHECK(!advertisement.failed && !browser.discoveryFailed && found);
     [browser netServiceBrowser:nil didNotSearch:@{NSNetServicesErrorDomain: @10, NSNetServicesErrorCode: @(-72000)}];
     [browser query:address]; [server frame:0]; [browser poll];
@@ -826,6 +983,9 @@ int main(int argc, const char **argv) { @autoreleasepool {
     SecondaryTargetingRun();
     UDPSmoke();
     DeathmatchRun();
+    MatchOptionsCheck();
+    LateJoinCheck();
+    MultipleAddressCheck();
     ConnectTimeoutCheck();
     DiscoveryFailureChecks();
     DiscoveryCheck();

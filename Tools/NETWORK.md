@@ -51,7 +51,7 @@ Remaining coverage and compatibility limits:
 - All peers share a process and definition cache in integration scenarios. Fresh
   process digest probes detect changed files, but do not replace separate app
   bundles connecting over a real network.
-- No physical macOS/iOS peers, Wi-Fi jitter, NAT, MTU/path issues,
+- The automated suite does not cover physical macOS/iOS peers, Wi-Fi jitter, NAT, MTU/path issues,
   endian/architecture combinations, background/resume or app lifecycle coverage.
 - The identity covers ship JSON only. Capital collision meshes, missions,
   projectile visuals and other game data still depend on a manually maintained
@@ -72,6 +72,10 @@ hostile to every other pilot, targeting includes human opponents, primary
 weapons damage another player, missiles carry the shooter's team, deaths
 increment once, respawns preserve score, and frag/time limits end the match.
 A rematch resets scores; a solo host waits without consuming the match clock.
+A third pilot joins more than a minute into a running match under 200 ms round-trip
+delay and periodic packet loss: scores and timer survive, and every client sees
+every other ship. Connection retries vary their spacing so they can recover even
+when periodic loss initially discards the connection requests.
 A missing host times out during connection attempts as well as after joining.
 
 A real Bonjour smoke publishes an ephemeral UDP port, resolves the declared
@@ -165,3 +169,87 @@ all new discovery messages. These do not replace the physical acceptance test.
 Apple documents the explicit policy-denied code in [TN3179](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy).
 Older APIs may leave a denied search empty without delivering this code; the
 empty-list guidance therefore still includes a permission check.
+
+
+## Testing Mac and iPhone on a LAN
+
+Follow Apple's [local-network privacy guidance](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy)
+and [WWDC walkthrough](https://developer.apple.com/videos/play/wwdc2020/10110/).
+Bonjour finds the host and its UDP port; the game then exchanges unicast UDP.
+The declared service is `_kestrel._udp` in both platforms' Info.plist files.
+Browsing starts when the player opens LAN, and publishing starts after Create
+Game. These actions are the appropriate time to request local-network access.
+The current iOS path does not use raw multicast or broadcast, so it does not
+need the multicast entitlement. Sandboxed Mac builds need both network client
+and server entitlements. Use an Apple Development signature for Mac permission
+testing; ad hoc signatures do not provide a stable privacy identity.
+
+Simulator can help exercise menus and connections, but does not support iOS
+local-network privacy. A simulator success cannot validate the phone's permission
+prompt, deny/allow behavior, or physical Wi-Fi path. A USB cable provides deployment
+and debugging; use the same reachable LAN for gameplay. Avoid guest Wi-Fi/client
+isolation; the network must carry Bonjour mDNS and the host's advertised UDP port.
+Do not disable the firewall globally: allow the signed game to receive connections.
+
+Build matching resources on both peers with `./build.sh` and `make iphone`
+(see [IOS.md](IOS.md) for signing). Keep the phone unlocked during deployment.
+Test the app launched from its icon as well as under development tools.
+
+1. On Mac, choose Multiplayer, then the title bar’s Create Game action. Set
+   the arena, shared ship, capacity, kill limit, duration and respawn delay, then
+   choose Create Game to publish the waiting room. On iPhone, open Multiplayer, grant Local Network access,
+   select that host and join. The Mac must list both pilots.
+2. Start the match on Mac. Verify both peers load, see each other moving and
+   firing, and receive match results. Leave and rejoin to verify cleanup.
+3. Reverse roles: host on iPhone, discover and join on Mac, then start on iPhone.
+4. Exercise denied permission followed by enabling it in Settings, host closure,
+   guest departure, background/resume, and loss/recovery of Wi-Fi. Record whether
+   the screen recovers by itself or needs leaving and reopening LAN.
+
+Diagnose each stage independently. `dns-sd -B _kestrel._udp local.` lists
+advertisements; `dns-sd -L '<instance name>' _kestrel._udp local.` resolves one.
+If the advertisement resolves but the game list stays empty, check the resolved
+IPv4 address and unicast info request/reply. The current transport is IPv4 only;
+IPv6-only LANs and peer-to-peer Wi-Fi without a shared LAN are not supported.
+A direct `+connect <host-ip>:<port>` check bypasses Bonjour and therefore cannot
+establish discovery success. Retain logs showing the remote handshake and live
+snapshots, not only a visible advertisement or a UDP socket opening.
+
+The headless Bonjour smoke depends on the machine's mDNS environment and is
+separate evidence from physical-device testing. A timeout alone does not identify
+permission denial: log publication, browse, resolution and UDP response stages.
+The diagnostics regression deliberately injects Bonjour error codes, including
+`-65570`; those messages are not evidence that the real smoke was denied access.
+
+
+Match setup uses archived `g_lan*` console variables (see [CONSOLE.md](../CONSOLE.md)).
+Only deathmatch levels apply these overrides; campaign and cached arena definitions
+remain unchanged. Settings can be edited in a hosted lobby without disconnecting
+pilots. Capacity cannot be reduced below the connected roster. The single shipped
+arena is shown as a disabled choice until another deathmatch level is available.
+Guests receive a typed `lobby_response` containing the roster and settings; the
+running match repeats its authoritative rules in `CS_LAN_RULES`. Existing `info`
+queries retain their original format. Additional lobby queries are optional for
+older peers. Each device formats the received values in its own language.
+
+Discovery queries all resolved IPv4 candidates and keeps the first responding
+route for each service, preventing duplicate listings across interfaces. A socket
+regression supplies a silent first address and a responding second address. This
+checks fallback without relying on the machine's mDNS setup. The separate real
+Bonjour smoke logs publication, discovery, resolved IPv4 candidates and UDP success;
+its result is still mandatory and is not skipped when the environment fails.
+
+
+Physical check, 7 November 2026: development builds were installed on this Mac
+and the USB-paired iPhone 14 Pro Max (iOS 26.6.2). The peers used the same Wi-Fi
+with Local Network access enabled. The Mac log recorded the phone's unicast
+connection and a dogfight start; the user confirmed it worked. Phone discovery
+logs show a resolution containing the USB link-local address first and the Wi-Fi
+address second, a real example of why selecting only the first address is unsafe.
+The reverse host direction, permission-denial recovery and long background/resume
+sessions remain separate manual checks; this run does not establish those.
+
+For a repeatable development launch, use `+lan_host` on Mac and `+lan_browse` on
+iPhone. `+connect <address>:<port>` isolates unicast from discovery; `+lan_start`
+starts a host with at least two pilots. LAN screens and flight disable the iOS
+idle timer while visible, so an unattended lobby does not auto-lock its host.

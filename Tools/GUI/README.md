@@ -78,6 +78,9 @@ and checks button/hint centring, callback routing, disabled actions, settings
 padding, two-line pause labels, rendered per-line text centring, pause touch sizes and touch-control hit geometry. It refreshes the same
 output directory; an optional first argument chooses a separate output folder.
 
+For focused iteration, `./Tools/run-ui-reference-checks.sh build/ui-reference --network-only`
+refreshes the menu and Multiplayer fixtures while retaining the rest of the catalogue.
+
 The offline catalogue filters by family, configuration, category and name. Use
 Actual size or open a PNG to judge typography at one scene point per pixel;
 fit-to-card thumbnails and the three JPG overview sheets are for navigation.
@@ -93,12 +96,11 @@ native simulator/device screenshots. Retina scaling and native event delivery
 still need device testing.
 
 Coverage includes action normal/selected/hover/disabled states, back/title bars
-with zero/one/two actions, long translations, information bars with/without an
-action, settings choices and actions, slider minimum/midpoint/maximum, every
+with zero/one/two actions, long translations, all fourteen title-bar icons in authored normal/selected/hover/pressed/disabled states, settings choices and actions, slider minimum/midpoint/maximum, every
 pause selection across local/online and chase/cockpit configurations, menu
 start/continue/replay and selections, mission current/locked/completed tiles and all three star ratings, conversation,
 tactical map, success/failure/overflow reports, loading empty/half/ready, LAN
-setup/waiting/ready/full/results, browser empty/selected/error, HUD conditions,
+setup/waiting/ready/full/results, guest waiting, framed list rows in normal/selected/hover states and long names, browser empty/selected/error, HUD conditions,
 targets/objectives/messages/help/respawn, unshielded and critical states, empty
 missile racks, the four fixed-resolution cockpit glass displays in normal,
 warning and destroyed states, and the shared touch controls at rest,
@@ -114,13 +116,14 @@ Run `./Tools/run-ui-localization-checks.sh` to render all 21 languages in the sa
 11 configurations. Optional language arguments, such as `de ar ja`, restrict a
 development run. The offline sheet is `build/ui-localization/index.html`, with
 language, device and name filters and actual-size inspection. It covers the main
-menu, online pause, flight settings, information bar, HUD with objectives and
-radio captions, and help. The runner checks button containment and centring,
+menu, online pause, flight settings, HUD with objectives and
+radio captions, and help, plus LAN settings, searching, waiting and full rosters. The runner checks button containment and centring,
 locale selection, and native CoreText glyph fallback for every catalog entry,
 including game content. `--glyphs-only` checks both games in every language;
 `--verify-only` checks all layout configurations without writing previews. Use
 these for quick iteration before regenerating the sheets. No game session or
 font download is needed.
+`--network-only` refreshes the Multiplayer settings and lobby previews while retaining other screenshots.
 `--flight-only` refreshes the HUD/help previews while retaining existing menu
 previews; a missing language sheet is rendered in full.
 
@@ -131,3 +134,5 @@ dialogue remains English; mission objectives, all in-flight radio captions, ship
 classes, cargo and weapon labels are translated. Proper names, callsigns and navigation markers retain their
 map spelling. These previews use the Mac's system font fallback; native iOS
 rendering should also be reviewed before release.
+
+All menu commands live in the top title bar. Phones show unframed command icons; iPad and desktop show icons with labels. Settings and empty states center within the remaining safe content region. Overflowing content scrolls below the fixed title bar; bindings have their own title-bar command.
