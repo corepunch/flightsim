@@ -1,0 +1,25 @@
+{
+  "characters": {
+    "MiraCaptain": {
+      "availableFrom": {"level": "02-cargo-run", "phase": "briefing"},
+      "returns": ["03-relay-silence", "05-customs", "14-exodus", "18-corsair-nest", "20-hammerfall"]
+    },
+    "Juno": {
+      "availableFrom": {"level": "07-lifeline", "phase": "debrief"},
+      "returns": ["08-into-the-rocks", "11-ring-defense", "13-shipyard-recon", "15-destroyer-ambush", "16-broken-chains", "20-hammerfall"]
+    },
+    "Rhea": {
+      "availableFrom": {"level": "10-frigate-down", "phase": "briefing"},
+      "returns": ["16-broken-chains", "19-iron-wall"]
+    },
+    "Kesh": {
+      "availableFrom": {"level": "16-broken-chains", "phase": "briefing"},
+      "returns": ["17-ghost", "20-hammerfall"]
+    },
+    "Lancer2": {
+      "availableFrom": {"level": "01-first-watch", "phase": "briefing"},
+      "unavailableFrom": {"level": "19-iron-wall", "phase": "debrief"},
+      "returns": ["03-relay-silence", "09-mine-sweep", "15-destroyer-ambush", "18-corsair-nest", "19-iron-wall"]
+    }
+  }
+}
