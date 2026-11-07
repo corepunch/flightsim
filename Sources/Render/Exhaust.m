@@ -77,11 +77,16 @@ static NSString *const kFlameFragment =
 static PlatformImage *LuminanceAlphaImage(NSURL *url) {
     CGImageSourceRef src = CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL);
     if (!src) return nil;
-    CGImageRef cg = CGImageSourceCreateImageAtIndex(src, 0, NULL);
+    // Sprites are soft shapes a few dozen pixels across on screen: 256 px
+    // is plenty, and every atlas built from them is a quarter of the memory.
+    NSDictionary *properties = CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(src, 0, NULL));
+    BOOL hasAlpha = [properties[(__bridge id)kCGImagePropertyHasAlpha] boolValue];
+    CGImageRef cg = CGImageSourceCreateThumbnailAtIndex(src, 0, (__bridge CFDictionaryRef)@{
+        (__bridge id)kCGImageSourceCreateThumbnailFromImageAlways: @YES,
+        (__bridge id)kCGImageSourceThumbnailMaxPixelSize: @256,
+    });
     CFRelease(src);
     if (!cg) return nil;
-    CGImageAlphaInfo info = CGImageGetAlphaInfo(cg);
-    BOOL hasAlpha = info != kCGImageAlphaNone && info != kCGImageAlphaNoneSkipLast && info != kCGImageAlphaNoneSkipFirst;
     size_t w = CGImageGetWidth(cg), h = CGImageGetHeight(cg);
     uint8_t *px = calloc(w * h * 4, 1);
     CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
@@ -125,6 +130,36 @@ static PlatformImage *LuminanceAlphaImage(NSURL *url) {
                 float along = powf(fmaxf(1.0f - fabsf(u), 0), 2.2f);     // 0 at the ends
                 float core = expf(-u * u * 40.0f) * 0.6f;                // hot centre
                 float a = fminf(fmaxf(across, 0) / (1 - expf(-18.0f)) * (along + core * along), 1);
+                uint8_t c = (uint8_t)lroundf(a * 255);
+                uint8_t *p = px + (y * w + x) * 4;
+                p[0] = p[1] = p[2] = p[3] = c;
+            }
+        }
+        CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+        CGContextRef ctx = CGBitmapContextCreate(px, w, h, 8, w * 4, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
+        CGImageRef cg = CGBitmapContextCreateImage(ctx);
+        image = PlatformImageFromCGImage(cg);
+        CGImageRelease(cg);
+        CGContextRelease(ctx);
+        CGColorSpaceRelease(cs);
+        free(px);
+    });
+    return image;
+}
+
++ (PlatformImage *)boltImage {
+    static PlatformImage *image;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        const int w = 32, h = 256;
+        uint8_t *px = calloc(w * h * 4, 1);
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                float u = (x + 0.5f) / w * 2 - 1, v = (y + 0.5f) / h * 2 - 1;
+                float across = (expf(-u * u * 7.0f) - expf(-7.0f)) / (1 - expf(-7.0f));   // 0 on the long edges
+                float along = fminf((1.0f - fabsf(v)) * 5.0f, 1);                        // flat, soft ends
+                float core = expf(-u * u * 60.0f) * 0.8f;                               // hot centre line
+                float a = fminf(fmaxf(across, 0) * along * (1 + core), 1);
                 uint8_t c = (uint8_t)lroundf(a * 255);
                 uint8_t *p = px + (y * w + x) * 4;
                 p[0] = p[1] = p[2] = p[3] = c;
@@ -236,16 +271,163 @@ static SCNMaterial *FlameMaterial(simd_float3 tint, float seed) {
     return m;
 }
 
-static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray<NSNumber *> *times) {
-    CAKeyframeAnimation *a = [CAKeyframeAnimation animationWithKeyPath:keyPath];
-    a.values = values;
-    a.keyTimes = times;
-    return a;
+
+// MARK: - Life ramps baked into image sequences
+
+// SceneKit builds a colour ramp for every particle system that has property
+// controllers, rebuilds it whenever the velocity, life span, size or frame
+// rate changes, and never frees the old one (macOS 26, iOS 26). The exhaust
+// follows the throttle through exactly those properties every frame, so its
+// colour and size over life are baked into an image sequence instead: one
+// frame per step of the life, the sprite tinted and scaled by the ramp, and
+// the sequence played once over the particle's life span. Measured on the
+// renderer: a particle's sprite is multiplied by its colour in linear light
+// and by its alpha linearly, so a white particle showing the tinted frame
+// draws exactly what the controllers drew.
+
+// Colour and size over a particle's life as keyframes at times 0..1, the way
+// the property controllers took them.
+typedef struct {
+    NSArray<SKColor *> *colors;
+    NSArray<NSNumber *> *colorTimes;
+    NSArray<NSNumber *> *sizes;       // factors on the particle size, as the controller applied them
+    NSArray<NSNumber *> *sizeTimes;
+} LifeRamp;
+
+static float SRGBToLinear(float c) { return c <= 0.04045f ? c / 12.92f : powf((c + 0.055f) / 1.055f, 2.4f); }
+static float LinearToSRGB(float c) { return c <= 0.0031308f ? c * 12.92f : 1.055f * powf(c, 1 / 2.4f) - 0.055f; }
+
+static simd_float4 ColorRGBA(SKColor *color) {
+    CGFloat r = 0, g = 0, b = 0, a = 1;
+#if TARGET_OS_IOS
+    [color getRed:&r green:&g blue:&b alpha:&a];
+#else
+    [[color colorUsingColorSpace:NSColorSpace.sRGBColorSpace] getRed:&r green:&g blue:&b alpha:&a];
+#endif
+    return simd_make_float4((float)r, (float)g, (float)b, (float)a);
 }
+
+// Piecewise linear interpolation of keyframes, as the controllers did it.
+static float KeyframeAt(NSArray<NSNumber *> *values, NSArray<NSNumber *> *times, float t) {
+    NSUInteger last = values.count - 1;
+    for (NSUInteger i = 1; i <= last; i++) {
+        float t0 = times[i - 1].floatValue, t1 = times[i].floatValue;
+        if (t <= t1) return values[i - 1].floatValue + (values[i].floatValue - values[i - 1].floatValue) * (t1 > t0 ? (t - t0) / (t1 - t0) : 1);
+    }
+    return values[last].floatValue;
+}
+
+static simd_float4 ColorKeyframeAt(NSArray<SKColor *> *colors, NSArray<NSNumber *> *times, float t) {
+    NSUInteger last = colors.count - 1;
+    for (NSUInteger i = 1; i <= last; i++) {
+        float t0 = times[i - 1].floatValue, t1 = times[i].floatValue;
+        if (t <= t1) return simd_mix(ColorRGBA(colors[i - 1]), ColorRGBA(colors[i]), t1 > t0 ? (t - t0) / (t1 - t0) : 1);
+    }
+    return ColorRGBA(colors[last]);
+}
+
+static float LargestSize(LifeRamp ramp) {
+    float largest = 0;
+    for (NSNumber *size in ramp.sizes) largest = fmaxf(largest, size.floatValue);
+    return largest;
+}
+
+// The sprite at `frames` steps of the ramp, each tinted by the colour and
+// drawn at its size relative to the largest, in a square grid read left to
+// right, top to bottom; straight alpha like +straightAlphaParticleTexture:.
+// Sizes enter as fractions, so every nozzle radius shares one atlas.
++ (PlatformImage *)rampSequence:(NSString *)sprite ramp:(LifeRamp)ramp frames:(NSUInteger)frames cell:(size_t)cell {
+    static NSMutableDictionary<NSString *, PlatformImage *> *cache;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
+    float largest = LargestSize(ramp);
+    NSMutableString *key = [NSMutableString stringWithFormat:@"%@|%lu|%zu", sprite, (unsigned long)frames, cell];
+    for (NSUInteger i = 0; i < ramp.colors.count; i++) {
+        simd_float4 c = ColorRGBA(ramp.colors[i]);
+        [key appendFormat:@"|%.3f,%.3f,%.3f,%.3f@%.3f", c.x, c.y, c.z, c.w, ramp.colorTimes[i].floatValue];
+    }
+    for (NSUInteger i = 0; i < ramp.sizes.count; i++)
+        [key appendFormat:@"|%.3f@%.3f", ramp.sizes[i].floatValue / largest, ramp.sizeTimes[i].floatValue];
+    @synchronized (cache) {
+        PlatformImage *img = cache[key];
+        if (img) return img;
+
+        size_t columns = (size_t)ceil(sqrt((double)frames)), rows = (frames + columns - 1) / columns;
+        size_t w = columns * cell, h = rows * cell;
+        CGImageRef source = PlatformImageCGImage([self particleTexture:sprite]);
+        NSMutableData *data = [NSMutableData dataWithLength:w * h * 4];
+        uint8_t *px = data.mutableBytes;
+        CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+        CGContextRef ctx = CGBitmapContextCreate(px, w, h, 8, w * 4, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
+        CGContextSetInterpolationQuality(ctx, kCGInterpolationHigh);
+        for (NSUInteger f = 0; f < frames; f++) {
+            float t = frames > 1 ? (float)f / (frames - 1) : 0;
+            float side = cell * KeyframeAt(ramp.sizes, ramp.sizeTimes, t) / largest;
+            CGFloat x = (f % columns) * cell + (cell - side) / 2, y = h - (f / columns + 1) * cell + (cell - side) / 2;
+            CGContextDrawImage(ctx, CGRectMake(x, y, side, side), source);
+        }
+        CGContextRelease(ctx);
+        // Tint each frame: straight colour into linear light times the ramp
+        // colour, alpha times the ramp alpha, stored straight.
+        for (NSUInteger f = 0; f < frames; f++) {
+            simd_float4 tint = ColorKeyframeAt(ramp.colors, ramp.colorTimes, frames > 1 ? (float)f / (frames - 1) : 0);
+            simd_float3 tintLinear = simd_make_float3(SRGBToLinear(tint.x), SRGBToLinear(tint.y), SRGBToLinear(tint.z));
+            size_t x0 = (f % columns) * cell, y0 = (f / columns) * cell;
+            for (size_t y = y0; y < y0 + cell; y++) {
+                for (size_t x = x0; x < x0 + cell; x++) {
+                    uint8_t *p = px + (y * w + x) * 4;
+                    float a = p[3] / 255.0f;
+                    if (a <= 0) { p[0] = p[1] = p[2] = 0; continue; }
+                    for (int c = 0; c < 3; c++) {
+                        float straight = fminf(p[c] / 255.0f / a, 1);
+                        p[c] = (uint8_t)lroundf(LinearToSRGB(SRGBToLinear(straight) * tintLinear[c]) * 255);
+                    }
+                    p[3] = (uint8_t)lroundf(a * tint.w * 255);
+                }
+            }
+        }
+        CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
+        CGImageRef out = CGImageCreate(w, h, 8, 32, w * 4, cs, (CGBitmapInfo)kCGImageAlphaLast,
+                                       provider, NULL, false, kCGRenderingIntentDefault);
+        img = PlatformImageFromCGImage(out);
+        CGImageRelease(out);
+        CGDataProviderRelease(provider);
+        CGColorSpaceRelease(cs);
+        cache[key] = img;
+        return img;
+    }
+}
+
+// The life span and the frame rate that plays the whole sequence over it, as
+// one setting: the last frame is reached just before the particle dies.
+static void ParticleSetLife(SCNParticleSystem *ps, CGFloat life, NSUInteger frames) {
+    ParticleSet(ps, @"particleLifeSpan", life);
+    ParticleSet(ps, @"imageSequenceFrameRate", frames / life);
+}
+
+// Gives the system the baked sequence in place of colour and size controllers:
+// white particles stepping through the frames once over the life span. A
+// size controller multiplied the particle's size and its variation (measured:
+// a size of 2 under a controller at 3 drew 6), so both take the ramp's
+// largest factor and the frames carry the rest. Any later change of life
+// span goes through ParticleSetLife with the same frame count.
+static void UseLifeRamp(SCNParticleSystem *ps, NSString *sprite, LifeRamp ramp, NSUInteger frames, size_t cell) {
+    float largest = LargestSize(ramp);
+    ps.particleImage = [Exhaust rampSequence:sprite ramp:ramp frames:frames cell:cell];
+    ps.imageSequenceColumnCount = (NSUInteger)ceil(sqrt((double)frames));
+    ps.imageSequenceRowCount = (frames + ps.imageSequenceColumnCount - 1) / ps.imageSequenceColumnCount;
+    ps.imageSequenceAnimationMode = SCNParticleImageSequenceAnimationModeClamp;
+    ps.particleSize *= largest;
+    ps.particleSizeVariation *= largest;
+    ps.propertyControllers = nil;
+    ParticleSetLife(ps, ps.particleLifeSpan, frames);
+}
+
+static const NSUInteger kPlasmaFrames = 16;   // a 4 x 4 sequence over 0.08-0.2 s: 80 frames a second and up
+static const NSUInteger kSmokeFrames = 25;    // a 5 x 5 sequence over 1.1 s: the puff grows in steps below 6%
 
 - (SCNParticleSystem *)plasmaWithColor:(simd_float3)color radius:(float)r {
     SCNParticleSystem *ps = [SCNParticleSystem particleSystem];
-    ps.particleImage = [Exhaust particleTexture:@"fire_01"];
     ps.blendMode = SCNParticleBlendModeAdditive;
     ps.local = YES;
     ps.particleAngleVariation = 180;
@@ -264,18 +446,15 @@ static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray
     SKColor *hot = [SKColor colorWithRed:0.9 green:0.95 blue:1.0 alpha:0.55];
     SKColor *mid = [SKColor colorWithRed:color.x green:color.y blue:color.z alpha:0.45];
     SKColor *end = [SKColor colorWithRed:color.x * 0.6 green:color.y * 0.3 blue:color.z * 0.8 alpha:0.0];
-    SCNParticlePropertyController *cc = [SCNParticlePropertyController controllerWithAnimation:
-                                         OverLife(@"color", @[hot, mid, end], @[@0, @0.35, @1])];
-    SCNParticlePropertyController *sc = [SCNParticlePropertyController controllerWithAnimation:
-                                         OverLife(@"size", @[@(r * 0.9), @(r * 1.6), @(r * 2.2)], @[@0, @0.5, @1])];
-    ps.propertyControllers = @{ SCNParticlePropertyColor : cc, SCNParticlePropertySize : sc };
+    LifeRamp ramp = { .colors = @[hot, mid, end], .colorTimes = @[@0, @0.35, @1],
+                      .sizes = @[@(r * 0.9), @(r * 1.6), @(r * 2.2)], .sizeTimes = @[@0, @0.5, @1] };
+    UseLifeRamp(ps, @"fire_01", ramp, kPlasmaFrames, 64);
     ps.sortingMode = SCNParticleSortingModeNone;
     return ps;
 }
 
 - (SCNParticleSystem *)smokeWithRadius:(float)r {
     SCNParticleSystem *ps = [SCNParticleSystem particleSystem];
-    ps.particleImage = [Exhaust particleTexture:@"smoke_07"];
     ps.blendMode = SCNParticleBlendModeAlpha;
     ps.local = NO;                     // left behind in space as a trail
     ps.birthRate = 0;
@@ -297,11 +476,9 @@ static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray
     SKColor *a = [SKColor colorWithRed:0.50 green:0.54 blue:0.62 alpha:0.0];
     SKColor *b = [SKColor colorWithRed:0.42 green:0.45 blue:0.52 alpha:0.06];
     SKColor *c = [SKColor colorWithRed:0.30 green:0.32 blue:0.38 alpha:0.0];
-    SCNParticlePropertyController *cc = [SCNParticlePropertyController controllerWithAnimation:
-                                         OverLife(@"color", @[a, b, c], @[@0, @0.1, @1])];
-    SCNParticlePropertyController *sc = [SCNParticlePropertyController controllerWithAnimation:
-                                         OverLife(@"size", @[@(r * 0.35), @(r * 0.9), @(r * 1.7)], @[@0, @0.4, @1])];
-    ps.propertyControllers = @{ SCNParticlePropertyColor : cc, SCNParticlePropertySize : sc };
+    LifeRamp ramp = { .colors = @[a, b, c], .colorTimes = @[@0, @0.1, @1],
+                      .sizes = @[@(r * 0.35), @(r * 0.9), @(r * 1.7)], .sizeTimes = @[@0, @0.4, @1] };
+    UseLifeRamp(ps, @"smoke_07", ramp, kSmokeFrames, 96);
     ps.sortingMode = SCNParticleSortingModeNone;
     ps.lightingEnabled = NO;
     return ps;
@@ -398,15 +575,15 @@ static CAKeyframeAnimation *OverLife(NSString *keyPath, NSArray *values, NSArray
         _cores[i].scale = SCNVector3Make(width * 0.45f, len * 0.45f, width * 0.45f);
 
         SCNParticleSystem *p = _plasma[i];
-        p.birthRate = 12 + 160 * L;
-        p.particleVelocity = r * (4 + 55 * L);
-        p.particleLifeSpan = 0.08 + 0.12 * fminf(L, 1.2f);
+        ParticleSet(p, @"birthRate", 12 + 160 * L);
+        ParticleSet(p, @"particleVelocity", r * (4 + 55 * L));
+        ParticleSetLife(p, round((0.08 + 0.12 * fminf(L, 1.2f)) / 0.02) * 0.02, kPlasmaFrames);
     }
     for (NSUInteger i = 0; i < _smoke.count; i++) {
         float r = _radii[i].floatValue;
         SCNParticleSystem *s = _smoke[i];
-        s.birthRate = L > 0.05f ? 30 + 270 * L : 0;
-        s.particleVelocity = r * (2 + 20 * L);
+        ParticleSet(s, @"birthRate", L > 0.05f ? 30 + 270 * L : 0);
+        ParticleSet(s, @"particleVelocity", r * (2 + 20 * L));
     }
 }
 

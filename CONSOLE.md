@@ -64,9 +64,13 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `cl_dynamicCamera` | 1 | archive | Chase camera looks into turns and leans with the ship; 0 keeps it fixed behind (Flight controls: Dynamic camera) |
 | `cl_autoStart` | 0 | | Skips the loading card's start prompt, for scripted runs |
 | `r_pixelRatio` | 2 | archive | iOS: 3D pixels per view point, capped at the display's native scale; 0 uses native. HUD and text stay native |
-| `r_textureSize` | 512 | archive | Maximum edge of a decoded 3D texture, in pixels (128–4096); 0 uses the source size. Restart after changing |
-| `r_motionBlur` | 0 iOS, 1 macOS | archive | Scale full-scene boost blur; 0 avoids velocity buffers and the blur pass |
-| `r_shadowSize` | 1024 iOS, 2048 macOS | archive | Sun shadow map edge in pixels (256–2048); restart after changing |
+| `r_hudPixelRatio` | 2 | archive | iOS: HUD and menu pixels per view point, capped at the display's native scale; 0 uses native. On a 3x phone, 2 saves about 30 MiB of frame buffers at the cost of slightly softer HUD text |
+| `r_textureSize` | 512 | archive | Maximum edge of a 3D texture, in pixels (128–4096); 0 uses the source size. Textures live on the GPU only. Restart after changing |
+| `r_cockpitScale` | 0.5 | archive | Cockpit display pixels per layout point (0.25–1); the four screens render into textures of that scale. Restart after changing |
+| `r_shadowSize` | 512 iOS, 1024 macOS | archive | Sun shadow map edge in pixels (256–2048), 4 bytes a pixel; restart after changing |
+| `r_terrainGrid` | 96 iOS, 128 macOS | archive | Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252; applies on the next level |
+| `r_terrainTrees` | 160 | archive | Trees per edge of each procedural terrain tree ring, up to 256; 0 draws none; applies on the next level |
+| `r_terrainTrees` | 64 iOS, 160 macOS | archive | Trees per edge of each of the three procedural tree rings (12, 24, 48 m apart), up to 256; 0 draws none; applies on the next level |
 | `s_radioVolume` | 0.32 | archive | Background radio voice volume (0–1); 0 silences voices. Music keeps its normal volume |
 | `cl_testInput` | 0 | cheat | A pilot who weaves and fires, for testing prediction |
 | `cl_testFire` | 0 | cheat | Holds the trigger |

@@ -171,7 +171,6 @@ typedef struct {
     simd_float3 origin;
     simd_quatf orientation;         // looks down -Z
     float fov, zNear;               // degrees, metres; fov 0 keeps the current one
-    float motionBlur;               // 0..1
     simd_float3 focus;              // what the sun's shadow map centres on
     simd_float3 velocity;           // viewer velocity, for the dust streaks
 } RefCamera;

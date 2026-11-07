@@ -3,6 +3,8 @@
 
 #define MUZZLE_POOL 24
 #define FLASH_LIGHTS 2
+enum { BoltPlayer, BoltEnemy, BoltIon, BOLT_STYLES };
+#define BOLT_LENGTH 16      // metres; the bolt's head is the node, the streak trails it
 
 static float frand(void) { return (float)arc4random_uniform(1000000) / 1000000.0f; }
 static simd_float3 randomUnit(void) {
@@ -13,14 +15,6 @@ static simd_float3 randomUnit(void) {
 }
 static SCNVector3 V3(simd_float3 v) { return SCNVector3Make(v.x, v.y, v.z); }
 
-// Soft-edged glow: brightest where the surface faces the camera.
-static NSString *const kGlowFragment =
-    @"#pragma arguments\n"
-     "float3 tint;\n"
-     "#pragma body\n"
-     "float f = abs(dot(normalize(_surface.normal), normalize(_surface.view)));\n"
-     "_output.color = float4(tint * pow(f, 2.2), 1.0);\n";
-
 static NSString *const kTintFragment =
     @"#pragma arguments\n"
      "float3 tint;\n"
@@ -29,17 +23,85 @@ static NSString *const kTintFragment =
 
 static SKColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [SKColor colorWithRed:r green:g blue:b alpha:a]; }
 
+// MARK: - Explosion kits
+
+// SceneKit builds a colour ramp for every particle system that has property
+// controllers and never frees it (macOS 26, iOS 26): a system copied for
+// each explosion left about a kilobyte behind for good. So the systems of
+// one explosion are kept as a kit and lent out again: taken off the last
+// explosion's nodes, restarted and attached to the new one's. Only the
+// birth rate is set on them afterwards, which leaves the ramp alone.
+@interface PooledSystem : NSObject
+@property (nonatomic, readonly) SCNParticleSystem *system;
+@property (nonatomic, readonly) NSUInteger uses;    // counts the explosions it served; a stale action compares
+@end
+
+@implementation PooledSystem {
+    __weak SCNNode *_host;
+    CGFloat _birthRate;      // the template's, restored for each use
+}
+
+- (instancetype)initWithTemplate:(SCNParticleSystem *)template {
+    if ((self = [super init])) {
+        _system = [template copy];
+        _birthRate = template.birthRate;
+    }
+    return self;
+}
+
+- (SCNParticleSystem *)takeOn:(SCNNode *)node {
+    [_host removeParticleSystem:_system];
+    [_system reset];
+    _system.birthRate = _birthRate;
+    [node addParticleSystem:_system];
+    _host = node;
+    _uses++;
+    return _system;
+}
+
+@end
+
+// Every system one explosion of a given scale needs: the flash and embers
+// at the centre and a fire and smoke trail for each burning fragment.
+@interface ExplosionKit : NSObject
+@property (nonatomic, readonly) PooledSystem *flash, *embers;
+@property (nonatomic, readonly) NSArray<PooledSystem *> *fires, *smokes;
+@end
+
+@implementation ExplosionKit
+
+- (instancetype)initWithSystems:(NSDictionary<NSString *, SCNParticleSystem *> *)systems fragments:(NSUInteger)fragments {
+    if ((self = [super init])) {
+        _flash = [[PooledSystem alloc] initWithTemplate:systems[@"flash"]];
+        _embers = [[PooledSystem alloc] initWithTemplate:systems[@"embers"]];
+        NSMutableArray *fires = [NSMutableArray arrayWithCapacity:fragments], *smokes = [NSMutableArray arrayWithCapacity:fragments];
+        for (NSUInteger i = 0; i < fragments; i++) {
+            [fires addObject:[[PooledSystem alloc] initWithTemplate:systems[@"trailFire"]]];
+            [smokes addObject:[[PooledSystem alloc] initWithTemplate:systems[@"trailSmoke"]]];
+        }
+        _fires = fires;
+        _smokes = smokes;
+    }
+    return self;
+}
+
+@end
+
+// MARK: - Effects
+
 @implementation Effects {
     SCNScene *_scene;
-    SCNMaterial *_playerCore, *_playerGlow, *_enemyCore, *_enemyGlow;
-    SCNMaterial *_ionCore, *_ionGlow;
-    SCNGeometry *_coreGeo, *_glowGeo;
+    // One core and one glow capsule per bolt style, shared by every bolt
+    // node: the pool of hundreds of bolts carries no geometry of its own.
+    SCNGeometry *_boltCore[BOLT_STYLES], *_boltGlow[BOLT_STYLES];
+    SCNGeometry *_tracerCore;
     NSMutableDictionary<NSString *, SCNMaterial *> *_streakMaterials;
     SCNNode *_muzzles[MUZZLE_POOL];
     NSUInteger _muzzleIndex;
     SCNMaterial *_muzzlePlayer, *_muzzleEnemy;
     SCNMaterial *_fireTemplate;
     NSMutableDictionary<NSNumber *, NSDictionary<NSString *, SCNParticleSystem *> *> *_explosionSystems;
+    NSMutableDictionary<NSNumber *, NSMutableArray<ExplosionKit *> *> *_explosionKits;   // per scale, least recently used first
     SCNNode *_flashLights[FLASH_LIGHTS];
     NSUInteger _flashIndex;
 }
@@ -56,32 +118,36 @@ static SKColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [SKCol
     return m;
 }
 
-static SCNMaterial *GlowMaterial(simd_float3 tint) {
+// An additive streak the bolt image long, in one tint.
+static SCNMaterial *BoltMaterial(simd_float3 tint) {
     SCNMaterial *m = [SCNMaterial material];
     m.lightingModelName = SCNLightingModelConstant;
+    m.diffuse.contents = [Exhaust boltImage];
+    m.diffuse.wrapS = m.diffuse.wrapT = SCNWrapModeClamp;
     m.blendMode = SCNBlendModeAdd;
     m.writesToDepthBuffer = NO;
-    m.shaderModifiers = @{ SCNShaderModifierEntryPointFragment : kGlowFragment };
+    m.doubleSided = YES;
+    m.shaderModifiers = @{ SCNShaderModifierEntryPointFragment : kTintFragment };
     [m setValue:[NSValue valueWithSCNVector3:V3(tint)] forKey:@"tint"];
     return m;
+}
+
+static SCNGeometry *BoltStreak(CGFloat width, CGFloat length, simd_float3 tint) {
+    SCNPlane *plane = [SCNPlane planeWithWidth:width height:length];
+    plane.firstMaterial = BoltMaterial(tint);
+    return plane;
 }
 
 - (instancetype)initWithScene:(SCNScene *)scene {
     if ((self = [super init])) {
         _scene = scene;
-        // White cores sit inside separate, softer coloured glow geometry.
-        _playerCore = GlowMaterial(simd_make_float3(5.0f, 9.0f, 6.0f));
-        _playerGlow = GlowMaterial(simd_make_float3(0.25f, 2.4f, 0.6f));
-        _enemyCore = GlowMaterial(simd_make_float3(9.0f, 5.5f, 4.5f));
-        _enemyGlow = GlowMaterial(simd_make_float3(2.6f, 0.25f, 0.12f));
-        _ionCore = GlowMaterial(simd_make_float3(5.5f, 7.5f, 11.0f));
-        _ionGlow = GlowMaterial(simd_make_float3(0.4f, 1.2f, 3.2f));
-        SCNCapsule *core = [SCNCapsule capsuleWithCapRadius:0.11 height:9];
-        core.radialSegmentCount = 8;
-        SCNCapsule *glow = [SCNCapsule capsuleWithCapRadius:0.5 height:11];
-        glow.radialSegmentCount = 12;
-        _coreGeo = core;
-        _glowGeo = glow;
+        // A near-white core line inside a wider, coloured glow.
+        const simd_float3 cores[BOLT_STYLES] = { { 1.3f, 1.7f, 1.4f }, { 1.8f, 1.2f, 1.0f }, { 1.1f, 1.4f, 1.8f } };
+        const simd_float3 glows[BOLT_STYLES] = { { 0.2f, 1.1f, 0.4f }, { 1.1f, 0.2f, 0.1f }, { 0.3f, 0.6f, 1.1f } };
+        for (int i = 0; i < BOLT_STYLES; i++) {
+            _boltCore[i] = BoltStreak(0.4, BOLT_LENGTH, cores[i]);
+            _boltGlow[i] = BoltStreak(1.5, BOLT_LENGTH, glows[i]);
+        }
         _streakMaterials = [NSMutableDictionary dictionary];
         // Explosion lights live in the scene permanently at zero intensity:
         // changing the number of lights makes SceneKit re-specialise every
@@ -107,8 +173,10 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
         [_fireTemplate setValue:@1 forKey:@"heat"];
         [_fireTemplate setValue:@1 forKey:@"fade"];
         _explosionSystems = [NSMutableDictionary dictionary];
-        _muzzlePlayer = [Effects additiveTextureMaterial:@"star_06" tint:simd_make_float3(1.5f, 3.0f, 1.8f)];
-        _muzzleEnemy = [Effects additiveTextureMaterial:@"star_06" tint:simd_make_float3(3.0f, 1.4f, 1.0f)];
+        _explosionKits = [NSMutableDictionary dictionary];
+        // A soft round flash at the gun, not a lens star.
+        _muzzlePlayer = [Effects additiveTextureMaterial:@"flare_01" tint:simd_make_float3(0.9f, 2.0f, 1.1f)];
+        _muzzleEnemy = [Effects additiveTextureMaterial:@"flare_01" tint:simd_make_float3(2.0f, 0.9f, 0.6f)];
         SCNPlane *plane = [SCNPlane planeWithWidth:1 height:1];
         for (int i = 0; i < MUZZLE_POOL; i++) {
             SCNNode *n = [SCNNode nodeWithGeometry:[plane copy]];
@@ -127,8 +195,8 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
 
 - (SCNNode *)makeBoltNode {
     SCNNode *n = [SCNNode node];
-    SCNNode *core = [SCNNode nodeWithGeometry:[_coreGeo copy]];
-    SCNNode *glow = [SCNNode nodeWithGeometry:[_glowGeo copy]];
+    SCNNode *core = [SCNNode nodeWithGeometry:_boltCore[BoltPlayer]];
+    SCNNode *glow = [SCNNode nodeWithGeometry:_boltGlow[BoltPlayer]];
     core.name = @"core";
     glow.name = @"glow";
     core.renderingOrder = 71;
@@ -141,11 +209,25 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
 }
 
 - (void)styleBolt:(SCNNode *)bolt player:(BOOL)player ion:(BOOL)ion {
+    int style = ion ? BoltIon : player ? BoltPlayer : BoltEnemy;
+    for (SCNNode *c in bolt.childNodes)
+        c.geometry = [c.name isEqualToString:@"core"] ? _boltCore[style] : _boltGlow[style];
+}
+
+- (void)setBolt:(SCNNode *)bolt length:(float)travelled {
+    float k = fminf(1, fmaxf(travelled, 0.5f) / BOLT_LENGTH);
     for (SCNNode *c in bolt.childNodes) {
-        BOOL core = [c.name isEqualToString:@"core"];
-        if (ion) { c.geometry.firstMaterial = core ? _ionCore : _ionGlow; continue; }
-        c.geometry.firstMaterial = core ? (player ? _playerCore : _enemyCore) : (player ? _playerGlow : _enemyGlow);
+        c.simdScale = simd_make_float3(1, k, 1);
+        c.simdPosition = simd_make_float3(0, -k * BOLT_LENGTH / 2.0f, 0);
     }
+}
+
+- (void)styleBoltAsTracer:(SCNNode *)bolt material:(SCNMaterial *)material {
+    if (_tracerCore.firstMaterial != material) {
+        _tracerCore = [_boltCore[BoltPlayer] copy];
+        _tracerCore.firstMaterial = material;
+    }
+    for (SCNNode *c in bolt.childNodes) if ([c.name isEqualToString:@"core"]) c.geometry = _tracerCore;
 }
 
 - (SCNNode *)streakWithColor:(SKColor *)color width:(float)width height:(float)height {
@@ -182,7 +264,7 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
     [n removeFromParentNode];
     n.geometry.firstMaterial = player ? _muzzlePlayer : _muzzleEnemy;
     n.simdPosition = local;
-    float s = 2.2f + frand() * 0.8f;
+    float s = 1.3f + frand() * 0.5f;
     n.scale = SCNVector3Make(s, s, s);
     n.eulerAngles = SCNVector3Make(0, 0, frand() * M_PI * 2);
     n.opacity = 1;
@@ -394,8 +476,9 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     trailFire.loops = YES;
     systems[@"trailFire"] = trailFire;
 
+    // The same soot as the billow's frames: a warm flicker at birth, then dark grey.
     SCNParticleSystem *trailSmoke = SpriteSystem(@"smoke_07", SCNParticleBlendModeAlpha,
-        @[RGBA(0.8, 0.55, 0.32, 0), RGBA(0.6, 0.48, 0.38, 0.65), RGBA(0.45, 0.44, 0.43, 0.5), RGBA(0.4, 0.41, 0.43, 0)],
+        @[RGBA(0.45, 0.25, 0.12, 0), RGBA(0.2, 0.16, 0.14, 0.65), RGBA(0.13, 0.13, 0.13, 0.5), RGBA(0.11, 0.11, 0.12, 0)],
         @[@0, @0.05, @0.22, @1],
         Scaled(@[@0.3, @0.8, @1.8], s), @[@0, @0.25, @1]);
     trailSmoke.birthRate = 55;
@@ -421,12 +504,34 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     return systems;
 }
 
+// Burning fragments per explosion: the streaks radiating from it.
+static int FragmentCount(float scale) { return 8 + (int)lroundf(3 * fminf(scale, 3)); }
+
+#define EXPLOSION_KITS 8    // explosions within five seconds before one has its particles taken
+
+// The next kit for this scale, least recently used; made on first use.
+- (ExplosionKit *)explosionKitForScale:(float)s {
+    NSNumber *key = @(roundf(s * 100) / 100);
+    NSMutableArray<ExplosionKit *> *kits = _explosionKits[key];
+    if (!kits) {
+        NSDictionary *systems = [self explosionSystemsForScale:s];
+        _explosionKits[key] = kits = [NSMutableArray arrayWithCapacity:EXPLOSION_KITS];
+        for (int i = 0; i < EXPLOSION_KITS; i++)
+            [kits addObject:[[ExplosionKit alloc] initWithSystems:systems fragments:(NSUInteger)FragmentCount(s)]];
+    }
+    ExplosionKit *kit = kits.firstObject;
+    [kits removeObjectAtIndex:0];
+    [kits addObject:kit];
+    return kit;
+}
+
 - (void)explosionAt:(simd_float3)p velocity:(simd_float3)v hullMaterial:(SCNMaterial *)hull {
     [self explosionAt:p velocity:v hullMaterial:hull scale:1];
 }
 
 - (void)explosionAt:(simd_float3)p velocity:(simd_float3)v hullMaterial:(SCNMaterial *)hull scale:(float)scale {
     NSDictionary<NSString *, SCNParticleSystem *> *systems = [self explosionSystemsForScale:scale];
+    ExplosionKit *kit = [self explosionKitForScale:scale];
     SCNNode *root = [SCNNode node];
     root.simdPosition = p;
     [_scene.rootNode addChildNode:root];
@@ -436,8 +541,8 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     SCNNode *flash = [SCNNode node];
     flash.renderingOrder = 90;
     [root addChildNode:flash];
-    [flash addParticleSystem:[systems[@"flash"] copy]];
-    [root addParticleSystem:[systems[@"embers"] copy]];
+    [kit.flash takeOn:flash];
+    [kit.embers takeOn:root];
 
     // One primary detonation followed by three smaller fast-moving lobes:
     // a short double beat gives the burst weight without hiding the fireball.
@@ -464,8 +569,8 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     [root addChildNode:glint];
     [glint runAction:[SCNAction sequence:@[[SCNAction fadeOutWithDuration:0.16], [SCNAction removeFromParentNode]]]];
 
-    int arms = 8 + (int)lroundf(3 * fminf(scale, 3));
-    for (int i = 0; i < arms; i++) [self burningFragmentIn:root systems:systems hull:hull scale:scale];
+    int arms = FragmentCount(scale);
+    for (int i = 0; i < arms; i++) [self burningFragmentIn:root fire:kit.fires[i] smoke:kit.smokes[i] hull:hull scale:scale];
     int pieces = 5 + (int)arc4random_uniform(4) + (int)(scale > 1 ? 4 : 0);
     for (int i = 0; i < pieces; i++) [self debrisFrom:p velocity:v hull:hull];
 
@@ -482,7 +587,7 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
 // A burning fragment that shoots out, slows and bends a little while it emits
 // fire and smoke into world space; the thin trail it leaves is one of the
 // streaks radiating from the explosion.
-- (void)burningFragmentIn:(SCNNode *)root systems:(NSDictionary<NSString *, SCNParticleSystem *> *)systems
+- (void)burningFragmentIn:(SCNNode *)root fire:(PooledSystem *)pooledFire smoke:(PooledSystem *)pooledSmoke
                      hull:(SCNMaterial *)hull scale:(float)scale {
     simd_float3 dir = randomUnit();
     simd_float3 velocity = dir * (40 + frand() * 65) * scale;
@@ -510,10 +615,11 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     fireNode.renderingOrder = 77;
     [head addChildNode:smokeNode];
     [head addChildNode:fireNode];
-    SCNParticleSystem *smoke = [systems[@"trailSmoke"] copy], *fire = [systems[@"trailFire"] copy];
+    SCNParticleSystem *smoke = [pooledSmoke takeOn:smokeNode], *fire = [pooledFire takeOn:fireNode];
     float smokeRate = smoke.birthRate, fireRate = fire.birthRate;
-    [smokeNode addParticleSystem:smoke];
-    [fireNode addParticleSystem:fire];
+    // Should the kit go round again while this fragment still burns, its
+    // systems belong to a newer explosion and this one leaves them alone.
+    NSUInteger use = pooledFire.uses;
 
     simd_float3 origin = head.simdPosition;
     [head runAction:[SCNAction sequence:@[
@@ -522,13 +628,16 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
             node.simdPosition = origin + velocity * distance + curl * (float)(elapsed * elapsed) * 0.5f;
             float t = (float)(elapsed / burn);
             bm.emission.intensity = 4.0f * (1.0f - t);
+            if (pooledFire.uses != use) return;
             // The flame dies before the smoke does, so the tips are sooty.
             fire.birthRate = fireRate * (1.0f - t) * (1.0f - t);
             smoke.birthRate = smokeRate * powf(1.0f - t, 1.3f);
         }],
         [SCNAction runBlock:^(SCNNode *node) {
-            fire.birthRate = 0;
-            smoke.birthRate = 0;
+            if (pooledFire.uses == use) {
+                fire.birthRate = 0;
+                smoke.birthRate = 0;
+            }
             chunk.hidden = YES;
         }],
         // Keep the node until its smoke has died; removing it kills its particles.
@@ -579,12 +688,12 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     [self styleBolt:bolt2 player:NO ion:NO];
     SCNNode *muzzle = [SCNNode nodeWithGeometry:[SCNPlane planeWithWidth:1 height:1]];
     muzzle.geometry.firstMaterial = _muzzlePlayer;
+    // The first explosion's kit lends its systems; the billow has none of
+    // the controllers that cost a ramp, so a copy of it is free.
     SCNNode *particles = [SCNNode node];
-    for (SCNParticleSystem *ps in [self explosionSystemsForScale:1].allValues) {
-        SCNParticleSystem *idle = [ps copy];
-        idle.birthRate = 0;
-        [particles addParticleSystem:idle];
-    }
+    ExplosionKit *kit = [self explosionKitForScale:1];
+    for (PooledSystem *ps in @[kit.flash, kit.embers, kit.fires[0], kit.smokes[0]]) [ps takeOn:particles].birthRate = 0;
+    [particles addParticleSystem:[[self explosionSystemsForScale:1][@"billow"] copy]];
     return @[fire, particles, streak, bolt, bolt2, muzzle];
 }
 
