@@ -1,6 +1,7 @@
 // Analytic optics: no stretched particle bitmap, animation noise or hard quad
 // edges. All profiles reach zero before the sprite borders. Values are linear
-// additive light; the sky/camera already provide the sun disc and HDR bloom.
+// additive light. The glare profile supplies the sun core, halo and diffraction
+// rays directly, without relying on HDR or a camera bloom pass.
 float gaussian(float x, float width) {
     float q = x / width;
     return exp(-q * q);
@@ -25,10 +26,19 @@ void main() {
         light *= ends * (1.0 - smoothstep(0.65, 1.0, abs(p.y)));
     } else if (u_profile < 1.5) {
         float r = length(p);
-        float core = exp(-r * r * 38.0);
-        float veil = exp(-r * r * 6.5) * 0.21;
-        light = vec3(1.0, 0.80, 0.51) * core + vec3(0.25, 0.42, 0.85) * veil;
-        light *= 1.0 - smoothstep(0.65, 1.0, r);
+        float core = gaussian(r, 0.046) * 3.0;
+        float inner = gaussian(r, 0.11) * 0.85;
+        float halo = gaussian(r, 0.23) * 0.18;
+        // Thin aperture rays give glare a luminous shape instead of a foggy disc.
+        float vertical = gaussian(p.x, 0.012) * gaussian(p.y, p.y > 0.0 ? 0.52 : 0.38);
+        vec2 diagonal = vec2(p.x + p.y, p.x - p.y) * 0.70710678;
+        float rays = vertical * 0.70
+                   + gaussian(diagonal.x, 0.011) * gaussian(diagonal.y, 0.34) * 0.45
+                   + gaussian(diagonal.y, 0.010) * gaussian(diagonal.x, 0.27) * 0.35;
+        vec3 warm = vec3(1.0, 0.86, 0.65);
+        vec3 coating = mix(warm, vec3(0.25, 0.48, 1.0), smoothstep(0.06, 0.30, r));
+        light = warm * (core + inner) + coating * (halo + rays);
+        light *= 1.0 - smoothstep(0.60, 0.95, r);
     } else {
         float r = length(p);
         // Soft coating reflections with modest dispersion, not solid discs
@@ -38,9 +48,9 @@ void main() {
         light = rim * vec3(0.45, 0.70, 1.0) * crescent + vec3(0.16, 0.23, 0.36) * exp(-r * r * 5.0);
         light *= 1.0 - smoothstep(0.72, 1.0, r);
     }
-    // Emissive light has zero coverage. SpriteKit first flattens the HUD;
-    // SceneKit then composites it over the world. Nonzero coverage here would
-    // attenuate the world a second time, even with additive sprite blending.
-    // Parent opacity still scales the emitted RGB through v_color_mix.
-    gl_FragColor = vec4(light, 0.0) * v_color_mix;
+    // A transparent SKView must carry valid premultiplied coverage through
+    // the system compositor. The SceneKit overlay can add zero-coverage light
+    // directly to its destination. Coverage follows the light, never the quad.
+    float coverage = clamp(max(max(light.r, light.g), light.b), 0.0, 1.0) * u_layerCoverage;
+    gl_FragColor = vec4(light, coverage) * v_color_mix;
 }

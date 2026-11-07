@@ -3,7 +3,7 @@
   "title": "{#mission.patrol.title}",
   "seed": 1918,
   "environment": {
-    "model": "PatrolLandscape",
+    "terrain": true,
     "sky": "PatrolSky",
     "fogColor": [
       0.67,

@@ -11,6 +11,15 @@
 #import "Shared.h"
 #import "Refresh.h"
 
+// MARK: - Scene visibility
+
+// SceneKit nodes default to the geometry category. Sky decoration remains
+// visible to cameras but does not participate in world visibility queries.
+typedef NS_OPTIONS(NSUInteger, RenderCategory) {
+    RenderCategoryGeometry = 1 << 0,
+    RenderCategoryBackground = 1 << 1,
+};
+
 // MARK: - CapitalView
 
 // What a capital ship, station, prop or rock looks like: a clone of the
@@ -44,6 +53,15 @@ typedef UIFont PlatformFont;
 typedef NSImage PlatformImage;
 typedef NSFont PlatformFont;
 #endif
+
+// MARK: - RenderTextures
+
+// Shares decoded 3D textures across material slots and applies the configured
+// texture budget before an image is expanded into CPU or GPU memory.
+@interface RenderTextures : NSObject
++ (id)contentsOfURL:(NSURL *)url sRGB:(BOOL)sRGB;
++ (void)printStats;
+@end
 
 static inline PlatformImage *PlatformImageFromCGImage(CGImageRef image) {
 #if TARGET_OS_IOS
@@ -111,8 +129,8 @@ static inline PlatformImage *PlatformDrawImage(CGSize size, void (^draw)(CGConte
 
 // Soft-knee roll-off on a lit hull's reflected light (emission untouched),
 // so sun, engine glow and explosion flashes can't push the plating past the
-// camera's bloom threshold and turn the ship into a white blob. Only real
-// emitters (engines, lasers, windows) bloom.
+// display range and turn the ship into a featureless white shape.
+// Emitters retain their separate coloured glow geometry.
 void ApplyHullRolloff(SCNMaterial *m);
 
 // What a ship looks like, from its definition: hull mesh, engine exhaust,
@@ -131,7 +149,7 @@ void ApplyHullRolloff(SCNMaterial *m);
 @property (nonatomic, readonly) float radius;
 
 - (void)updateThrottle:(float)throttle boost:(BOOL)boost hull:(float)hull alive:(BOOL)alive dt:(float)dt;
-- (void)flashShield;
+- (void)flashShieldFrom:(simd_float3)direction;   // toward the hit, in ship space
 - (void)setAlive:(BOOL)alive;
 
 @end
@@ -160,8 +178,8 @@ void ApplyHullRolloff(SCNMaterial *m);
 // MARK: - Effects
 
 // Film-style space combat effects, layered the way Star Wars games and films
-// build them: blaster bolts with a white-hot core inside a coloured HDR glow
-// (the bloom carries the colour), pooled muzzle flashes, shader-driven "hot
+// build them: blaster bolts with a white-hot core inside a coloured glow,
+// pooled muzzle flashes, shader-driven "hot
 // sphere" impacts, and explosions built from layered sprite particles (flash,
 // fire, a smoke shroud, and burning fragments that trail fire and smoke).
 @interface Effects : NSObject
@@ -190,7 +208,7 @@ void ApplyHullRolloff(SCNMaterial *m);
 // MARK: - FXRecorder
 
 // Offline effect preview: renders one effect on a black background with the
-// game camera's HDR + bloom settings at a fixed 60 fps timestep and encodes
+// game camera settings at a fixed 60 fps timestep and encodes
 // it to H.264 .mp4 (plus a contact-sheet .png of 12 frames next to it).
 //
 //   KestrelFrontier --record-fx explosion out.mp4 [seconds]
@@ -221,7 +239,8 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 // MARK: - LensFlare
 
-// Camera optics in view points, separate from the sky's HDR sun and bloom.
+// Camera optics in view points: sun core, halo, aperture rays and reflections.
+// The shader supplies glare directly in the display range, without camera bloom.
 // The caller supplies visibility after testing the light against scene geometry.
 @interface LensFlare : SKNode
 - (void)updateSource:(CGPoint)source visibility:(CGFloat)visibility
@@ -235,6 +254,7 @@ void ApplyHullRolloff(SCNMaterial *m);
 // pools. Only the platform glue (Host, FXRecorder) knows this class; the
 // client talks to it through <Refresh>.
 @interface SceneKitRefresh : NSObject <Refresh>
+- (void)printStats;
 
 // `renderer` is the view (or offscreen renderer) the scene is drawn with; it
 // projects points and uploads to the GPU. `size` is used when it is not a
@@ -252,19 +272,43 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 // MARK: - SpaceSky
 
-// Bakes the procedural skybox (see Resources/Shaders/SkyBake.metal) into an
-// HDR cubemap and builds the camera-relative space dust.
+// A vertex-coloured nebula mesh with shader stars and an analytic planet.
+// The sky and dust follow the camera without allocating sky textures.
 @interface SpaceSky : NSObject
 
-- (instancetype)initWithDevice:(id<MTLDevice>)device faceSize:(NSUInteger)faceSize seed:(uint32_t)seed;
+- (instancetype)initWithDevice:(id<MTLDevice>)device seed:(uint32_t)seed;
 
-@property (nonatomic, readonly) id<MTLTexture> cubeTexture;
+@property (nonatomic, readonly) SCNNode *node;
 @property (nonatomic, readonly) simd_float3 sunDirection;    // toward the sun
 @property (nonatomic, readonly) simd_float3 planetDirection;
-@property (nonatomic, readonly) double bakeSeconds;
 
 // Infinite field of dust streaks that wraps around the camera.
 - (SCNNode *)makeDustNode;
 - (void)updateDust:(SCNNode *)dust cameraPosition:(simd_float3)cameraPosition velocity:(simd_float3)velocity;
+
+@end
+
+// MARK: - ProceduralTerrain
+
+// A landscape evaluated entirely on the GPU: geometry-clipmap rings of one shared grid
+// follow the camera, and Resources/Shaders/Terrain*.metal compute height, cover
+// (water, roads, villages, fields, forest, rock), lighting and a cloud sky dome from
+// noise. There are no height or colour maps; a level only switches it on.
+@interface ProceduralTerrain : NSObject
+
+// Compiles TerrainCommon.metal and Terrain.metal from the directory (nil on failure).
++ (id<MTLLibrary>)libraryWithDevice:(id<MTLDevice>)device shaderDirectory:(NSURL *)directory;
+
+// cells: vertices per ring edge, a multiple of 4 up to 252; more is finer and costlier.
+- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells hdr:(BOOL)hdr;
+
+@property (nonatomic, readonly) SCNNode *node;        // the clipmap rings
+@property (nonatomic, readonly) SCNNode *skyNode;     // the dome; follows the camera
+@property (nonatomic) simd_float3 sunDirection;       // toward the sun
+@property (nonatomic) LevelEnvironment environment;   // fog colour and range
+
+// Recentres the rings and picks the finest ring for the camera's height.
+- (void)updateForCamera:(simd_float3)position time:(double)time;
+- (NSString *)stats;
 
 @end

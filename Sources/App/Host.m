@@ -9,6 +9,7 @@
 #import "Audio.h"
 #include "Shared.h"
 #import <stdatomic.h>
+#import <os/lock.h>
 #if TARGET_OS_OSX
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -63,7 +64,53 @@ static NSString *LoadStatus(LoadStage s) {
 
 static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the title card
 
-@interface Host () <UIServices>
+// Bounded timing samples keep the render callback cheap. Reports distinguish
+// host/HUD cadence from SceneKit submissions; GPU timing still comes from Metal.
+@interface FrameTimings : NSObject
+- (void)tick:(double)time;
+- (void)report:(NSString *)name reset:(BOOL)reset;
+@end
+@implementation FrameTimings {
+    os_unfair_lock _lock;
+    double _last, _intervals[3600];
+    NSUInteger _count, _next;
+}
+- (instancetype)init {
+    if ((self = [super init])) _lock = OS_UNFAIR_LOCK_INIT;
+    return self;
+}
+- (void)tick:(double)time {
+    os_unfair_lock_lock(&_lock);
+    if (_last > 0 && time > _last) {
+        _intervals[_next] = time - _last;
+        _next = (_next + 1) % 3600;
+        _count = MIN(_count + 1, 3600);
+    }
+    _last = time;
+    os_unfair_lock_unlock(&_lock);
+}
+- (void)report:(NSString *)name reset:(BOOL)reset {
+    double intervals[3600];
+    os_unfair_lock_lock(&_lock);
+    NSUInteger count = _count;
+    memcpy(intervals, _intervals, count * sizeof(double));
+    if (reset) { _last = 0; _count = _next = 0; }
+    os_unfair_lock_unlock(&_lock);
+    if (!count) return;
+    qsort_b(intervals, count, sizeof(double), ^int(const void *a, const void *b) {
+        double left = *(const double *)a, right = *(const double *)b;
+        return (left > right) - (left < right);
+    });
+    double total = 0;
+    NSUInteger late = 0;
+    for (NSUInteger i = 0; i < count; i++) { total += intervals[i]; if (intervals[i] > 0.025) late++; }
+    NSLog(@"Frames %@: %.2f fps, p95 %.2f ms, max %.2f ms, %lu/%lu intervals >25 ms",
+          name, count / total, intervals[(count - 1) * 95 / 100] * 1000, intervals[count - 1] * 1000,
+          (unsigned long)late, (unsigned long)count);
+}
+@end
+
+@interface Host () <UIServices, SKViewDelegate>
 @end
 
 @implementation Host {
@@ -101,6 +148,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     NSMutableArray<SKNode *> *_retiredCovers;
 
     Cvar *_testInput, *_testFire, *_cockpit, *_autoStart;
+    FrameTimings *_hostTimings, *_renderTimings;
 
 #if TARGET_OS_OSX
     NSMutableArray<NSString *> *_screenshotPaths;   // render thread: waiting for a readable frame
@@ -113,6 +161,8 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _view = view;
         [GameAudio shared];
         _input = input;
+        _hostTimings = [FrameTimings new];
+        _renderTimings = [FrameTimings new];
         [self registerConsole];
         _loadQueue = dispatch_queue_create("KestrelFrontier.loading", DISPATCH_QUEUE_SERIAL);
         _frontEnd = [[FrontEnd alloc] initWithSize:view.bounds.size services:self];
@@ -147,12 +197,20 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         SCNScene *placeholder = [SCNScene scene];
         placeholder.background.contents = [SKColor blackColor];
         view.scene = placeholder;
+#if TARGET_OS_IOS
+        ((GameView *)view).overlayScene = _loading;
+#else
         view.overlaySKScene = _loading;
+#endif
         __weak SCNView *weakSCNView = view;
         __weak Host *weakHost = self;
         _screens = [[ScreenHost alloc] initWithScreen:_loading install:^(SKScene *screen, SKNode *cover) {
             Host *host = weakHost;
             if (host && screen != host->_clientView.hud) [[GameAudio shared] play:@"ui-panel"];
+#if TARGET_OS_IOS
+            ((GameView *)weakSCNView).overlayScene = screen;
+            [cover removeFromParent];
+#else
             dispatch_async(dispatch_get_main_queue(), ^{
                 weakSCNView.overlaySKScene = screen;
                 Host *strong = weakHost;
@@ -161,9 +219,11 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
                     [strong->_retiredCovers addObject:cover];
                 }
             });
+#endif
         }];
-#if !TARGET_OS_IOS
         view.delegate = self;
+#if TARGET_OS_IOS
+        ((GameView *)view).overlayView.delegate = self;
 #endif
         view.playing = YES;
         view.loops = YES;
@@ -198,6 +258,14 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _cockpit = [Cvar get:@"cl_cockpit" defaultValue:@"0" flags:CVAR_ARCHIVE help:@"Fly from the cockpit instead of the chase camera"];
     _autoStart = [Cvar get:@"cl_autoStart" defaultValue:@"0" flags:0 help:@"Skip the loading card's start prompt (scripted runs)"];
     __weak Host *weak = self;
+    [Cmd add:@"r_stats" help:@"r_stats [reset]: prints memory and frame timings; reset starts a new timing window" handler:^(NSArray<NSString *> *a) {
+        Host *host = weak;
+        if (!host) return;
+        [host->_refresh printStats];
+        BOOL reset = a.count > 1 && [a[1] isEqualToString:@"reset"];
+        [host->_hostTimings report:@"host/HUD" reset:reset];
+        [host->_renderTimings report:@"SceneKit" reset:reset];
+    }];
     [Cmd add:@"map" help:@"map <mission number or level name>: flies that campaign mission" handler:^(NSArray<NSString *> *a) {
         Host *host = weak;
         NSUInteger count = host->_frontEnd.levelCount;
@@ -407,7 +475,8 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 - (void)saveScreenshot:(NSString *)path {
     SCNView *view = _view;
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSData *png = UIImagePNGRepresentation([view snapshot]);
+        UIImage *image = [view isKindOfClass:GameView.class] ? [(GameView *)view snapshotWithOverlay] : [view snapshot];
+        NSData *png = UIImagePNGRepresentation(image);
         if (!png || ![png writeToFile:path.stringByExpandingTildeInPath atomically:YES]) NSLog(@"screenshot: cannot write %@", path);
         else NSLog(@"screenshot: wrote %@", path);
     });
@@ -790,16 +859,21 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 
 #pragma mark - Loop
 
+- (void)renderer:(id<SCNSceneRenderer>)renderer didRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
+    [_renderTimings tick:CACurrentMediaTime()];
+}
+
 #if TARGET_OS_IOS
-// SpriteKit overlays participate in UIKit focus on iPad. Run their updates
-// on the main thread instead of SceneKit's render queue, holding SceneKit's
-// lock: the render queue draws the overlay under the same lock, so screens
-// never change their node trees while they are being drawn.
-- (void)displayLinkTick:(CADisplayLink *)link {
+// SpriteKit calls this on the main thread before updating and drawing the
+// overlay. SceneKit's lock protects only the 3D scene; it cannot serialize
+// mutations of an overlay that SceneKit renders on a different queue.
+- (BOOL)view:(SKView *)view shouldRenderAtTime:(NSTimeInterval)time {
+    NSAssert(NSThread.isMainThread, @"The overlay frame belongs to the main thread");
     [SCNTransaction lock];
-    [self updateFrameAtTime:link.timestamp];
+    [self updateFrameAtTime:time];
     [SCNTransaction unlock];
-    if (_booted) [_refresh renderDisplaysWithQueue:_view.commandQueue time:link.timestamp];
+    if (_booted) [_refresh renderDisplaysWithQueue:_view.commandQueue time:time];
+    return YES;
 }
 #else
 - (void)renderer:(id<SCNSceneRenderer>)renderer willRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
@@ -814,6 +888,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 #endif
 
 - (void)updateFrameAtTime:(NSTimeInterval)time {
+    [_hostTimings tick:CACurrentMediaTime()];
     float dt = _lastTime > 0 ? (float)(time - _lastTime) : 1.0f / 60.0f;
     _lastTime = time;
     dt = clampf(dt, 0.0005f, 1.0f / 20.0f);

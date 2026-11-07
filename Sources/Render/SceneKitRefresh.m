@@ -1,7 +1,9 @@
 #import "Render.h"
 #import "Shared.h"
+#import "Common.h"
+#import <mach/mach.h>
+#import <QuartzCore/CAMetalLayer.h>
 
-static const NSUInteger kSkyFaceSize = TARGET_OS_IOS ? 1024 : 1536;
 
 typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, RefKindProjectile, RefKindPickup };
 
@@ -36,27 +38,36 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @implementation RefEntityNode
 @end
 
-// Authored scenery is game data. This view owns its scene, panorama and haze.
+// Scenery is game data: an authored model with a panorama, or the procedural terrain
+// with its own sky dome. This view owns whichever the level asks for, and the haze.
 @interface WorldBackdrop : NSObject
 @property (nonatomic, readonly) SCNNode *node;
 @property (nonatomic, readonly) LevelEnvironment definition;
 @property (nonatomic, readonly) NSURL *sky;
-- (instancetype)initWithDefinition:(LevelEnvironment)definition;
+@property (nonatomic, readonly) ProceduralTerrain *terrain;
+- (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells hdr:(BOOL)hdr;
 @end
 @implementation WorldBackdrop
-- (instancetype)initWithDefinition:(LevelEnvironment)definition {
+- (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells hdr:(BOOL)hdr {
     if ((self = [super init])) {
         _definition = definition;
-        NSURL *url = FSURL(@"Models", definition.model, @"scn");
-        SCNScene *scene = url ? [SCNScene sceneWithURL:url options:nil error:nil] : nil;
-        _node = [scene.rootNode clone] ?: [SCNNode node];
-        [_node enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
-            for (SCNMaterial *material in child.geometry.materials) {
-                material.lightingModelName = SCNLightingModelPhysicallyBased;
-                material.roughness.contents = @1;
-                material.metalness.contents = @0;
-            }
-        }];
+        if (definition.terrain) {
+            NSURL *shaders = [[NSBundle.mainBundle URLForResource:@"Terrain" withExtension:@"metal" subdirectory:@"Shaders"] URLByDeletingLastPathComponent];
+            _terrain = [[ProceduralTerrain alloc] initWithLibrary:[ProceduralTerrain libraryWithDevice:device shaderDirectory:shaders] cells:cells hdr:hdr];
+            _terrain.environment = definition;
+            _node = _terrain.node;
+        } else {
+            NSURL *url = FSURL(@"Models", definition.model, @"scn");
+            SCNScene *scene = url ? [SCNScene sceneWithURL:url options:nil error:nil] : nil;
+            _node = [scene.rootNode clone] ?: [SCNNode node];
+            [_node enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
+                for (SCNMaterial *material in child.geometry.materials) {
+                    material.lightingModelName = SCNLightingModelPhysicallyBased;
+                    material.roughness.contents = @1;
+                    material.metalness.contents = @0;
+                }
+            }];
+        }
         _sky = FSURL(@"Textures", definition.sky, @"jpg");
     }
     return self;
@@ -90,6 +101,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     double _time;
     float _dt;
     SCNMaterial *_tracer;
+    Cvar *_motionBlur, *_shadowSize, *_terrainGrid;
 }
 
 - (instancetype)initWithRenderer:(id<SCNSceneRenderer>)renderer size:(CGSize)size {
@@ -102,6 +114,12 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         _pending = [NSMutableArray array];
         _entities = [NSMutableDictionary dictionary];
         _dt = 1.0f / 60.0f;
+        _motionBlur = [Cvar get:@"r_motionBlur" defaultValue:TARGET_OS_IOS ? @"0" : @"1" flags:CVAR_ARCHIVE
+                          help:@"Scale full-scene motion blur; 0 disables its velocity buffers and postprocessing pass"];
+        _shadowSize = [Cvar get:@"r_shadowSize" defaultValue:TARGET_OS_IOS ? @"1024" : @"2048" flags:CVAR_ARCHIVE
+                          help:@"Sun shadow map edge in pixels (restart required)"];
+        _terrainGrid = [Cvar get:@"r_terrainGrid" defaultValue:TARGET_OS_IOS ? @"96" : @"128" flags:CVAR_ARCHIVE
+                           help:@"Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252 (applies on the next level)"];
     }
     return self;
 }
@@ -116,6 +134,28 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     return _size;
 }
 
+- (void)printStats {
+    task_vm_info_data_t memory = {0};
+    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+    if (task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&memory, &count) == KERN_SUCCESS)
+        NSLog(@"Render: app footprint %.1f MiB, resident %.1f MiB, Metal allocations %.1f MiB, %lu models, %lu entities",
+              memory.phys_footprint / 1048576.0, memory.resident_size / 1048576.0,
+              _device.currentAllocatedSize / 1048576.0, (unsigned long)_models.count, (unsigned long)_entities.count);
+    [RenderTextures printStats];
+    if (_backdrop.terrain) NSLog(@"%@", _backdrop.terrain.stats);
+    NSLog(@"Render pipeline: HDR %@, colour pixel format %lu, camera bloom %.2f",
+          _cameraNode.camera.wantsHDR ? @"on" : @"off", (unsigned long)_renderer.colorPixelFormat,
+          _cameraNode.camera.bloomIntensity);
+#if TARGET_OS_IOS
+    if ([(id)_renderer isKindOfClass:SCNView.class]) {
+        SCNView *view = (SCNView *)_renderer;
+        NSLog(@"Render target: %@ pixels, %.2f pixels/point, HDR off, motion blur %.2f, mesh sky",
+              NSStringFromCGSize(((CAMetalLayer *)view.layer).drawableSize), view.contentScaleFactor,
+              _motionBlur.value);
+    }
+#endif
+}
+
 - (simd_float3)sunDirection { return _backdrop ? simd_normalize(simd_make_float3(-0.4f, 0.7f, -0.5f)) : _sky.sunDirection; }
 
 #pragma mark - World
@@ -125,23 +165,9 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     cam.fieldOfView = studio ? 60 : 70;
     cam.zNear = 0.3;
     cam.zFar = studio ? 5000 : 40000;
-    cam.wantsHDR = YES;
+    cam.wantsHDR = NO;
     cam.wantsExposureAdaptation = NO;
-    cam.exposureOffset = 0.0;
-    // Screen-space bloom does the glow work: emitters write HDR values > 1.
-    cam.bloomIntensity = 1.35;
-    cam.bloomThreshold = 0.9;
-    cam.bloomBlurRadius = 18;
-    if (!studio) {
-        cam.bloomIterationCount = 2;
-        cam.bloomIterationSpread = 1.0;
-        cam.vignettingIntensity = 0.7;
-        cam.vignettingPower = 0.9;
-        cam.colorFringeStrength = 0.5;
-        cam.colorFringeIntensity = 0.6;
-        cam.saturation = 1.08;
-        cam.contrast = 0.05;
-    }
+    cam.bloomIntensity = 0;
     SCNNode *n = [SCNNode node];
     n.camera = cam;
     return n;
@@ -190,14 +216,15 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     [SCNTransaction begin];
     [SCNTransaction setDisableActions:YES];
     _scene = [SCNScene scene];
-    [self applySky:[[SpaceSky alloc] initWithDevice:_device faceSize:kSkyFaceSize seed:1337] dust:nil];
+    [self applySky:[[SpaceSky alloc] initWithDevice:_device seed:1337] dust:nil];
 
     SCNLight *sun = [SCNLight light];
     sun.type = SCNLightTypeDirectional;
     sun.color = [SKColor colorWithRed:1.0 green:0.94 blue:0.86 alpha:1];
     sun.intensity = 2600;
     sun.castsShadow = YES;
-    sun.shadowMapSize = CGSizeMake(2048, 2048);
+    NSInteger shadowSize = MAX(256, MIN(2048, _shadowSize.integer));
+    sun.shadowMapSize = CGSizeMake(shadowSize, shadowSize);
     sun.shadowSampleCount = 8;
     sun.shadowRadius = 2;
     sun.orthographicScale = 40;
@@ -245,10 +272,11 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 }
 
 - (void)applySky:(SpaceSky *)sky dust:(SCNNode *)dust {
+    [_sky.node removeFromParentNode];
     _sky = sky;
-    _scene.background.contents = _sky.cubeTexture;
-    _scene.lightingEnvironment.contents = _sky.cubeTexture;
-    _scene.lightingEnvironment.intensity = 1.6;
+    _scene.background.contents = nil;
+    _scene.lightingEnvironment.contents = nil;
+    [_scene.rootNode addChildNode:_sky.node];
     [_dust removeFromParentNode];
     _dust = dust ?: [sky makeDustNode];
     [_scene.rootNode addChildNode:_dust];
@@ -258,15 +286,19 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 
 - (void)beginRegistration:(uint32_t)skySeed {
     _nextBackdrop = nil;
-    _nextSky = [[SpaceSky alloc] initWithDevice:_device faceSize:kSkyFaceSize seed:skySeed ?: 1337];
+    _nextSky = [[SpaceSky alloc] initWithDevice:_device seed:skySeed ?: 1337];
     _nextDust = [_nextSky makeDustNode];
-    @synchronized (_pending) { [_pending addObject:_nextDust]; }
+    @synchronized (_pending) { [_pending addObject:_nextSky.node]; [_pending addObject:_nextDust]; }
 }
 
 - (void)registerEnvironment:(LevelEnvironment)environment {
-    if (!environment.model.length) return;
-    _nextBackdrop = [[WorldBackdrop alloc] initWithDefinition:environment];
-    @synchronized (_pending) { [_pending addObject:_nextBackdrop.node]; }
+    if (!environment.model.length && !environment.terrain) return;
+    _nextBackdrop = [[WorldBackdrop alloc] initWithDefinition:environment device:_device
+                                                        cells:(NSUInteger)MAX(0, _terrainGrid.integer) hdr:_cameraNode.camera.wantsHDR];
+    @synchronized (_pending) {
+        [_pending addObject:_nextBackdrop.node];
+        if (_nextBackdrop.terrain) [_pending addObject:_nextBackdrop.terrain.skyNode];
+    }
 }
 
 - (RefModel)registerModel:(NSString *)name {
@@ -361,12 +393,19 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     if (_backdrop) {
         LevelEnvironment environment = _backdrop.definition;
         _scene.fogColor = [SKColor colorWithRed:environment.fogColor.x green:environment.fogColor.y blue:environment.fogColor.z alpha:1];
-        _scene.background.contents = _backdrop.sky;
+        [_sky.node removeFromParentNode];
+        // The procedural sky dome draws the background itself; the panorama, when the
+        // level has one, still lights the aircraft.
+        _scene.background.contents = _backdrop.terrain ? nil : _backdrop.sky;
         _scene.lightingEnvironment.contents = _backdrop.sky;
         _scene.lightingEnvironment.intensity = 0.8;
         [_dust removeFromParentNode];
         _dust = nil;
         [_world addChildNode:_backdrop.node];
+        if (_backdrop.terrain) {
+            _backdrop.terrain.sunDirection = self.sunDirection;
+            [_world addChildNode:_backdrop.terrain.skyNode];
+        }
     }
     _playerShown = NO;
 }
@@ -517,12 +556,16 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     SCNCamera *cam = _cameraNode.camera;
     if (c.fov > 0) cam.fieldOfView = c.fov;
     if (c.zNear > 0) cam.zNear = c.zNear;
-    cam.motionBlurIntensity = c.motionBlur;
+    // Even a tiny nonzero blur retains SceneKit's velocity buffers and full
+    // screen pass. The smoothed boost value otherwise keeps them alive.
+    cam.motionBlurIntensity = c.motionBlur * clampf(_motionBlur.value, 0, 1);
     if (_sunLight) {
         _sunLight.simdPosition = c.focus + self.sunDirection * 250.0f;
         [_sunLight simdLookAt:c.focus];
     }
+    _sky.node.simdPosition = c.origin;
     if (_dust) [_sky updateDust:_dust cameraPosition:c.origin velocity:c.velocity];
+    [_backdrop.terrain updateForCamera:c.origin time:_time];
 }
 
 - (SCNNode *)nodeFor:(uint16_t)key {
@@ -581,9 +624,9 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     [s runAction:[SCNAction sequence:@[[SCNAction fadeOutWithDuration:0.8], [SCNAction removeFromParentNode]]]];
 }
 
-- (void)flashShieldOn:(uint16_t)key {
-    if (key && key == _playerKey) [_playerView flashShield];
-    else [_entities[@(key)].ship flashShield];
+- (void)flashShieldOn:(uint16_t)key from:(simd_float3)direction {
+    if (key && key == _playerKey) [_playerView flashShieldFrom:direction];
+    else [_entities[@(key)].ship flashShieldFrom:direction];
 }
 
 #pragma mark - Queries
@@ -629,6 +672,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     NSArray *hits = [_scene.rootNode hitTestWithSegmentFromPoint:SCNVector3Make(from.x, from.y, from.z)
                                                          toPoint:SCNVector3Make(to.x, to.y, to.z)
                                                          options:@{ SCNHitTestOptionSearchMode : @(SCNHitTestSearchModeAll),
+                                                                    SCNHitTestOptionCategoryBitMask : @(RenderCategoryGeometry),
                                                                     SCNHitTestBackFaceCullingKey : @YES,
                                                                     SCNHitTestIgnoreHiddenNodesKey : @YES }];
     for (SCNHitTestResult *h in hits) {

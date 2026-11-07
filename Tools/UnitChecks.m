@@ -250,20 +250,23 @@ static void CheckPlayerState(void) {
 }
 
 static void CheckEventsAndCommands(void) {
-    GameEvent events[3] = {
+    GameEvent events[4] = {
         { .type = EV_BOLT, .team = 1, .entity = 5, .id = 9, .pos = { 1, 2, 3 }, .vel = { 4, 5, 6 } },
         { .type = EV_EXPLOSION, .model = 2, .pos = { -1, -2, -3 }, .vel = { 0, 1, 0 }, .scale = 1.5f, .radius = 300 },
         { .type = EV_IMPACT, .flags = EVF_SHIELDED, .id = 9, .pos = { 7, 8, 9 } },
+        { .type = EV_DAMAGE, .entity = 5, .flags = EVF_SHIELDED, .pos = { -0.6f, 0, 0.8f }, .scale = 0.35f },
     };
     MsgWriter *w = [MsgWriter new];
-    WriteEvents(w, events, 3);
+    WriteEvents(w, events, 4);
     MsgReader *r = [[MsgReader alloc] initWithData:w.data];
     NSData *back = ReadEvents(r);
-    CHECK(!r.overflow && back.length == 3 * sizeof(GameEvent));
+    CHECK(!r.overflow && back.length == 4 * sizeof(GameEvent));
     const GameEvent *e = back.bytes;
     CHECK(e[0].type == EV_BOLT && e[0].entity == 5 && simd_equal(e[0].vel, events[0].vel));
     CHECK(e[1].type == EV_EXPLOSION && e[1].scale == 1.5f && e[1].radius == 300 && e[1].model == 2);
     CHECK(e[2].type == EV_IMPACT && e[2].flags == EVF_SHIELDED && simd_equal(e[2].pos, events[2].pos));
+    CHECK(e[3].type == EV_DAMAGE && e[3].entity == 5 && e[3].flags == EVF_SHIELDED
+          && simd_equal(e[3].pos, events[3].pos) && e[3].scale == events[3].scale);
 
     // A user command is quantized before use, so the client predicts on
     // exactly what the server runs.
@@ -529,7 +532,10 @@ static void CheckDawnPatrol(void) {
     FSSetGame(@"DawnPatrol");
     LevelDef *level = LevelCreate(FSJSON(FSURL(@"Levels", @"01-morning-patrol", @"json")));
     const ShipDef *aircraft = ShipDefNamed(@"se5a");
-    CHECK(level && [level->environment.model isEqual:@"PatrolLandscape"]);
+    CHECK(level && level->environment.terrain && !level->environment.model);
+    LevelDef *both = LevelCreate(@{ @"environment": @{ @"terrain": @YES, @"model": @"PatrolLandscape" } });
+    CHECK(both->problems.count > 0);
+    LevelRelease(both);
     CHECK(aircraft && aircraft->params.gravity > 0 && aircraft->shield == 0 && aircraft->secondary.rounds == 0);
     CHECK(aircraft && !aircraft->texture[0] && aircraft->propeller.w > 0);
     CHECK([MissionRunner problemsWithLevel:level].count == 0);

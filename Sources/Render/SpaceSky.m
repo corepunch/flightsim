@@ -1,115 +1,177 @@
 #import "Render.h"
+#import "Common.h"
 
 typedef struct {
-    simd_float4 sunDir;
-    simd_float4 galaxyNormal;
-    simd_float4 galaxyCenter;
-    simd_float4 planetDir;
-    simd_float4 planetAxis;
-    uint32_t faceSize;
-    uint32_t seed;
-    uint32_t face;
-    uint32_t pad;
+    simd_float4 sunDir, galaxyNormal, galaxyCenter, planetDir, planetAxis;
+    uint32_t seed, vertexCount, pad[2];
 } SkyParams;
 
 static const float kDustBox = 360.0f;
 static const NSUInteger kDustCount = 1400;
 
-@implementation SpaceSky {
-    id<MTLDevice> _device;
-}
-
-- (instancetype)initWithDevice:(id<MTLDevice>)device faceSize:(NSUInteger)faceSize seed:(uint32_t)seed {
-    if ((self = [super init])) {
-        _device = device;
-        _sunDirection = simd_normalize(simd_make_float3(0.55f, 0.32f, -0.77f));
-        _planetDirection = simd_normalize(simd_make_float3(-0.62f, -0.18f, -0.76f));
-        CFTimeInterval t0 = CACurrentMediaTime();
-        [self bakeWithFaceSize:faceSize seed:seed];
-        _bakeSeconds = CACurrentMediaTime() - t0;
-    }
-    return self;
-}
-
-- (id<MTLComputePipelineState>)pipeline:(NSString *)name library:(id<MTLLibrary>)library {
-    NSError *error = nil;
-    id<MTLFunction> fn = [library newFunctionWithName:name];
-    id<MTLComputePipelineState> pso = [_device newComputePipelineStateWithFunction:fn error:&error];
-    if (!pso) NSLog(@"SpaceSky: pipeline %@ failed: %@", name, error);
-    return pso;
-}
-
-- (void)dispatch:(id<MTLComputePipelineState>)pso queue:(id<MTLCommandQueue>)queue
-          output:(id<MTLTexture>)output input:(id<MTLTexture>)input params:(SkyParams)params {
-    // One command buffer per face keeps each GPU submission short.
-    for (uint32_t face = 0; face < 6; face++) {
-        params.face = face;
-        id<MTLCommandBuffer> cb = [queue commandBuffer];
-        id<MTLComputeCommandEncoder> enc = [cb computeCommandEncoder];
-        [enc setComputePipelineState:pso];
-        [enc setTexture:output atIndex:0];
-        if (input) [enc setTexture:input atIndex:1];
-        [enc setBytes:&params length:sizeof(params) atIndex:0];
-        MTLSize tg = MTLSizeMake(16, 16, 1);
-        [enc dispatchThreads:MTLSizeMake(params.faceSize, params.faceSize, 1) threadsPerThreadgroup:tg];
-        [enc endEncoding];
-        [cb commit];
-        [cb waitUntilCompleted];
-        if (cb.error) NSLog(@"SpaceSky: face %u failed: %@", face, cb.error);
+static simd_float3 SkyDirection(unsigned face, float u, float v) {
+    switch (face) {
+        case 0: return simd_make_float3(1, -v, -u);
+        case 1: return simd_make_float3(-1, -v, u);
+        case 2: return simd_make_float3(u, 1, v);
+        case 3: return simd_make_float3(u, -1, -v);
+        case 4: return simd_make_float3(u, -v, 1);
+        default: return simd_make_float3(-u, -v, -1);
     }
 }
 
-- (void)bakeWithFaceSize:(NSUInteger)faceSize seed:(uint32_t)seed {
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"SkyBake" ofType:@"metal" inDirectory:@"Shaders"];
-    NSString *source = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
-    NSError *error = nil;
-    MTLCompileOptions *options = [MTLCompileOptions new];
-    if (@available(macOS 15.0, iOS 18.0, *)) options.mathMode = MTLMathModeFast;
-    id<MTLLibrary> library = [_device newLibraryWithSource:source ?: @"" options:options error:&error];
-    if (!library) {
-        NSLog(@"SpaceSky: shader compile failed: %@", error);
-        return;
-    }
+static simd_float3 SkyRandom(uint32_t index, uint32_t seed) {
+    simd_uint3 v = simd_make_uint3(index, seed, index ^ seed);
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    v ^= v >> 16u;
+    v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+    return __builtin_convertvector(v, simd_float3) * (1.0f / 4294967295.0f);
+}
 
+@implementation SpaceSky
+
+- (SCNMaterial *)materialWithLibrary:(id<MTLLibrary>)library vertex:(NSString *)vertex
+                           fragment:(NSString *)fragment params:(SkyParams)params additive:(BOOL)additive {
+    SCNProgram *program = [SCNProgram new];
+    program.library = library;
+    program.vertexFunctionName = vertex;
+    program.fragmentFunctionName = fragment;
+    program.opaque = !additive;
+    [program handleBindingOfBufferNamed:@"P" frequency:SCNBufferFrequencyPerFrame
+                            usingBlock:^(id<SCNBufferStream> stream, SCNNode *node, id<SCNShadable> shadable, SCNRenderer *renderer) {
+        [stream writeBytes:&params length:sizeof(params)];
+    }];
+    SCNMaterial *material = [SCNMaterial material];
+    material.program = program;
+    material.doubleSided = YES;
+    material.readsFromDepthBuffer = NO;
+    material.writesToDepthBuffer = NO;
+    material.blendMode = additive ? SCNBlendModeAdd : SCNBlendModeReplace;
+    return material;
+}
+
+- (instancetype)initWithDevice:(id<MTLDevice>)device seed:(uint32_t)seed {
+    if (!(self = [super init])) return nil;
+    _sunDirection = simd_normalize(simd_make_float3(0.55f, 0.32f, -0.77f));
+    _planetDirection = simd_normalize(simd_make_float3(-0.62f, -0.18f, -0.76f));
+    _node = [SCNNode node];
+    _node.name = @"Procedural sky";
+    _node.categoryBitMask = RenderCategoryBackground;
+    _node.castsShadow = NO;
+    _node.renderingOrder = -1000;
+
+    static id<MTLLibrary> library;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSURL *url = [NSBundle.mainBundle URLForResource:@"SpaceSky" withExtension:@"metal" subdirectory:@"Shaders"];
+        NSString *source = [NSString stringWithContentsOfURL:url encoding:NSUTF8StringEncoding error:nil];
+        NSError *error = nil;
+        library = [device newLibraryWithSource:source ?: @"" options:nil error:&error];
+        if (!library) NSLog(@"SpaceSky: shader compile failed: %@", error);
+    });
+    if (!library) return self;
+
+    // The nebula changes slowly across the sky, so interpolate its colours on
+    // a mesh instead of retaining six image faces and their mip chains.
+    const unsigned divisions = 64, side = divisions + 1;
+    const unsigned count = 6 * side * side, indexCount = 6 * divisions * divisions * 6;
+    id<MTLBuffer> directions = [device newBufferWithLength:count * sizeof(simd_float3) options:MTLResourceStorageModeShared];
+    id<MTLBuffer> colours = [device newBufferWithLength:count * sizeof(simd_half4) options:MTLResourceStorageModeShared];
+    simd_float3 *positions = directions.contents;
+    NSMutableData *indices = [NSMutableData dataWithLength:indexCount * sizeof(uint32_t)];
+    uint32_t *triangles = indices.mutableBytes;
+    unsigned vertex = 0, index = 0;
+    for (unsigned face = 0; face < 6; face++) {
+        for (unsigned y = 0; y <= divisions; y++) {
+            for (unsigned x = 0; x <= divisions; x++)
+                positions[vertex++] = SkyDirection(face, 2.0f * x / divisions - 1, 2.0f * y / divisions - 1);
+        }
+        for (unsigned y = 0; y < divisions; y++) {
+            for (unsigned x = 0; x < divisions; x++) {
+                unsigned a = face * side * side + y * side + x, b = a + 1, c = a + side, d = c + 1;
+                triangles[index++] = a; triangles[index++] = b; triangles[index++] = c;
+                triangles[index++] = b; triangles[index++] = d; triangles[index++] = c;
+            }
+        }
+    }
     SkyParams params = {0};
-    simd_float3 galaxyNormal = simd_normalize(simd_make_float3(0.25f, 0.9f, 0.35f));
-    simd_float3 galaxyCenter = simd_normalize(simd_cross(galaxyNormal, simd_make_float3(1, 0, 0)));
-    simd_float3 planetDir = _planetDirection;
-    simd_float3 planetAxis = simd_normalize(simd_make_float3(0.2f, 1.0f, 0.15f));
     params.sunDir = simd_make_float4(_sunDirection, 0.010f);
-    params.galaxyNormal = simd_make_float4(galaxyNormal, 0);
-    params.galaxyCenter = simd_make_float4(galaxyCenter, 0);
-    params.planetDir = simd_make_float4(planetDir, 0.16f);
-    params.planetAxis = simd_make_float4(planetAxis, 0);
+    simd_float3 normal = simd_normalize(simd_make_float3(0.25f, 0.9f, 0.35f));
+    params.galaxyNormal = simd_make_float4(normal, 0);
+    params.galaxyCenter = simd_make_float4(simd_normalize(simd_cross(normal, simd_make_float3(1, 0, 0))), 0);
+    params.planetDir = simd_make_float4(_planetDirection, 0.16f);
+    params.planetAxis = simd_make_float4(simd_normalize(simd_make_float3(0.2f, 1.0f, 0.15f)), 0);
     params.seed = seed;
+    params.vertexCount = count;
+    NSError *error = nil;
+    id<MTLComputePipelineState> pipeline = [device newComputePipelineStateWithFunction:[library newFunctionWithName:@"colourSkyMesh"] error:&error];
+    if (!pipeline) { NSLog(@"SpaceSky: mesh colours failed: %@", error); return self; }
+    id<MTLCommandQueue> queue = [device newCommandQueue];
+    id<MTLCommandBuffer> commands = [queue commandBuffer];
+    id<MTLComputeCommandEncoder> encoder = [commands computeCommandEncoder];
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:directions offset:0 atIndex:0];
+    [encoder setBuffer:colours offset:0 atIndex:1];
+    [encoder setBytes:&params length:sizeof(params) atIndex:2];
+    [encoder dispatchThreads:MTLSizeMake(count, 1, 1) threadsPerThreadgroup:MTLSizeMake(pipeline.threadExecutionWidth, 1, 1)];
+    [encoder endEncoding];
+    [commands commit];
+    [commands waitUntilCompleted];
+    if (commands.error) NSLog(@"SpaceSky: mesh colours failed: %@", commands.error);
+    SCNGeometrySource *positionSource = [SCNGeometrySource geometrySourceWithBuffer:directions vertexFormat:MTLVertexFormatFloat3
+        semantic:SCNGeometrySourceSemanticVertex vertexCount:count dataOffset:0 dataStride:sizeof(simd_float3)];
+    SCNGeometrySource *colourSource = [SCNGeometrySource geometrySourceWithBuffer:colours vertexFormat:MTLVertexFormatHalf4
+        semantic:SCNGeometrySourceSemanticColor vertexCount:count dataOffset:0 dataStride:sizeof(simd_half4)];
+    SCNGeometryElement *element = [SCNGeometryElement geometryElementWithData:indices primitiveType:SCNGeometryPrimitiveTypeTriangles
+        primitiveCount:indexCount / 3 bytesPerIndex:sizeof(uint32_t)];
+    SCNGeometry *geometry = [SCNGeometry geometryWithSources:@[positionSource, colourSource] elements:@[element]];
+    geometry.materials = @[[self materialWithLibrary:library vertex:@"skyVertex" fragment:@"skyFragment" params:params additive:NO]];
+    _node.geometry = geometry;
 
-    id<MTLCommandQueue> queue = [_device newCommandQueue];
-
-    // Pass 1: volumetric nebula at low resolution (it is smooth anyway).
-    NSUInteger nebSize = MAX(faceSize / 4, 128);
-    MTLTextureDescriptor *nd = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:MTLPixelFormatRGBA16Float
-                                                                                     size:nebSize mipmapped:NO];
-    nd.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
-    nd.storageMode = MTLStorageModePrivate;
-    id<MTLTexture> nebula = [_device newTextureWithDescriptor:nd];
-    params.faceSize = (uint32_t)nebSize;
-    [self dispatch:[self pipeline:@"bakeNebula" library:library] queue:queue output:nebula input:nil params:params];
-
-    // Pass 2: full-resolution composite with mip chain for image based lighting.
-    MTLTextureDescriptor *cd = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:MTLPixelFormatRGBA16Float
-                                                                                     size:faceSize mipmapped:YES];
-    cd.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
-    cd.storageMode = MTLStorageModePrivate;
-    _cubeTexture = [_device newTextureWithDescriptor:cd];
-    params.faceSize = (uint32_t)faceSize;
-    [self dispatch:[self pipeline:@"composeSky" library:library] queue:queue output:_cubeTexture input:nebula params:params];
-
-    id<MTLCommandBuffer> cb = [queue commandBuffer];
-    id<MTLBlitCommandEncoder> blit = [cb blitCommandEncoder];
-    [blit generateMipmapsForTexture:_cubeTexture];
-    [blit endEncoding];
-    [cb commit];
-    [cb waitUntilCompleted];
+    // Point sprites have an angular size in the vertex shader. Their tiny
+    // Gaussian fragments stay sharp at every screen size without star textures.
+    const unsigned starCount = 150000;
+    id<MTLBuffer> stars = [device newBufferWithLength:starCount * sizeof(simd_float3) options:MTLResourceStorageModeShared];
+    id<MTLBuffer> starColours = [device newBufferWithLength:starCount * sizeof(simd_half4) options:MTLResourceStorageModeShared];
+    simd_float3 *starPositions = stars.contents;
+    simd_half4 *starValues = starColours.contents;
+    simd_float3 tangent = simd_normalize(simd_cross(normal, simd_make_float3(1, 0, 0)));
+    simd_float3 bitangent = simd_cross(normal, tangent);
+    for (unsigned i = 0; i < starCount; i++) {
+        simd_float3 h = SkyRandom(i, seed);
+        simd_float3 random = SkyRandom(i, seed + 100);
+        // Match the original three star layers: the faint population gathers
+        // along the galactic plane while nearby bright stars fill the sky.
+        float planeFraction = i < 5600 ? 0 : i < 37200 ? 0.328f : 0.52f;
+        float latitude = h.x * 2 - 1;
+        if (h.z < planeFraction)
+            latitude = clampf(0.13f * sqrtf(-2 * logf(fmaxf(random.x, 0.000001f))) * cosf(random.z * 2 * M_PI), -1, 1);
+        float phi = h.y * 2 * M_PI, radius = sqrtf(MAX(0, 1 - latitude * latitude));
+        starPositions[i] = normal * latitude + radius * (tangent * cosf(phi) + bitangent * sinf(phi));
+        float t = random.z;
+        simd_float3 cool = simd_make_float3(1, 0.62f, 0.38f), mid = simd_make_float3(1, 0.94f, 0.88f), hot = simd_make_float3(0.66f, 0.78f, 1);
+        simd_float3 colour = t < 0.55f ? simd_mix(cool, mid, t / 0.55f) : simd_mix(mid, hot, (t - 0.55f) / 0.45f);
+        float brightness = (0.015f + powf(random.y, 14)) * (i < 5600 ? 7 : i < 37200 ? 1.6f : 0.6f);
+        simd_float4 value = simd_make_float4(colour, brightness);
+        starValues[i] = __builtin_convertvector(value, simd_half4);
+    }
+    SCNGeometrySource *starSource = [SCNGeometrySource geometrySourceWithBuffer:stars vertexFormat:MTLVertexFormatFloat3
+        semantic:SCNGeometrySourceSemanticVertex vertexCount:starCount dataOffset:0 dataStride:sizeof(simd_float3)];
+    SCNGeometrySource *starColourSource = [SCNGeometrySource geometrySourceWithBuffer:starColours vertexFormat:MTLVertexFormatHalf4
+        semantic:SCNGeometrySourceSemanticColor vertexCount:starCount dataOffset:0 dataStride:sizeof(simd_half4)];
+    SCNGeometryElement *points = [SCNGeometryElement geometryElementWithData:nil primitiveType:SCNGeometryPrimitiveTypePoint
+        primitiveCount:starCount bytesPerIndex:sizeof(uint32_t)];
+    SCNGeometry *starGeometry = [SCNGeometry geometryWithSources:@[starSource, starColourSource] elements:@[points]];
+    starGeometry.materials = @[[self materialWithLibrary:library vertex:@"starVertex" fragment:@"starFragment" params:params additive:YES]];
+    SCNNode *starNode = [SCNNode nodeWithGeometry:starGeometry];
+    starNode.categoryBitMask = RenderCategoryBackground;
+    starNode.castsShadow = NO;
+    starNode.renderingOrder = -999;
+    [_node addChildNode:starNode];
+    NSLog(@"SpaceSky: %u coloured vertices, %u shader stars, %.1f MiB buffers, no sky textures", count, starCount,
+          (directions.length + colours.length + indices.length + stars.length + starColours.length) / 1048576.0);
+    return self;
 }
 
 #pragma mark - Dust
@@ -175,6 +237,7 @@ static const NSUInteger kDustCount = 1400;
 
     SCNNode *node = [SCNNode nodeWithGeometry:geo];
     node.name = @"dust";
+    node.categoryBitMask = RenderCategoryBackground;
     node.castsShadow = NO;
     node.renderingOrder = 50;
     return node;

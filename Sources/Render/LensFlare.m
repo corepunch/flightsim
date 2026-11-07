@@ -16,7 +16,10 @@ static SKShader *FlareShader(int profile) {
         NSMutableArray *profiles = [NSMutableArray array];
         for (int i = 0; i < 3; i++) {
             SKShader *shader = [SKShader shaderWithSource:source ?: @"void main() { gl_FragColor = vec4(0.0); }"];
-            shader.uniforms = @[[SKUniform uniformWithName:@"u_profile" float:i]];
+            shader.uniforms = @[
+                [SKUniform uniformWithName:@"u_profile" float:i],
+                [SKUniform uniformWithName:@"u_layerCoverage" float:TARGET_OS_IOS ? 1 : 0],
+            ];
             [profiles addObject:shader];
         }
         shaders = profiles;
@@ -25,7 +28,7 @@ static SKShader *FlareShader(int profile) {
 }
 
 @implementation LensFlare {
-    SKSpriteNode *_streak, *_glow, *_ghosts[3];
+    SKSpriteNode *_streak, *_glare, *_ghosts[3];
     CGFloat _visibility;
 }
 
@@ -48,7 +51,7 @@ static SKShader *FlareShader(int profile) {
     if ((self = [super init])) {
         self.name = @"lensFlare";
         self.hidden = YES;
-        _glow = [self spriteWithProfile:1];
+        _glare = [self spriteWithProfile:1];
         _streak = [self spriteWithProfile:0];
         for (int i = 0; i < 3; i++) _ghosts[i] = [self spriteWithProfile:2];
     }
@@ -76,10 +79,10 @@ static SKShader *FlareShader(int profile) {
     if (self.hidden) return;
     self.alpha = _visibility;
 
-    _streak.position = _glow.position = source;
+    _streak.position = _glare.position = source;
     _streak.size = CGSizeMake(MIN(viewport.width * 1.15, shortSide * 1.8), shortSide * 0.065);
-    _glow.size = CGSizeMake(shortSide * 0.30, shortSide * 0.24);
-    _glow.alpha = 0.28;
+    _glare.size = CGSizeMake(shortSide * 0.24, shortSide * 0.24);
+    _glare.alpha = 0.92;
     _streak.alpha = 0.8;
 
     CGPoint centre = PointScale(PointFromSize(viewport), 0.5);

@@ -339,7 +339,7 @@ static BOOL UnitCaptured(id u) {
             [self destroyCapital:m];
             for (GFighter *g in fighters) {
                 float d = simd_distance(g.position, m.position);
-                if (g.alive && d < 90) [self damageShip:g amount:0.75f * (1 - d / 120) by:nil shake:0.35f];
+                if (g.alive && d < 90) [self damageShip:g amount:0.75f * (1 - d / 120) from:m.position by:nil shake:0.35f];
             }
             return;
         }

@@ -94,7 +94,7 @@ static PlatformImage *LuminanceAlphaImage(NSURL *url) {
             if (!hasAlpha) p[3] = MAX(p[0], MAX(p[1], p[2]));   // rgb already equals premultiplied colour
             // Soft circular vignette: several sprites have content running
             // into the quad's edge, which shows as straight cut lines once
-            // bloom brightens it. Fade everything to zero inside the circle.
+            // the glow is brightened. Fade everything to zero inside the circle.
             float u = (x + 0.5f) / w * 2 - 1, v = (y + 0.5f) / h * 2 - 1;
             float m = fminf(fmaxf((1.0f - sqrtf(u * u + v * v)) / 0.3f, 0), 1);
             m = m * m * (3 - 2 * m);

@@ -245,7 +245,7 @@ typedef enum {
     EV_BOLT = 1,        // id, pos, vel, team, flags EVF_ION, scale = flight time in seconds; entity = the player who fired, 0 for AI
     EV_IMPACT,          // id (bolt, 0 none), pos, team, flags EVF_SHIELDED
     EV_MUZZLE,          // entity, pos = gun in ship space, team
-    EV_DAMAGE,          // entity hit, flags EVF_SHIELDED, scale = camera shake if it is you
+    EV_DAMAGE,          // entity hit, pos = direction toward hit in ship space (0 if unknown), flags EVF_SHIELDED, scale = camera shake
     EV_EXPLOSION,       // pos, vel, scale, model (hull material), radius = shake falloff
     EV_JUMP,            // pos, scale
 } EventType;
@@ -412,7 +412,7 @@ NSString *CapitalModelName(NSString *asset, NSString *style);      // "cap:Carri
 typedef struct {
     char name[SHIP_NAME_LENGTH];
     char glow[SHIP_NAME_LENGTH];    // Resources/Particles/<glow>.png, drawn additively, facing the camera
-    simd_float3 tint;               // HDR tint of the glow
+    simd_float3 tint;               // Emissive tint of the glow
     float size;                     // metres
 } ProjectileDef;
 
@@ -439,7 +439,7 @@ typedef struct {
     char style[SHIP_NAME_LENGTH];
     char glow[SHIP_NAME_LENGTH];        // Resources/Particles/<glow>.png
     char message[SHIP_NAME_LENGTH];     // radio text, usually a catalog token; empty: nothing is said
-    simd_float3 tint;                   // HDR tint of the glow
+    simd_float3 tint;                   // Emissive tint of the glow
     float size;                         // glow, metres
     float spin;                         // degrees per second
     float radius;                       // collected within this of a ship's edge, metres
@@ -692,9 +692,11 @@ typedef struct {
 NSString *LANLobbyEncode(LANLobbyInfo lobby);
 BOOL LANLobbyDecode(NSString *text, LANLobbyInfo *lobby);
 
-// Optional authored landscape and panorama; absent for a space level.
+// Optional scenery; absent for a space level. Either an authored landscape model with a
+// sky panorama, or the engine's procedural terrain and sky ("terrain": true), with haze.
 typedef struct {
     NSString *model, *sky;
+    bool terrain;
     simd_float3 fogColor;
     float fogStart, fogEnd;
 } LevelEnvironment;

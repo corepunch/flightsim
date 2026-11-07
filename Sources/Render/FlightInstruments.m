@@ -21,9 +21,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
 @implementation TargetReadout {
     SKNode *_info;
     SKLabelNode *_empty, *_name, *_kind, *_shield, *_hull, *_systems, *_range, *_closing, *_cargo, *_component, *_mode;
-    SKSpriteNode *_preview;
-    SCNRenderer *_previewRenderer;
-    double _previewAt;
+    SK3DNode *_preview;
     SCNNode *_camera, *_holder, *_model, *_key;
     id _source;
     simd_float3 _boundsMin, _boundsMax;   // the model's box, in holder space
@@ -46,7 +44,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
         _component = Readout(_info, @"", 22, 30, 20, SKLabelHorizontalAlignmentModeLeft);
         if (preview) {
             // The free space between the stat columns and the name and mode lines.
-            _preview = [SKSpriteNode spriteNodeWithColor:SKColor.clearColor size:CGSizeMake(300, 205)];
+            _preview = [SK3DNode nodeWithViewportSize:CGSizeMake(300, 205)];
             _preview.position = CGPointMake(304, 220);
             // The target as the world draws it, lit by the sun from where we
             // look at it, framed to fill the display.
@@ -57,6 +55,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
             _holder = [SCNNode node];
             [scene.rootNode addChildNode:_holder];
             _camera = [SCNNode node]; _camera.camera = [SCNCamera camera];
+            _camera.camera.wantsHDR = NO;
             _camera.camera.usesOrthographicProjection = YES; _camera.camera.orthographicScale = 1.05;
             _camera.camera.zNear = 0.1; _camera.camera.zFar = 20;
             _camera.position = SCNVector3Make(0, 0, 6);
@@ -72,10 +71,11 @@ static NSString *Short(NSString *text, NSUInteger length) {
             SCNNode *ambient = [SCNNode node]; ambient.light = [SCNLight light];
             ambient.light.type = SCNLightTypeAmbient; ambient.light.intensity = 220;
             [scene.rootNode addChildNode:ambient];
-            _previewRenderer = [SCNRenderer rendererWithDevice:MTLCreateSystemDefaultDevice() options:nil];
-            _previewRenderer.scene = scene; _previewRenderer.pointOfView = _camera;
+            // SpriteKit renders this directly into its GPU frame. CPU snapshots
+            // forced a second SceneKit renderer to read back and upload images.
+            _preview.scnScene = scene;
+            _preview.pointOfView = _camera;
             [_info addChild:_preview];
-            _previewAt = -1;
         }
     }
     return self;
@@ -95,7 +95,7 @@ static NSString *Short(NSString *text, NSUInteger length) {
     _mode.position = CGPointMake(compact ? 586 : 304, compact ? 21 : 109);
     _cargo.position = CGPointMake(22, compact ? 48 : 65);
     _component.position = CGPointMake(22, compact ? 21 : 30);
-    _preview.size = CGSizeMake(compact ? 280 : 300, compact ? 150 : 205);
+    _preview.viewportSize = CGSizeMake(compact ? 280 : 300, compact ? 150 : 205);
     _preview.position = CGPointMake(304, compact ? 155 : 220);
 }
 - (void)updateFrame:(CockpitFrame)f contacts:(const CockpitContact *)contacts count:(NSUInteger)count {
@@ -164,18 +164,13 @@ static NSString *Short(NSString *text, NSUInteger length) {
                 simd_float3 p = simd_act(_holder.simdOrientation, corner);
                 lo = simd_min(lo, p.xy); hi = simd_max(hi, p.xy);
             }
-            float aspect = (float)(_preview.size.width / fmax(1, _preview.size.height));
+            float aspect = (float)(_preview.viewportSize.width / fmax(1, _preview.viewportSize.height));
             simd_float2 half = (hi - lo) / 2;
             float fit = fmaxf(0.05f, fmaxf(half.y, half.x / aspect)) * 1.12f;
             _fit = _fit > 0 ? _fit + (fit - _fit) * 0.35f : fit;
             simd_float2 centre = (lo + hi) / 2;
             _camera.camera.orthographicScale = _fit;
             _camera.simdPosition = simd_make_float3(centre.x, centre.y, 6);
-        }
-        if (_previewAt < 0 || f.time < _previewAt || f.time - _previewAt >= 0.12) {
-            _previewAt = f.time;
-            PlatformImage *picture = [_previewRenderer snapshotAtTime:f.time withSize:CGSizeMake(_preview.size.width * 2, _preview.size.height * 2) antialiasingMode:SCNAntialiasingModeMultisampling4X];
-            if (picture) _preview.texture = [SKTexture textureWithImage:picture];
         }
     }
 }
@@ -228,7 +223,7 @@ static const CGFloat ScopeRadius = 64;
     float range = 5000;
     // Keep a selected distant craft on sensors, with an explicit range change.
     if (f.target >= 0 && f.target < (int)count) range = fmaxf(range, ceilf(simd_length(contacts[f.target].local) / 1000) * 1000);
-    _range.text = L10nFormat(@"units.km0", range / 1000);
+    UISetLabelText(_range, L10nFormat(@"units.km0", range / 1000));
     for (NSUInteger i = 0; i < _blips.count; i++) {
         SKShapeNode *blip = _blips[i]; blip.hidden = YES;
         if (!f.alive || i >= count) continue;
