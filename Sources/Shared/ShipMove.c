@@ -18,13 +18,16 @@ void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput c, float dt) {
     // exhaust and HUD would all flicker along with it.
     if (s->boostEnergy <= 0.02f) s->boostDepleted = 1;
     else if (s->boostEnergy >= 0.15f) s->boostDepleted = 0;
-    bool boost = c.boost && !s->boostDepleted;
+    bool aircraft = p->gravity > 0;
+    bool boost = !aircraft && c.boost && !s->boostDepleted;
     s->boostEnergy = fminf(1, fmaxf(0, s->boostEnergy + (boost ? -p->boostDrain : p->boostRecharge) * dt));
     s->boosting = boost;
     s->throttle = c.throttle;
 
     // Angular rates chase the stick, giving a little weight to the controls.
     simd_float3 target = simd_make_float3(c.pitch * p->pitchRate, -c.yaw * p->yawRate, -c.roll * p->rollRate) * p->turnRate;
+    float airspeed = fmaxf(0, simd_dot(s->velocity, QuatForward(s->orientation)));
+    if (aircraft) target *= clampf(airspeed / fmaxf(p->stallSpeed, 1), 0.2f, 1);
     if (boost) target *= p->boostTurn;
     s->angularVelocity += (target - s->angularVelocity) * (1.0f - expf(-p->agility * dt));
     float w = simd_length(s->angularVelocity);
@@ -39,6 +42,13 @@ void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput c, float dt) {
     simd_float3 desired = QuatForward(s->orientation) * speed;
     float grip = boost ? p->boostGrip : p->grip;
     s->velocity += (desired - s->velocity) * (1.0f - expf(-grip * dt));
+    if (aircraft) {
+        // Assisted flight keeps a level aircraft trimmed at flying speed.
+        // Banking loses vertical lift; cutting the engine bleeds speed and stalls.
+        float lift = clampf(airspeed / fmaxf(p->stallSpeed, 1), 0, 1);
+        simd_float3 acceleration = (QuatUp(s->orientation) * (lift * lift) - simd_make_float3(0, 1, 0)) * p->gravity;
+        s->velocity += acceleration * dt;
+    }
     s->origin += s->velocity * dt;
 }
 

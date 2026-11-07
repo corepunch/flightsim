@@ -70,7 +70,7 @@ id FSJSON(NSURL *url);
 // Version 6 distinguishes campaign results from competitive LAN matches.
 // Older front ends would record a dogfight as a campaign mission completion.
 // Version 7 adds pickups (EntityPickup), which older clients cannot draw.
-#define PROTOCOL_VERSION 7
+#define PROTOCOL_VERSION 8
 
 #define TICK_RATE 30
 #define TICK_DT (1.0f / TICK_RATE)
@@ -185,6 +185,7 @@ typedef struct {
     float boostGrip;                // grip while boosting
     float boostTurn;                // turn rate multiplier while boosting
     float boostDrain, boostRecharge;    // boost energy per second
+    float gravity, stallSpeed;       // 0 gravity: space; otherwise lift falls below stallSpeed
 } ShipParams;
 
 // Engine stats come first; a game counts whatever else it likes from STAT_GAME.
@@ -354,6 +355,8 @@ typedef struct {
     char displayName[SHIP_NAME_LENGTH];     // "Wasp"
     char mesh[SHIP_NAME_LENGTH];            // Resources/Models/<mesh>.scn (OBJ space, +Z nose)
     char texture[SHIP_NAME_LENGTH];         // Resources/Models/<texture>.png
+    simd_float4 propeller;                  // ship-local hub xyz and blade radius; w 0: none
+    simd_float3 cockpitEye;                 // pilot camera, ship-local metres
     float radius;
     int gunCount;
     simd_float3 guns[SHIP_MAX_GUNS];
@@ -689,8 +692,16 @@ typedef struct {
 NSString *LANLobbyEncode(LANLobbyInfo lobby);
 BOOL LANLobbyDecode(NSString *text, LANLobbyInfo *lobby);
 
+// Optional authored landscape and panorama; absent for a space level.
+typedef struct {
+    NSString *model, *sky;
+    simd_float3 fogColor;
+    float fogStart, fogEnd;
+} LevelEnvironment;
+
 typedef struct {
     NSString *name, *title;
+    LevelEnvironment environment;
     int seed;
     simd_float3 playerPos, playerFacing;
     NSString *playerShip;               // nil: the game's default
@@ -748,7 +759,7 @@ enum {
 // (GameExport). Only plain C crosses it, so the game can live in its own
 // dylib and be rebuilt or swapped without touching the engine.
 
-#define GAME_API_VERSION 4
+#define GAME_API_VERSION 5
 
 typedef struct {
     float radius;

@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "Patrulla matutina",
+    "mission.patrol.route": "Recorre los tres puntos de patrulla en orden",
+    "mission.patrol.intercept": "Derriba los dos cazas alemanes",
+    "mission.patrol.return": "Regresa a Bertincourt",
+    "mission.patrol.wingman": "Trae a Bennett de vuelta",
+    "radio.patrol.start": "Sigue los puntos. Mantén la velocidad y vigila la altura.",
+    "radio.patrol.contact": "Dos cazas alemanes sobre el río. ¡Ataquemos juntos!",
+    "radio.patrol.clear": "Cielo despejado. Termina la patrulla y vuelve a Bertincourt.",
+    "game.aircraft.raf": "Caza de la RAF",
+    "game.aircraft.german": "Caza alemán",
+    "game.aircraft.neutral": "Caza",
+    "hud.laser": "AMETRALLADORAS",
+    "combat.no_secondary": "Sin arma secundaria equipada",
+    "game.weapon.none": "Ninguna",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "Sigue los puntos. Mantén la velocidad y vigila la altura.",
+      "Dos cazas alemanes sobre el río. ¡Ataquemos juntos!",
+      "Cielo despejado. Termina la patrulla y vuelve a Bertincourt."
+    ],
+    "hud.help": [
+      "LMB / SPACE → AMETRALLADORAS",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

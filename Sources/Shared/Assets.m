@@ -25,6 +25,8 @@ static ShipParams ParamsFrom(NSDictionary *d, ShipParams base) {
     p.boostTurn = Number(d, @"boostTurn", p.boostTurn);
     p.boostDrain = Number(d, @"boostDrain", p.boostDrain);
     p.boostRecharge = Number(d, @"boostRecharge", p.boostRecharge);
+    p.gravity = fmaxf(0, JSONFloat(d, @"gravity", p.gravity));
+    p.stallSpeed = fmaxf(1, JSONFloat(d, @"stallSpeed", p.stallSpeed));
     return p;
 }
 
@@ -79,6 +81,8 @@ static ShipDef *LoadShipDef(NSString *name) {
     CopyName(s->mesh, d[@"mesh"] ?: name);
     CopyName(s->texture, d[@"texture"] ?: d[@"mesh"] ?: name);
     s->radius = Number(d, @"radius", 5);
+    s->propeller = simd_make_float4(JSONVec3(d, @"propellerHub", 0), fmaxf(0, JSONFloat(d, @"propellerRadius", 0)));
+    s->cockpitEye = JSONVec3(d, @"cockpitEye", simd_make_float3(0, 1, -2.2f));
     for (NSArray *g in d[@"guns"]) {
         if (s->gunCount >= SHIP_MAX_GUNS) break;
         s->guns[s->gunCount++] = Vec3(g);
@@ -477,6 +481,16 @@ LevelDef *LevelCreate(NSDictionary *json) {
     level->name = JSONString(json, @"name") ?: @"";
     level->title = JSONString(json, @"title") ?: level->name;
     level->seed = JSONInt(json, @"seed", 0);
+    NSDictionary *environment = JSONObject(json, @"environment");
+    if (json[@"environment"] && !environment) [problems addObject:@"\"environment\" is not an object"];
+    level->environment = (LevelEnvironment){
+        .model = JSONString(environment, @"model"), .sky = JSONString(environment, @"sky"),
+        .fogColor = JSONVec3(environment, @"fogColor", simd_make_float3(0.64f, 0.75f, 0.81f)),
+        .fogStart = fmaxf(0, JSONFloat(environment, @"fogStart", 3000)),
+        .fogEnd = fmaxf(1, JSONFloat(environment, @"fogEnd", 12000)),
+    };
+    if (level->environment.fogEnd <= level->environment.fogStart)
+        [problems addObject:@"environment fogEnd must be beyond fogStart"];
     NSDictionary *player = JSONObject(json, @"player");
     level->playerPos = JSONVec3(player, @"pos", 0);
     level->playerFacing = simd_normalize(JSONVec3(player, @"facing", Forward));

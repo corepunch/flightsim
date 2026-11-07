@@ -192,6 +192,9 @@ static void RunFrame(void) {
         [w collidePlayer:cl from:before];
     }
     for (GPilot *p in [w->_pilots copy]) [w thinkPilot:p dt:dt];
+    for (GFighter *s in [w fighters])
+        if (s.alive && s->params.gravity > 0 && s.position.y <= s.radius * 0.25f)
+            [w harmShip:s amount:s.definition->hull + s.definition->shield by:nil shake:1];
     for (GCapital *c in [w->_capitals copy]) {
         [c update:dt];
         [w fireTurrets:c];

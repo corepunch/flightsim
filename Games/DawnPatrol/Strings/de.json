@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "Morgenpatrouille",
+    "mission.patrol.route": "Die drei Patrouillenpunkte der Reihe nach abfliegen",
+    "mission.patrol.intercept": "Die beiden deutschen Jagdflugzeuge abschießen",
+    "mission.patrol.return": "Nach Bertincourt zurückkehren",
+    "mission.patrol.wingman": "Bennett sicher heimbringen",
+    "radio.patrol.start": "Den Wegpunkten folgen. Fluggeschwindigkeit und Höhe halten.",
+    "radio.patrol.contact": "Zwei deutsche Jäger über dem Fluss. Gemeinsam angreifen!",
+    "radio.patrol.clear": "Himmel frei. Patrouille beenden und nach Bertincourt zurückkehren.",
+    "game.aircraft.raf": "RAF-Jäger",
+    "game.aircraft.german": "Deutscher Jäger",
+    "game.aircraft.neutral": "Jagdflugzeug",
+    "hud.laser": "MG",
+    "combat.no_secondary": "Keine Sekundärwaffe eingebaut",
+    "game.weapon.none": "Keine",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "Den Wegpunkten folgen. Fluggeschwindigkeit und Höhe halten.",
+      "Zwei deutsche Jäger über dem Fluss. Gemeinsam angreifen!",
+      "Himmel frei. Patrouille beenden und nach Bertincourt zurückkehren."
+    ],
+    "hud.help": [
+      "LMB / SPACE → MG",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

@@ -1,0 +1,139 @@
+newmtl earth
+Kd 0.220000 0.300000 0.140000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl field0
+Kd 0.250000 0.340000 0.140000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl field4
+Kd 0.190000 0.280000 0.120000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl hedge
+Kd 0.120000 0.190000 0.080000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl field2
+Kd 0.310000 0.270000 0.160000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl field5
+Kd 0.310000 0.380000 0.180000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl field3
+Kd 0.390000 0.390000 0.200000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl field1
+Kd 0.340000 0.370000 0.170000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl riverbank
+Kd 0.350000 0.350000 0.230000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl water
+Kd 0.180000 0.320000 0.340000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl runway
+Kd 0.360000 0.340000 0.220000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl canvas
+Kd 0.420000 0.400000 0.270000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl hangardoor
+Kd 0.100000 0.120000 0.080000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl ops
+Kd 0.320000 0.270000 0.180000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl plaster
+Kd 0.620000 0.560000 0.390000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl roofs
+Kd 0.290000 0.180000 0.120000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl church
+Kd 0.510000 0.480000 0.360000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl mill
+Kd 0.430000 0.350000 0.220000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl bark
+Kd 0.200000 0.150000 0.090000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl leaves
+Kd 0.160000 0.240000 0.100000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2

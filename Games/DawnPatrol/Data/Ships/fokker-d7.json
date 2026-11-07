@@ -1,0 +1,66 @@
+{
+  "displayName": "Fokker D.VII",
+  "mesh": "FokkerD7",
+  "texture": "",
+  "radius": 4.5,
+  "propellerHub": [
+    0,
+    0.15,
+    -3.5
+  ],
+  "propellerRadius": 1.25,
+  "guns": [
+    [
+      -0.22,
+      0.45,
+      -2.2
+    ],
+    [
+      0.22,
+      0.45,
+      -2.2
+    ]
+  ],
+  "gun": {
+    "speed": 740,
+    "life": 0.9,
+    "energy": 0.012,
+    "recharge": 0.32,
+    "interval": 0.08,
+    "damage": 0.09,
+    "capitalDamage": 0.02,
+    "assist": 4
+  },
+  "aiGun": {
+    "interval": 0.17,
+    "damage": 0.035
+  },
+  "nozzles": [],
+  "params": {
+    "maxSpeed": 54,
+    "turnRate": 0.95,
+    "pitchRate": 0.8,
+    "yawRate": 0.65,
+    "rollRate": 1.9,
+    "agility": 3.7,
+    "grip": 0.7,
+    "gravity": 9.81,
+    "stallSpeed": 20
+  },
+  "ai": {
+    "maxSpeed": 52,
+    "turnRate": 0.95,
+    "speedSpread": 0
+  },
+  "hull": 0.8,
+  "shield": 0,
+  "shieldRegen": 0,
+  "secondary": {
+    "rounds": 0
+  },
+  "cockpitEye": [
+    0,
+    0.9,
+    0.2
+  ]
+}

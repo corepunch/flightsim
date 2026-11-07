@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "清晨巡逻",
+    "mission.patrol.route": "按顺序飞过三个巡逻地标",
+    "mission.patrol.intercept": "击落两架德军侦察战斗机",
+    "mission.patrol.return": "返回贝尔坦库尔",
+    "mission.patrol.wingman": "让贝内特平安返航",
+    "radio.patrol.start": "沿地标前进。保持飞行速度，留意高度。",
+    "radio.patrol.contact": "河流上空有两架德军战斗机，一起攻击！",
+    "radio.patrol.clear": "天空安全。完成巡逻后返回贝尔坦库尔。",
+    "game.aircraft.raf": "英国皇家空军战斗机",
+    "game.aircraft.german": "德军战斗机",
+    "game.aircraft.neutral": "战斗机",
+    "hud.laser": "机枪",
+    "combat.no_secondary": "未装备副武器",
+    "game.weapon.none": "无",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "沿地标前进。保持飞行速度，留意高度。",
+      "河流上空有两架德军战斗机，一起攻击！",
+      "天空安全。完成巡逻后返回贝尔坦库尔。"
+    ],
+    "hud.help": [
+      "LMB / SPACE → 机枪",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

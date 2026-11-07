@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "Ранковий патруль",
+    "mission.patrol.route": "Пролетіть три точки патруля по черзі",
+    "mission.patrol.intercept": "Збийте два німецькі винищувачі",
+    "mission.patrol.return": "Поверніться до Бертенкура",
+    "mission.patrol.wingman": "Поверніть Беннетта додому",
+    "radio.patrol.start": "Летіть за орієнтирами. Тримайте швидкість і стежте за висотою.",
+    "radio.patrol.contact": "Два німецькі винищувачі над річкою. Атакуємо разом!",
+    "radio.patrol.clear": "Небо чисте. Завершіть патруль і повертайтеся до Бертенкура.",
+    "game.aircraft.raf": "Винищувач RAF",
+    "game.aircraft.german": "Німецький винищувач",
+    "game.aircraft.neutral": "Винищувач",
+    "hud.laser": "КУЛЕМЕТИ",
+    "combat.no_secondary": "Додаткове озброєння не встановлено",
+    "game.weapon.none": "Немає",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "Летіть за орієнтирами. Тримайте швидкість і стежте за висотою.",
+      "Два німецькі винищувачі над річкою. Атакуємо разом!",
+      "Небо чисте. Завершіть патруль і повертайтеся до Бертенкура."
+    ],
+    "hud.help": [
+      "LMB / SPACE → КУЛЕМЕТИ",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

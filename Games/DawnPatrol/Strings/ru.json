@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "Утренний патруль",
+    "mission.patrol.route": "Пролетите три точки патруля по порядку",
+    "mission.patrol.intercept": "Сбейте два немецких истребителя",
+    "mission.patrol.return": "Вернитесь в Бертенкур",
+    "mission.patrol.wingman": "Верните Беннетта домой",
+    "radio.patrol.start": "Следуйте по ориентирам. Держите скорость и следите за высотой.",
+    "radio.patrol.contact": "Два немецких истребителя над рекой. Атакуем вместе!",
+    "radio.patrol.clear": "Небо чистое. Завершите патруль и возвращайтесь в Бертенкур.",
+    "game.aircraft.raf": "Истребитель RAF",
+    "game.aircraft.german": "Немецкий истребитель",
+    "game.aircraft.neutral": "Истребитель",
+    "hud.laser": "ПУЛЕМЁТЫ",
+    "combat.no_secondary": "Дополнительное оружие не установлено",
+    "game.weapon.none": "Нет",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "Следуйте по ориентирам. Держите скорость и следите за высотой.",
+      "Два немецких истребителя над рекой. Атакуем вместе!",
+      "Небо чистое. Завершите патруль и возвращайтесь в Бертенкур."
+    ],
+    "hud.help": [
+      "LMB / SPACE → ПУЛЕМЁТЫ",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

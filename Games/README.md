@@ -51,3 +51,35 @@ translate the game's complete English catalog, including engine-key overrides,
 so a generic engine translation cannot replace game-specific wording. The
 current translation scope covers the interface, flight feedback and objectives;
 briefing and debrief campaign conversations remain English; in-flight radio is translated.
+
+## Dawn Patrol
+
+`DawnPatrol` is an atmospheric-flight game using the Kestrel Frontier module and
+its own campaign, aircraft, landscape, theme, art, sound and string catalogs.
+Build with `GAME=DawnPatrol ./build.sh` to produce `build/DawnPatrol.app`. The console can also select it at startup:
+`+set fs_game DawnPatrol +map 01-morning-patrol`.
+
+The first sortie starts airborne in an S.E.5a with Bennett. Fly Saint-Martin,
+Scarpe and Mercatel in order, intercept two Fokker D.VIIs at the river, then return
+to the Bertincourt marker. Bennett's survival is optional. The return pass ends
+the sortie; takeoff and landing are not implemented in this first mission.
+
+Aircraft definitions opt into assisted atmospheric flight with `params.gravity`
+and `params.stallSpeed`: lift falls with airspeed, banking loses vertical lift,
+and boost is unavailable. Ground impact at y=0 is fatal for player and AI aircraft.
+Landscape buildings and trees are visual scenery in this first slice.
+`environment` on a level names the authored landscape, sky panorama and fog.
+
+`Art/build_models.py` runs in Blender with `--background --factory-startup
+--disable-autoexec --python` and reproduces the OBJ/MTL files from the preserved
+CC0 source archive. `python3 Games/DawnPatrol/Art/build_audio.py` reproduces the
+original synthesized sounds. Asset provenance and art prompts are in `Art/`.
+
+Rooms select the typed `StoryBoardStyle` enum with `board.style` in
+`Story/rooms.json`: `holographic` (the default) keeps the signal shader, grid and
+animated readouts; `blackboard` draws static content directly inside the painted
+board's `bezel` polygon, without those effects. Dawn Patrol uses `blackboard`.
+
+A game may ship `default.cfg` for its initial cvars. Explicit `+set` launch
+arguments override these defaults. Dawn Patrol starts the throttle at 80 percent
+so its airborne start has flying speed.

@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "Patrouille du matin",
+    "mission.patrol.route": "Survoler les trois repères dans l’ordre",
+    "mission.patrol.intercept": "Abattre les deux chasseurs allemands",
+    "mission.patrol.return": "Rentrer à Bertincourt",
+    "mission.patrol.wingman": "Ramener Bennett",
+    "radio.patrol.start": "Suivez les repères. Gardez votre vitesse et surveillez votre altitude.",
+    "radio.patrol.contact": "Deux chasseurs allemands au-dessus de la rivière. Attaquons ensemble !",
+    "radio.patrol.clear": "Ciel dégagé. Terminez la patrouille et rentrez à Bertincourt.",
+    "game.aircraft.raf": "Chasseur de la RAF",
+    "game.aircraft.german": "Chasseur allemand",
+    "game.aircraft.neutral": "Chasseur",
+    "hud.laser": "MITRAILLEUSES",
+    "combat.no_secondary": "Aucune arme secondaire équipée",
+    "game.weapon.none": "Aucune",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "Suivez les repères. Gardez votre vitesse et surveillez votre altitude.",
+      "Deux chasseurs allemands au-dessus de la rivière. Attaquons ensemble !",
+      "Ciel dégagé. Terminez la patrouille et rentrez à Bertincourt."
+    ],
+    "hud.help": [
+      "LMB / SPACE → MITRAILLEUSES",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

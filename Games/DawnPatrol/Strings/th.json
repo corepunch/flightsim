@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "ลาดตระเวนยามเช้า",
+    "mission.patrol.route": "บินผ่านจุดลาดตระเวนทั้งสามตามลำดับ",
+    "mission.patrol.intercept": "ยิงเครื่องบินลาดตระเวนเยอรมันสองลำให้ตก",
+    "mission.patrol.return": "กลับแบร์แต็งกูร์",
+    "mission.patrol.wingman": "พาเบนเน็ตต์กลับอย่างปลอดภัย",
+    "radio.patrol.start": "บินตามจุดสังเกต รักษาความเร็วและระวังระดับความสูง",
+    "radio.patrol.contact": "เครื่องบินเยอรมันสองลำเหนือแม่น้ำ โจมตีพร้อมกัน!",
+    "radio.patrol.clear": "ท้องฟ้าปลอดภัย ลาดตระเวนให้เสร็จแล้วกลับแบร์แต็งกูร์",
+    "game.aircraft.raf": "เครื่องบินขับไล่ RAF",
+    "game.aircraft.german": "เครื่องบินขับไล่เยอรมัน",
+    "game.aircraft.neutral": "เครื่องบินขับไล่",
+    "hud.laser": "ปืนกล",
+    "combat.no_secondary": "ไม่ได้ติดตั้งอาวุธรอง",
+    "game.weapon.none": "ไม่มี",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "บินตามจุดสังเกต รักษาความเร็วและระวังระดับความสูง",
+      "เครื่องบินเยอรมันสองลำเหนือแม่น้ำ โจมตีพร้อมกัน!",
+      "ท้องฟ้าปลอดภัย ลาดตระเวนให้เสร็จแล้วกลับแบร์แต็งกูร์"
+    ],
+    "hud.help": [
+      "LMB / SPACE → ปืนกล",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

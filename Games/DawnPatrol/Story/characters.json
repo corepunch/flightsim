@@ -1,0 +1,20 @@
+{
+  "player": "Reed",
+  "characters": {
+    "Mercer": {
+      "name": "Captain Edward Mercer",
+      "portrait": "Mercer",
+      "faces": "right"
+    },
+    "Bennett": {
+      "name": "Lieutenant Thomas Bennett",
+      "portrait": "Bennett",
+      "faces": "right"
+    },
+    "Reed": {
+      "name": "Second Lieutenant Arthur Reed",
+      "portrait": "Reed",
+      "faces": "right"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "rooms": {
+    "BriefingHut": {
+      "image": "BriefingHut",
+      "size": [
+        1672,
+        941
+      ],
+      "board": {
+        "style": "blackboard",
+        "bottom": 436,
+        "height": 345
+      },
+      "bezel": [
+        [
+          501,
+          500
+        ],
+        [
+          1266,
+          500
+        ],
+        [
+          1266,
+          164
+        ],
+        [
+          501,
+          164
+        ]
+      ]
+    },
+    "Aerodrome": {
+      "image": "Aerodrome",
+      "size": [
+        1672,
+        941
+      ]
+    }
+  }
+}

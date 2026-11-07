@@ -15,7 +15,8 @@
 //   Story/characters.json  { "player": "<id>",
 //                            "characters": { "<id>": { "name": "…", "portrait": "<art>", "faces": "left"|"right" } } }
 //   Story/rooms.json       { "rooms": { "<id>": { "image": "<art>", "size": [w, h],
-//                                                 "board": { "bottom": y, "height": h },
+//                                                 "board": { "bottom": y, "height": h,
+//                                                            "style": "holographic"|"blackboard" },
 //                                                 "bezel": [[x, y], …] } } }
 //   Campaign/campaign.json { "storyDefaults": { "officer": "<id>", "room": "<id>",
 //                                               "briefingPages": ["dialogue", "situation", …] },
@@ -145,13 +146,21 @@ StoryDefaults *CampaignStoryDefaults(void);
 @property (nonatomic, readonly) BOOL facesRight;                         // as the portrait art is drawn
 @end
 
+// The room chooses how briefing content is presented on its board.
+typedef NS_ENUM(NSInteger, StoryBoardStyle) {
+    StoryBoardStyleHolographic,     // default for existing rooms
+    StoryBoardStyleBlackboard,
+};
+
 @interface StoryRoom : NSObject
 @property (nonatomic, readonly) NSString *identifier, *image;
 @property (nonatomic, readonly) simd_float2 size;                        // source pixels; 0 when unknown
 @property (nonatomic, readonly) BOOL hasBoard;
+@property (nonatomic, readonly) StoryBoardStyle boardStyle;
 @property (nonatomic, readonly) float boardBottom, boardHeight;          // source pixels, y down
 @property (nonatomic, readonly) NSUInteger bezelCount;                   // corners of the wall monitor
 - (simd_float2)bezelPoint:(NSUInteger)index;
++ (instancetype)roomWithJSON:(NSDictionary *)json identifier:(NSString *)identifier;
 @end
 
 // The character the player flies as. Their portrait stands on the right.

@@ -36,6 +36,33 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @implementation RefEntityNode
 @end
 
+// Authored scenery is game data. This view owns its scene, panorama and haze.
+@interface WorldBackdrop : NSObject
+@property (nonatomic, readonly) SCNNode *node;
+@property (nonatomic, readonly) LevelEnvironment definition;
+@property (nonatomic, readonly) NSURL *sky;
+- (instancetype)initWithDefinition:(LevelEnvironment)definition;
+@end
+@implementation WorldBackdrop
+- (instancetype)initWithDefinition:(LevelEnvironment)definition {
+    if ((self = [super init])) {
+        _definition = definition;
+        NSURL *url = FSURL(@"Models", definition.model, @"scn");
+        SCNScene *scene = url ? [SCNScene sceneWithURL:url options:nil error:nil] : nil;
+        _node = [scene.rootNode clone] ?: [SCNNode node];
+        [_node enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
+            for (SCNMaterial *material in child.geometry.materials) {
+                material.lightingModelName = SCNLightingModelPhysicallyBased;
+                material.roughness.contents = @1;
+                material.metalness.contents = @0;
+            }
+        }];
+        _sky = FSURL(@"Textures", definition.sky, @"jpg");
+    }
+    return self;
+}
+@end
+
 @implementation SceneKitRefresh {
     __weak id<SCNSceneRenderer> _renderer;
     CGSize _size;
@@ -46,6 +73,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     NSMutableArray *_pending;                           // built, not yet uploaded
 
     SpaceSky *_sky, *_nextSky;
+    WorldBackdrop *_backdrop, *_nextBackdrop;
     SCNNode *_sunLight, *_engineLight, *_dust, *_nextDust, *_world;
     Effects *_fx;
     Cockpit *_cockpit;
@@ -61,6 +89,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 
     double _time;
     float _dt;
+    SCNMaterial *_tracer;
 }
 
 - (instancetype)initWithRenderer:(id<SCNSceneRenderer>)renderer size:(CGSize)size {
@@ -87,7 +116,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     return _size;
 }
 
-- (simd_float3)sunDirection { return _sky.sunDirection; }
+- (simd_float3)sunDirection { return _backdrop ? simd_normalize(simd_make_float3(-0.4f, 0.7f, -0.5f)) : _sky.sunDirection; }
 
 #pragma mark - World
 
@@ -120,6 +149,10 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 
 // Effects, the bolt pool and the player's rig: shared by the game and the studio.
 - (void)buildCommon:(BOOL)studio {
+    _tracer = [SCNMaterial material];
+    _tracer.lightingModelName = SCNLightingModelConstant;
+    _tracer.diffuse.contents = [SKColor colorWithRed:1 green:0.8 blue:0.36 alpha:1];
+    _tracer.emission.contents = [SKColor colorWithRed:1 green:0.65 blue:0.15 alpha:1];
     _cameraNode = [self makeCamera:studio];
     [_scene.rootNode addChildNode:_cameraNode];
 
@@ -224,9 +257,16 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 #pragma mark - Registration
 
 - (void)beginRegistration:(uint32_t)skySeed {
+    _nextBackdrop = nil;
     _nextSky = [[SpaceSky alloc] initWithDevice:_device faceSize:kSkyFaceSize seed:skySeed ?: 1337];
     _nextDust = [_nextSky makeDustNode];
     @synchronized (_pending) { [_pending addObject:_nextDust]; }
+}
+
+- (void)registerEnvironment:(LevelEnvironment)environment {
+    if (!environment.model.length) return;
+    _nextBackdrop = [[WorldBackdrop alloc] initWithDefinition:environment];
+    @synchronized (_pending) { [_pending addObject:_nextBackdrop.node]; }
 }
 
 - (RefModel)registerModel:(NSString *)name {
@@ -313,6 +353,21 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     _world = [SCNNode node];
     _world.name = @"World";
     [_scene.rootNode addChildNode:_world];
+    [_backdrop.node removeFromParentNode];
+    _backdrop = _nextBackdrop;
+    _nextBackdrop = nil;
+    _scene.fogStartDistance = _backdrop ? _backdrop.definition.fogStart : 0;
+    _scene.fogEndDistance = _backdrop ? _backdrop.definition.fogEnd : 0;
+    if (_backdrop) {
+        LevelEnvironment environment = _backdrop.definition;
+        _scene.fogColor = [SKColor colorWithRed:environment.fogColor.x green:environment.fogColor.y blue:environment.fogColor.z alpha:1];
+        _scene.background.contents = _backdrop.sky;
+        _scene.lightingEnvironment.contents = _backdrop.sky;
+        _scene.lightingEnvironment.intensity = 0.8;
+        [_dust removeFromParentNode];
+        _dust = nil;
+        [_world addChildNode:_backdrop.node];
+    }
     _playerShown = NO;
 }
 
@@ -450,9 +505,10 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     _playerNode.simdPosition = p->origin;
     _playerNode.simdOrientation = p->orientation;
     if (alive) [_playerView updateThrottle:p->throttle boost:p->boost hull:p->hull alive:YES dt:_dt];
-    _engineLight.light.intensity = alive && _playerView ? 60 + 900 * _playerView.exhaust.level : 0;
-    _playerView.model.hidden = interior;
-    _cockpit.node.hidden = !interior;
+    BOOL aircraft = _playerView.definition && _playerView.definition->params.gravity > 0;
+    _engineLight.light.intensity = alive && _playerView && !aircraft ? 60 + 900 * _playerView.exhaust.level : 0;
+    _playerView.model.hidden = interior && !aircraft;
+    _cockpit.node.hidden = !interior || aircraft;
 }
 
 - (void)setCamera:(RefCamera)c {
@@ -463,7 +519,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     if (c.zNear > 0) cam.zNear = c.zNear;
     cam.motionBlurIntensity = c.motionBlur;
     if (_sunLight) {
-        _sunLight.simdPosition = c.focus + _sky.sunDirection * 250.0f;
+        _sunLight.simdPosition = c.focus + self.sunDirection * 250.0f;
         [_sunLight simdLookAt:c.focus];
     }
     if (_dust) [_sky updateDust:_dust cameraPosition:c.origin velocity:c.velocity];
@@ -481,6 +537,9 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     if (slot < 0 || slot >= REF_MAX_BOLTS) return;
     SCNNode *n = _boltNodes[slot];
     [_fx styleBolt:n player:friendly ion:ion];
+    [n childNodeWithName:@"glow" recursively:NO].hidden = _backdrop != nil;
+    n.simdScale = _backdrop ? simd_make_float3(0.4f, 0.22f, 0.4f) : simd_make_float3(1, 1, 1);
+    if (_backdrop) [n childNodeWithName:@"core" recursively:NO].geometry.firstMaterial = _tracer;
     n.simdPosition = position;
     n.simdOrientation = simd_quaternion(simd_make_float3(0, 1, 0), simd_normalize(velocity));
     n.hidden = NO;
