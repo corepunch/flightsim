@@ -15,9 +15,11 @@ codesign --force --sign - "$qa/LocalizationChecks.app"
 glyphs_only=0
 verify_only=0
 flight_only=0
+network_only=0
 if [[ ${1:-} == --glyphs-only ]]; then glyphs_only=1; shift;
 elif [[ ${1:-} == --verify-only ]]; then verify_only=1; shift;
-elif [[ ${1:-} == --flight-only ]]; then flight_only=1; shift; fi
+elif [[ ${1:-} == --flight-only ]]; then flight_only=1; shift;
+elif [[ ${1:-} == --network-only ]]; then network_only=1; shift; fi
 locales=("$@")
 if [[ $#locales == 0 ]]; then locales=(${(@)$(python3 -I -c 'from pathlib import Path; print("\n".join(p.stem for p in sorted(Path("Resources/Strings").glob("*.json"))))')}); fi
 games=(KestrelFrontier)
@@ -29,6 +31,7 @@ for locale in $locales; do
     if (( glyphs_only )); then log=$locale-$game-glyphs; extra=(--glyphs-only "$game"); fi
     if (( verify_only )); then log=$locale-layout; extra=(--verify-only); fi
     if (( flight_only )); then log=$locale-flight; extra=(--flight-only); fi
+    if (( network_only )); then log=$locale-network; extra=(--network-only); fi
     : > "$qa/$log.stdout.log"
     : > "$qa/$log.stderr.log"
     # Very short checks can exit before LaunchServices attaches its wait event.

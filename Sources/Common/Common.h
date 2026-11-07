@@ -56,6 +56,13 @@ static inline CGPoint UnboxPoint(NSValue *v) { CGPoint p = CGPointZero; [v getVa
 static inline NSValue *BoxRect(CGRect r) { return [NSValue valueWithBytes:&r objCType:@encode(CGRect)]; }
 static inline CGRect UnboxRect(NSValue *v) { CGRect r = CGRectZero; [v getValue:&r size:sizeof r]; return r; }
 
+// MARK: - LAN matches
+
+// LAN choices persist as console variables; UI and hosting share this contract.
+LANMatchSettings LANMatchSettingsCurrent(void);
+void LANMatchSettingsSave(LANMatchSettings settings);
+NSString *LANMatchSummary(LANMatchSettings settings);
+
 // MARK: - Cmd
 
 // Console commands and the command buffer, after Quake 2's Cmd_* and Cbuf_*.

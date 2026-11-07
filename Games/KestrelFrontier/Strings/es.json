@@ -10,7 +10,6 @@
       "KESTREL",
       "FRONTIER"
     ],
-    "menu.caption": "LANCER 01   /   EXECUTIONER",
     "missions.kicker": "KESTREL FRONTIER  /  CNS BASTION",
     "briefing.default_speaker": "BASTION / Control de vuelo",
     "briefing.orders_line": "Tus órdenes están en el panel.",

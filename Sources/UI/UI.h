@@ -84,6 +84,7 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)closeLANGame;
 @property (nonatomic, readonly) NSArray<NSString *> *hostedPilots;
 @property (nonatomic, readonly) BOOL hostingFailed;
+@property (nonatomic, readonly) BOOL waitingForLANMatch;
 // Shows a screen once the current one has played its exit animation.
 - (void)present:(SKScene *)screen;
 // Plays an exit of `seconds` (e.g. the main menu powering down), then quits.
@@ -120,6 +121,7 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)page;
 - (void)showBrowser;
 - (void)showLANResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting;
+- (void)showLANHost;
 // Set up after boot, without presenting: the main menu, with the mission
 // list ready behind it.
 - (void)prepareAfterBoot;
@@ -134,7 +136,6 @@ typedef NSEdgeInsets BriefingInsets;
 
 // Server browser lines.
 - (void)setBrowserStatus:(NSString *)status;
-- (void)setHostLine:(NSString *)line;
 
 @end
 
@@ -170,6 +171,7 @@ typedef NSEdgeInsets BriefingInsets;
 // Declarative settings content. The form owns row heights, padding, alignment,
 // responsive stacking and slider interaction; screens supply only content.
 @interface UISettingItem : NSObject
+@property (nonatomic) BOOL enabled;
 + (instancetype)choice:(NSString *)title value:(NSString *)value detail:(NSString *)detail action:(void (^)(void))action;
 + (instancetype)slider:(NSString *)title value:(float)value minimum:(float)minimum maximum:(float)maximum
                 step:(float)step text:(NSString *(^)(float))text change:(void (^)(float))change;
@@ -178,6 +180,7 @@ typedef NSEdgeInsets BriefingInsets;
 
 @interface UISettingsForm : SKNode
 - (instancetype)initWithItems:(NSArray<UISettingItem *> *)items width:(CGFloat)width;
+- (instancetype)initWithItems:(NSArray<UISettingItem *> *)items width:(CGFloat)width compact:(BOOL)compact;
 @property (nonatomic) NSUInteger selectedIndex;
 @property (nonatomic, readonly) CGFloat height;
 @property (nonatomic, readonly) NSArray<NSValue *> *rowRects, *controlRects, *titleRects;
@@ -188,6 +191,28 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)endDrag;
 - (void)hoverAt:(CGPoint)point;
 - (BOOL)adjust:(NSInteger)direction;
+@end
+
+// Content starts in the center; overflow keeps its top reachable by scrolling.
+CGPoint UIScrollContentPosition(CGRect region, CGSize contentSize, CGFloat offset);
+
+@class UIHover;
+
+// Framed entries shared by game browsers, rosters and match results. Geometry
+// and typography belong to the row; the caller supplies content and selection.
+@interface UIListRow : SKNode
+- (instancetype)initWithRect:(CGRect)rect title:(NSString *)title detail:(NSString *)detail
+                     compact:(BOOL)compact selected:(BOOL)selected;
+@property (nonatomic, readonly) CGRect rect;
+@property (nonatomic, readonly) SKShapeNode *plate;
+@property (nonatomic, readonly) SKLabelNode *titleLabel, *detailLabel;
+- (void)registerHover:(UIHover *)hover;
+@end
+
+// A centered, wrapping status message constrained to a screen's content area.
+@interface UIEmptyState : SKNode
+- (instancetype)initWithRegion:(CGRect)region text:(NSString *)text compact:(BOOL)compact;
+@property (nonatomic, readonly) SKLabelNode *label;
 @end
 
 // The engine's flight options and fixed bindings, reused in the menu and pause.
@@ -201,6 +226,8 @@ typedef NSEdgeInsets BriefingInsets;
 @property (nonatomic, readonly) CGFloat scrollOffset;
 @property (nonatomic, readonly) SKNode *scrollContent;
 @property (nonatomic, readonly) UISettingsForm *form;
+@property (nonatomic, readonly) CGRect bindingsRect;
+- (void)showBindings;
 @end
 
 #if TARGET_OS_IOS
@@ -312,7 +339,6 @@ typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJ
 @property (nonatomic, readonly) LANServer *selected;
 @property (nonatomic, readonly, copy) NSString *status;
 @property (nonatomic, readonly) CGRect createRect, joinRect, serverRows;
-@property (nonatomic, copy) NSString *hostLine;     // "Hosting on port 27910", shown at the bottom
 // The safe area in scene points, from the host; a standalone SKView's own wins.
 @property (atomic) ScreenInsets contentInsets;
 
@@ -325,15 +351,21 @@ typedef NS_ENUM(NSInteger, BrowserCommand) { BrowserCommandNone, BrowserCommandJ
 // MARK: - LANGame
 
 typedef NS_ENUM(NSInteger, LANGameStage) { LANGameSetup, LANGameLobby, LANGameResults };
-typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandConfirm, LANGameCommandBack };
+typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandConfirm, LANGameCommandBack, LANGameCommandSettings };
 
 // Creation, waiting for friends and results use the same responsive screen.
 @interface LANGame : SKScene <ScreenInput>
 @property (atomic) ScreenInsets contentInsets;
 @property (nonatomic, readonly) LANGameStage stage;
 @property (nonatomic, readonly) CGRect confirmRect, backRect, bodyRect;
+@property (nonatomic, readonly) LANMatchSettings settings;
+@property (nonatomic, readonly) BOOL hosting, editingLobby;
+@property (nonatomic, readonly) NSArray<NSValue *> *pilotRects;
+@property (nonatomic, readonly) UISettingsForm *settingsForm;
+@property (nonatomic, readonly) SKLabelNode *statusLabel;
 - (void)showSetup;
 - (void)showPilots:(NSArray<NSString *> *)pilots;
+- (void)showGuestLobby:(LANServer *)server;
 - (void)showResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting;
 - (LANGameCommand)handle:(InputAction)actions;
 @end
@@ -522,10 +554,7 @@ static inline SKShapeNode *UISkewedShape(CGRect rect, SKColor *stroke, SKColor *
     return shape;
 }
 
-static inline SKShapeNode *UIControlRail(CGRect rect, BOOL console) {
-    return UISkewedShape(rect, UIColorWithOpacity(console ? UIConsoleEdge : UIInk, console ? 0.95 : 0.35),
-                        UIColorWithOpacity(console ? UIConsoleSteel : UIPanel, 0.91));
-}
+
 
 static inline SKLabelNode *UIButtonLabel(NSString *text, CGFloat fontSize, CGPoint at) {
     SKLabelNode *label = UIInterfaceLabel(fontSize, UIColorWithOpacity(UIInk, 1), SKLabelHorizontalAlignmentModeCenter,
@@ -756,6 +785,8 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size);
 // the caller's own, never one read back from a node on screen: reading a live
 // shape node's path races the renderer.
 - (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent outline:(CGPathRef)outline;
+- (void)addButton:(SKNode *)button rect:(CGRect)rect accent:(UIRGB)accent outline:(CGPathRef)outline
+    hoverChanged:(void (^)(BOOL hovered))changed;
 // Render thread, once per frame.
 - (void)updateInScene:(SKScene *)scene;
 @end
@@ -764,23 +795,36 @@ NSTimeInterval UIMotionPowerDown(SKNode *stage, CGSize size);
 
 // Every screen is laid out in the same regions, and content goes into a region,
 // never at an ad hoc position: the title bar along the top (TitleBar: back,
-// title, actions), the body (lists, grids, the story), and an optional footer
-// for status lines and hints. Compact screens are phones.
+// title, actions) and the body (lists, grids, the story). Compact screens are phones.
 typedef struct {
-    CGRect header, body, footer;   // footer is empty when the screen has none
+    CGRect header, body;
     CGRect bodyToEdge;             // body run to the bottom screen edge, for scrolling grids on phones
     BOOL compact;
 } ScreenRegions;
 
-ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHeight);
+ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe);
 
 // MARK: - TitleBar
+
+// Semantic commands map directly to columns of the single authored icon atlas.
+typedef NS_ENUM(NSInteger, UICommandIcon) {
+    UICommandBack, UICommandHome, UICommandMissions, UICommandPrevious,
+    UICommandNext, UICommandSkip, UICommandLaunch, UICommandReplay,
+    UICommandCreate, UICommandJoin, UICommandStart, UICommandSettings,
+    UICommandSave, UICommandBindings, UICommandIconCount
+};
+typedef NS_ENUM(NSInteger, UICommandState) {
+    UICommandNormal, UICommandSelected, UICommandHover, UICommandPressed, UICommandDisabled, UICommandStateCount
+};
+SKTexture *UICommandTexture(UICommandIcon icon, UICommandState state);
 
 // A screen supplies the meaning of an action; the bar owns its presentation
 // and hit testing. Capture screen owners weakly in handlers.
 @interface UIBarAction : NSObject
 + (instancetype)title:(NSString *)title accent:(UIRGB)accent handler:(void (^)(void))handler;
++ (instancetype)title:(NSString *)title icon:(UICommandIcon)icon accent:(UIRGB)accent handler:(void (^)(void))handler;
 @property (nonatomic) BOOL enabled;
+@property (nonatomic) UICommandState iconState;
 @end
 
 // The bar along the top of a screen or panel: the back control on the left (an
@@ -797,6 +841,8 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
                          title:(NSString *)title kicker:(NSString *)kicker actions:(NSArray<UIBarAction *> *)actions;
 - (CGRect)rectForAction:(UIBarAction *)action;
 - (BOOL)activateAt:(CGPoint)point;
+- (void)beginAt:(CGPoint)point;
+- (void)endPress;
 @property (nonatomic, readonly) CGFloat height, fontSize;
 @property (nonatomic, readonly) CGRect row, lane;   // the whole bar, and the space for the title
 @property (nonatomic, readonly) NSArray<SKShapeNode *> *controls;   // in the order added
@@ -805,19 +851,6 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
 - (void)registerHover:(UIHover *)hover;
 // The controls drop in from above in turn and the title decodes.
 - (void)revealAfter:(NSTimeInterval)delay;
-@end
-
-// A footer rail containing readable information and an optional primary action.
-// The same bar is used by conversations, reports and informational footers.
-@interface UIInfoBar : SKNode
-+ (CGFloat)heightCompact:(BOOL)compact;
-- (instancetype)initWithRegion:(CGRect)region compact:(BOOL)compact console:(BOOL)console
-                          info:(NSString *)info action:(UIBarAction *)action;
-@property (nonatomic, readonly) CGRect row, actionRect;
-@property (nonatomic, readonly) SKLabelNode *infoLabel;
-@property (nonatomic, readonly) SKShapeNode *action;
-- (BOOL)activateAt:(CGPoint)point;
-- (void)registerHover:(UIHover *)hover;
 @end
 
 // MARK: - UITouchControls

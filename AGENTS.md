@@ -106,10 +106,13 @@ own small class (`TacticalMap : SKCropNode`, `TextViewport : SKNode` in
 
 **Compose shared UI controls; never position their parts in scenes.** Scenes
 declare a bar's information, title and actions with callbacks. `TitleBar`,
-`UIInfoBar`, `UISettingsForm` and `ScreenRegions` own sizing, typography, padding,
+`UISettingsForm` and `ScreenRegions` own sizing, typography, padding,
 alignment, responsive placement, interaction states and hit geometry. For
-example, create an information bar with hint text and a Continue action handler;
-do not place a rail, left label and right Continue button independently. Reuse
+example, declare a title bar with its information and command callbacks;
+do not place its title, icons and buttons independently. All screen commands live
+in the top title bar, with no bottom information rail. Phones use unframed icons;
+iPad and desktop use icons with text. Center content within the safe body region
+when it fits; keep overflow scrollable below the fixed title bar. Reuse
 the same control across scenes. Extend or refactor the shared control when a
 composition is missing instead of adding screen-specific offsets. Touch flight
 artwork and layout belong to `UITouchControls`; the platform adapter routes input.

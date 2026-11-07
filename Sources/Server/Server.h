@@ -36,6 +36,7 @@ GetGameAPIFunc GameLoaderOpen(void);
 @property (nonatomic, readonly) int clientCount;
 @property (nonatomic, readonly) NSArray<NSString *> *clientNames;
 @property (nonatomic) BOOL publicHosting;       // only explicit LAN sessions accept remote players
+@property (nonatomic) LANMatchSettings matchSettings;
 @property (nonatomic, readonly) BOOL missionEnded;   // the game has sent its debrief
 
 // Loads a mission. Slow; call off the render thread with `loading` set.

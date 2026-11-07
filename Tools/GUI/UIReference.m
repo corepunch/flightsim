@@ -44,6 +44,10 @@ static void Save(SKScene *scene, NSString *category, NSString *name) {
         View.frame = RectWithSize(scene.size);
         [View presentScene:scene];
         FinishText(scene);
+        // Let SpriteKit commit the newly composed tree before capturing it.
+        NSDate *ready = [NSDate dateWithTimeIntervalSinceNow:0.04];
+        while (ready.timeIntervalSinceNow > 0)
+            [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:ready];
         SKTexture *texture = [View textureFromNode:scene crop:RectWithSize(scene.size)];
         REQUIRE(texture.CGImage);
         // SKView returns backing pixels (2x on Retina). Store one pixel per
@@ -78,7 +82,7 @@ static UIBarAction *Action(NSString *title, BOOL enabled, void (^handler)(void))
 
 static void CheckButton(SKShapeNode *button, CGRect rect) {
     REQUIRE(CGRectGetHeight(rect) >= 44);
-    for (SKNode *child in button.children) if ([child isKindOfClass:SKLabelNode.class]) {
+    for (SKNode *child in button.children) if (!child.hidden && [child isKindOfClass:SKLabelNode.class]) {
         if (!CGRectContainsRect(CGRectInset(rect, -1, -1), child.frame)) fprintf(stderr, "Button %s rect %s label %s\n", ((SKLabelNode *)child).text.UTF8String, NSStringFromRect(rect).UTF8String, NSStringFromRect(child.frame).UTF8String);
         REQUIRE(CGRectContainsRect(CGRectInset(rect, -1, -1), child.frame));
         REQUIRE(fabs(CGRectGetMidY(child.frame) - CGRectGetMidY(rect)) < 1);
@@ -88,11 +92,11 @@ static void CheckButton(SKShapeNode *button, CGRect rect) {
 static void Bars(void) {
     CGFloat width = Config.size.width;
     BOOL compact = MIN(Config.size.width, Config.size.height) <= 500;
-    SKScene *sheet = Canvas(CGSizeMake(width, 1030));
+    SKScene *sheet = Canvas(CGSizeMake(width, 530));
     CGFloat left = MAX(24, Config.safe.left + 12), right = width - MAX(24, Config.safe.right + 12);
     __block NSUInteger fired = 0;
     for (NSUInteger state = 0; state < 4; state++) {
-        CGFloat top = 1000 - state * 122;
+        CGFloat top = 500 - state * 122;
         Heading(sheet, @[@"Header / back + title", @"Header / primary action", @"Header / previous + primary",
             @"Header / long translation + disabled action"][state], CGPointMake(left, top));
         UIBarAction *back = Action(L10n(@"story.missions"), YES, ^{ fired++; });
@@ -105,6 +109,8 @@ static void Bars(void) {
         [sheet addChild:bar];
         REQUIRE(CGRectContainsRect(CGRectInset(bar.lane, -1, -1), bar.titleLabel.frame));
         REQUIRE(CGRectContainsRect(CGRectInset(bar.lane, -1, -1), bar.kickerLabel.frame));
+        CGRect titleBlock = CGRectUnion(bar.titleLabel.frame, bar.kickerLabel.frame);
+        REQUIRE(fabs(CGRectGetMidY(titleBlock)-CGRectGetMidY(bar.row)) < 0.1);
         for (UIBarAction *item in [@[back] arrayByAddingObjectsFromArray:actions]) {
             CGRect rect = [bar rectForAction:item];
             NSUInteger before = fired;
@@ -117,26 +123,51 @@ static void Bars(void) {
             CheckButton(button, [bar rectForAction:item]); i++;
         }
     }
-    NSArray *hints = @[L10n(@"debrief.conversation_hint"), L10n(@"briefing.hint"),
-        @"Long translated information wraps within the shared bar, leaving the action reachable.", @"Status without an action"];
-    for (NSUInteger state = 0; state < hints.count; state++) {
-        CGFloat top = 510 - state * 122;
-        Heading(sheet, @[@"Info rail / conversation", @"Info rail / tactical", @"Info rail / long text", @"Info rail / status only"][state], CGPointMake(left, top));
-        CGRect region = RectFromEdges(left, top - 98, right, top - 98 + [UIInfoBar heightCompact:compact]);
-        UIBarAction *item = state < 3 ? Action(L10n(@"debrief.continue"), YES, ^{ fired++; }) : nil;
-        UIInfoBar *bar = [[UIInfoBar alloc] initWithRegion:region compact:compact console:state % 2 == 0 info:hints[state] action:item];
-        [sheet addChild:bar];
-        REQUIRE(CGRectContainsRect(CGRectInset(region, -1, -1), bar.infoLabel.frame));
-        REQUIRE(fabs(CGRectGetMidY(bar.infoLabel.frame) - CGRectGetMidY(region)) < 1);
-        REQUIRE(bar.infoLabel.fontSize >= 16);
-        if (item) {
-            REQUIRE(fabs(CGRectGetMidY(bar.actionRect) - CGRectGetMidY(region)) < 0.01);
-            REQUIRE(!CGRectIntersectsRect(bar.infoLabel.frame, bar.actionRect));
-            CheckButton(bar.action, bar.actionRect);
-            NSUInteger before = fired; REQUIRE([bar activateAt:RectCenter(bar.actionRect)] && fired == before + 1);
-        }
-    }
     Save(sheet, @"controls", @"bars");
+}
+
+static void IconStates(void) {
+    NSArray *titles = @[@"BACK", @"HOME", @"MISSIONS", @"PREVIOUS", @"NEXT", @"SKIP", @"LAUNCH",
+        @"REPLAY", @"CREATE", @"JOIN", @"START", @"SETTINGS", @"SAVE", @"BINDINGS"];
+    BOOL compact = MIN(Config.size.width, Config.size.height) <= 500;
+    CGFloat width = Config.size.width, cell = (width - 48) / UICommandStateCount;
+    SKScene *sheet = Canvas(CGSizeMake(width, 1320));
+    NSArray *states = @[@"Normal", @"Selected", @"Hover", @"Pressed", @"Disabled"];
+    for (NSUInteger state = 0; state < UICommandStateCount; state++)
+        Heading(sheet, states[state], CGPointMake(24 + cell * state, 1300));
+    for (NSUInteger icon = 0; icon < UICommandIconCount; icon++) for (NSUInteger state = 0; state < UICommandStateCount; state++) {
+        UIBarAction *item = [UIBarAction title:titles[icon] icon:icon accent:UIInk handler:^{}];
+        item.enabled = state != UICommandDisabled;
+        item.iconState = state == UICommandSelected ? UICommandSelected : UICommandNormal;
+        TitleBar *bar = [[TitleBar alloc] initWithHeader:CGRectMake(24 + cell * state, 1220 - icon * 88, cell - 8, 52)
+            compact:compact back:nil title:nil kicker:nil actions:@[item]];
+        [sheet addChild:bar];
+        CGRect rect = [bar rectForAction:item];
+        if (state == UICommandPressed) [bar beginAt:RectCenter(rect)];
+        if (state == UICommandHover) {
+            UIHover *hover = [UIHover new]; [bar registerHover:hover];
+            [hover queuePointAtFraction:PointFractionInRect(RectCenter(rect), RectWithSize(sheet.size))];
+            [hover updateInScene:sheet];
+        }
+        SKShapeNode *button = bar.controls.firstObject;
+        if (compact) {
+            REQUIRE(CGColorGetAlpha(button.strokeColor.CGColor) == 0);
+            REQUIRE(CGColorGetAlpha(button.fillColor.CGColor) == 0);
+        }
+        CheckButton(button, rect);
+        NSUInteger glyphs = 0;
+        for (SKNode *child in button.children) {
+            if ([child isKindOfClass:SKLabelNode.class]) REQUIRE(child.hidden == compact);
+            if ([child isKindOfClass:SKSpriteNode.class]) {
+                glyphs++; REQUIRE(CGRectContainsRect(rect, child.frame));
+                REQUIRE(((SKSpriteNode *)child).size.width == (compact ? 54 : 28));
+                if (compact) REQUIRE(PointDistance(child.position, RectCenter(rect)) < 0.01);
+                REQUIRE(((SKSpriteNode *)child).texture.CGImage);
+            }
+        }
+        REQUIRE(glyphs == 1);
+    }
+    Save(sheet, @"controls", @"command-icons");
 }
 
 static void Buttons(void) {
@@ -229,6 +260,7 @@ static void Menus(void) {
     CGRect bounds = RectInsetEdges(RectWithSize(Config.size), Config.safe.left + 18, Config.safe.top + 18, Config.safe.right + 18, Config.safe.bottom + 18);
     [panel layoutIn:bounds sceneSize:Config.size]; [sheet addChild:panel];
     Save(sheet, @"screens", @"flight-settings-top");
+    [panel showBindings];
     [panel pointerScroll:10000 at:PointFractionInRect(RectCenter(panel.scrollRect), RectWithSize(Config.size))];
     Save(sheet, @"screens", @"flight-settings-bindings");
 }
@@ -268,6 +300,8 @@ static void Network(void) {
     LANGame *game = [[LANGame alloc] initWithSize:Config.size]; game.contentInsets = Config.safe;
     [game showSetup]; Save(game, @"screens", @"lan-setup");
     [game showPilots:@[@"Host"]]; Save(game, @"screens", @"lan-waiting");
+    REQUIRE(game.statusLabel && game.pilotRects.count==1);
+    REQUIRE(fabs(CGRectGetMidX(game.statusLabel.frame)-CGRectGetMidX(game.bodyRect))<1);
     [game showPilots:@[@"Host", @"Wingmate"]]; Save(game, @"screens", @"lan-ready");
     NSArray *pilots = @[@"Host", @"Wingmate", @"Pilot 3", @"Pilot 4", @"Pilot 5", @"Pilot 6", @"Pilot 7", @"Pilot 8"];
     [game showPilots:pilots]; Save(game, @"screens", @"lan-full");
@@ -285,6 +319,27 @@ static void Network(void) {
     for (NSString *key in @[@"browser.permission", @"browser.socket_failed", @"browser.search_failed", @"browser.resolve_failed", @"browser.unreachable", @"browser.network_help"]) {
         [browser setStatus:L10nFormat(key, @(-72007))]; Save(browser, @"screens", key);
     }
+    [browser setStatus:@"Connection failed. Select a game to retry."]; Save(browser, @"screens", @"browser-error");
+    LANServer *guest=[LANServer new]; guest.settings=LANMatchSettingsDefault(); guest.pilots=@[@"Host",@"Wingmate"];
+    [game showGuestLobby:guest]; Save(game,@"screens",@"lan-guest-waiting");
+    REQUIRE(CGRectIsEmpty(game.confirmRect) && game.pilotRects.count==2);
+
+    SKScene *sheet=Canvas(CGSizeMake(Config.size.width,400));
+    CGFloat width=MIN(760,Config.size.width-2*MAX(24,Config.safe.left+12));
+    CGFloat x=(Config.size.width-width)/2;
+    BOOL compact=MIN(Config.size.width,Config.size.height)<=500;
+    UIHover *hover=[UIHover new];
+    for(NSUInteger i=0;i<4;i++) {
+        CGRect rect=CGRectMake(x,300-i*80,width,64);
+        UIListRow *row=[[UIListRow alloc] initWithRect:rect title:i==3 ? @"A very long game or pilot name that must fit within the framed entry without colliding with its edges" : @"Wingmates   2/8"
+            detail:i==0 ? nil : @"Dogfight • 10 kills • 5 minutes" compact:compact selected:i==1];
+        [sheet addChild:row];
+        REQUIRE(CGRectContainsRect(rect,row.titleLabel.frame));
+        if(row.detailLabel) REQUIRE(CGRectContainsRect(rect,row.detailLabel.frame));
+        if(i==2) { [row registerHover:hover]; [hover queuePointAtFraction:PointFractionInRect(RectCenter(rect),RectWithSize(sheet.size))]; }
+    }
+    [hover updateInScene:sheet];
+    Save(sheet,@"controls",@"list-rows-normal-selected-hover-long");
 }
 
 static void Flight(void) {
@@ -358,10 +413,11 @@ static void Instruments(void) {
 }
 
 int main(int argc, const char **argv) { @autoreleasepool {
-    REQUIRE(argc == 2 || (argc == 3 && [@(argv[2]) isEqualToString:@"--ratings-only"]));
+    REQUIRE(argc == 2 || (argc == 3 && ([@(argv[2]) isEqualToString:@"--ratings-only"] || [@(argv[2]) isEqualToString:@"--network-only"])));
     Output = @(argv[1]);
-    BOOL ratingsOnly = argc == 3;
-    if (ratingsOnly) {
+    BOOL ratingsOnly = argc == 3 && [@(argv[2]) isEqualToString:@"--ratings-only"];
+    BOOL networkOnly = argc == 3 && [@(argv[2]) isEqualToString:@"--network-only"];
+    if (ratingsOnly || networkOnly) {
         NSData *data = [NSData dataWithContentsOfFile:[Output stringByAppendingPathComponent:@"manifest.json"]];
         REQUIRE(data);
         id previous = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL];
@@ -370,7 +426,7 @@ int main(int argc, const char **argv) { @autoreleasepool {
     [NSApplication sharedApplication]; [NSApp finishLaunching];
     [Cvar set:@"ui_reduceMotion" value:@"1"];
     Window = [[NSWindow alloc] initWithContentRect:CGRectMake(0,0,800,600) styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];
-    View = [[SKView alloc] initWithFrame:CGRectMake(0,0,800,600)]; Window.contentView = View; [Window orderFrontRegardless];
+    View = [[SKView alloc] initWithFrame:CGRectMake(0,0,800,600)]; View.shouldCullNonVisibleNodes=NO; Window.contentView = View; [Window orderFrontRegardless];
     const ReferenceConfig configs[] = {
         {@"iphone-small", @"iPhone", {568,320}, {0,0,0,0}, YES},
         {@"iphone-se", @"iPhone", {667,375}, {0,0,0,0}, YES},
@@ -388,8 +444,11 @@ int main(int argc, const char **argv) { @autoreleasepool {
         Config = configs[i]; fprintf(stderr, "Rendering %s\n", Config.name.UTF8String);
         REQUIRE([NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.igor.spacefight.uireference"]);
         [NSUserDefaults.standardUserDefaults removePersistentDomainForName:NSBundle.mainBundle.bundleIdentifier];
-        if (!ratingsOnly) { Bars(); Buttons(); Forms(); Menus(); Campaign(); Network(); Flight(); Instruments(); }
-        MissionRatings();
+        if (networkOnly) { Menus(); Network(); }
+        else {
+            if (!ratingsOnly) { Bars(); IconStates(); Buttons(); Forms(); Menus(); Campaign(); Network(); Flight(); Instruments(); }
+            MissionRatings();
+        }
     }
     NSData *manifest = [NSJSONSerialization dataWithJSONObject:Entries options:NSJSONWritingPrettyPrinted error:NULL];
     REQUIRE([manifest writeToFile:[Output stringByAppendingPathComponent:@"manifest.json"] atomically:YES]);

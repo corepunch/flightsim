@@ -11,6 +11,7 @@ static NSString *Output, *Locale;
 static NSMutableArray *Entries;
 static BOOL VerifyOnly;
 static BOOL FlightOnly;
+static BOOL NetworkOnly;
 static NSUInteger SavedCount;
 
 static void CheckGlyphs(SKNode *node) {
@@ -48,6 +49,9 @@ static void Save(SKScene *scene, NSString *device, NSString *family, NSString *n
         if (VerifyOnly) { CheckGlyphs(scene); return; }
         [View presentScene:nil]; View.frame=RectWithSize(scene.size);
         [View presentScene:scene]; CheckGlyphs(scene);
+        NSDate *ready = [NSDate dateWithTimeIntervalSinceNow:0.04];
+        while (ready.timeIntervalSinceNow > 0)
+            [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:ready];
         SKTexture *texture = [View textureFromNode:scene crop:RectWithSize(scene.size)]; CHECK(texture.CGImage);
         CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
         CGContextRef context = CGBitmapContextCreate(NULL,scene.size.width,scene.size.height,8,0,space,(CGBitmapInfo)kCGImageAlphaPremultipliedLast);
@@ -75,11 +79,12 @@ int main(int argc,const char **argv) { @autoreleasepool {
     BOOL glyphsOnly=argc>=5 && strcmp(argv[3],"--glyphs-only")==0;
     VerifyOnly=argc>=4 && strcmp(argv[3],"--verify-only")==0;
     FlightOnly=argc>=4 && strcmp(argv[3],"--flight-only")==0;
-    if (FlightOnly) {
+    NetworkOnly=argc>=4 && strcmp(argv[3],"--network-only")==0;
+    if (FlightOnly || NetworkOnly) {
         NSData *prior=[NSData dataWithContentsOfFile:[Output stringByAppendingPathComponent:[Locale stringByAppendingString:@".json"]]];
         NSArray *entries=prior ? [NSJSONSerialization JSONObjectWithData:prior options:0 error:NULL] : nil;
         if ([entries isKindOfClass:NSArray.class] && entries.count) [Entries addObjectsFromArray:entries];
-        else FlightOnly=NO;
+        else { FlightOnly=NO; NetworkOnly=NO; }
     }
     FSSetGame(glyphsOnly ? @(argv[4]) : @"KestrelFrontier");
     [NSApplication sharedApplication]; [NSApp finishLaunching];
@@ -103,7 +108,7 @@ int main(int argc,const char **argv) { @autoreleasepool {
         return 0;
     }
     [Cvar set:@"ui_reduceMotion" value:@"1"];
-    View=[[SKView alloc] initWithFrame:CGRectMake(0,0,1600,900)];
+    View=[[SKView alloc] initWithFrame:CGRectMake(0,0,1600,900)]; View.shouldCullNonVisibleNodes=NO;
     const struct { __unsafe_unretained NSString *name,*family; CGSize size; ScreenInsets safe; BOOL touch; } configs[]={
         {@"iphone-small",@"iPhone",{568,320},{0,0,0,0},YES},
         {@"iphone-se",@"iPhone",{667,375},{0,0,0,0},YES},
@@ -119,7 +124,7 @@ int main(int argc,const char **argv) { @autoreleasepool {
     };
     for (NSUInteger i=0;i<sizeof(configs)/sizeof(configs[0]);i++) @autoreleasepool {
         CGSize size=configs[i].size; ScreenInsets safe=configs[i].safe;
-        if (!FlightOnly) {
+        if (!FlightOnly && !NetworkOnly) {
         PauseMenu *pause=[[PauseMenu alloc] initWithSize:size]; pause.contentInsets=safe;
         [pause showRemote:YES cockpit:NO];
         for (NSString *key in pause.layout.buttons) {
@@ -143,13 +148,21 @@ int main(int argc,const char **argv) { @autoreleasepool {
         ControlsPanel *panel=[ControlsPanel new]; panel.touchNavigationEnabled=configs[i].touch;
         [panel layoutIn:RectInsetEdges(RectWithSize(size),safe.left+18,safe.top+18,safe.right+18,safe.bottom+18) sceneSize:size];
         [settings addChild:panel]; Save(settings,configs[i].name,configs[i].family,@"flight-settings",safe);
-        SKScene *bars=[SKScene sceneWithSize:CGSizeMake(size.width,200)]; bars.backgroundColor=UIColorWithOpacity(UIBackground,1);
-        BOOL compact=MIN(size.width,size.height)<=500;
-        UIBarAction *action=[UIBarAction title:L10n(@"debrief.continue") accent:UIAmber handler:^{}];
-        UIInfoBar *info=[[UIInfoBar alloc] initWithRegion:CGRectMake(safe.left+16,20,size.width-safe.left-safe.right-32,[UIInfoBar heightCompact:compact])
-            compact:compact console:YES info:L10n(@"debrief.conversation_hint") action:action];
-        [bars addChild:info]; Save(bars,configs[i].name,configs[i].family,@"information-bar",safe);
         }
+        if (!FlightOnly) {
+        LANGame *lan=[[LANGame alloc] initWithSize:size]; lan.contentInsets=safe;
+        [lan showSetup]; [lan handle:0]; Save(lan,configs[i].name,configs[i].family,@"lan-settings",safe);
+        [lan showPilots:@[@"Host"]]; Save(lan,configs[i].name,configs[i].family,@"lan-waiting",safe);
+        [lan showPilots:@[@"Host",@"Wingmate",@"Pilot 3",@"Pilot 4",@"Pilot 5",@"Pilot 6",@"Pilot 7",@"Pilot 8"]];
+        for(NSValue *rect in lan.pilotRects) {
+            if(!CGRectContainsRect(CGRectInset(lan.bodyRect,-1,-1),UnboxRect(rect))) fprintf(stderr,"LAN %s / %s: body %s row %s\n",Locale.UTF8String,configs[i].name.UTF8String,NSStringFromRect(lan.bodyRect).UTF8String,NSStringFromRect(UnboxRect(rect)).UTF8String);
+            CHECK(CGRectContainsRect(CGRectInset(lan.bodyRect,-1,-1),UnboxRect(rect)));
+        }
+        Save(lan,configs[i].name,configs[i].family,@"lan-full",safe);
+        ServerBrowser *browser=[[ServerBrowser alloc] initWithSize:size]; browser.contentInsets=safe;
+        [browser showServers:@[]]; Save(browser,configs[i].name,configs[i].family,@"lan-searching",safe);
+        }
+        if (NetworkOnly) continue;
         HUD *hud=[[HUD alloc] initWithSize:size]; hud.backgroundColor=UIColorWithOpacity(UIBackground,1);
         hud.touchLayout=configs[i].touch; hud.contentInsets=safe;
         [hud setObjectives:@[L10n(@"mission.objective.first_watch.patrol"),L10n(@"mission.objective.first_watch.scouts")]

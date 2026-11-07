@@ -10,7 +10,6 @@
       "KESTREL",
       "FRONTIER"
     ],
-    "menu.caption": "LANCER 01   /   EXECUTIONER",
     "missions.kicker": "KESTREL FRONTIER  /  CNS BASTION",
     "briefing.default_speaker": "BASTION / 飛行管制",
     "briefing.orders_line": "任務内容は画面に表示されています。",

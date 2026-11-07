@@ -264,6 +264,7 @@ typedef struct {
     // Mission
     BOOL _running, _over;
     const LevelDef *_level;                 // the level being flown; cached for the process
+    LevelDef _matchDefinition;              // a match owns its overrides; cached arena data stays immutable
     double _missionTime;
     MissionRunner *_runner;                 // objectives, events and rules (engine runtime)
     // "hold" entities and waves, by id, until an event spawns them: pointers into _level.

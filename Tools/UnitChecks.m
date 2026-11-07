@@ -983,6 +983,21 @@ static void CheckLocalization(void) {
     CHECK([expected containsString:@"3"] && [expected containsString:@"1"]);
 }
 
+static void CheckLANSettings(void) {
+    LANMatchSettings settings = LANMatchSettingsDefault();
+    settings.arena=@"arena"; settings.ship=@"executioner"; settings.fragLimit=25; settings.maxPilots=4;
+    settings.matchSeconds=600; settings.respawnSeconds=5;
+    LANLobbyInfo decoded;
+    CHECK(LANLobbyDecode(LANLobbyEncode((LANLobbyInfo){.pilots=@[@"Игорь", @"Mira"], .settings=settings}), &decoded));
+    CHECK(([decoded.pilots isEqual:@[@"Игорь", @"Mira"]]));
+    CHECK(decoded.settings.fragLimit==25 && decoded.settings.maxPilots==4 && decoded.settings.matchSeconds==600 && decoded.settings.respawnSeconds==5);
+    CHECK([decoded.settings.arena isEqual:@"arena"] && [decoded.settings.ship isEqual:@"executioner"]);
+    CHECK(!LANLobbyDecode(@"[]", &decoded) && !LANLobbyDecode(@"{\"players\":[3]}", &decoded));
+    CHECK(!LANMatchSettingsDecode(@"{\"kills\":\"ten\"}", &settings));
+    settings=LANMatchSettingsNormalize((LANMatchSettings){.fragLimit=1000, .maxPilots=1, .matchSeconds=INFINITY, .respawnSeconds=NAN});
+    CHECK(settings.fragLimit==100 && settings.maxPilots==2 && isfinite(settings.matchSeconds) && isfinite(settings.respawnSeconds));
+}
+
 int main(void) {
     @autoreleasepool {
         CheckShipMove();
@@ -990,6 +1005,7 @@ int main(void) {
         CheckEntityDeltas();
         CheckPlayerState();
         CheckEventsAndCommands();
+        CheckLANSettings();
         CheckConsole();
         CheckCampaign();
         CheckDefinitions();

@@ -42,6 +42,8 @@
 @property (nonatomic) int players, maxPlayers;
 @property (nonatomic, copy) NSString *levelName;   // nil: no level running
 @property (nonatomic) double lastSeen;
+@property (nonatomic) LANMatchSettings settings;
+@property (nonatomic, copy) NSArray<NSString *> *pilots;
 @end
 
 // Finds a declared Bonjour service and asks its resolved IPv4 addresses for

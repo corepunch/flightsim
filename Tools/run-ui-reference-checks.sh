@@ -6,7 +6,7 @@ qa=${1:-"$PWD/build/ui-reference"}
 mkdir -p "$qa"
 qa=${qa:A}
 extra=()
-if [[ ${2:-} == --ratings-only ]]; then extra=(--ratings-only)
+if [[ ${2:-} == --ratings-only || ${2:-} == --network-only ]]; then extra=("$2")
 elif [[ -n ${2:-} ]]; then print -u2 "Unknown reference option: $2"; exit 1
 fi
 contents="$qa/UIReference.app/Contents"

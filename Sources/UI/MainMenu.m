@@ -49,7 +49,7 @@ static SKShader *MenuArtShader(void) {
     BOOL _sceneryPortrait;
     SKSpriteNode *_artNode, *_backdropNode;
     SKNode *_rowNodes[MenuItemCount];
-    NSMutableArray<SKLabelNode *> *_header, *_rowLabels[MenuItemCount], *_footerLabels;
+    NSMutableArray<SKLabelNode *> *_header, *_rowLabels[MenuItemCount];
     UIHover *_hover;
 }
 
@@ -215,7 +215,6 @@ static SKShader *MenuArtShader(void) {
     [_hover reset];
     memset(_rowNodes, 0, sizeof(_rowNodes));
     _header = [NSMutableArray array];
-    _footerLabels = [NSMutableArray array];
     for (NSUInteger i = 0; i < MenuItemCount; i++) _rowLabels[i] = [NSMutableArray array];
     _stage.position = CGPointMake(self.size.width / 2, self.size.height / 2);
     _root.position = _ghost.position = _scenery.position = CGPointMake(-self.size.width / 2, -self.size.height / 2);
@@ -311,14 +310,6 @@ static SKShader *MenuArtShader(void) {
         _rowNodes[i] = [self drawButton:[self itemText:_items[i][@"text"]] ?: @"" detail:[self itemText:_items[i][@"detail"]] rect:_rows[i]
                                selected:i == _selected compact:compact labels:_rowLabels[i]];
     }
-    if (!compact) {
-        [_footerLabels addObject:[self label:L10n(self.touchNavigationEnabled ? @"menu.footer_touch" : @"menu.footer") size:[self metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
-                                           x:left y:bottom]];
-        SKLabelNode *caption = [self label:L10n(@"menu.caption") size:[self metric:@"footerSize" flags:flags fallback:11] color:UIInk opacity:0.6
-                                        x:self.size.width - _usedInsets.right - margin y:bottom];
-        caption.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
-        [_footerLabels addObject:caption];
-    }
     [self startIdle];
     if (transition == UITransitionIntro || transition == UITransitionPage)
         [self animateMenuIntro:transition == UITransitionIntro && _boot];
@@ -366,7 +357,6 @@ static SKShader *MenuArtShader(void) {
         UIMotionFlickerIn(row, at);
         for (SKLabelNode *label in _rowLabels[i]) UIMotionDecode(label, at + 0.1, 0.35);
     }
-    for (SKLabelNode *label in _footerLabels) UIMotionFlickerIn(label, t + 0.45);
 }
 
 // The newly highlighted button kicks forward and a glint runs across it.
@@ -448,7 +438,6 @@ static SKShader *MenuArtShader(void) {
         }
         [label runAction:UIAfter(0.08, [SKAction fadeOutWithDuration:0.16])];
     }
-    for (SKLabelNode *label in _footerLabels) [label runAction:[SKAction fadeOutWithDuration:0.12]];
     [_controlsPanel runAction:[SKAction fadeOutWithDuration:0.15]];
     return MAX(longest, 0.24);
 }

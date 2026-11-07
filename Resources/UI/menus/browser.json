@@ -2,7 +2,7 @@
   "metrics": {
     "shade": 0.72,
     "emptySize": 17,
-    "rowHeight": 52, "rowSize": 16,
+    "rowHeight": 64, "rowSize": 16,
     "notesStep": 20, "statusSize": 14, "noteSize": 12,
     "wideHelpWidth": 850,
     "buttonWidth": 145

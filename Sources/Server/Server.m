@@ -121,6 +121,7 @@ static void SV_CvarSet(const char *name, const char *value) { [Cvar set:@(name ?
     if ((self = [super init])) {
         sv = self;
         _name = [name copy];
+        _matchSettings = LANMatchSettingsDefault();
         _transports = [NSMutableArray array];
         _configStrings = [NSMutableArray arrayWithCapacity:MAX_CONFIGSTRINGS];
         for (int i = 0; i < MAX_CONFIGSTRINGS; i++) [_configStrings addObject:@""];
@@ -271,9 +272,12 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
     if (!self.publicHosting && !from.isLoopback) return;
     NSArray *args = [text componentsSeparatedByString:@" "];
     NSString *cmd = args.firstObject;
-    if ([cmd isEqualToString:@"info"]) {
+    if ([cmd isEqualToString:@"lobby"]) {
+        NSString *info = LANLobbyEncode((LANLobbyInfo){.pilots=self.clientNames, .settings=_matchSettings});
+        [NetChannel sendOutOfBand:[@"lobby_response " stringByAppendingString:info] transport:t to:from];
+    } else if ([cmd isEqualToString:@"info"]) {
         NSString *mission = _running ? _configStrings[CS_LEVEL] : @"-";
-        [NetChannel sendOutOfBand:[NSString stringWithFormat:@"info_response %d %d %@ %@", self.clientCount, MAX_CLIENTS, mission, _name]
+        [NetChannel sendOutOfBand:[NSString stringWithFormat:@"info_response %d %d %@ %@", self.clientCount, _matchSettings.maxPilots, mission, _name]
                         transport:t to:from];
     } else if ([cmd isEqualToString:@"connect"]) {
         if (args.count < 2 || [args[1] intValue] != PROTOCOL_VERSION) {
@@ -287,7 +291,7 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
             if (_slots[i].state != SlotFree && [_slots[i].channel.address isEqual:from]) { [self drop:(int)i reason:nil]; index = (int)i; break; }
         if (index < 0)
             for (NSUInteger i = 0; i < _slots.count; i++) if (_slots[i].state == SlotFree) { index = (int)i; break; }
-        if (index < 0 || !_ge->clientConnect(index, name.UTF8String)) {
+        if (index < 0 || self.clientCount >= _matchSettings.maxPilots || !_ge->clientConnect(index, name.UTF8String)) {
             [NetChannel sendOutOfBand:@"reject full" transport:t to:from];
             return;
         }

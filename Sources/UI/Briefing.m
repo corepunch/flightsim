@@ -38,7 +38,7 @@ static NSString *const PortraitDeparture = @"portraitDeparture";
 static const CGFloat MaxPortraitAspect = 1.04;
 static const CGFloat PortraitFaceBand = 0.30, CaptionFaceGap = 8;
 static const CGFloat CaptionDrop = 42;
-static const CGFloat PortraitDepth = 1, CaptionDepth = 2, FooterDepth = 3;
+static const CGFloat PortraitDepth = 1, CaptionDepth = 2, NavigationDepth = 3;
 static const CGFloat MonitorInset = 6;
 
 // Offset every edge inward, including the diagonals, so the gap stays uniform.
@@ -133,7 +133,7 @@ typedef struct {
 // it rather than popping. An intro forgets all but the mode.
 typedef struct {
     Mode mode;
-    NSString *channel, *content, *action;   // monitor channel, content kind, footer action
+    NSString *channel, *content, *action;   // monitor channel, content kind, command action
     MapEmphasis map;
 } Shown;
 
@@ -146,10 +146,10 @@ typedef struct {
     double due;             // scene time to move on
 } Autoplay;
 
-// Where the footer's buttons are, for clicks.
+// Where the title bar's commands are, for clicks.
 typedef struct {
     CGRect confirm, previous, back;
-} FooterButtons;
+} NavigationButtons;
 
 // The mission list's tiles, for clicks and keyboard navigation.
 typedef struct {
@@ -793,7 +793,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     CampaignMission *_mission;
     NSArray<BriefingPage *> *_pages;
     NSUInteger _page;
-    FooterButtons _buttons;
+    NavigationButtons _buttons;
     MissionGrid _grid;
     NSValue *_queuedClick;
     NSMutableArray<NSValue *> *_queuedScrolls;
@@ -811,9 +811,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     SKNode *_stage, *_ghost;
     UITransition _transition;
     BOOL _presented;
-    NSMutableArray<SKNode *> *_footerNodes;
-    TitleBar *_bar;                         // in _footerNodes when touch navigation is up
-    UIInfoBar *_infoBar;
+    NSMutableArray<SKNode *> *_navigationNodes;
+    TitleBar *_bar;                         // owned by _navigationNodes
     InputAction _barInput;
     Shown _shown;
     Autoplay _autoplay;
@@ -878,31 +877,26 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 static const CGFloat PhoneSpeakerFont = 16;
 static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
-- (UIBarAction *)barAction:(NSString *)title input:(InputAction)input {
+- (UIBarAction *)barAction:(NSString *)title icon:(UICommandIcon)icon input:(InputAction)input {
     __weak Briefing *owner = self;
-    return [UIBarAction title:title accent:UIAmber handler:^{ Briefing *screen = owner; if (screen) screen->_barInput |= input; }];
+    return [UIBarAction title:title icon:icon accent:UIAmber handler:^{ Briefing *screen = owner; if (screen) screen->_barInput |= input; }];
 }
 
-- (NSString *)footerActionLabel:(NSString *)action {
+- (NSString *)commandActionLabel:(NSString *)action {
     return [action stringByReplacingOccurrencesOfString:@"↵  " withString:@""];
 }
 
-// The mission list keeps a hint line in its footer where there is room for it.
-- (BOOL)listHasHint { return !ScreenRegionsMake(self.size, self.contentInsets, 0).compact && self.size.width > 750; }
+- (ScreenRegions)listRegions { return ScreenRegionsMake(self.size, self.contentInsets); }
 
-- (ScreenRegions)listRegions {
-    return ScreenRegionsMake(self.size, self.contentInsets, [self listHasHint] ? [UIInfoBar heightCompact:NO] : 0);
-}
-
-// The story screens' title bar for touch: back to the missions, then the
+// The story screens' title bar: back to the missions, then the
 // previous page and the action in the top-right corner, with the mission's
 // name between them.
-- (TitleBar *)storyBar:(NSString *)action rects:(FooterButtons *)rects {
-    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets, 0);
+- (TitleBar *)storyBar:(NSString *)action rects:(NavigationButtons *)rects {
+    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets);
     BOOL compact = regions.compact;
-    UIBarAction *back = [self barAction:L10n(@"story.missions") input:InputActionBack];
-    UIBarAction *confirm = action ? [self barAction:[self footerActionLabel:action] input:InputActionConfirm] : nil;
-    UIBarAction *previous = [self barAction:L10n(@"story.previous") input:InputActionLeft];
+    UIBarAction *back = [self barAction:L10n(@"story.missions") icon:UICommandMissions input:InputActionBack];
+    UIBarAction *confirm = action ? [self barAction:[self commandActionLabel:action] icon:_mode==ModeBriefing ? ([self hasNextBriefingPage] ? UICommandSkip : UICommandLaunch) : (_success ? UICommandNext : UICommandReplay) input:InputActionConfirm] : nil;
+    UIBarAction *previous = [self barAction:L10n(@"story.previous") icon:UICommandPrevious input:InputActionLeft];
     BOOL hasPrevious = _mode == ModeBriefing ? _page > 0 : _debriefBeat > 0;
     NSMutableArray *actions = [NSMutableArray array];
     if (confirm) [actions addObject:confirm];
@@ -910,7 +904,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:compact back:back
         title:CampaignMissionAt(_index).title.uppercaseString
         kicker:L10nFormat(@"briefing.kicker", (unsigned long)_index + 1) actions:actions];
-    FooterButtons b = { .back = [bar rectForAction:back], .confirm = [bar rectForAction:confirm],
+    NavigationButtons b = { .back = [bar rectForAction:back], .confirm = [bar rectForAction:confirm],
                         .previous = [bar rectForAction:previous] };
     if (rects) *rects = b;
     return bar;
@@ -989,11 +983,10 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     for (SKNode *node in _root.children)
         if (node != _portraitLayer) [node removeFromParent];
     [_hover reset];
-    _footerNodes = [NSMutableArray array];
+    _navigationNodes = [NSMutableArray array];
     _bar = nil;
-    _infoBar = nil;
     _barInput = 0;
-    _buttons = (FooterButtons){0};
+    _buttons = (NavigationButtons){0};
     _grid = (MissionGrid){0};
     _map = nil;
     _backdropRoom = nil;
@@ -1131,8 +1124,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         if (CGRectGetMaxY(selected) + _scrollOffset > CGRectGetMaxY(_grid.rows))
             [self scrollBy:CGRectGetMaxY(_grid.rows) - CGRectGetMaxY(selected) - _scrollOffset];
     }
-    NSString *hint = L10n(TARGET_OS_IOS ? @"missions.hint_touch" : @"missions.hint");
-    [self footer:hint action:_index < unlocked ? L10n(@"missions.briefing") : nil];
+    [self navigationAction:_index < unlocked ? L10n(@"missions.briefing") : nil];
 }
 
 - (void)revealPreviewTitle:(SKLabelNode *)title location:(SKLabelNode *)location text:(SKLabelNode *)text
@@ -1143,12 +1135,12 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     if (objectives) UIMotionSlideIn(objectives, CGVectorMake(0, 8), MIN(typed, t + 0.45), 0.25);
 }
 
-- (void)footer:(NSString *)text action:(NSString *)action {
-    [self buildFooter:text action:action];
-    SKNode *confirm = !action ? nil : _bar ? _bar.action : _infoBar.action;
+- (void)navigationAction:(NSString *)action {
+    [self buildNavigation:action];
+    SKNode *confirm = action ? _bar.action : nil;
     if ([self intro]) {
         NSUInteger i = 0;
-        for (SKNode *node in _footerNodes) {
+        for (SKNode *node in _navigationNodes) {
             if ([node isKindOfClass:SKLabelNode.class]) UIMotionFlickerIn(node, 0.45);
             else if (node == _bar) {
                 [_bar revealAfter:0.18 + 0.05 * i];
@@ -1156,7 +1148,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
             } else UIMotionSlideIn(node, CGVectorMake(0, -44), 0.18 + 0.05 * i++, 0.32);
         }
     } else if ([self paging] && action && _shown.action && ![action isEqualToString:_shown.action] && confirm) {
-        // The footer action changed: the button re-strikes.
+        // The title-bar action changed: the button re-strikes.
         for (SKNode *child in confirm.children)
             if ([child isKindOfClass:SKLabelNode.class]) UIMotionDecode((SKLabelNode *)child, 0, 0.3);
         UIMotionFlickerIn(confirm, 0);
@@ -1164,48 +1156,32 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     _shown.action = action;
 }
 
-- (SKNode *)footerAdd:(SKNode *)node {
-    node.zPosition = FooterDepth;
+- (SKNode *)navigationAdd:(SKNode *)node {
+    node.zPosition = NavigationDepth;
     [_root addChild:node];
-    [_footerNodes addObject:node];
+    [_navigationNodes addObject:node];
     return node;
 }
 
-- (void)footerBar:(TitleBar *)bar {
+- (void)navigationBar:(TitleBar *)bar {
     _bar = bar;
-    [self footerAdd:bar];
+    [self navigationAdd:bar];
     [bar registerHover:_hover];
 }
 
-- (void)buildFooter:(NSString *)text action:(NSString *)action {
-    BriefingInsets safe = self.contentInsets;
-    BOOL console = [self illustrated];
+- (void)buildNavigation:(NSString *)action {
     if (_mode == ModeList) {
         ScreenRegions regions = [self listRegions];
-        UIBarAction *back = [self barAction:L10n(@"missions.main_menu") input:InputActionBack];
-        UIBarAction *confirm = action ? [self barAction:action input:InputActionConfirm] : nil;
+        UIBarAction *back = [self barAction:L10n(@"missions.main_menu") icon:UICommandHome input:InputActionBack];
+        UIBarAction *confirm = action ? [self barAction:action icon:UICommandNext input:InputActionConfirm] : nil;
         TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:regions.compact back:back
             title:L10n(@"missions.title") kicker:L10n(@"missions.kicker") actions:confirm ? @[confirm] : @[]];
         _buttons.back = [bar rectForAction:back];
         _buttons.confirm = [bar rectForAction:confirm];
-        [self footerBar:bar];
-        if (!CGRectIsEmpty(regions.footer)) {
-            _infoBar = [[UIInfoBar alloc] initWithRegion:regions.footer compact:regions.compact console:NO info:text action:nil];
-            [self footerAdd:_infoBar];
-        }
+        [self navigationBar:bar];
         return;
     }
-    if (self.touchNavigationEnabled || [self compactStoryLayout]) {
-        [self footerBar:[self storyBar:action rects:&_buttons]];
-        return;
-    }
-    BOOL compact = ScreenRegionsMake(self.size, safe, 0).compact;
-    ScreenRegions regions = ScreenRegionsMake(self.size, safe, [UIInfoBar heightCompact:compact]);
-    UIBarAction *confirm = action ? [self barAction:action input:InputActionConfirm] : nil;
-    _infoBar = [[UIInfoBar alloc] initWithRegion:regions.footer compact:compact console:console info:text action:confirm];
-    [self footerAdd:_infoBar];
-    [_infoBar registerHover:_hover];
-    _buttons.confirm = _infoBar.actionRect;
+    [self navigationBar:[self storyBar:action rects:&_buttons]];
 }
 
 #pragma mark - Briefing
@@ -1323,7 +1299,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
 - (CGRect)portraitArea:(CGRect)area {
     // Keep faces inside the usable landscape width, while the illustration
-    // can still extend behind the bottom caption and footer.
+    // can still extend behind the bottom caption.
     BriefingInsets safe = self.contentInsets;
     // On a phone the outer shoulder may pass under the notch so the figure can
     // grow without its face crowding the monitor.
@@ -1491,11 +1467,8 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     BOOL phone = compact && !narrow;
     CGFloat textSize = phone ? 19 : MIN(24, MAX(14, size.width / 60));
     CGFloat minTextSize = phone ? 15 : 12;
-    // Touch screens navigate from a bar along the top, which leaves the bottom
-    // to the caption; desktop keeps its hint rail along the bottom.
-    BOOL topBar = self.touchNavigationEnabled || compact;
-    TitleBar *bar = topBar ? [self storyBar:action rects:NULL] : nil;
-    CGFloat floor = self.contentInsets.bottom + (topBar ? (compact ? 10 : 16) : 70);
+    TitleBar *bar = [self storyBar:action rects:NULL];
+    CGFloat floor = self.contentInsets.bottom + (compact ? 10 : 16);
 
     // The monitor clears the whole bar, not just today's controls, so it stays
     // put when PREV appears after the first page.
@@ -1552,7 +1525,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     CGFloat laneLeft = CGRectGetMinX(screen), laneRight = CGRectGetMaxX(screen);
     const CGFloat captionPadding = [self captionHeader] + (phone ? 8 : 12);
     CGFloat tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
-    // Leave a gap below the monitor while keeping the caption above the footer.
+    // Leave a gap below the monitor while keeping the caption inside the safe area.
     CGFloat captionTop = CGRectGetMinY(screen) + (paintedBoard ? 0 : 3) - CaptionDrop;
     if (!narrow) {
         CGFloat portraitHeight = MIN(CGRectGetHeight(speakerArea), CGRectGetWidth(speakerArea) / MaxPortraitAspect);
@@ -1587,7 +1560,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     if (phone) captionLeft = (size.width - captionWidth) / 2;
     [self addCaption:line inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
              fontSize:textSize speakerOnRight:playerSpeaking];
-    [self footer:L10n(_mode == ModeBriefing ? @"briefing.hint" : @"debrief.conversation_hint") action:action];
+    [self navigationAction:action];
 }
 
 // titled: the monitor heads its readouts with the mission's name; screens with
@@ -1777,9 +1750,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         return;
     }
 
-    BOOL topBar = self.touchNavigationEnabled;
-    BOOL compact = ScreenRegionsMake(s, safe, 0).compact;
-    ScreenRegions regions = ScreenRegionsMake(s, safe, topBar ? 0 : [UIInfoBar heightCompact:compact]);
+    ScreenRegions regions = ScreenRegionsMake(s, safe);
     CGFloat top = MIN(s.height - safe.top - MIN(95, s.height * 0.15), CGRectGetMaxY(regions.body));
     SKLabelNode *title = Text(MIN(36, MAX(20, s.width / 30)),
                               _success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1),
@@ -1826,12 +1797,14 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         NSTimeInterval typed = UIMotionTypeOn(summary, 0.5, 160);
         UIMotionTypeOn(results, MAX(0.7, typed - 0.2), 200);
     }
-    [self footer:L10n(@"debrief.hint")
-           action:conversation.count ? L10n(@"debrief.continue_story") : (_success ? next : L10n(@"debrief.retry"))];
+    [self navigationAction:conversation.count ? L10n(@"debrief.continue_story") : (_success ? next : L10n(@"debrief.retry"))];
 }
 
 #pragma mark - Input & animation
 
+- (void)pointerDown:(CGPoint)point { [_bar beginAt:PointMultiply(point,self.size)]; }
+- (void)pointerUp:(CGPoint)point { [_bar endPress]; }
+- (void)pointerCancel { [_bar endPress]; }
 - (void)pointerHover:(CGPoint)point { [_hover queuePointAtFraction:point]; }
 
 - (void)pointerClick:(CGPoint)point { _queuedClick = BoxPoint(point); }
@@ -1881,7 +1854,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     if (click) {
         CGPoint point = PointMultiply(UnboxPoint(click), self.size);
         _barInput = 0;
-        BOOL barHit = [_bar activateAt:point] || [_infoBar activateAt:point];
+        BOOL barHit = [_bar activateAt:point];
         if (_barInput & InputActionConfirm) {
             if (_mode == ModeBriefing && [self hasNextBriefingPage]) {
                 _page = _pages.count - 1;
@@ -1984,9 +1957,9 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     _oldCaption = CaptionTake(&_caption);
     NSTimeInterval caption = [self closeOldCaption];
     NSUInteger i = 0;
-    for (SKNode *node in _footerNodes) {
-        // The navigation bar leaves upward, the footer downward.
-        CGFloat away = node == _bar ? 40 : -40;
+    for (SKNode *node in _navigationNodes) {
+        // Navigation leaves through the top edge.
+        CGFloat away = 40;
         [node runAction:UIAfter(i++ * 0.03, [SKAction group:@[
             UIEased([SKAction moveByX:0 y:away duration:0.2], UICurveIn), [SKAction fadeOutWithDuration:0.2],
         ]])];

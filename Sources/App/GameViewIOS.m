@@ -64,6 +64,9 @@
     [super setOverlaySKScene:scene];
     [self updateFlightControls];
     [self updateOverlayInsets];
+    BOOL keepAwake=[scene isKindOfClass:HUD.class] || [scene isKindOfClass:LANGame.class] || [scene isKindOfClass:ServerBrowser.class];
+    // Hosting and discovery need foreground frames even while nobody taps.
+    dispatch_async(dispatch_get_main_queue(), ^{ UIApplication.sharedApplication.idleTimerDisabled=keepAwake; });
 }
 
 - (void)updateOverlayInsets { [self applySafeAreaTo:self.overlaySKScene]; }

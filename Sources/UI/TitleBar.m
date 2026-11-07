@@ -3,7 +3,7 @@
 
 // MARK: - ScreenRegions
 
-ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHeight) {
+ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe) {
     ScreenRegions r = { .compact = MIN(size.width, size.height) <= 500 };
     // Content keeps clear of the side insets; the bars' controls may reach
     // halfway into them, since phones keep their sensor housing at mid-height.
@@ -11,26 +11,49 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
     CGFloat headerTop = size.height - safe.top - (r.compact ? 10 : 16);
     r.header = RectFromEdges(edge, headerTop - [TitleBar heightCompact:r.compact], size.width - edge, headerTop);
     CGFloat bottom = safe.bottom + (r.compact ? 8 : 16);
-    if (footerHeight > 0) r.footer = RectFromEdges(side, bottom, size.width - side, bottom + footerHeight);
     CGFloat bodyTop = CGRectGetMinY(r.header) - 12;
-    CGFloat bodyBottom = footerHeight > 0 ? CGRectGetMaxY(r.footer) + 12 : bottom;
+    CGFloat bodyBottom = bottom;
     r.body = RectFromEdges(side, bodyBottom, size.width - side, MAX(bodyBottom, bodyTop));
-    r.bodyToEdge = footerHeight > 0 || !r.compact ? r.body : RectFromEdges(side, 0, size.width - side, CGRectGetMaxY(r.body));
+    r.bodyToEdge = !r.compact ? r.body : RectFromEdges(side, 0, size.width - side, CGRectGetMaxY(r.body));
     return r;
 }
 
 // MARK: - TitleBar
 
+// Centers of the authored glyph ink inside each atlas tile. Keeping these
+// anchors per state aligns the artwork without changing or recoloring it.
+static const CGPoint CommandInkCenters[UICommandStateCount][UICommandIconCount] = {
+    {{0.5772, 0.4400}, {0.5882, 0.4400}, {0.5791, 0.4367}, {0.5534, 0.4333}, {0.5377, 0.4400}, {0.5286, 0.4400}, {0.5062, 0.4100}, {0.4838, 0.4233}, {0.4981, 0.4400}, {0.4990, 0.4500}, {0.4800, 0.4300}, {0.4342, 0.4333}, {0.4152, 0.4300}, {0.4194, 0.4200}},
+    {{0.5739, 0.4367}, {0.5882, 0.4367}, {0.5791, 0.4333}, {0.5534, 0.4300}, {0.5410, 0.4367}, {0.5286, 0.4367}, {0.5062, 0.4067}, {0.4838, 0.4200}, {0.4981, 0.4333}, {0.4990, 0.4433}, {0.4800, 0.4300}, {0.4276, 0.4300}, {0.4152, 0.4233}, {0.4194, 0.4100}},
+    {{0.5806, 0.4767}, {0.5882, 0.4733}, {0.5791, 0.4767}, {0.5534, 0.4700}, {0.5377, 0.4767}, {0.5319, 0.4700}, {0.5095, 0.4467}, {0.4838, 0.4500}, {0.5014, 0.4700}, {0.4990, 0.4800}, {0.4800, 0.4633}, {0.4309, 0.4667}, {0.4185, 0.4567}, {0.4194, 0.4467}},
+    {{0.5705, 0.5033}, {0.5882, 0.4933}, {0.5791, 0.4933}, {0.5534, 0.4900}, {0.5410, 0.4967}, {0.5286, 0.4967}, {0.5062, 0.4667}, {0.4838, 0.4767}, {0.5048, 0.4967}, {0.4990, 0.5000}, {0.4800, 0.4867}, {0.4309, 0.4867}, {0.4185, 0.4800}, {0.4194, 0.4733}},
+    {{0.5705, 0.5233}, {0.5882, 0.5233}, {0.5791, 0.5233}, {0.5534, 0.5100}, {0.5410, 0.5200}, {0.5286, 0.5200}, {0.5062, 0.4900}, {0.4838, 0.5067}, {0.5014, 0.5233}, {0.4990, 0.5233}, {0.4766, 0.5167}, {0.4342, 0.5133}, {0.4185, 0.5067}, {0.4194, 0.4967}}
+};
+
+SKTexture *UICommandTexture(UICommandIcon icon, UICommandState state) {
+    static SKTexture *atlas;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ atlas=[SKTexture textureWithImageNamed:@"UI/Icons/TitleBar.png"]; });
+    icon=MAX(0,MIN(UICommandIconCount-1,icon)); state=MAX(0,MIN(UICommandStateCount-1,state));
+    CGRect tile=CGRectMake((CGFloat)icon/UICommandIconCount,(CGFloat)(UICommandStateCount-1-state)/UICommandStateCount,
+                           1.0/UICommandIconCount,1.0/UICommandStateCount);
+    return [SKTexture textureWithRect:tile inTexture:atlas];
+}
+
 @interface UIBarAction ()
 @property (nonatomic, copy) NSString *title;
+@property (nonatomic) UICommandIcon icon;
 @property (nonatomic) UIRGB accent;
 @property (nonatomic, copy) void (^handler)(void);
 @end
 
 @implementation UIBarAction
 + (instancetype)title:(NSString *)title accent:(UIRGB)accent handler:(void (^)(void))handler {
+    return [self title:title icon:UICommandNext accent:accent handler:handler];
+}
++ (instancetype)title:(NSString *)title icon:(UICommandIcon)icon accent:(UIRGB)accent handler:(void (^)(void))handler {
     UIBarAction *action = [self new];
-    action.title = title; action.accent = accent; action.handler = handler; action.enabled = YES;
+    action.title = title; action.icon=icon; action.accent = accent; action.handler = handler; action.enabled = YES;
     return action;
 }
 @end
@@ -41,6 +64,8 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
 @property (nonatomic) CGRect rect;
 @property (nonatomic) UIBarAction *item;
 @property (nonatomic) id outline;
+@property (nonatomic) SKSpriteNode *icon;
+@property (nonatomic) BOOL hovered, pressed;
 @end
 @implementation UIBarControl
 @end
@@ -54,7 +79,7 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
     CGFloat _actionWidthLimit;
 }
 
-+ (CGFloat)heightCompact:(BOOL)compact { return compact ? 52 : 44; }
++ (CGFloat)heightCompact:(BOOL)compact { return compact ? 68 : 44; }
 
 - (instancetype)initWithHeader:(CGRect)header compact:(BOOL)compact back:(UIBarAction *)back
                          title:(NSString *)title kicker:(NSString *)kicker actions:(NSArray<UIBarAction *> *)actions {
@@ -105,32 +130,78 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
     return RectFromEdges(left, CGRectGetMinY(_row), MAX(left, right), CGRectGetMaxY(_row));
 }
 
-- (void)keep:(SKShapeNode *)node rect:(CGRect)rect item:(UIBarAction *)item outline:(CGPathRef)outline {
+- (UICommandState)iconState:(UIBarControl *)entry {
+    if (!entry.item.enabled) return UICommandDisabled;
+    if (entry.pressed) return UICommandPressed;
+    if (entry.hovered) return UICommandHover;
+    return entry.item.iconState;
+}
+- (void)updateIcon:(UIBarControl *)entry {
+    UICommandState state = [self iconState:entry];
+    entry.icon.texture = UICommandTexture(entry.item.icon, state);
+    entry.icon.anchorPoint = CommandInkCenters[state][entry.item.icon];
+}
+- (UIBarControl *)keep:(SKShapeNode *)node rect:(CGRect)rect item:(UIBarAction *)item outline:(CGPathRef)outline back:(BOOL)back {
     UIBarControl *entry = [UIBarControl new];
     entry.node = node; entry.rect = rect; entry.item = item; entry.outline = (__bridge id)outline;
-    node.alpha = item.enabled ? 1 : 0.35;
+    if (_compact) {
+        CGPathRef hit = CGPathCreateWithRect(rect, NULL);
+        entry.outline = (__bridge id)hit; CGPathRelease(hit);
+        node.strokeColor = SKColor.clearColor;
+        node.fillColor = SKColor.clearColor;
+    }
+    node.name=item.title;
+    SKLabelNode *label=(SKLabelNode *)node.children.firstObject;
+    label.text=_compact ? @"" : item.title;
+    label.hidden=_compact;
+    label.horizontalAlignmentMode=SKLabelHorizontalAlignmentModeLeft;
+    CGFloat iconSize=_compact ? 54 : 28, gap=_compact ? 0 : 8;
+    CGRect inner=RectInsetEdges(rect,back ? UIBackControlTip(rect) : CGRectGetHeight(rect)*UISlant,0,12,0);
+    if (_compact) inner=rect;
+    UIFitControlLabel(label,MAX(1,CGRectGetWidth(inner)-iconSize-gap));
+    CGFloat group=iconSize+gap+CGRectGetWidth(label.frame);
+    CGFloat left=CGRectGetMidX(inner)-group/2;
+    entry.icon=[SKSpriteNode spriteNodeWithTexture:UICommandTexture(item.icon,[self iconState:entry])];
+    entry.icon.size=CGSizeMake(iconSize,iconSize);
+    [self updateIcon:entry];
+    entry.icon.position=_compact ? RectCenter(rect) : CGPointMake(left+iconSize/2,CGRectGetMidY(rect));
+    [node addChild:entry.icon];
+    label.position=CGPointMake(left+iconSize+gap,CGRectGetMidY(rect));
+    UICenterLabelVertically(label,CGRectGetMidY(rect));
+    if (!item.enabled) {
+        if (!_compact) node.strokeColor=[node.strokeColor colorWithAlphaComponent:0.35];
+        label.alpha=0.35;
+    }
     [self addChild:node]; [_entries addObject:entry];
+    return entry;
 }
+- (void)beginAt:(CGPoint)point {
+    for (UIBarControl *entry in _entries) {
+        entry.pressed=entry.item.enabled && CGPathContainsPoint((__bridge CGPathRef)entry.outline,NULL,point,NO);
+        [self updateIcon:entry];
+    }
+}
+- (void)endPress { for (UIBarControl *entry in _entries) { entry.pressed=NO; [self updateIcon:entry]; } }
 
 - (void)addBack:(UIBarAction *)item {
-    CGFloat width = MIN(CGRectGetWidth(_row) * 0.4, UIBackControlWidth(item.title, _height, _fontSize));
+    CGFloat width = _compact ? _height+8 : MIN(CGRectGetWidth(_row) * 0.4, UIBackControlWidth(item.title, _height, _fontSize)+36);
     CGRect rect = CGRectMake(CGRectGetMinX(_row), CGRectGetMinY(_row), width, _height);
     _backRight = CGRectGetMaxX(rect);
     CGPathRef outline = UICreateBackControlPath(rect);
-    [self keep:UIBackControl(rect, item.title, item.accent, _fontSize) rect:rect item:item outline:outline];
+    [self keep:UIBackControl(rect, @"", item.accent, _fontSize) rect:rect item:item outline:outline back:YES];
     CGPathRelease(outline);
 }
 
 - (void)addAction:(UIBarAction *)item {
-    CGFloat label = UIButtonLabel(item.title, _fontSize, CGPointZero).frame.size.width + _height * UISlant + 32;
-    CGFloat width = MIN(_actionWidthLimit, MAX(_compact ? 132 : 144, label));
+    CGFloat label = UIButtonLabel(item.title, _fontSize, CGPointZero).frame.size.width + _height * UISlant + 68;
+    CGFloat width = _compact ? _height+4 : MIN(_actionWidthLimit, MAX(144, label));
     // Neighboring slanted edges nest while retaining a visible gutter.
     CGFloat right = !_action ? CGRectGetMaxX(_row) : _actionsLeft + MIN(_height * UISlant, width * 0.25) - 6;
     CGRect rect = CGRectMake(right - width, CGRectGetMinY(_row), width, _height);
     _actionsLeft = CGRectGetMinX(rect);
-    SKShapeNode *button = UIActionButtonSized(rect, item.title, item.accent, _fontSize);
+    SKShapeNode *button = UIActionButtonSized(rect, @"", item.accent, _fontSize);
     CGPathRef outline = UICreateSkewedPath(rect);
-    [self keep:button rect:rect item:item outline:outline];
+    [self keep:button rect:rect item:item outline:outline back:NO];
     CGPathRelease(outline);
     if (!_action) _action = button;
 }
@@ -138,38 +209,52 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
 - (void)setTitle:(NSString *)title kicker:(NSString *)kicker {
     [_titleLabel removeFromParent];
     [_kickerLabel removeFromParent];
+    _titleLabel = nil; _kickerLabel = nil;
     CGRect lane = self.lane;
     CGFloat titleSize = _compact ? 20 : 26, kickerSize = 14, gap = 3;
     SKLabelNode *(^line)(NSString *, CGFloat, CGFloat) = ^SKLabelNode *(NSString *text, CGFloat size, CGFloat opacity) {
         SKLabelNode *label = UIInterfaceLabel(size, UIColorWithOpacity(UIInk, opacity), SKLabelHorizontalAlignmentModeLeft,
-                                              SKLabelVerticalAlignmentModeTop);
+                                              SKLabelVerticalAlignmentModeCenter);
         label.text = text;
         label.numberOfLines = 1;
         label.preferredMaxLayoutWidth = MAX(1, lane.size.width);
         label.lineBreakMode = NSLineBreakByTruncatingTail;
         return label;
     };
-    // Kicker over title, the pair centred on the bar.
-    CGFloat stack = titleSize + (kicker.length ? kickerSize + gap : 0);
-    CGFloat top = CGRectGetMidY(_row) + stack / 2;
     if (kicker.length) {
         _kickerLabel = line(kicker, kickerSize, 0.65);
-        _kickerLabel.position = CGPointMake(CGRectGetMinX(lane), top);
         [self addChild:_kickerLabel];
-        top -= kickerSize + gap;
     }
     _titleLabel = line(title, titleSize, 1);
     _titleLabel.fontName = UIInterfaceBoldFont;
     UIFitControlLabel(_titleLabel, CGRectGetWidth(lane));
     if (_kickerLabel) UIFitControlLabel(_kickerLabel, CGRectGetWidth(lane));
-    _titleLabel.position = CGPointMake(CGRectGetMinX(lane), top);
+    // Center the rendered text block, including the kicker, on the same axis
+    // as the command glyphs. Font sizes do not describe their visible bounds.
+    CGFloat titleHeight = CGRectGetHeight(_titleLabel.frame);
+    CGFloat kickerHeight = _kickerLabel ? CGRectGetHeight(_kickerLabel.frame) : 0;
+    CGFloat stack = titleHeight + (_kickerLabel ? kickerHeight + gap : 0);
+    CGFloat bottom = CGRectGetMidY(_row) - stack/2;
+    _titleLabel.position = CGPointMake(CGRectGetMinX(lane), 0);
+    UICenterLabelVertically(_titleLabel, bottom + titleHeight/2);
+    if (_kickerLabel) {
+        _kickerLabel.position = CGPointMake(CGRectGetMinX(lane), 0);
+        UICenterLabelVertically(_kickerLabel, bottom + titleHeight + gap + kickerHeight/2);
+    }
     [self addChild:_titleLabel];
 }
 
 - (void)registerHover:(UIHover *)hover {
     for (UIBarControl *entry in _entries) {
         if (!entry.item.enabled) continue;
-        [hover addButton:entry.node rect:entry.rect accent:entry.item.accent outline:(__bridge CGPathRef)entry.outline];
+        __weak TitleBar *owner=self;
+        __weak UIBarControl *control=entry;
+        // Compact commands use only their authored glyph states for feedback.
+        CGPathRef empty = _compact ? CGPathCreateMutable() : NULL;
+        [hover addButton:entry.node rect:entry.rect accent:entry.item.accent outline:empty ?: (__bridge CGPathRef)entry.outline hoverChanged:^(BOOL hovered) {
+            UIBarControl *live=control; live.hovered=hovered; [owner updateIcon:live];
+        }];
+        if (empty) CGPathRelease(empty);
     }
 }
 
@@ -182,48 +267,4 @@ ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe, CGFloat footerHe
     if (_titleLabel) UIMotionDecode(_titleLabel, delay + 0.07, 0.45);
 }
 
-@end
-
-// MARK: - UIInfoBar
-
-@implementation UIInfoBar {
-    TitleBar *_controls;
-}
-+ (CGFloat)heightCompact:(BOOL)compact { return [TitleBar heightCompact:compact] + 16; }
-- (instancetype)initWithRegion:(CGRect)region compact:(BOOL)compact console:(BOOL)console
-                          info:(NSString *)info action:(UIBarAction *)action {
-    if ((self = [super init])) {
-        _row = region;
-        [self addChild:UIControlRail(region, console)];
-        CGRect inner = CGRectInset(region, 16, 8);
-        _controls = [[TitleBar alloc] initWithHeader:inner compact:compact back:nil title:nil kicker:nil
-                                           actions:action ? @[action] : @[]];
-        [self addChild:_controls];
-        _actionRect = [_controls rectForAction:action];
-        _action = _controls.action;
-        CGRect lane = _controls.lane;
-        // Keep the hint inside the rail's slanted leading edge.
-        lane = RectInsetEdges(lane, CGRectGetHeight(region) * UISlant, 0, 0, 0);
-        _infoLabel = UIInterfaceLabel(16, UIColorWithOpacity(UIInk, console ? 1 : 0.85),
-            SKLabelHorizontalAlignmentModeLeft, SKLabelVerticalAlignmentModeCenter);
-        _infoLabel.text = info;
-        _infoLabel.numberOfLines = 0;
-        _infoLabel.preferredMaxLayoutWidth = MAX(1, CGRectGetWidth(lane));
-        _infoLabel.lineBreakMode = NSLineBreakByTruncatingTail;
-        // Fit paragraphs explicitly as well: SpriteKit can silently clip the
-        // final line instead of drawing an ellipsis with numberOfLines = 2.
-        NSString *text = info ?: @"";
-        while (CGRectGetHeight(_infoLabel.frame) > CGRectGetHeight(inner) && text.length) {
-            NSRange last = [text rangeOfComposedCharacterSequenceAtIndex:text.length - 1];
-            text = [text substringToIndex:last.location];
-            _infoLabel.text = text.length ? [text stringByAppendingString:@"…"] : @"";
-        }
-        _infoLabel.position = CGPointMake(CGRectGetMinX(lane), CGRectGetMidY(region));
-        UICenterLabelVertically(_infoLabel, CGRectGetMidY(region));
-        [self addChild:_infoLabel];
-    }
-    return self;
-}
-- (BOOL)activateAt:(CGPoint)point { return [_controls activateAt:point]; }
-- (void)registerHover:(UIHover *)hover { [_controls registerHover:hover]; }
 @end

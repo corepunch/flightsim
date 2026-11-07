@@ -37,6 +37,7 @@
 				"GCC_OPTIMIZATION_LEVEL" = "0";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf";
 				"ONLY_ACTIVE_ARCH" = "YES";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.corepunch.spacefight";
 			};
 		};
 		"2C51B24F1BD0E37CCD3A85CD" = {
@@ -72,6 +73,7 @@
 				"GCC_OPTIMIZATION_LEVEL" = "2";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
 				"ONLY_ACTIVE_ARCH" = "NO";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.corepunch.spacefight";
 			};
 		};
 		"4F9780D05AFB226691EE6E8A" = {
@@ -198,7 +200,8 @@
 				"SDKROOT" = "macosx";
 				"SUPPORTED_PLATFORMS" = "macosx";
 				"MACOSX_DEPLOYMENT_TARGET" = "13.0";
-				"PRODUCT_BUNDLE_IDENTIFIER" = "com.igor.spacefight";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.corepunch.spacefight";
+				"CODE_SIGN_ENTITLEMENTS" = "$(SRCROOT)/Resources/KestrelFrontier-macOS.entitlements";
 				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
 				"OTHER_LDFLAGS" = (
 					"$(inherited)",
@@ -247,7 +250,8 @@
 				"SDKROOT" = "macosx";
 				"SUPPORTED_PLATFORMS" = "macosx";
 				"MACOSX_DEPLOYMENT_TARGET" = "13.0";
-				"PRODUCT_BUNDLE_IDENTIFIER" = "com.igor.spacefight";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.corepunch.spacefight";
+				"CODE_SIGN_ENTITLEMENTS" = "$(SRCROOT)/Resources/KestrelFrontier-macOS.entitlements";
 				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
 				"OTHER_LDFLAGS" = (
 					"$(inherited)",
@@ -627,6 +631,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"E3F6E01AC37D26D908240C37" = {
+			"isa" = "PBXFileReference";
+			"path" = "LANOptions.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"AB66981B4A5BEED8CA66F2B4" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E3F6E01AC37D26D908240C37";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"D4E2E7B31CAC6CA19D4B832B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E3F6E01AC37D26D908240C37";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"E27E5DBBD76619080648F92C" = {
 			"isa" = "PBXFileReference";
 			"path" = "Localization.m";
@@ -654,6 +678,7 @@
 				"2C6355762D27A812CAEEBC59",
 				"9022A9FD591163A963A731FB",
 				"D427B5C9D948DD3CC465B308",
+				"E3F6E01AC37D26D908240C37",
 				"E27E5DBBD76619080648F92C",
 			);
 			"sourceTree" = "<group>";
@@ -1330,6 +1355,24 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "532788FE1E8977261C7A5882";
 		};
+		"CF76F53B2791C0E284C909A9" = {
+			"isa" = "PBXFileReference";
+			"path" = "LANSettings.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"715FB79132E1D5143D023AA3" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "CF76F53B2791C0E284C909A9";
+		};
+		"2A0F308A2F0838BFF2224C25" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "CF76F53B2791C0E284C909A9";
+		};
+		"151FF911A91056046DA26E80" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "CF76F53B2791C0E284C909A9";
+		};
 		"2038708BEF0950E0226888A9" = {
 			"isa" = "PBXFileReference";
 			"path" = "Shared.h";
@@ -1360,6 +1403,7 @@
 			"children" = (
 				"40F193704F3D6B4273923770",
 				"532788FE1E8977261C7A5882",
+				"CF76F53B2791C0E284C909A9",
 				"2038708BEF0950E0226888A9",
 				"2ACB1B6BE7DACE217AF29CB6",
 			);
@@ -1666,6 +1710,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"9797B178B7E6457C7D1BA12C" = {
+			"isa" = "PBXFileReference";
+			"path" = "UIList.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"41057633AA4B290221678617" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "9797B178B7E6457C7D1BA12C";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"0BF668D4129452A7FAC4D5CB" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "9797B178B7E6457C7D1BA12C";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"A0B7717091DC976B7BD96039" = {
 			"isa" = "PBXFileReference";
 			"path" = "UIMotion.m";
@@ -1764,6 +1828,7 @@
 				"D54896152F411DCEC67CF9EB",
 				"84B3D45B9B081490849BD404",
 				"D4C91D096E021A45E3923A87",
+				"9797B178B7E6457C7D1BA12C",
 				"A0B7717091DC976B7BD96039",
 				"0031E18773F7BA6D5077AB1B",
 				"ABF8A704D28EA8A017362EDC",
@@ -1985,6 +2050,7 @@
 				"56695B04F0902A5956783502",
 				"E3BAFB07624F6577D79D98EE",
 				"6B839E6B2579ADDFAE67D51F",
+				"AB66981B4A5BEED8CA66F2B4",
 				"4009EE748AD594AC7F7D6779",
 				"93B9BBB10F670BF783011C21",
 				"52008117FAF5E634CBB78072",
@@ -2013,6 +2079,7 @@
 				"EBA6D3C936ECFD0E50878A81",
 				"C5EB970F6F9D6A01AA21691D",
 				"A4F63592999AB8436389240D",
+				"715FB79132E1D5143D023AA3",
 				"419640121AD728914FAEB565",
 				"F31AB976A1B2AB41A476E04E",
 				"940C2B92CEBF3E1A1612782D",
@@ -2028,6 +2095,7 @@
 				"47DFC225FA8CFD11163788D7",
 				"BCC69BE9FEF8C1AD7EB979ED",
 				"B53619A32BAACC04DC0947BC",
+				"41057633AA4B290221678617",
 				"53A704EC357CA4AEA1E5345C",
 				"F365BC11D11F67498EF09307",
 				"AB84E9F172D7CC4CD5F00B38",
@@ -2054,6 +2122,7 @@
 				"74FC34BE044DB1189C1D444F",
 				"7E9F3289797ABF52E16F99A5",
 				"CEF700888D27BD6EE485C46F",
+				"D4E2E7B31CAC6CA19D4B832B",
 				"162E208C5216735E6513B19A",
 				"FA4434847FAD62E240C9BA02",
 				"B3D25F6BA3BB680BCAF776DD",
@@ -2079,6 +2148,7 @@
 				"4D47162F592440C78EC2525E",
 				"975B61AC13A2C20C93310039",
 				"1AF6241ECF326BAA931012EA",
+				"2A0F308A2F0838BFF2224C25",
 				"DDC0D67AAAA5499A4BEA641A",
 				"63F80E833DC18123E8370997",
 				"779026633E677BC0ED6D61FF",
@@ -2094,6 +2164,7 @@
 				"94880F2D3D5004D0565ADA80",
 				"B1B93A59243A96A2B7DA779E",
 				"331FCC0B7C09A04E4A800032",
+				"0BF668D4129452A7FAC4D5CB",
 				"1987F5077973522EF9E86DE3",
 				"C8395B85D9BA6A172271FD30",
 				"088586AD122F949F4E626565",
@@ -2111,6 +2182,7 @@
 				"3791B8A598B8DA4DC2EEB57A",
 				"3262C3C0E2DD6DE73130369C",
 				"13106E22BB5E4799A7B3BC07",
+				"151FF911A91056046DA26E80",
 				"D1CD86F41330DCE9376E64FD",
 				"DF27D0FDF4D1F41A3FBC1F9E",
 				"83A8897DD976F2FCEE850815",
