@@ -58,6 +58,32 @@ tokens over the wire and expand them on each client.
 - User-facing text goes through `L10n` and `Resources/Strings/<locale>.json`
   (games add theirs in `Games/<name>/Strings/`).
 
+## Placing things on a ship
+
+A ship's attachment points (`guns`, `nozzles`, `cockpitEye`, `propellerHub`) are
+data in `Games/<name>/Data/Ships/<ship>.json`, in **ship space**: metres, origin
+at the model's origin, nose along **-Z**, +Y up, +X to the pilot's right. The
+OBJ is modelled with its nose along +Z; the renderer turns it half a turn about
+Y, so an OBJ vertex (x, y, z) sits at (-x, y, -z) in ship space. A point must
+sit on the mesh: a gun muzzle at the front of a barrel or prong, a nozzle at
+the back of an engine. `Tools/validate_ships.py` (part of the unit checks)
+rejects a gun more than 0.5 m, or a nozzle more than 0.8 m, from a mesh
+vertex. To find a spot, read the mesh's extents, in ship space, with a short
+script over the OBJ's `v` lines (the validator shows the transform), then look
+at it:
+
+```sh
+build/KestrelFrontier.app/Contents/MacOS/KestrelFrontier --preview-ship executioner
+build/DawnPatrol.app/Contents/MacOS/KestrelFrontier --preview-ship se5a DawnPatrol
+```
+
+The preview opens one ship in the studio scene, flying its exhaust through
+idle, full throttle and boost and firing from each gun in turn, with the
+camera circling. **M** shows the attachment points (green guns, orange
+nozzles, white cockpit eye), **Space** holds the camera, **Q** quits. Ships from
+a game that builds on another (`game.json` "base") are previewed from the base
+game's app with the game named as the second argument.
+
 ## House style
 
 **Values, not components.** Treat `CGPoint` as a 2D vector and use the helpers in
@@ -132,5 +158,6 @@ changed and why. Commit only when asked.
 | [STORY.md](STORY.md) | The Kestrel Frontier campaign's story |
 | [TODO.md](TODO.md) | Known gaps |
 | [CREDITS.md](CREDITS.md) | Third-party assets and their licences |
+| [TERRAIN-REFERENCES.md](TERRAIN-REFERENCES.md) | Terrain papers and what shipped flight games published |
 | [Tools/IOS.md](Tools/IOS.md) | Xcode project, iOS builds and devices |
 | [Tools/NETWORK.md](Tools/NETWORK.md) | LAN configuration and manual device testing |

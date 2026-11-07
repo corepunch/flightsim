@@ -1205,6 +1205,19 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"9032307364044338ED22D266" = {
+			"isa" = "PBXFileReference";
+			"path" = "ShipPreview.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"1231CDA57E32C818819FC3E1" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "9032307364044338ED22D266";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"E57F1961077C5380AC980E7F" = {
 			"isa" = "PBXFileReference";
 			"path" = "ShipView.m";
@@ -1298,6 +1311,7 @@
 				"358FCA6A1ECFF95196BC9395",
 				"2EB4A381A384CBA2046C68A0",
 				"D96C15D203EDCEFA454177E9",
+				"9032307364044338ED22D266",
 				"E57F1961077C5380AC980E7F",
 				"1CE4AF0DAA0BED34BA1C9D51",
 				"2B1C4CDCE2BD01D82ADD5ECE",
@@ -2208,6 +2222,7 @@
 				"7489EE6B4A86150E22E5D9AD",
 				"3BAF4C688458894C79A6FE6C",
 				"186438697A22B416E7411AA6",
+				"1231CDA57E32C818819FC3E1",
 				"64375A3C004E4AB200A1E94F",
 				"5F272960EC8CC0CD6A184166",
 				"4851016DD82341A945ADACC8",

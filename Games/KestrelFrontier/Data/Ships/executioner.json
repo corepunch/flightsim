@@ -3,7 +3,7 @@
   "mesh": "Executioner",
   "texture": "Executioner_Blue",
   "radius": 5.0,
-  "guns": [[-4.38, 0.1, -2.5], [4.38, 0.1, -2.5]],
+  "guns": [[-0.93, -0.46, -6.0], [0.93, -0.46, -6.0]],
   "gun": { "speed": 900, "life": 1.6, "energy": 0.035, "recharge": 0.22, "interval": 0.11, "damage": 0.12, "capitalDamage": 0.12 },
   "aiGun": { "interval": 0.22, "damage": 0.09, "capitalDamage": 0.1 },
   "nozzles": [[-0.937, -0.155, 2.85, 0.42], [0.937, -0.155, 2.85, 0.42], [-4.379, 0.161, 3.0, 0.55], [4.379, 0.161, 3.0, 0.55]],

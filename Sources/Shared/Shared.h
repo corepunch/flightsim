@@ -288,8 +288,11 @@ typedef enum {
 
 #pragma mark - Ship definitions
 
-// A flyable ship, from Resources/Ships/<name>.json. Positions are in ship
-// space (forward is -Z, metres). The game registers its model as
+// A flyable ship, from Data/Ships/<name>.json. Positions are in ship space
+// (forward is -Z, metres): guns are the muzzles and nozzles the exhaust
+// outlets, each on the mesh itself (Tools/validate_ships.py checks they are;
+// it also prints a mesh's forward-most points when a gun needs placing). The
+// game registers its model as
 // "ship:<name>"; the client dresses entities with that model from the same
 // definition. Example:
 //

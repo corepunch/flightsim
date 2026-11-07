@@ -79,4 +79,5 @@ if ! "$qa/UnitChecks"; then
 fi
 
 python3 -I Tools/validate_strings.py
+python3 -I Tools/validate_ships.py
 python3 -I Tools/test_story_continuity.py
