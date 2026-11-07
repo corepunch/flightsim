@@ -1,1 +1,1 @@
-space,combat,flight,simulator,dogfight,starfighter,sci-fi,campaign,offline,shooter,trackball
+multiplayer,family,local,wifi,lan,party,dogfight,space,combat,starfighter,sci-fi,campaign,trackball
