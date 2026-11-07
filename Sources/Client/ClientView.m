@@ -336,7 +336,7 @@ static float Ease(float value, float target, float rate, float dt) {
             break;
         case EV_DAMAGE:
             if (e->flags & EVF_SHIELDED) {
-                [_refresh flashShieldOn:e->entity];
+                [_refresh flashShieldOn:e->entity from:e->pos];
             }
             if (e->entity && e->entity == ps->entity) {
                 _damageFlash = 1;

@@ -337,9 +337,10 @@ const GameRules *GRules(void);
 - (GBolt *)fireFrom:(simd_float3)pos velocity:(simd_float3)v direction:(simd_float3)dir speed:(float)speed life:(float)life
                team:(Team)team damage:(float)damage capDamage:(float)capDamage ion:(BOOL)ion owner:(GClient *)owner;
 - (void)muzzleFlash:(GFighter *)s;
-- (void)damageShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake;   // hostile fire: marks the ship attacked
-- (void)harmShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake;     // the same without that (collisions, scripted kills)
-- (void)ionShip:(GFighter *)s amount:(float)amount shake:(float)shake;
+// The source is a world point on the incoming side; use the ship's position for unknown/scripted damage.
+- (void)damageShip:(GFighter *)s amount:(float)amount from:(simd_float3)source by:(GClient *)attacker shake:(float)shake;   // hostile fire: marks the ship attacked
+- (void)harmShip:(GFighter *)s amount:(float)amount from:(simd_float3)source by:(GClient *)attacker shake:(float)shake;     // the same without that (collisions, scripted kills)
+- (void)ionShip:(GFighter *)s amount:(float)amount from:(simd_float3)source shake:(float)shake;
 - (void)updateBolts:(float)dt;
 - (void)updateTorpedoes:(float)dt;
 - (void)updateExplosions;

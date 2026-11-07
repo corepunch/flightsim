@@ -584,7 +584,7 @@ static simd_float3 FormationSlot(LevelFormation f, int i) {
 - (void)missionDestroy:(id<MissionUnit>)unit {
     if ([(id)unit isKindOfClass:GFighter.class]) {
         GFighter *s = (GFighter *)unit;
-        if (s.alive) [self harmShip:s amount:s.shield + s.hull + 1 by:nil shake:0];
+        if (s.alive) [self harmShip:s amount:s.shield + s.hull + 1 from:s.position by:nil shake:0];
     } else if ([(id)unit isKindOfClass:GCapital.class]) {
         GCapital *c = (GCapital *)unit;
         if (c.alive) [self destroyCapital:c];
