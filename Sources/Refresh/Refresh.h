@@ -227,7 +227,7 @@ typedef struct {
 // Debris takes the hull material of `model` when it has one.
 - (void)explosionAt:(simd_float3)position velocity:(simd_float3)velocity model:(RefModel)model scale:(float)scale;
 - (void)jumpFlashAt:(simd_float3)position scale:(float)scale;
-- (void)flashShieldOn:(uint16_t)key;
+- (void)flashShieldOn:(uint16_t)key from:(simd_float3)direction;   // toward the hit, in ship space
 
 #pragma mark Queries (render thread)
 

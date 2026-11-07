@@ -131,7 +131,7 @@ void ApplyHullRolloff(SCNMaterial *m);
 @property (nonatomic, readonly) float radius;
 
 - (void)updateThrottle:(float)throttle boost:(BOOL)boost hull:(float)hull alive:(BOOL)alive dt:(float)dt;
-- (void)flashShield;
+- (void)flashShieldFrom:(simd_float3)direction;   // toward the hit, in ship space
 - (void)setAlive:(BOOL)alive;
 
 @end

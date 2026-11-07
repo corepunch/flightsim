@@ -581,9 +581,9 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     [s runAction:[SCNAction sequence:@[[SCNAction fadeOutWithDuration:0.8], [SCNAction removeFromParentNode]]]];
 }
 
-- (void)flashShieldOn:(uint16_t)key {
-    if (key && key == _playerKey) [_playerView flashShield];
-    else [_entities[@(key)].ship flashShield];
+- (void)flashShieldOn:(uint16_t)key from:(simd_float3)direction {
+    if (key && key == _playerKey) [_playerView flashShieldFrom:direction];
+    else [_entities[@(key)].ship flashShieldFrom:direction];
 }
 
 #pragma mark - Queries

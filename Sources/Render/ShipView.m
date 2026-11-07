@@ -1,16 +1,25 @@
 #import "Render.h"
 #import "Shared.h"
 
-// Shield bubble: fresnel rim with a scrolling hex-ish ripple, additive.
+// Keep the impact patch attached to the ship as it turns and the camera moves.
+static NSString *const kShieldGeometry =
+    @"#pragma varyings\n"
+     "float3 shieldPosition;\n"
+     "#pragma body\n"
+     "out.shieldPosition = _geometry.position.xyz;\n";
+
+// The rest of the bubble contributes no light outside the impact patch.
 static NSString *const kShieldFragment =
     @"#pragma arguments\n"
      "float level;\n"
+     "float3 hitDirection;\n"
      "#pragma body\n"
+     "float patch = smoothstep(0.65, 0.95, dot(normalize(in.shieldPosition), hitDirection));\n"
      "float f = 1.0 - abs(dot(normalize(_surface.normal), normalize(_surface.view)));\n"
      "float3 p = _surface.position * 1.7;\n"
      "float ripple = 0.6 + 0.4 * sin(p.x * 3.0 + scn_frame.time * 9.0) * sin(p.y * 3.0 - scn_frame.time * 7.0) * sin(p.z * 3.0);\n"
-     "float a = (pow(f, 2.5) * 1.6 + 0.12) * ripple * level;\n"
-     "_output.color = float4(float3(0.35, 0.65, 1.0) * a * 2.5, 1.0);\n";
+     "float a = (pow(f, 2.5) * 1.6 + 0.12) * ripple * level * patch;\n"
+     "_output.color = float4(float3(0.35, 0.65, 1.0) * a * 2.5, a);\n";
 
 // Ceiling sits just under ClientView's bloomThreshold (0.9).
 static NSString *const kHullRolloff =
@@ -134,8 +143,10 @@ void ApplyHullRolloff(SCNMaterial *m) {
     _shieldMaterial.blendMode = SCNBlendModeAdd;
     _shieldMaterial.writesToDepthBuffer = NO;
     _shieldMaterial.doubleSided = NO;
-    _shieldMaterial.shaderModifiers = @{ SCNShaderModifierEntryPointFragment : kShieldFragment };
+    _shieldMaterial.shaderModifiers = @{ SCNShaderModifierEntryPointGeometry : kShieldGeometry,
+                                         SCNShaderModifierEntryPointFragment : kShieldFragment };
     [_shieldMaterial setValue:@0 forKey:@"level"];
+    [_shieldMaterial setValue:[NSValue valueWithSCNVector3:SCNVector3Make(0, 0, -1)] forKey:@"hitDirection"];
     sphere.firstMaterial = _shieldMaterial;
     _shieldNode = [SCNNode nodeWithGeometry:sphere];
     _shieldNode.scale = SCNVector3Make(_radius * 1.15, _radius * 0.5, _radius * 1.05);
@@ -263,7 +274,11 @@ static void BurnLevels(float sinceHit, float *fire, float *smoke) {
     *smoke = clampf(1.0f - (sinceHit - smokeHold) / (smokeOut - smokeHold), 0, 1);
 }
 
-- (void)flashShield {
+- (void)flashShieldFrom:(simd_float3)direction {
+    if (simd_length_squared(direction) < 1e-6f) return;
+    // The bubble is an ellipsoid; map the ship-space direction to its unit sphere.
+    simd_float3 hit = simd_normalize(direction / _shieldNode.simdScale);
+    [_shieldMaterial setValue:[NSValue valueWithSCNVector3:SCNVector3FromFloat3(hit)] forKey:@"hitDirection"];
     _shieldFlash = 1;
     _shieldNode.hidden = NO;
 }

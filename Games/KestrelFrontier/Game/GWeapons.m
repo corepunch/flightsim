@@ -28,16 +28,24 @@
     GEvent((GameEvent){ .type = EV_EXPLOSION, .pos = s.position, .vel = s.velocity, .scale = 1, .model = s.model, .radius = 300 });
 }
 
-- (void)damageShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake {
-    if (s.alive) s.attacked = YES;
-    [self harmShip:s amount:amount by:attacker shake:shake];
+// Store the hit in ship space so prediction and interpolation cannot shift its side.
+static simd_float3 HitDirection(GFighter *s, simd_float3 source) {
+    simd_float3 direction = source - s.position;
+    return simd_length_squared(direction) > 1e-6f
+        ? simd_act(simd_inverse(s.orientation), simd_normalize(direction)) : simd_make_float3(0);
 }
 
-- (void)harmShip:(GFighter *)s amount:(float)amount by:(GClient *)attacker shake:(float)shake {
+- (void)damageShip:(GFighter *)s amount:(float)amount from:(simd_float3)source by:(GClient *)attacker shake:(float)shake {
+    if (s.alive) s.attacked = YES;
+    [self harmShip:s amount:amount from:source by:attacker shake:shake];
+}
+
+- (void)harmShip:(GFighter *)s amount:(float)amount from:(simd_float3)source by:(GClient *)attacker shake:(float)shake {
     if (!s.alive) return;
     if (s.client && GCvar("g_god")) amount = 0;   // cheat: invulnerable players
     BOOL shielded = [s takeDamage:amount];
-    GEvent((GameEvent){ .type = EV_DAMAGE, .entity = s.number, .flags = shielded ? EVF_SHIELDED : 0, .scale = shake });
+    GEvent((GameEvent){ .type = EV_DAMAGE, .entity = s.number, .pos = HitDirection(s, source),
+                        .flags = shielded ? EVF_SHIELDED : 0, .scale = shake });
     if (!s.alive) {
         if (s.client) s.client.deaths++;
         if (attacker && TeamsHostile(attacker.ship.team, s.team)) attacker.kills++;
@@ -47,12 +55,13 @@
 
 // Ion hits move the shield and systems meters and never the hull, so there is
 // nothing to destroy and no kill to credit.
-- (void)ionShip:(GFighter *)s amount:(float)amount shake:(float)shake {
+- (void)ionShip:(GFighter *)s amount:(float)amount from:(simd_float3)source shake:(float)shake {
     if (!s.alive) return;
     if (s.client && GCvar("g_god")) amount = 0;
     s.attacked = YES;
     BOOL shielded = [s takeIonDamage:amount];
-    GEvent((GameEvent){ .type = EV_DAMAGE, .entity = s.number, .flags = shielded ? EVF_SHIELDED : 0, .scale = shake });
+    GEvent((GameEvent){ .type = EV_DAMAGE, .entity = s.number, .pos = HitDirection(s, source),
+                        .flags = shielded ? EVF_SHIELDED : 0, .scale = shake });
 }
 
 - (void)updateBolts:(float)dt {
@@ -70,8 +79,9 @@
             if (SegmentHits(p0, p1, s.position, s.radius * (s.client ? 0.8f : 0.85f))) {
                 BOOL shielded = s.shielded;
                 GEvent((GameEvent){ .type = EV_IMPACT, .id = b->id, .team = b->team, .pos = p1, .flags = shielded ? EVF_SHIELDED : 0 });
-                if (b->ion) [self ionShip:s amount:b->damage shake:0.35f];
-                else [self damageShip:s amount:b->damage by:b->owner shake:0.35f];
+                simd_float3 source = s.position - (b->velocity - s.velocity);
+                if (b->ion) [self ionShip:s amount:b->damage from:source shake:0.35f];
+                else [self damageShip:s amount:b->damage from:source by:b->owner shake:0.35f];
                 // A hit makes AI pilots jink.
                 for (GPilot *p in _pilots)
                     if (p.ship == s && p.mode == AIModeAttack && frand() < p.skill.jinkChance) {
@@ -164,7 +174,7 @@
         if (![c hitSegmentFrom:before to:ahead point:&point subsystem:&sub]) continue;
         cl.lastBump = cl.cmdTime;
         float speed = simd_length(s.velocity);
-        [self harmShip:s amount:0.08f + speed * 0.0025f by:nil shake:0.8f];
+        [self harmShip:s amount:0.08f + speed * 0.0025f from:point by:nil shake:0.8f];
         s.position = before - simd_normalize(s.velocity + 1e-3f) * 2.0f;
         s.velocity = -s.velocity * 0.35f;
         GEvent((GameEvent){ .type = EV_IMPACT, .team = TeamNeutral, .pos = point, .flags = EVF_SHIELDED });
@@ -230,7 +240,7 @@ NSString *GSecondaryShort(const ShipDef *def) { return OrRule(def ? def->seconda
         t.position = p1;
         BOOL boom = t.life <= 0;
         if ([target isKindOfClass:[GFighter class]] && BodyAlive(target) && simd_distance(p1, BodyPosition(target)) < w.fuse) {
-            [self damageShip:target amount:w.damage by:t.owner shake:0.35f];
+            [self damageShip:target amount:w.damage from:p1 by:t.owner shake:0.35f];
             boom = YES;
         }
         if (!boom)

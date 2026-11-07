@@ -245,7 +245,7 @@ typedef enum {
     EV_BOLT = 1,        // id, pos, vel, team, flags EVF_ION, scale = flight time in seconds; entity = the player who fired, 0 for AI
     EV_IMPACT,          // id (bolt, 0 none), pos, team, flags EVF_SHIELDED
     EV_MUZZLE,          // entity, pos = gun in ship space, team
-    EV_DAMAGE,          // entity hit, flags EVF_SHIELDED, scale = camera shake if it is you
+    EV_DAMAGE,          // entity hit, pos = direction toward hit in ship space (0 if unknown), flags EVF_SHIELDED, scale = camera shake
     EV_EXPLOSION,       // pos, vel, scale, model (hull material), radius = shake falloff
     EV_JUMP,            // pos, scale
 } EventType;
