@@ -461,7 +461,7 @@ static float Ease(float value, float target, float rate, float dt) {
 /// Everything here is smoothed over time so the view never moves abruptly:
 /// - Free-look (hat) and the chase camera's orientation lag behind the ship using
 ///   exponential easing, `1 - exp(-k*dt)`, which doesn't depend on frame rate.
-/// - Boost effects (pull-back, FOV, motion blur) are scaled by `_chase.boost`, which
+/// - Boost effects (pull-back, FOV) are scaled by `_chase.boost`, which
 ///   eases in and out instead of snapping between 0 and 1.
 /// - Shake is a deterministic sum of sines, not per-frame random noise. Random
 ///   noise jumps to a new spot every frame, so it shows up as jitter (worse at
@@ -545,7 +545,7 @@ static float Ease(float value, float target, float rate, float dt) {
     _chase = chase;
     _camera = (RefCamera){
         .origin = pos, .orientation = q, .fov = chase.fov, .zNear = _cockpit ? 0.08f : 0.3f,
-        .motionBlur = boostFx * 0.25f, .focus = ps->move.origin, .velocity = ps->move.velocity,
+        .focus = ps->move.origin, .velocity = ps->move.velocity,
     };
     [_refresh setCamera:_camera];
 }

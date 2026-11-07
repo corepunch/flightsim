@@ -155,16 +155,19 @@ vertex TreeVarying treeVertex(TreeVertexIn in [[stage_in]],
         float2 rel = (slot - floor(T.camera.xz / fine) * fine) / fine;
         if (all(rel >= -halfSlots) && all(rel < halfSlots)) return out;
     }
-    float2 xz = slot + (0.1 + 0.8 * hash22(slot * 0.731 + 17.0)) * spacing;
+    // Slots sit on the finest lattice in every ring, so each keeps its hashes across rings.
+    float2 cell = round(slot / finest);
+    float2 jitter = cellHash(cell), dice = cellHash(cell + 8192.0), shape = cellHash(cell + 16384.0);
+    float2 xz = slot + (0.1 + 0.8 * jitter) * spacing;
     float dist = distance(xz, T.camera.xz);
     float near = halfSlots * finest * 0.75;
     float keep = min(1.0, (near * near) / max(dist * dist, 1.0) * (spacing * spacing) / (finest * finest));
     float fade = 1.0 - smoothstep(0.8 * T.trees.z, T.trees.z, dist);
-    if (hash12(slot + 3.7) >= keep || fade <= 0.0) return out;
+    if (dice.x >= keep || fade <= 0.0) return out;
 
     float cavity;
     float ground = groundHeight(xz, 3, cavity);
-    StandingTree tree = standingTree(xz, ground, cavity, hash12(slot + 9.1), hash12(slot + 5.3));
+    StandingTree tree = standingTree(xz, ground, cavity, dice.y, shape.x);
     if (tree.height <= 0.0) return out;
     float grow = (1.0 + 0.5 * smoothstep(300.0, 2500.0, dist)) * fade;
     int corner = int(in.position.y + 0.5);
@@ -181,7 +184,7 @@ vertex TreeVarying treeVertex(TreeVertexIn in [[stage_in]],
         out.normal = float3(0.0, -1.0, 0.0);
         out.up = 0.0;
     } else {
-        float a = hash12(slot + 1.3) * 2.0 * M_PI_F + float(corner) * 2.0943951;
+        float a = shape.y * 2.0 * M_PI_F + float(corner) * 2.0943951;
         float2 dir = float2(cos(a), sin(a));
         p = base + float3(dir.x * tree.radius * grow, tree.widest * height + (tree.widest > 0.0 ? 1.5 : 0.0), dir.y * tree.radius * grow);
         out.normal = normalize(float3(dir.x, tree.widest > 0.0 ? 0.25 : 0.6, dir.y));

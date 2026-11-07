@@ -68,8 +68,10 @@ static SKShapeNode *Stroke(CGPathRef path, SKColor *color, CGFloat width) {
 
 // Background shared by every display: dark glass, faint grid, scanlines and
 // a vignette, so the screens don't read as flat colour.
+// Drawn at a quarter of the screen's size: a gradient and a few lines scale
+// up without showing it, and the texture is a sixteenth of the memory.
 static SKTexture *ScreenBackground(CGSize size) {
-    PlatformImage *img = PlatformDrawImage(size, ^(CGContextRef cg, CGRect r) {
+    PlatformImage *img = PlatformDrawImage(CGSizeMake(round(size.width / 4), round(size.height / 4)), ^(CGContextRef cg, CGRect r) {
         CGFloat comps[] = { 0.02, 0.075, 0.07, 1,   0.004, 0.012, 0.014, 1 };
         CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
         CGGradientRef g = CGGradientCreateWithColorComponents(cs, comps, NULL, 2);
@@ -78,10 +80,10 @@ static SKTexture *ScreenBackground(CGSize size) {
         CGGradientRelease(g);
         CGColorSpaceRelease(cs);
         [[SKColor colorWithRed:0.55 green:0.95 blue:0.85 alpha:0.05] setFill];
-        for (CGFloat x = 0; x < r.size.width; x += 32) CGContextFillRect(cg, CGRectMake(x, 0, 1, r.size.height));
-        for (CGFloat y = 0; y < r.size.height; y += 32) CGContextFillRect(cg, CGRectMake(0, y, r.size.width, 1));
+        for (CGFloat x = 0; x < r.size.width; x += 8) CGContextFillRect(cg, CGRectMake(x, 0, 1, r.size.height));
+        for (CGFloat y = 0; y < r.size.height; y += 8) CGContextFillRect(cg, CGRectMake(0, y, r.size.width, 1));
         [[SKColor colorWithWhite:0 alpha:0.18] setFill];
-        for (CGFloat y = 0; y < r.size.height; y += 3) CGContextFillRect(cg, CGRectMake(0, y, r.size.width, 1));
+        for (CGFloat y = 0; y < r.size.height; y += 2) CGContextFillRect(cg, CGRectMake(0, y, r.size.width, 1));
     });
     return [SKTexture textureWithImage:img];
 }
@@ -90,7 +92,7 @@ static SKScene *MakeScreen(CGSize size, NSString *title) {
     SKScene *s = [SKScene sceneWithSize:size];
     s.backgroundColor = [SKColor blackColor];
     s.scaleMode = SKSceneScaleModeFill;
-    SKSpriteNode *bg = [SKSpriteNode spriteNodeWithTexture:ScreenBackground(size)];
+    SKSpriteNode *bg = [SKSpriteNode spriteNodeWithTexture:ScreenBackground(size) size:size];
     bg.anchorPoint = CGPointZero;
     bg.zPosition = -10;
     [s addChild:bg];
@@ -183,7 +185,7 @@ static SKColor *TeamColor(TeamRelation r, CGFloat a) {
 // emission channel, the unlit one the diffuse, so an off lamp still shows
 // its engraved legend.
 static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
-    return PlatformDrawImage(CGSizeMake(256, 120), ^(CGContextRef cg, CGRect r) {
+    return PlatformDrawImage(CGSizeMake(128, 60), ^(CGContextRef cg, CGRect r) {
         CGFloat red = 0, green = 0, blue = 0;
         [color getRed:&red green:&green blue:&blue alpha:NULL];
         SKColor *bg = lit ? [SKColor colorWithRed:red * 0.12 green:green * 0.12 blue:blue * 0.12 alpha:1]
@@ -194,7 +196,7 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
         NSMutableParagraphStyle *ps = [NSMutableParagraphStyle new];
         ps.alignment = NSTextAlignmentCenter;
         BOOL twoLines = [legend containsString:@"\n"];
-        NSDictionary *attrs = @{ NSFontAttributeName : [PlatformFont fontWithName:UIMonoBoldFont size:twoLines ? 38 : 54] ?: [PlatformFont boldSystemFontOfSize:50],
+        NSDictionary *attrs = @{ NSFontAttributeName : [PlatformFont fontWithName:UIMonoBoldFont size:twoLines ? 19 : 27] ?: [PlatformFont boldSystemFontOfSize:25],
                                  NSForegroundColorAttributeName : fg, NSParagraphStyleAttributeName : ps };
         CGSize ts = [legend sizeWithAttributes:attrs];
         [legend drawInRect:CGRectMake(0, (r.size.height - ts.height) / 2, r.size.width, ts.height) withAttributes:attrs];
@@ -252,12 +254,15 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     CockpitFrame _last;
     id<MTLDevice> _device;
     NSMutableArray<Display *> *_displays;
+    Cvar *_displayScale;
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device {
     if ((self = [super init])) {
         _device = device;
         _displays = [NSMutableArray array];
+        _displayScale = [Cvar get:@"r_cockpitScale" defaultValue:@"0.5" flags:CVAR_ARCHIVE
+                             help:@"Cockpit display pixels per layout point, 0.25 to 1 (restart required)"];
         _node = [SCNNode node];
         _node.name = @"Cockpit";
         _lamps = [NSMutableDictionary dictionary];
@@ -431,11 +436,14 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     [_indicators addObject:lamp];
 }
 
+// The scene lays out in its own points; it renders into a texture of those
+// points times the display scale, which SpriteKit fills (scale mode fill).
 - (Display *)displayForScene:(SKScene *)scene {
     if (!scene) return nil;
+    float scale = clampf(_displayScale.value, 0.25f, 1);
     MTLTextureDescriptor *td = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm_sRGB
-                                                                                  width:(NSUInteger)scene.size.width
-                                                                                 height:(NSUInteger)scene.size.height
+                                                                                  width:(NSUInteger)MAX(32, round(scene.size.width * scale))
+                                                                                 height:(NSUInteger)MAX(32, round(scene.size.height * scale))
                                                                               mipmapped:NO];
     td.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
     td.storageMode = MTLStorageModePrivate;

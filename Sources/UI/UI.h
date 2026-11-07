@@ -38,6 +38,8 @@ typedef NSEdgeInsets BriefingInsets;
 @property (nonatomic, readonly) NSUInteger selectedIndex;
 
 - (void)showListSelecting:(NSUInteger)index;
+// Releases the art and laid-out nodes while the screen is away; the next show rebuilds them.
+- (void)unload;
 - (void)showBriefing:(NSUInteger)index;
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)page;   // opens on a later page
 // results: one line per objective, prefixed "+" done, "x" failed, "-" not done.
@@ -130,6 +132,8 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)fillLoadingCard:(Loading *)card level:(NSUInteger)index;
 - (NSString *)bannerForLevel:(NSUInteger)index;
 - (void)levelStarted:(NSUInteger)index remote:(BOOL)remote;
+// Flight has begun: the menus release their art until they are shown again.
+- (void)flightStarted;
 - (void)levelEnded:(NSUInteger)index success:(BOOL)success results:(NSArray<NSString *> *)results remote:(BOOL)remote;
 // The level was left (aborted, restarted elsewhere, disconnected): back to the list.
 - (void)levelLeft:(NSUInteger)index;
@@ -272,6 +276,8 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
 @property (nonatomic, readonly) ControlsPanel *controlsPanel;
 
 - (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed;
+// Releases the painting and nodes while the menu is away; the next show rebuilds them.
+- (void)unload;
 - (MainMenuCommand)handle:(InputAction)actions;
 // Exit by switching off like a tube (for quitting). Returns its length.
 - (NSTimeInterval)motionPowerDown;

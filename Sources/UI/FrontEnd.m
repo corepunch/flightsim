@@ -125,6 +125,11 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     if (!remote) ProgressMarkStarted();
 }
 
+- (void)flightStarted {
+    [_briefing unload];
+    [_mainMenu unload];
+}
+
 - (void)levelEnded:(NSUInteger)index success:(BOOL)success results:(NSArray<NSString *> *)results remote:(BOOL)remote {
     NSMutableArray *shown = [NSMutableArray array];
     for (NSString *line in results) [shown addObject:L10nExpand(line)];

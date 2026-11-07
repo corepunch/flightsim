@@ -56,9 +56,12 @@ typedef NSFont PlatformFont;
 
 // MARK: - RenderTextures
 
-// Shares decoded 3D textures across material slots and applies the configured
-// texture budget before an image is expanded into CPU or GPU memory.
+// Shares 3D textures across material slots. Each image is decoded once within
+// the configured edge budget and uploaded to the GPU with its mip chain; no
+// decoded pixels stay in memory. The pixel format carries the colour space:
+// colour maps are sRGB, data maps (normal, roughness, metalness) are linear.
 @interface RenderTextures : NSObject
++ (void)useDevice:(id<MTLDevice>)device;
 + (id)contentsOfURL:(NSURL *)url sRGB:(BOOL)sRGB;
 + (void)printStats;
 @end
@@ -88,12 +91,28 @@ static inline PlatformImage *PlatformDrawImage(CGSize size, void (^draw)(CGConte
         draw(context.CGContext, CGRectMake(0, 0, size.width, size.height));
     }];
 #else
-    return [NSImage imageWithSize:size flipped:NO drawingHandler:^BOOL(NSRect rect) {
-        draw(NSGraphicsContext.currentContext.CGContext, rect);
-        return YES;
-    }];
+    // One bitmap of exactly `size` pixels: a drawing handler would keep a
+    // backing store per screen scale it was asked for.
+    NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:(NSInteger)size.width
+        pixelsHigh:(NSInteger)size.height bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES isPlanar:NO
+        colorSpaceName:NSDeviceRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
+    [NSGraphicsContext saveGraphicsState];
+    NSGraphicsContext.currentContext = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
+    draw(NSGraphicsContext.currentContext.CGContext, CGRectMake(0, 0, size.width, size.height));
+    [NSGraphicsContext restoreGraphicsState];
+    NSImage *image = [[NSImage alloc] initWithSize:size];
+    [image addRepresentation:rep];
+    return image;
 #endif
 }
+
+// Assigns a particle system property only when the value really changes, so
+// a steady throttle does not touch SceneKit's particle state every frame.
+static inline void ParticleSet(SCNParticleSystem *ps, NSString *key, CGFloat value) {
+    CGFloat current = [[ps valueForKey:key] doubleValue];
+    if (fabs(current - value) > 0.001 + 0.002 * fabs(value)) [ps setValue:@(value) forKey:key];
+}
+
 
 // MARK: - Exhaust
 
@@ -114,6 +133,7 @@ static inline PlatformImage *PlatformDrawImage(CGSize size, void (^draw)(CGConte
 
 + (PlatformImage *)softDotImage;
 + (PlatformImage *)streakImage;      // anamorphic streak, zero alpha on all edges
++ (PlatformImage *)boltImage;        // a blaster bolt along its height: flat body, soft ends, hot centre line
 // Resources/Particles/<name>.png. Names joined with "+" ("flame_01+flame_02")
 // give a square atlas of those sprites, for an image sequence.
 + (PlatformImage *)particleTexture:(NSString *)name;
@@ -186,9 +206,16 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 - (instancetype)initWithScene:(SCNScene *)scene;
 
-// Bolt prototype: node whose children are a core and a glow capsule along +Y.
+// Bolt prototype: a node whose children are a core and a glow streak along
+// +Y with their faces toward +Z. The renderer turns each bolt about its axis
+// to face the camera, so a shot reads as a long bolt from every angle but
+// dead astern.
 - (SCNNode *)makeBoltNode;
 - (void)styleBolt:(SCNNode *)bolt player:(BOOL)player ion:(BOOL)ion;
+// The streak trails the head by the distance travelled, up to its full length.
+- (void)setBolt:(SCNNode *)bolt length:(float)travelled;
+// A tracer round: the core alone, drawn in the given material.
+- (void)styleBoltAsTracer:(SCNNode *)bolt material:(SCNMaterial *)material;
 
 - (void)muzzleFlashOn:(SCNNode *)parent local:(simd_float3)local player:(BOOL)player;
 - (void)impactAt:(simd_float3)p player:(BOOL)playerBolt shielded:(BOOL)shielded;
@@ -216,6 +243,20 @@ void ApplyHullRolloff(SCNMaterial *m);
 @interface FXRecorder : NSObject
 
 + (int)recordEffect:(NSString *)effect toFile:(NSString *)path seconds:(double)seconds;
+
+@end
+
+// MARK: - ShipPreview
+
+// A window with one ship in the studio scene, for checking a definition's
+// attachment points against its mesh: exhaust through its range, each gun
+// firing in turn, the camera circling. M shows the points, Space holds the
+// camera, Q quits.
+//
+//   KestrelFrontier --preview-ship <ship> [game]
+@interface ShipPreview : NSObject
+
++ (int)runWithShip:(NSString *)ship game:(NSString *)game;
 
 @end
 
@@ -293,14 +334,16 @@ void ApplyHullRolloff(SCNMaterial *m);
 // A landscape evaluated entirely on the GPU: geometry-clipmap rings of one shared grid
 // follow the camera, and Resources/Shaders/Terrain*.metal compute height, cover
 // (water, roads, villages, fields, forest, rock), lighting and a cloud sky dome from
-// noise. There are no height or colour maps; a level only switches it on.
+// noise. Forests stand as camera-facing triangle trees on lattice rings of their own.
+// There are no height or colour maps; a level only switches it on.
 @interface ProceduralTerrain : NSObject
 
 // Compiles TerrainCommon.metal and Terrain.metal from the directory (nil on failure).
 + (id<MTLLibrary>)libraryWithDevice:(id<MTLDevice>)device shaderDirectory:(NSURL *)directory;
 
 // cells: vertices per ring edge, a multiple of 4 up to 252; more is finer and costlier.
-- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells hdr:(BOOL)hdr;
+// treeCells: tree slots per edge of each of the four tree rings (5, 10, 20, 40 m apart), up to 256; 0 draws none.
+- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr;
 
 @property (nonatomic, readonly) SCNNode *node;        // the clipmap rings
 @property (nonatomic, readonly) SCNNode *skyNode;     // the dome; follows the camera

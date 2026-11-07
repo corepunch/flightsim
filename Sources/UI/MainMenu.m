@@ -71,19 +71,31 @@ static SKShader *MenuArtShader(void) {
         [_stage addChild:_ghost];
         [self addChild:_stage];
 
-        NSURL *url = FSURL(@"Menu", @"background", @"jpg");
-        CGImageSourceRef source = url ? CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL) : NULL;
-        if (source) {
-            CGImageRef image = CGImageSourceCreateImageAtIndex(source, 0, NULL);
-            if (image) {
-                _art = [SKTexture textureWithCGImage:image];
-                CGImageRelease(image);
-            }
-            CFRelease(source);
-        }
         [self showMission:0 title:nil started:NO completed:NO];
     }
     return self;
+}
+
+// The background painting is a full-screen image, decoded while the menu is
+// in use and released for flight.
+- (SKTexture *)artTexture {
+    if (_art) return _art;
+    NSURL *url = FSURL(@"Menu", @"background", @"jpg");
+    CGImageSourceRef source = url ? CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL) : NULL;
+    if (!source) return nil;
+    CGImageRef image = CGImageSourceCreateImageAtIndex(source, 0, NULL);
+    CFRelease(source);
+    if (!image) return nil;
+    _art = [SKTexture textureWithCGImage:image];
+    CGImageRelease(image);
+    return _art;
+}
+
+- (void)unload {
+    [_scenery removeAllChildren];
+    [_root removeAllChildren];
+    _artNode = _backdropNode = nil;
+    _art = nil;
 }
 
 - (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
@@ -137,10 +149,11 @@ static SKShader *MenuArtShader(void) {
 }
 
 - (void)drawArtPortrait:(BOOL)portrait {
-    if (!_art) return;
-    CGSize size = self.size, artSize = _art.size;
+    SKTexture *texture = self.artTexture;
+    if (!texture) return;
+    CGSize size = self.size, artSize = texture.size;
     CGFloat artWidth = size.width * (portrait ? 1.18 : 0.72);
-    SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:_art
+    SKSpriteNode *art = [SKSpriteNode spriteNodeWithTexture:texture
                                                      size:CGSizeMake(artWidth, artWidth * artSize.height / artSize.width)];
     art.shader = MenuArtShader();
     art.position = CGPointMake(portrait ? size.width * 0.45 : size.width - artWidth / 2,

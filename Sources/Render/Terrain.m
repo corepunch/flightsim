@@ -73,7 +73,7 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     return material;
 }
 
-- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells hdr:(BOOL)hdr {
+- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr {
     if (!(self = [super init])) return nil;
     _cells = (int)MAX(16, MIN(252, cells & ~(NSUInteger)3));   // multiples of 4 keep the hole on the coarser grid
     _finest = -1;
@@ -81,8 +81,7 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     _params.misc = simd_make_float4(12000, _cells / 2.0f, hdr ? 1 : 0, TARGET_OS_IOS ? 8 : 12);
     _node = [SCNNode node];
     _node.name = @"Terrain";
-    // Tree slots per ring edge follow the terrain grid, so the density setting scales both.
-    _treeSlots = (int)MAX(16, (_cells * 3 / 4) & ~1);
+    _treeSlots = (int)MIN(256, treeCells & ~(NSUInteger)1);
     _params.trees = simd_make_float4(_treeSlots / 2.0f, kTreeSpacing, _treeSlots / 2.0f * kTreeSpacing * (1 << (kTreeLevels - 1)), 0);
     _skyNode = [SCNNode node];
     _skyNode.name = @"Terrain sky";
@@ -125,7 +124,7 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
         [_node addChildNode:ring];
     }
 
-    [self addTreesWithLibrary:library];
+    if (_treeSlots > 0) [self addTreesWithLibrary:library];
 
     // The dome is a unit cube around the camera; its fragment shader only needs directions.
     static const simd_float3 corners[8] = {
@@ -151,7 +150,8 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
 }
 
 // One shared grid of tree slots, five vertices each (top, three corners, bottom, all at the
-// slot's indices; the shader places them), drawn by every tree ring. Two unindexed vertices
+// slot's indices; the shader places them), drawn by every tree ring. Indices are 32-bit:
+// a ring of 256 slots per edge has over 300 000 vertices. Two unindexed vertices
 // carry the height range so culling boxes cover hills and trees.
 - (void)addTreesWithLibrary:(id<MTLLibrary>)library {
     int n = _treeSlots, half = n / 2, count = n * n * 5 + 2;

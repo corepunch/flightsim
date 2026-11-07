@@ -1958,6 +1958,14 @@ static const CGFloat PhoneSpeakerFont = 16;
 
 #pragma mark - Scene motion
 
+// Flight is on: the portraits and rooms go until the screen comes back,
+// when motionEnter lays everything out again from its state.
+- (void)unload {
+    [_root removeAllChildren];
+    [_ghost removeAllChildren];
+    [_art removeAllObjects];
+}
+
 - (void)motionEnter {
     _queuedClick = nil;
     _transition = UITransitionIntro;

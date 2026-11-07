@@ -45,15 +45,18 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @property (nonatomic, readonly) LevelEnvironment definition;
 @property (nonatomic, readonly) NSURL *sky;
 @property (nonatomic, readonly) ProceduralTerrain *terrain;
-- (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells hdr:(BOOL)hdr;
+- (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells
+                         treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr;
 @end
 @implementation WorldBackdrop
-- (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells hdr:(BOOL)hdr {
+- (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells
+                         treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr {
     if ((self = [super init])) {
         _definition = definition;
         if (definition.terrain) {
             NSURL *shaders = [[NSBundle.mainBundle URLForResource:@"Terrain" withExtension:@"metal" subdirectory:@"Shaders"] URLByDeletingLastPathComponent];
-            _terrain = [[ProceduralTerrain alloc] initWithLibrary:[ProceduralTerrain libraryWithDevice:device shaderDirectory:shaders] cells:cells hdr:hdr];
+            _terrain = [[ProceduralTerrain alloc] initWithLibrary:[ProceduralTerrain libraryWithDevice:device shaderDirectory:shaders]
+                                                            cells:cells treeCells:treeCells hdr:hdr];
             _terrain.environment = definition;
             _node = _terrain.node;
         } else {
@@ -89,6 +92,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     Effects *_fx;
     Cockpit *_cockpit;
     SCNNode *_boltNodes[REF_MAX_BOLTS];
+    simd_float3 _boltAxis[REF_MAX_BOLTS];      // flight direction, the streak's +Y
+    simd_float3 _boltSpawn[REF_MAX_BOLTS];     // where the bolt left the gun; the streak grows from there
 
     NSMutableDictionary<NSNumber *, RefEntityNode *> *_entities;
 
@@ -101,7 +106,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     double _time;
     float _dt;
     SCNMaterial *_tracer;
-    Cvar *_motionBlur, *_shadowSize, *_terrainGrid;
+    Cvar *_shadowSize, *_terrainGrid, *_terrainTrees;
 }
 
 - (instancetype)initWithRenderer:(id<SCNSceneRenderer>)renderer size:(CGSize)size {
@@ -109,17 +114,18 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         _renderer = renderer;
         _size = size;
         _device = renderer.device ?: MTLCreateSystemDefaultDevice();
+        [RenderTextures useDevice:_device];
         _models = [NSMutableArray array];
         _handles = [NSMutableDictionary dictionary];
         _pending = [NSMutableArray array];
         _entities = [NSMutableDictionary dictionary];
         _dt = 1.0f / 60.0f;
-        _motionBlur = [Cvar get:@"r_motionBlur" defaultValue:TARGET_OS_IOS ? @"0" : @"1" flags:CVAR_ARCHIVE
-                          help:@"Scale full-scene motion blur; 0 disables its velocity buffers and postprocessing pass"];
-        _shadowSize = [Cvar get:@"r_shadowSize" defaultValue:TARGET_OS_IOS ? @"1024" : @"2048" flags:CVAR_ARCHIVE
+        _shadowSize = [Cvar get:@"r_shadowSize" defaultValue:TARGET_OS_IOS ? @"512" : @"1024" flags:CVAR_ARCHIVE
                           help:@"Sun shadow map edge in pixels (restart required)"];
         _terrainGrid = [Cvar get:@"r_terrainGrid" defaultValue:TARGET_OS_IOS ? @"96" : @"128" flags:CVAR_ARCHIVE
-                           help:@"Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252; tree rings get three quarters as many slots (applies on the next level)"];
+                           help:@"Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252 (applies on the next level)"];
+        _terrainTrees = [Cvar get:@"r_terrainTrees" defaultValue:TARGET_OS_IOS ? @"64" : @"96" flags:CVAR_ARCHIVE
+                            help:@"Tree slots per edge of each of the four procedural tree rings (5 to 40 m apart), up to 256; 0 draws none (applies on the next level)"];
     }
     return self;
 }
@@ -149,9 +155,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 #if TARGET_OS_IOS
     if ([(id)_renderer isKindOfClass:SCNView.class]) {
         SCNView *view = (SCNView *)_renderer;
-        NSLog(@"Render target: %@ pixels, %.2f pixels/point, HDR off, motion blur %.2f, mesh sky",
-              NSStringFromCGSize(((CAMetalLayer *)view.layer).drawableSize), view.contentScaleFactor,
-              _motionBlur.value);
+        NSLog(@"Render target: %@ pixels, %.2f pixels/point, HDR off, mesh sky",
+              NSStringFromCGSize(((CAMetalLayer *)view.layer).drawableSize), view.contentScaleFactor);
     }
 #endif
 }
@@ -294,7 +299,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 - (void)registerEnvironment:(LevelEnvironment)environment {
     if (!environment.model.length && !environment.terrain) return;
     _nextBackdrop = [[WorldBackdrop alloc] initWithDefinition:environment device:_device
-                                                        cells:(NSUInteger)MAX(0, _terrainGrid.integer) hdr:_cameraNode.camera.wantsHDR];
+                                                        cells:(NSUInteger)MAX(0, _terrainGrid.integer)
+                                                    treeCells:(NSUInteger)MAX(0, _terrainTrees.integer) hdr:_cameraNode.camera.wantsHDR];
     @synchronized (_pending) {
         [_pending addObject:_nextBackdrop.node];
         if (_nextBackdrop.terrain) [_pending addObject:_nextBackdrop.terrain.skyNode];
@@ -556,9 +562,6 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     SCNCamera *cam = _cameraNode.camera;
     if (c.fov > 0) cam.fieldOfView = c.fov;
     if (c.zNear > 0) cam.zNear = c.zNear;
-    // Even a tiny nonzero blur retains SceneKit's velocity buffers and full
-    // screen pass. The smoothed boost value otherwise keeps them alive.
-    cam.motionBlurIntensity = c.motionBlur * clampf(_motionBlur.value, 0, 1);
     if (_sunLight) {
         _sunLight.simdPosition = c.focus + self.sunDirection * 250.0f;
         [_sunLight simdLookAt:c.focus];
@@ -582,14 +585,32 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     [_fx styleBolt:n player:friendly ion:ion];
     [n childNodeWithName:@"glow" recursively:NO].hidden = _backdrop != nil;
     n.simdScale = _backdrop ? simd_make_float3(0.4f, 0.22f, 0.4f) : simd_make_float3(1, 1, 1);
-    if (_backdrop) [n childNodeWithName:@"core" recursively:NO].geometry.firstMaterial = _tracer;
-    n.simdPosition = position;
-    n.simdOrientation = simd_quaternion(simd_make_float3(0, 1, 0), simd_normalize(velocity));
+    if (_backdrop) [_fx styleBoltAsTracer:n material:_tracer];
+    _boltAxis[slot] = simd_normalize(velocity);
+    _boltSpawn[slot] = position;
+    [self placeBolt:slot at:position];
     n.hidden = NO;
 }
 
+// The streak's +Y is the flight direction; it turns about that axis so its
+// face (+Z) points at the camera: a billboard with one axis pinned. The
+// streak trails the bolt's head and is no longer than the way it has come,
+// so a shot leaves the gun as a growing streak rather than a bar through the ship.
+- (void)placeBolt:(int)slot at:(simd_float3)position {
+    SCNNode *n = _boltNodes[slot];
+    simd_float3 axis = _boltAxis[slot];
+    simd_float3 toCamera = _cameraNode.simdWorldPosition - position;
+    simd_float3 x = simd_cross(axis, toCamera);
+    if (simd_length_squared(x) < 1e-6f) x = simd_cross(axis, simd_make_float3(0, 1, 0));
+    if (simd_length_squared(x) < 1e-6f) x = simd_cross(axis, simd_make_float3(1, 0, 0));
+    x = simd_normalize(x);
+    n.simdOrientation = simd_quaternion(simd_matrix(x, axis, simd_cross(x, axis)));
+    n.simdPosition = position;
+    [_fx setBolt:n length:simd_distance(position, _boltSpawn[slot])];
+}
+
 - (void)moveBolt:(int)slot to:(simd_float3)position {
-    if (slot >= 0 && slot < REF_MAX_BOLTS) _boltNodes[slot].simdPosition = position;
+    if (slot >= 0 && slot < REF_MAX_BOLTS) [self placeBolt:slot at:position];
 }
 
 - (void)hideBolt:(int)slot {

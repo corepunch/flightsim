@@ -140,6 +140,9 @@ int main(int argc, const char *argv[]) {
             return EXIT_FAILURE;
         }
         CFRelease(session);
+        // One ship in a window: KestrelFrontier --preview-ship <ship> [game]
+        if (argc >= 3 && !strcmp(argv[1], "--preview-ship"))
+            return [ShipPreview runWithShip:@(argv[2]) game:argc >= 4 && argv[3][0] != '+' ? @(argv[3]) : nil];
 
         NSApplication *app = [NSApplication sharedApplication];
         app.activationPolicy = NSApplicationActivationPolicyRegular;

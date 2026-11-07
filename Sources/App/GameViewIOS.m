@@ -32,9 +32,24 @@
     [super layoutSubviews];
     Cvar *ratio = [Cvar get:@"r_pixelRatio" defaultValue:@"2" flags:CVAR_ARCHIVE
                       help:@"3D pixels per view point; 0 uses native resolution (HUD stays native)"];
+    Cvar *hudRatio = [Cvar get:@"r_hudPixelRatio" defaultValue:@"2" flags:CVAR_ARCHIVE
+                         help:@"HUD and menu pixels per view point, capped at the display's native scale; 0 uses native"];
     CGFloat native = self.window.screen.scale ?: UIScreen.mainScreen.scale;
     CGFloat scale = ratio.value > 0 ? MIN(native, MAX(1, ratio.value)) : native;
     if (self.contentScaleFactor != scale) self.contentScaleFactor = scale;
+    // The overlay is a second full-screen drawable chain; its scale is the
+    // trade between crisp text and the memory of three more frame buffers.
+    CGFloat hudScale = hudRatio.value > 0 ? MIN(native, MAX(1, hudRatio.value)) : native;
+    if (_overlayView && _overlayView.contentScaleFactor != hudScale) _overlayView.contentScaleFactor = hudScale;
+    // SpriteKit sizes its drawable from the screen, not the view's scale; set it outright.
+    CALayer *layer = _overlayView.layer;
+    if ([layer isKindOfClass:CAMetalLayer.class]) {
+        CGSize wanted = CGSizeMake(round(self.bounds.size.width * hudScale), round(self.bounds.size.height * hudScale));
+        if (!CGSizeEqualToSize(((CAMetalLayer *)layer).drawableSize, wanted)) {
+            layer.contentsScale = hudScale;
+            ((CAMetalLayer *)layer).drawableSize = wanted;
+        }
+    }
 }
 
 - (void)setInput:(Input *)input {

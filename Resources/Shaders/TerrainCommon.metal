@@ -225,13 +225,26 @@ static bool isFarm(Parcel p, float y, float roadD) {
     return cluster > 0.10 && y > kShore && y < 75.0;
 }
 
-static float treeLine(float2 xz) { return 430.0 + 80.0 * noise(xz / 1500.0); }
+// Only real mountains (kRelief reaches 1500 m over the plain) break the tree line.
+static float treeLine(float2 xz) { return 1500.0 + 150.0 * noise(xz / 1500.0); }
 
 static float forestDensity(float2 xz, float y) {
     return fbm(xz / 1300.0 + 11.0, 3) + 0.35 * smoothstep(40.0, 260.0, y) - 0.06;
 }
 
-static float coniferShare(float y) { return 0.1 + 0.85 * smoothstep(140.0, 380.0, y); }
+static float coniferShare(float y) { return 0.1 + 0.65 * smoothstep(140.0, 380.0, y); }
+
+// Integer-lattice hash (pcg2d, Jarzynski and Olano). hash22 on whole numbers correlates
+// along x == y and would streak a straight line of look-alike trees through every forest.
+static float2 cellHash(float2 cell) {
+    uint2 v = uint2(int2(cell) + 0x10000);
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * 1664525u; v.y += v.x * 1664525u;
+    v ^= v >> 16u;
+    v.x += v.y * 1664525u; v.y += v.x * 1664525u;
+    v ^= v >> 16u;
+    return float2(v & 0x00ffffffu) / float(0x01000000);
+}
 
 // Stand type at a point: whole part 1 for conifers, fraction a slowly varying tint.
 static float standId(float2 xz, float y) {
@@ -303,7 +316,7 @@ static Surface coverAt(float2 xz, float ground, float cavity, float detail, bool
             s.kind = Hedge;
             s.cover = (3.0 + 7.0 * smoothstep(0.35, 0.7, noise(xz / 7.0))) * max(detail, 0.3);
         }
-    } else if (r.dist > 12.0 && !s.village && forest(xz, ground, id)) {
+    } else if ((r.dist > 12.0 || !lowland) && !s.village && forest(xz, ground, id)) {
         s.kind = Tree;
         s.id = id;
     }
