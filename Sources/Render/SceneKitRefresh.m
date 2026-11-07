@@ -46,17 +46,17 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @property (nonatomic, readonly) NSURL *sky;
 @property (nonatomic, readonly) ProceduralTerrain *terrain;
 - (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells
-                         treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr;
+                         treeCells:(NSUInteger)treeCells mapTexels:(NSUInteger)mapTexels hdr:(BOOL)hdr;
 @end
 @implementation WorldBackdrop
 - (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells
-                         treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr {
+                         treeCells:(NSUInteger)treeCells mapTexels:(NSUInteger)mapTexels hdr:(BOOL)hdr {
     if ((self = [super init])) {
         _definition = definition;
         if (definition.terrain) {
             NSURL *shaders = [[NSBundle.mainBundle URLForResource:@"Terrain" withExtension:@"metal" subdirectory:@"Shaders"] URLByDeletingLastPathComponent];
             _terrain = [[ProceduralTerrain alloc] initWithLibrary:[ProceduralTerrain libraryWithDevice:device shaderDirectory:shaders]
-                                                            cells:cells treeCells:treeCells hdr:hdr];
+                                                            cells:cells treeCells:treeCells mapTexels:mapTexels hdr:hdr];
             _terrain.environment = definition;
             _node = _terrain.node;
         } else {
@@ -106,7 +106,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     double _time;
     float _dt;
     SCNMaterial *_tracer;
-    Cvar *_shadowSize, *_terrainGrid, *_terrainTrees;
+    Cvar *_shadowSize, *_terrainGrid, *_terrainTrees, *_terrainMap;
 }
 
 - (instancetype)initWithRenderer:(id<SCNSceneRenderer>)renderer size:(CGSize)size {
@@ -126,6 +126,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
                            help:@"Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252 (applies on the next level)"];
         _terrainTrees = [Cvar get:@"r_terrainTrees" defaultValue:TARGET_OS_IOS ? @"64" : @"96" flags:CVAR_ARCHIVE
                             help:@"Tree slots per edge of each of the four procedural tree rings (5 to 40 m apart), up to 256; 0 draws none (applies on the next level)"];
+        _terrainMap = [Cvar get:@"r_terrainMap" defaultValue:TARGET_OS_IOS ? @"512" : @"1024" flags:CVAR_ARCHIVE
+                          help:@"Texels per edge of each procedural ground map level, a power of two from 256 to 2048, 8 bytes a texel; the finest level is a metre per texel (applies on the next level)"];
     }
     return self;
 }
@@ -138,6 +140,25 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     if ([(id)r isKindOfClass:NSView.class]) return ((NSView *)r).bounds.size;
 #endif
     return _size;
+}
+
+// The 3D drawable in pixels: what the view's layer presents, or the view scaled.
+- (CGSize)drawableSize {
+    id<SCNSceneRenderer> r = _renderer;
+    if ([(id)r isKindOfClass:SCNView.class]) {
+        CALayer *layer = ((SCNView *)r).layer;
+        if ([layer isKindOfClass:CAMetalLayer.class]) {
+            CGSize drawable = ((CAMetalLayer *)layer).drawableSize;
+            if (drawable.width > 0 && drawable.height > 0) return drawable;
+        }
+    }
+    CGSize size = self.viewSize;
+#if TARGET_OS_IOS
+    CGFloat scale = [(id)r isKindOfClass:UIView.class] ? ((UIView *)r).contentScaleFactor : 1;
+#else
+    CGFloat scale = [(id)r isKindOfClass:NSView.class] ? ((NSView *)r).window.backingScaleFactor : 1;
+#endif
+    return CGSizeMake(size.width * MAX(scale, 1), size.height * MAX(scale, 1));
 }
 
 - (void)printStats {
@@ -300,7 +321,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     if (!environment.model.length && !environment.terrain) return;
     _nextBackdrop = [[WorldBackdrop alloc] initWithDefinition:environment device:_device
                                                         cells:(NSUInteger)MAX(0, _terrainGrid.integer)
-                                                    treeCells:(NSUInteger)MAX(0, _terrainTrees.integer) hdr:_cameraNode.camera.wantsHDR];
+                                                    treeCells:(NSUInteger)MAX(0, _terrainTrees.integer)
+                                                    mapTexels:(NSUInteger)MAX(0, _terrainMap.integer) hdr:_cameraNode.camera.wantsHDR];
     @synchronized (_pending) {
         [_pending addObject:_nextBackdrop.node];
         if (_nextBackdrop.terrain) [_pending addObject:_nextBackdrop.terrain.skyNode];
@@ -568,7 +590,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     }
     _sky.node.simdPosition = c.origin;
     if (_dust) [_sky updateDust:_dust cameraPosition:c.origin velocity:c.velocity];
-    [_backdrop.terrain updateForCamera:c.origin time:_time];
+    [_backdrop.terrain updateForCamera:_cameraNode viewport:self.drawableSize time:_time];
 }
 
 - (SCNNode *)nodeFor:(uint16_t)key {
@@ -714,6 +736,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 }
 
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time {
+    [_backdrop.terrain bakeWithQueue:queue];
     [_cockpit renderDisplaysWithQueue:queue time:time];
 }
 

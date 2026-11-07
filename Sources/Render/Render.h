@@ -331,11 +331,13 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 // MARK: - ProceduralTerrain
 
-// A landscape evaluated entirely on the GPU: geometry-clipmap rings of one shared grid
-// follow the camera, and Resources/Shaders/Terrain*.metal compute height, cover
-// (water, roads, villages, fields, forest, rock), lighting and a cloud sky dome from
-// noise. Forests stand as camera-facing triangle trees on lattice rings of their own.
-// There are no height or colour maps; a level only switches it on.
+// A landscape evaluated on the GPU: geometry-clipmap rings of one shared grid follow
+// the camera and sample a texture clipmap of the ground (a lit image and a height map,
+// one window per power-of-two spacing) that compute kernels bake from the procedural
+// surface in Resources/Shaders/Terrain*.metal (height, cover: water, roads, villages,
+// fields, forest, rock; and lighting) as the windows scroll. The cloud sky is marched
+// into a quarter-size screen texture each frame and spread over a dome. Forests stand
+// as triangle trees on lattice rings of their own. A level only switches it on.
 @interface ProceduralTerrain : NSObject
 
 // Compiles TerrainCommon.metal and Terrain.metal from the directory (nil on failure).
@@ -343,15 +345,22 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 // cells: vertices per ring edge, a multiple of 4 up to 252; more is finer and costlier.
 // treeCells: tree slots per edge of each of the four tree rings (5, 10, 20, 40 m apart), up to 256; 0 draws none.
-- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr;
+// mapTexels: texels per edge of each ground map level, a power of two from 256 to 2048; the
+// finest level is a metre per texel, so 1024 holds a kilometre around the camera at full detail.
+- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells treeCells:(NSUInteger)treeCells
+                      mapTexels:(NSUInteger)mapTexels hdr:(BOOL)hdr;
 
 @property (nonatomic, readonly) SCNNode *node;        // the clipmap rings
 @property (nonatomic, readonly) SCNNode *skyNode;     // the dome; follows the camera
 @property (nonatomic) simd_float3 sunDirection;       // toward the sun
 @property (nonatomic) LevelEnvironment environment;   // fog colour and range
 
-// Recentres the rings and picks the finest ring for the camera's height.
-- (void)updateForCamera:(simd_float3)position time:(double)time;
+// Recentres the rings and the ground maps on the camera, picks the finest ring for its
+// height and takes its view for the sky. viewport is the drawable size in pixels.
+- (void)updateForCamera:(SCNNode *)camera viewport:(CGSize)viewport time:(double)time;
+// Encodes the frame's map scrolling and sky march on the queue the scene renders from;
+// call after updateForCamera and before the scene is drawn.
+- (void)bakeWithQueue:(id<MTLCommandQueue>)queue;
 - (NSString *)stats;
 
 @end

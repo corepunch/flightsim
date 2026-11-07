@@ -4,7 +4,10 @@
 // built by Sources/Render/Terrain.m (engine).
 //
 //   make build/tools/TerrainPreview
-//   build/tools/TerrainPreview [current|procedural|engine|all] [outdir] [width] [height]
+//   build/tools/TerrainPreview [current|procedural|engine|all|bench] [outdir] [width] [height]
+//
+// bench prints GPU milliseconds per frame of the engine clipmap at the given size instead
+// of writing images.
 
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
@@ -114,7 +117,7 @@ static void RenderCurrent(id<MTLDevice> device, NSString *outDir, CGSize size) {
 static void RenderEngine(id<MTLDevice> device, NSString *outDir, CGSize size) {
     id<MTLLibrary> library = [ProceduralTerrain libraryWithDevice:device shaderDirectory:[NSURL fileURLWithPath:@"Resources/Shaders"]];
     if (!library) return;
-    ProceduralTerrain *terrain = [[ProceduralTerrain alloc] initWithLibrary:library cells:128 treeCells:96 hdr:NO];
+    ProceduralTerrain *terrain = [[ProceduralTerrain alloc] initWithLibrary:library cells:128 treeCells:96 mapTexels:1024 hdr:NO];
     terrain.environment = PatrolEnvironment();
     terrain.sunDirection = kSun;
     SCNScene *scene = [SCNScene scene];
@@ -125,7 +128,14 @@ static void RenderEngine(id<MTLDevice> device, NSString *outDir, CGSize size) {
     SCNRenderer *renderer = [SCNRenderer rendererWithDevice:device options:nil];
     renderer.scene = scene;
     renderer.pointOfView = eye;
-    SnapshotViews(renderer, eye, outDir, @"engine", size, ^(View v) { [terrain updateForCamera:v.eye time:0]; });
+    SnapshotViews(renderer, eye, outDir, @"engine", size, ^(View v) {
+        [terrain updateForCamera:eye viewport:size time:0];
+        [SCNTransaction flush];     // no run loop here to commit the rings' visibility
+        [terrain bakeWithQueue:renderer.commandQueue];
+        id<MTLCommandBuffer> fence = [renderer.commandQueue commandBuffer];
+        [fence commit];
+        [fence waitUntilCompleted];
+    });
     printf("%s\n", terrain.stats.UTF8String);
 }
 
@@ -190,6 +200,98 @@ static void RenderProcedural(id<MTLDevice> device, NSString *outDir, CGSize size
     }
 }
 
+// MARK: - Timing
+
+// GPU time per frame of the game clipmap at a drawable size, for each part in turn, so a
+// change can be judged by numbers: the whole thing, then without trees, with a 16-cell
+// grid (almost no vertex work, the same pixels), the terrain and the trees without the
+// sky, and the sky dome alone. Trees alone are drawn over the 16-cell ground, so their
+// own pixels are not also counted as the ground's.
+static void BenchEngine(id<MTLDevice> device, NSString *outDir, CGSize size) {
+    id<MTLLibrary> library = [ProceduralTerrain libraryWithDevice:device shaderDirectory:[NSURL fileURLWithPath:@"Resources/Shaders"]];
+    if (!library) return;
+    MTLTextureDescriptor *td = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+                                                                                 width:(NSUInteger)size.width height:(NSUInteger)size.height mipmapped:NO];
+    td.usage = MTLTextureUsageRenderTarget;
+    td.storageMode = MTLStorageModeManaged;
+    id<MTLTexture> colour = [device newTextureWithDescriptor:td];
+    td.pixelFormat = MTLPixelFormatDepth32Float;
+    td.storageMode = MTLStorageModePrivate;
+    id<MTLTexture> depth = [device newTextureWithDescriptor:td];
+    MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
+    pass.colorAttachments[0].texture = colour;
+    pass.colorAttachments[0].loadAction = MTLLoadActionClear;
+    pass.colorAttachments[0].storeAction = MTLStoreActionStore;
+    pass.depthAttachment.texture = depth;
+    pass.depthAttachment.loadAction = MTLLoadActionClear;
+    pass.depthAttachment.clearDepth = 1;
+    id<MTLCommandQueue> queue = [device newCommandQueue];
+    struct { const char *name; NSUInteger cells, trees; BOOL hideTerrain, hideSky; } cases[] = {
+        { "full (128 cells, 96 tree slots)", 128, 96, NO, NO },
+        { "no trees", 128, 0, NO, NO },
+        { "16 cells, no trees", 16, 0, NO, NO },
+        { "terrain only, no sky", 128, 0, NO, YES },
+        { "trees only (96 slots)", 16, 96, NO, YES },
+        { "sky dome only", 16, 0, YES, NO },
+    };
+    printf("ms per frame (bakes, encoding and GPU) at %dx%d\n", (int)size.width, (int)size.height);
+    for (size_t c = 0; c < sizeof cases / sizeof *cases; c++) {
+        ProceduralTerrain *terrain = [[ProceduralTerrain alloc] initWithLibrary:library cells:cases[c].cells treeCells:cases[c].trees mapTexels:1024 hdr:NO];
+        terrain.environment = PatrolEnvironment();
+        terrain.sunDirection = kSun;
+        terrain.node.hidden = cases[c].hideTerrain;
+        terrain.skyNode.hidden = cases[c].hideSky;
+        SCNScene *scene = [SCNScene scene];
+        [scene.rootNode addChildNode:terrain.node];
+        [scene.rootNode addChildNode:terrain.skyNode];
+        SCNNode *eye = MakeCamera();
+        [scene.rootNode addChildNode:eye];
+        SCNRenderer *renderer = [SCNRenderer rendererWithDevice:device options:nil];
+        renderer.scene = scene;
+        renderer.pointOfView = eye;
+        printf("  %-34s", cases[c].name);
+        for (size_t i = 0; i < sizeof kViews / sizeof *kViews; i++) {
+            View v = kViews[i];
+            eye.camera.fieldOfView = v.fovDegrees;
+            eye.simdPosition = v.eye;
+            [eye simdLookAt:v.target];
+            double best = 1e9;
+            for (int frame = 0; frame < 4; frame++) {     // the first frame compiles pipelines and fills the maps
+                // A step sideways each frame, so the maps scroll as they would in flight.
+                eye.simdPosition = v.eye + simd_make_float3(frame * 2.0f, 0, 0);
+                [terrain updateForCamera:eye viewport:size time:0];
+                [SCNTransaction flush];     // no run loop here to commit the rings' visibility
+                // The bakes run in command buffers of their own, so the frame is timed from
+                // the first of them to the end of the scene's; the GPU idles before it.
+                CFTimeInterval t0 = CACurrentMediaTime();
+                [terrain bakeWithQueue:queue];
+                id<MTLCommandBuffer> cb = [queue commandBuffer];
+                [renderer renderAtTime:frame * 0.016 viewport:CGRectMake(0, 0, size.width, size.height) commandBuffer:cb passDescriptor:pass];
+                id<MTLBlitCommandEncoder> blit = [cb blitCommandEncoder];
+                [blit synchronizeResource:colour];
+                [blit endEncoding];
+                [cb commit];
+                [cb waitUntilCompleted];
+                best = MIN(best, (cb.GPUEndTime - t0) * 1000.0);
+            }
+            printf(" %s %6.1f", v.name, best);
+            fflush(stdout);
+            if (i == 0) {
+                NSUInteger width = colour.width, height = colour.height;
+                NSMutableData *pixels = [NSMutableData dataWithLength:width * height * 4];
+                [colour getBytes:pixels.mutableBytes bytesPerRow:width * 4 fromRegion:MTLRegionMake2D(0, 0, width, height) mipmapLevel:0];
+                CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+                CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)pixels);
+                CGImageRef image = CGImageCreate(width, height, 8, 32, width * 4, space,
+                                                 kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipFirst, provider, NULL, NO, kCGRenderingIntentDefault);
+                WritePNG(image, [outDir stringByAppendingPathComponent:[NSString stringWithFormat:@"bench-%zu.png", c]]);
+                CGImageRelease(image); CGDataProviderRelease(provider); CGColorSpaceRelease(space);
+            }
+        }
+        printf("\n");
+    }
+}
+
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         NSString *mode = argc > 1 ? @(argv[1]) : @"all";
@@ -201,6 +303,7 @@ int main(int argc, const char *argv[]) {
         if (all || [mode isEqualToString:@"current"]) RenderCurrent(device, outDir, size);
         if (all || [mode isEqualToString:@"procedural"]) RenderProcedural(device, outDir, size);
         if (all || [mode isEqualToString:@"engine"]) RenderEngine(device, outDir, size);
+        if ([mode isEqualToString:@"bench"]) BenchEngine(device, outDir, size);
     }
     return 0;
 }

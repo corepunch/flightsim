@@ -2,7 +2,7 @@
 
 Sources behind the procedural terrain in `Sources/Render/Terrain.m` and
 `Resources/Shaders/Terrain*.metal`, and what shipped flight and air-combat games
-have published about their own terrain. The code today follows only the first
+have published about their own terrain. The code today follows the first
 section; the second is what it should be measured against.
 
 ## What the current code is built on
@@ -11,7 +11,8 @@ section; the second is what it should be measured against.
 |---|---|
 | Losasso, Hoppe — *Geometry Clipmaps: Terrain Rendering Using Nested Regular Grids*, SIGGRAPH 2004. [hhoppe.com/proj/geomclipmap](https://hhoppe.com/proj/geomclipmap/) | Nested rings of one grid following the camera; the ring layout in `Terrain.m`. |
 | Asirvatham, Hoppe — *Terrain Rendering Using GPU-Based Geometry Clipmaps*, GPU Gems 2 ch. 2, 2005. [developer.nvidia.com](https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-2-terrain-rendering-using-gpu-based-geometry), [PDF](https://hhoppe.com/gpugcm.pdf), [GDC 2005 slides](https://download.nvidia.com/developer/presentations/2005/GDC/Sponsored_Day/GPUTerrain.pdf), [sample code](https://github.com/QianMo/GPU-Gems-Book-Source-Code/tree/master/GPU-Gems-2-CD-Content/Geometric_Complexity/Ch_02_Terrain_Rendering_using_GPU-Based_Geometry_Clipmaps) | Vertex-shader displacement, the "finest ring ≈ half the camera height" rule. |
-| Strugar — *Continuous Distance-Dependent Level of Detail for Rendering Heightmaps (CDLOD)*, 2010. [github.com/fstrugar/CDLOD](https://github.com/fstrugar/CDLOD) | The edge morph that removes seams and T-junctions between rings. |
+| Strugar — *Continuous Distance-Dependent Level of Detail for Rendering Heightmaps (CDLOD)*, 2010. [github.com/fstrugar/CDLOD](https://github.com/fstrugar/CDLOD) | The edge morph that removes seams and T-junctions between rings; the height morphs between map levels with it. |
+| Tanner, Migdal, Jones — *The Clipmap: A Virtual Mipmap*, SIGGRAPH 1998. [PDF](https://dl.acm.org/doi/pdf/10.1145/280814.280855) | The ground maps: nested windows of a lit ground image and a height map, one per power-of-two spacing, held as tori that scroll with the camera; `groundBake` fills in the texels that come into view. The procedural surface runs once per texel, not per pixel per frame. |
 
 ## What flight and air-combat games published
 
@@ -58,6 +59,8 @@ section; the second is what it should be measured against.
 
 Every shipped title above renders an **authored or measured heightmap** with a
 **material/type map** and **tiled detail textures**, and uses procedural noise only
-as a modifier: splat blending, micro-detail, displacement. None computes landform,
-erosion, parcels, roads, forest and albedo from noise alone per vertex and per pixel,
-which is what `TerrainCommon.metal` does today.
+as a modifier: splat blending, micro-detail, displacement. `TerrainCommon.metal`
+still computes landform, erosion, parcels, roads, forest and albedo from noise alone,
+but into the clipmap's ground maps as they scroll, so a frame samples textures as
+those games do; the finest map is a metre per texel, coarser ones blur with distance
+where a tiled detail texture would keep them sharp.

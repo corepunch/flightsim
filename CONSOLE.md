@@ -70,6 +70,7 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `r_shadowSize` | 512 iOS, 1024 macOS | archive | Sun shadow map edge in pixels (256–2048), 4 bytes a pixel; restart after changing |
 | `r_terrainGrid` | 96 iOS, 128 macOS | archive | Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252; applies on the next level |
 | `r_terrainTrees` | 64 iOS, 96 macOS | archive | Tree slots per edge of each of the four procedural tree rings (5, 10, 20, 40 m apart), up to 256; 0 draws none; applies on the next level |
+| `r_terrainMap` | 512 iOS, 1024 macOS | archive | Texels per edge of each procedural ground map level, a power of two from 256 to 2048, 8 bytes a texel; the finest level is a metre per texel, each further level doubles that until the coarsest reaches the horizon (1024 is 7 levels, 56 MiB); applies on the next level |
 | `s_radioVolume` | 0.32 | archive | Background radio voice volume (0–1); 0 silences voices. Music keeps its normal volume |
 | `cl_testInput` | 0 | cheat | A pilot who weaves and fires, for testing prediction |
 | `cl_testFire` | 0 | cheat | Holds the trigger |

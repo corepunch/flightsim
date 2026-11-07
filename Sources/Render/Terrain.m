@@ -1,8 +1,26 @@
 #import "Render.h"
 
+enum { kMaxMapLevels = 10 };
+
 typedef struct {
-    simd_float4 camera, sun, fog, misc, trees;
+    simd_float4 camera, sun, fog, misc, trees, map, heights;
+    simd_float4 mapOrigin[kMaxMapLevels];
 } TerrainParams;
+
+typedef struct {
+    simd_int4 origin;       // xy = world texel index of thread (0, 0), z = level, w = texels per edge
+    simd_float4 spacing;    // x = metres per texel, y = detail
+} BakeParams;
+
+typedef struct {
+    simd_float4x4 inverseViewProjection;
+} SkyBakeParams;
+
+// A rectangle of one level's texels, in world texel indices, waiting to be baked.
+typedef struct {
+    int level;
+    simd_int2 origin, size;
+} Strip;
 
 static const float kFinestSpacing = 4;      // metres between vertices of the innermost ring
 enum { kLevels = 8 };                       // 4 m to 512 m spacing; the coarsest ring reaches 32 km
@@ -10,10 +28,17 @@ enum { kVariants = 5 };                     // 0: full square; 1-4: rings, hole 
 static const float kMinHeight = -60, kMaxHeight = 2600;
 static const float kTreeSpacing = 5;        // metres between tree slots in the innermost tree ring
 enum { kTreeLevels = 4 };                   // 5 m to 40 m slots; trees reach about 1.4 km at the default grid
+static const float kMapSpacing = 1;         // metres per texel of the finest ground map
+enum { kMaxStrips = 2 * kMaxMapLevels };
+static const int kSkyScale = 4;             // the sky texture is the drawable over this, each way
 
 static float Snap(float v, float step) { return floorf(v / step) * step; }
 
 static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((c + 0.055f) / 1.055f, 2.4f); }
+
+static NSUInteger TextureBytes(id<MTLTexture> t) {
+    return t ? t.allocatedSize : 0;
+}
 
 @implementation ProceduralTerrain {
     int _cells;
@@ -23,6 +48,18 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     TerrainParams _params;
     NSUInteger _bytes;
     int _finest;
+
+    id<MTLDevice> _device;
+    id<MTLComputePipelineState> _groundBake, _skyBake;
+    id<MTLTexture> _groundMap, _heightMap, _skyMap;
+    SCNMaterial *_skyMaterial;
+    int _mapTexels, _mapLevels;
+    simd_int2 _mapOrigin[kMaxMapLevels];
+    BOOL _mapFilled;
+    Strip _strips[kMaxStrips];
+    int _stripCount;
+    SkyBakeParams _skyParams;
+    BOOL _skyReady;
 }
 
 + (id<MTLLibrary>)libraryWithDevice:(id<MTLDevice>)device shaderDirectory:(NSURL *)directory {
@@ -70,10 +107,42 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     }];
     SCNMaterial *material = [SCNMaterial material];
     material.program = program;
+    // SceneKit binds textures to the shader arguments of the same names.
+    [material setValue:[SCNMaterialProperty materialPropertyWithContents:_groundMap] forKey:@"groundMap"];
+    [material setValue:[SCNMaterialProperty materialPropertyWithContents:_heightMap] forKey:@"heightMap"];
     return material;
 }
 
-- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr {
+// The ground maps: one window per level, each twice the spacing of the last, enough of
+// them that the coarsest covers the coarsest ring.
+- (void)makeMapsWithLibrary:(id<MTLLibrary>)library texels:(NSUInteger)texels {
+    _device = library.device;
+    int t = 256;
+    while (t < (int)texels && t < 2048) t *= 2;     // the torus needs a power of two
+    _mapTexels = t;
+    float reach = _cells / 2.0f * kFinestSpacing * (1 << (kLevels - 1));
+    _mapLevels = (int)MIN(kMaxMapLevels, 1 + ceilf(log2f(reach / (_mapTexels / 2.0f * kMapSpacing))));
+    NSError *error = nil;
+    _groundBake = [_device newComputePipelineStateWithFunction:[library newFunctionWithName:@"groundBake"] error:&error];
+    _skyBake = _groundBake ? [_device newComputePipelineStateWithFunction:[library newFunctionWithName:@"skyBake"] error:&error] : nil;
+    if (!_skyBake) { NSLog(@"Terrain: bake pipeline failed: %@", error); return; }
+    MTLTextureDescriptor *d = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm_sRGB
+                                                                                width:_mapTexels height:_mapTexels mipmapped:NO];
+    d.textureType = MTLTextureType2DArray;
+    d.arrayLength = _mapLevels;
+    d.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
+    d.storageMode = MTLStorageModePrivate;
+    _groundMap = [_device newTextureWithDescriptor:d];
+    _groundMap.label = @"Terrain ground map";
+    d.pixelFormat = MTLPixelFormatRG16Unorm;
+    _heightMap = [_device newTextureWithDescriptor:d];
+    _heightMap.label = @"Terrain height map";
+    _params.map = simd_make_float4(_mapTexels, _mapLevels, kMapSpacing, 0);
+    _params.heights = simd_make_float4(kMinHeight, kMaxHeight - kMinHeight, 0, 0);
+}
+
+- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells treeCells:(NSUInteger)treeCells
+                       mapTexels:(NSUInteger)mapTexels hdr:(BOOL)hdr {
     if (!(self = [super init])) return nil;
     _cells = (int)MAX(16, MIN(252, cells & ~(NSUInteger)3));   // multiples of 4 keep the hole on the coarser grid
     _finest = -1;
@@ -87,6 +156,8 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     _skyNode.name = @"Terrain sky";
     _skyNode.categoryBitMask = RenderCategoryBackground;
     if (!library) return self;
+    [self makeMapsWithLibrary:library texels:mapTexels];
+    if (!_heightMap) return self;
 
     // The grid is the only vertex data; the shader reads the ring's place and spacing from
     // its node transform. Two corners carry the height range so culling boxes cover hills.
@@ -137,11 +208,11 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     SCNGeometryElement *cubeFaces = [SCNGeometryElement geometryElementWithData:[NSData dataWithBytes:faces length:sizeof(faces)]
         primitiveType:SCNGeometryPrimitiveTypeTriangles primitiveCount:12 bytesPerIndex:sizeof(uint16_t)];
     SCNGeometry *dome = [SCNGeometry geometryWithSources:@[cube] elements:@[cubeFaces]];
-    SCNMaterial *sky = [self materialWithLibrary:library vertex:@"terrainSkyVertex" fragment:@"terrainSkyFragment"];
-    sky.doubleSided = YES;
-    sky.readsFromDepthBuffer = NO;
-    sky.writesToDepthBuffer = NO;
-    dome.materials = @[sky];
+    _skyMaterial = [self materialWithLibrary:library vertex:@"terrainSkyVertex" fragment:@"terrainSkyFragment"];
+    _skyMaterial.doubleSided = YES;
+    _skyMaterial.readsFromDepthBuffer = NO;
+    _skyMaterial.writesToDepthBuffer = NO;
+    dome.materials = @[_skyMaterial];
     _skyNode.geometry = dome;
     _skyNode.categoryBitMask = RenderCategoryBackground;
     _skyNode.castsShadow = NO;
@@ -195,7 +266,40 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     _params.misc.x = environment.fogEnd;
 }
 
-- (void)updateForCamera:(simd_float3)position time:(double)time {
+- (void)setSunDirection:(simd_float3)sunDirection {
+    _sunDirection = sunDirection;
+    _mapFilled = NO;    // the maps hold the sun's light
+}
+
+- (void)addStrip:(int)level origin:(simd_int2)origin size:(simd_int2)size {
+    if (size.x <= 0 || size.y <= 0 || _stripCount >= kMaxStrips) return;
+    _strips[_stripCount++] = (Strip){ level, origin, size };
+}
+
+// Moves each level's window to the camera and queues the texels that scrolled in: a
+// column band and a row band, or the whole window after a jump.
+- (void)scrollMapsToCamera:(simd_float3)position {
+    int n = _mapTexels;
+    for (int level = 0; level < _mapLevels; level++) {
+        float spacing = kMapSpacing * (1 << level);
+        simd_int2 origin = simd_make_int2((int)floorf(position.x / spacing) - n / 2, (int)floorf(position.z / spacing) - n / 2);
+        simd_int2 shift = origin - _mapOrigin[level];
+        _mapOrigin[level] = origin;
+        _params.mapOrigin[level] = simd_make_float4(origin.x, origin.y, 0, 0);
+        if (!_mapFilled || abs(shift.x) >= n || abs(shift.y) >= n) {
+            [self addStrip:level origin:origin size:simd_make_int2(n, n)];
+            continue;
+        }
+        if (shift.x > 0) [self addStrip:level origin:simd_make_int2(origin.x + n - shift.x, origin.y) size:simd_make_int2(shift.x, n)];
+        if (shift.x < 0) [self addStrip:level origin:origin size:simd_make_int2(-shift.x, n)];
+        if (shift.y > 0) [self addStrip:level origin:simd_make_int2(origin.x, origin.y + n - shift.y) size:simd_make_int2(n, shift.y)];
+        if (shift.y < 0) [self addStrip:level origin:origin size:simd_make_int2(n, -shift.y)];
+    }
+    _mapFilled = YES;
+}
+
+- (void)updateForCamera:(SCNNode *)camera viewport:(CGSize)viewport time:(double)time {
+    simd_float3 position = camera.simdWorldPosition;
     _params.camera = simd_make_float4(position, (float)fmod(time, 3600.0));
     _params.sun = simd_make_float4(simd_normalize(_sunDirection), 0);
     _skyNode.simdPosition = position;
@@ -233,11 +337,65 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
         _treeRings[level].simdPosition = simd_make_float3(Snap(position.x, spacing), 0, Snap(position.z, spacing));
         _treeRings[level].simdScale = simd_make_float3(spacing, 1, spacing);
     }
+    if (!_heightMap) return;
+    [self scrollMapsToCamera:position];
+
+    // The sky is marched for this frame's view into a texture a quarter of the drawable.
+    NSUInteger width = MAX(16, (NSUInteger)ceil(viewport.width / kSkyScale)), heightPx = MAX(16, (NSUInteger)ceil(viewport.height / kSkyScale));
+    if (!_skyMap || _skyMap.width != width || _skyMap.height != heightPx) {
+        MTLTextureDescriptor *d = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA16Float
+                                                                                    width:width height:heightPx mipmapped:NO];
+        d.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
+        d.storageMode = MTLStorageModePrivate;
+        _skyMap = [_device newTextureWithDescriptor:d];
+        _skyMap.label = @"Terrain sky";
+        [_skyMaterial setValue:[SCNMaterialProperty materialPropertyWithContents:_skyMap] forKey:@"skyMap"];
+    }
+    simd_float4x4 projection = SCNMatrix4ToMat4([camera.camera projectionTransformWithViewportSize:viewport]);
+    _skyParams.inverseViewProjection = simd_inverse(simd_mul(projection, simd_inverse(camera.simdWorldTransform)));
+    _skyReady = YES;
+}
+
+- (void)bakeWithQueue:(id<MTLCommandQueue>)queue {
+    if (!_heightMap || !_skyReady) return;
+    TerrainParams params = _params;
+    for (int i = 0; i < _stripCount; i++) {
+        // A command buffer per strip keeps a whole level's first fill short of the GPU watchdog.
+        Strip s = _strips[i];
+        BakeParams b = { simd_make_int4(s.origin.x, s.origin.y, s.level, _mapTexels),
+                         simd_make_float4(kMapSpacing * (1 << s.level), MAX(0.0f, 1.0f - 0.5f * s.level), 0, 0) };
+        id<MTLCommandBuffer> cb = [queue commandBuffer];
+        cb.label = @"Terrain ground bake";
+        id<MTLComputeCommandEncoder> enc = [cb computeCommandEncoder];
+        [enc setComputePipelineState:_groundBake];
+        [enc setTexture:_groundMap atIndex:0];
+        [enc setTexture:_heightMap atIndex:1];
+        [enc setBytes:&params length:sizeof(params) atIndex:0];
+        [enc setBytes:&b length:sizeof(b) atIndex:1];
+        [enc dispatchThreads:MTLSizeMake(s.size.x, s.size.y, 1) threadsPerThreadgroup:MTLSizeMake(8, 8, 1)];
+        [enc endEncoding];
+        [cb commit];
+    }
+    _stripCount = 0;
+
+    id<MTLCommandBuffer> cb = [queue commandBuffer];
+    cb.label = @"Terrain sky bake";
+    id<MTLComputeCommandEncoder> enc = [cb computeCommandEncoder];
+    [enc setComputePipelineState:_skyBake];
+    [enc setTexture:_skyMap atIndex:0];
+    [enc setBytes:&params length:sizeof(params) atIndex:0];
+    [enc setBytes:&_skyParams length:sizeof(_skyParams) atIndex:1];
+    [enc dispatchThreads:MTLSizeMake(_skyMap.width, _skyMap.height, 1) threadsPerThreadgroup:MTLSizeMake(8, 8, 1)];
+    [enc endEncoding];
+    [cb commit];
 }
 
 - (NSString *)stats {
-    return [NSString stringWithFormat:@"Terrain: %d rings of %d cells, finest ring %d, %d tree rings of %d slots, %.2f MiB grid and index data, no textures",
-            kLevels, _cells, _finest, kTreeLevels, _treeSlots, _bytes / 1048576.0];
+    NSUInteger textures = TextureBytes(_groundMap) + TextureBytes(_heightMap) + TextureBytes(_skyMap);
+    return [NSString stringWithFormat:@"Terrain: %d rings of %d cells, finest ring %d, %d tree rings of %d slots, %.2f MiB grid and index data; "
+            @"%d ground map levels of %d texels (%g m per texel and up), sky %lux%lu, %.1f MiB of textures",
+            kLevels, _cells, _finest, kTreeLevels, _treeSlots, _bytes / 1048576.0,
+            _mapLevels, _mapTexels, kMapSpacing, (unsigned long)_skyMap.width, (unsigned long)_skyMap.height, textures / 1048576.0];
 }
 
 @end
