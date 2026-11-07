@@ -100,20 +100,7 @@ static void RenderCurrent(id<MTLDevice> device, NSString *outDir, CGSize size) {
     [sun simdLookAt:simd_make_float3(0, 0, 0)];
     [scene.rootNode addChildNode:sun];
 
-    SCNCamera *cam = [SCNCamera camera];
-    cam.zNear = 0.3;
-    cam.zFar = 40000;
-    cam.wantsHDR = YES;
-    cam.wantsExposureAdaptation = NO;
-    cam.bloomIntensity = 1.35;
-    cam.bloomThreshold = 0.9;
-    cam.bloomBlurRadius = 18;
-    cam.vignettingIntensity = 0.7;
-    cam.vignettingPower = 0.9;
-    cam.saturation = 1.08;
-    cam.contrast = 0.05;
-    SCNNode *eye = [SCNNode node];
-    eye.camera = cam;
+    SCNNode *eye = MakeCamera();
     [scene.rootNode addChildNode:eye];
 
     SCNRenderer *renderer = [SCNRenderer rendererWithDevice:device options:nil];
