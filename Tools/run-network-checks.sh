@@ -17,9 +17,13 @@ clang -fobjc-arc -O1 -g -Wall -Wno-unused-function -Wno-deprecated-declarations 
     -framework Cocoa -framework SceneKit -framework SpriteKit -framework QuartzCore \
     -o "$qa/NetworkChecks"
 python3 Tools/network-fixtures.py "$qa"
-# Preserve a networking failure while still exercising the production campaigns.
-# Bonjour availability must not hide story/objective regressions in CI.
 network_status=0
+# Repeat the socket teardown/reconnect path on the native runner. Keep a
+# separate log so an intermittent failure retains its iteration number.
+for iteration in {1..25}; do
+    print "UDP disconnect iteration $iteration/25" | tee -a "$qa/udp-disconnect.log"
+    "$qa/NetworkChecks" --udp-disconnect 2>&1 | tee -a "$qa/udp-disconnect.log" || { network_status=$?; break; }
+done
 "$qa/NetworkChecks" 2>&1 | tee "$qa/results.log" || network_status=$?
 python3 Tools/network-fixtures.py "$qa" --check-identities
 # A separate process and resource tree prevent fixture definitions leaking into

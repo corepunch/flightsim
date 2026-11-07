@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <time.h>
 
 static double clockNow = 100;
 double NetworkCheckTime(void) { return clockNow; }
@@ -661,6 +662,71 @@ static void SecondaryTargetingRun(void) {
     [client disconnect]; [server stop];
     puts("PASS secondary targeting: first-press launch, manual enemy lock, crosshair proximity over distance, automatic retargeting, no offscreen/friendly/neutral/departed/hidden targets, ammunition preserved without a target");
 }
+// Delayed delivery makes the old one-frame disconnect assumption fail on
+// every run, without depending on the kernel scheduler or the idle timeout.
+static void DisconnectDeliveryCheck(void) {
+    routes = [NSMutableDictionary dictionary];
+    delay = 0; dropEvery = 0; blackout = NO; assertPendingPrediction = NO;
+    Server *server = [[Server alloc] initWithName:@"Disconnect delivery"]; CHECK(server);
+    Link *host = [Link port:1]; [server addTransport:host];
+    [server spawnLevel:@"check-1"];
+    NSMutableArray<Client *> *clients = [NSMutableArray array];
+    for (int i = 0; i < 2; i++) {
+        Client *client = [[Client alloc] initWithView:(ClientView *)[Spy new]];
+        __weak Client *weak = client; client.gamestateHandler = ^{ [weak begin]; };
+        [clients addObject:client];
+        [client connectTo:[NetAddress loopback:1] transport:[Link port:10+i] name:@"Leaving"];
+    }
+    for (int round = 0; round < 16; round++) {
+        Steps(server, clients, (ControlState){0}, 60);
+        CHECK(server.clientCount == 2);
+        for (Client *client in clients) CHECK(client.state == ClientActive && Latest(client));
+        // Keep only the disconnect burst. Lose its first two packets for each
+        // client, leaving the third to exercise cleanup for both slots.
+        [host.queue removeAllObjects];
+        delay = 0.1;
+        for (Client *client in clients) {
+            [client disconnect]; [client disconnect];
+            CHECK(client.state == ClientDisconnected && !Latest(client));
+        }
+        CHECK(host.queue.count == 6);
+        [host.queue removeObjectsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(3, 2)]];
+        [host.queue removeObjectsInRange:NSMakeRange(0, 2)];
+        [server frame:0]; CHECK(server.clientCount == 2);
+        clockNow += 0.11;
+        [server frame:0]; CHECK(server.clientCount == 0);
+        // The same endpoints must be reusable immediately after cleanup.
+        delay = 0;
+        for (int i = 0; i < 2; i++)
+            [clients[i] connectTo:[NetAddress loopback:1] transport:routes[@(10+i)] name:@"Returned"];
+    }
+    Steps(server, clients, (ControlState){0}, 60);
+    CHECK(server.clientCount == 2);
+    for (Client *client in clients) [client disconnect];
+    [server frame:0]; CHECK(server.clientCount == 0);
+    [server stop];
+    puts("PASS delayed disconnects: both slots released, burst loss, repeated disconnect and 16 same-endpoint reconnects");
+}
+
+static double SocketCheckTime(void) {
+    struct timespec now;
+    CHECK(clock_gettime(CLOCK_MONOTONIC, &now) == 0);
+    return now.tv_sec + now.tv_nsec / 1e9;
+}
+
+static void WaitForUDPDisconnects(Server *server) {
+    // The simulation clock deliberately stays frozen: an idle timeout must
+    // never satisfy this check. Poll real sockets until delivery or a deadline.
+    double until = SocketCheckTime() + 2;
+    do {
+        [server frame:0];
+        if (!server.clientCount) return;
+        usleep(1000);
+    } while (SocketCheckTime() < until);
+    fprintf(stderr, "UDP disconnect delivery deadline: %lu slots remain\n", (unsigned long)server.clientCount);
+    CHECK(server.clientCount == 0);
+}
+
 static void UDPSmoke(void) {
     assertPendingPrediction = YES;
     delay = 0; dropEvery = 0; blackout = NO;
@@ -669,9 +735,11 @@ static void UDPSmoke(void) {
     UDPTransport *host = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(host);
     [server addTransport:host]; [server spawnLevel:@"check-1"];
     NetAddress *address = [NetAddress addressWithString:@"127.0.0.1" port:host.port];
+    NSMutableArray<UDPTransport *> *sockets = [NSMutableArray array];
     NSMutableArray<Client *> *clients = [NSMutableArray array];
     for (int i = 0; i < 2; i++) {
         UDPTransport *socket = [[UDPTransport alloc] initWithPort:0 attempts:1]; CHECK(socket);
+        [sockets addObject:socket];
         Client *client = [[Client alloc] initWithView:(ClientView *)[Spy new]];
         __weak Client *weak = client; client.gamestateHandler = ^{ [weak begin]; };
         [client connectTo:address transport:socket name:@"UDP pilot"]; [clients addObject:client];
@@ -682,11 +750,28 @@ static void UDPSmoke(void) {
     CHECK(Latest(clients[0]).ps.entity != Latest(clients[1]).ps.entity);
     CHECK(Latest(clients[0]).ps.lastCommand > 200 && Latest(clients[1]).ps.lastCommand > 200);
     for (Client *c in clients) [c disconnect];
-    // Kernel delivery is asynchronous even on localhost. Drain real packets
-    // without advancing the virtual timeout clock.
-    for (int i = 0; i < 100 && server.clientCount; i++) { usleep(1000); [server frame:0]; }
-    CHECK(server.clientCount == 0); [server stop];
-    puts("PASS real IPv4 UDP sockets on localhost, one process, two clients");
+    WaitForUDPDisconnects(server);
+    // Reuse the very same sockets and clients, including rapid, duplicate
+    // disconnect calls. Reaching zero between rounds proves slots are freed.
+    for (int round = 0; round < 16; round++) {
+        for (NSUInteger i = 0; i < clients.count; i++) {
+            Client *client = clients[i];
+            UDPTransport *socket = sockets[i];
+            NetAddress *from;
+            while ([socket receiveFrom:&from]) {} // discard the previous session's snapshots
+            [client connectTo:address transport:socket name:@"UDP returned"];
+        }
+        for (int frame = 0; frame < 60; frame++) {
+            Step(server, clients, fly);
+            usleep(1000);
+        }
+        CHECK(server.clientCount == 2);
+        for (Client *client in clients) CHECK(client.state == ClientActive && Latest(client));
+        for (Client *client in clients) { [client disconnect]; [client disconnect]; }
+        WaitForUDPDisconnects(server);
+    }
+    [server stop];
+    puts("PASS real IPv4 UDP sockets: two clients, disconnect and 16 rapid same-socket reconnects");
 }
 
 static void DeathmatchRun(void) {
@@ -773,6 +858,8 @@ static void LateJoinCheck(void) {
     float elapsed = level->_missionTime;
     CHECK(elapsed > 25 && !server.missionEnded);
     delay = 0.1; dropEvery = 11;
+    // Drop the first joining attempt at the periodic loss phase.
+    sent = 8; dropped = 0;
     Client *late = [[Client alloc] initWithView:(ClientView *)[Spy new]];
     __weak Client *weak = late; late.gamestateHandler = ^{ [weak begin]; };
     [late connectTo:[NetAddress loopback:1] transport:[Link port:12] name:@"Late pilot"];
@@ -972,6 +1059,9 @@ int main(int argc, const char **argv) { @autoreleasepool {
     if (argc > 2 && !strcmp(argv[1], "--campaign")) return CampaignAudit(@(argv[2]));
     if (argc > 2 && !strcmp(argv[1], "--peer")) return LivePeer(@(argv[2]));
     if (argc > 1 && !strcmp(argv[1], "--identity")) { puts(ShipDataIdentity().UTF8String); return 0; }
+    if (argc > 1 && !strcmp(argv[1], "--udp-disconnect")) {
+        DisconnectDeliveryCheck(); UDPSmoke(); return 0;
+    }
     for (int mission = 0; mission < 2; mission++) for (int loss = 0; loss < 2; loss++) Scenario(mission, loss);
     CHECK(predictionChecks > 1000);
     printf("PASS %lu pending-input prediction comparisons against subsequent authority\n", (unsigned long)predictionChecks);
@@ -981,6 +1071,7 @@ int main(int argc, const char **argv) { @autoreleasepool {
     OrdersRun();
     BoardRun();
     SecondaryTargetingRun();
+    DisconnectDeliveryCheck();
     UDPSmoke();
     DeathmatchRun();
     MatchOptionsCheck();

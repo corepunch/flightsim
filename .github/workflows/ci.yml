@@ -56,6 +56,7 @@ jobs:
         with:
           name: network-checks
           path: |
+            build/network-checks.*/udp-disconnect.log
             build/network-checks.*/results.log
             build/network-checks.*/campaign-*.log
           if-no-files-found: ignore

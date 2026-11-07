@@ -32,6 +32,22 @@ Transport scheduling is deterministic; it does not depend on sleeps or wall time
 Loss applies to handshake, reliable fragments, commands and snapshots alike.
 The burst exceeds input redundancy too, so instantaneous zero correction is not
 expected under loss; final convergence is checked after delivery recovers.
+The disconnect regression holds both clients' disconnect datagrams for 100 ms,
+loses the first two copies of each burst, and verifies both slots remain allocated
+before delivery and are freed afterward. Sixteen cycles reconnect the same endpoints;
+repeated disconnect calls must be harmless.
+
+The UDP smoke requires both slots to be freed within two seconds of monotonic
+wall time, pumping the server with zero delta while the virtual clock stays frozen.
+It cannot pass by expiring idle connections. It then repeats disconnect/reconnect
+sixteen times using the same sockets and requires active snapshots on each join.
+The built fixture executable accepts `--udp-disconnect` to repeat just these checks
+without Bonjour or campaign checks, for example:
+
+```sh
+for run in {1..50}; do build/network-checks.<run>/NetworkChecks --udp-disconnect || break; done
+```
+
 The UDP smoke has no injected delay/loss. It is a real kernel socket test, not
 LAN, separate-process or device testing.
 
