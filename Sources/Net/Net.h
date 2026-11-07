@@ -32,6 +32,8 @@
 + (instancetype)side:(int)port;     // 0 client, 1 server
 @end
 
+@class UDPTransport;
+
 // MARK: - LANBrowser
 
 @interface LANServer : NSObject
@@ -48,8 +50,16 @@
 @interface LANBrowser : NSObject
 
 - (instancetype)init;
+// Injectable socket for deterministic discovery checks (nil models socket failure).
+- (instancetype)initWithSocket:(UDPTransport *)socket;
 @property (nonatomic, readonly) NSArray<LANServer *> *servers;   // newest replies, sorted by name
 @property (atomic, readonly) BOOL discoveryFailed;
+// Independent paths: a Bonjour failure does not disable direct UDP queries.
+@property (atomic, readonly) BOOL socketFailed;
+@property (atomic, readonly) BOOL accessDenied; // explicit DNS policy denial only
+@property (atomic, readonly, strong) NSError *searchError;
+@property (atomic, readonly, strong) NSError *resolutionError;
+@property (atomic, readonly) BOOL hostUnreachable;
 
 - (void)query:(NetAddress *)address;
 - (void)poll;       // call every frame while browsing

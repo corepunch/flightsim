@@ -282,7 +282,9 @@ static void Network(void) {
         server.address = [NetAddress addressWithString:@"127.0.0.1" port:27910 + (int)i]; [servers addObject:server];
     }
     [browser showServers:servers]; [browser handle:InputActionDown]; Save(browser, @"screens", @"browser-selected");
-    [browser setStatus:@"Connection failed. Select a game to retry."]; Save(browser, @"screens", @"browser-error");
+    for (NSString *key in @[@"browser.permission", @"browser.socket_failed", @"browser.search_failed", @"browser.resolve_failed", @"browser.unreachable", @"browser.network_help"]) {
+        [browser setStatus:L10nFormat(key, @(-72007))]; Save(browser, @"screens", key);
+    }
 }
 
 static void Flight(void) {

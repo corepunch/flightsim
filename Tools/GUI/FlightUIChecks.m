@@ -468,8 +468,21 @@ static int CheckControls(void) {
 }
 // The front end runs the menus through UIServices alone; a stand-in host
 // records what it is asked to do.
+@interface FailedDiscovery : LANBrowser
+@end
+@implementation FailedDiscovery
+- (instancetype)init {
+    if ((self = [super initWithSocket:nil])) [self stop];
+    return self;
+}
+- (BOOL)socketFailed { return NO; }
+- (NSError *)searchError { return [NSError errorWithDomain:@"Bonjour/10" code:-72000 userInfo:nil]; }
+- (void)poll {}
+@end
+
 @interface FakeServices : NSObject <UIServices>
 @property (nonatomic) SKScene *presented;
+@property (nonatomic) LANBrowser *browser;
 @property (nonatomic) NSInteger started, cancels;
 @property (nonatomic) NSInteger created, matches, closed;
 @property (nonatomic) NSArray<NSString *> *hostedPilots;
@@ -486,7 +499,7 @@ static int CheckControls(void) {
 - (void)quitAfter:(NSTimeInterval)seconds {}
 - (void)drawMenuBackdrop {}
 - (BOOL)isOwnServer:(LANServer *)server { return NO; }
-- (LANBrowser *)makeLANBrowser { return nil; }   // no sockets: nothing for the firewall to ask about
+- (LANBrowser *)makeLANBrowser { return _browser; }
 - (double)time { return 0; }
 - (NSString *)connectedServer { return nil; }
 @end
@@ -504,8 +517,15 @@ static int CheckFrontEnd(void) {
     CHECK([services.presented isKindOfClass:Briefing.class] && front.currentScreen == services.presented);
     [front frame:InputActionBack];                 // the mission list goes back to the main menu
     CHECK([services.presented isKindOfClass:MainMenu.class]);
+    services.browser = [FailedDiscovery new];
     [front showBrowser];
     CHECK([services.presented isKindOfClass:ServerBrowser.class]);
+    [front setBrowserStatus:@"Connection rejected: protocol"];
+    [front frame:0];
+    CHECK([((ServerBrowser *)front.currentScreen).status isEqualToString:@"Connection rejected: protocol"]);
+    [front setBrowserStatus:@""];
+    [front frame:0];
+    CHECK([((ServerBrowser *)front.currentScreen).status isEqualToString:L10nFormat(@"browser.search_failed", @(-72000))]);
     [front frame:InputActionBack];
     CHECK(services.cancels == 1 && [services.presented isKindOfClass:MainMenu.class]);
     [front levelEnded:0 success:NO results:@[@"x Objective"] remote:YES];

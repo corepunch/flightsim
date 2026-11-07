@@ -1,6 +1,7 @@
 #import "Net.h"
 #import <QuartzCore/QuartzCore.h>
 #include <netinet/in.h>
+#include <dns_sd.h>
 
 static NSString *const LANServiceType = @"_kestrel._udp.";
 
@@ -38,7 +39,11 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
 @end
 
 @interface LANBrowser () <NSNetServiceBrowserDelegate, NSNetServiceDelegate>
-@property (atomic, readwrite) BOOL discoveryFailed;
+@property (atomic) BOOL stopped;
+@property (atomic, readwrite) BOOL socketFailed;
+@property (atomic, readwrite, strong) NSError *searchError;
+@property (atomic, readwrite, strong) NSError *resolutionError;
+@property (atomic, readwrite) BOOL hostUnreachable;
 @end
 
 @implementation LANServer
@@ -47,16 +52,20 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
 @implementation LANBrowser {
     UDPTransport *_socket;
     NSMutableDictionary<NetAddress *, LANServer *> *_found;
-    double _lastBroadcast;
+    double _lastBroadcast, _firstResolved;
     NSNetServiceBrowser *_browser;
     NSMutableArray<NSNetService *> *_services;
     NSMutableDictionary<NSString *, NetAddress *> *_resolved;
 }
 
 - (instancetype)init {
+    return [self initWithSocket:[[UDPTransport alloc] initWithPort:0 attempts:1]];
+}
+
+- (instancetype)initWithSocket:(UDPTransport *)socket {
     if ((self = [super init])) {
-        _socket = [[UDPTransport alloc] initWithPort:0 attempts:1];
-        self.discoveryFailed = !_socket;
+        _socket = socket;
+        self.socketFailed = !_socket;
         _found = [NSMutableDictionary dictionary];
         _lastBroadcast = -100;
         _services = [NSMutableArray array];
@@ -64,7 +73,7 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
         __weak LANBrowser *weak = self;
         dispatch_async(dispatch_get_main_queue(), ^{
             LANBrowser *owner = weak;
-            if (!owner) return;
+            if (!owner || owner.stopped) return;
             owner->_browser = [NSNetServiceBrowser new];
             owner->_browser.delegate = owner;
             [owner->_browser searchForServicesOfType:LANServiceType inDomain:@"local."];
@@ -74,6 +83,7 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
 }
 
 - (void)stop {
+    self.stopped = YES;
     if (!NSThread.isMainThread) { dispatch_async(dispatch_get_main_queue(), ^{ [self stop]; }); return; }
     _browser.delegate = nil;
     [_browser stop]; _browser = nil;
@@ -103,14 +113,39 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
     [_services removeObject:service];
     [service stop];
 }
-- (void)netServiceBrowser:(NSNetServiceBrowser *)browser didNotSearch:(NSDictionary *)errorDict { self.discoveryFailed = YES; }
+- (BOOL)accessDenied {
+    return self.searchError.code == kDNSServiceErr_PolicyDenied || self.resolutionError.code == kDNSServiceErr_PolicyDenied;
+}
+
+- (BOOL)discoveryFailed { return self.socketFailed || self.searchError != nil; }
+
+- (NSError *)bonjourError:(NSDictionary *)details service:(NSString *)name {
+    NSError *error = [NSError errorWithDomain:[NSString stringWithFormat:@"Bonjour/%@", details[NSNetServicesErrorDomain] ?: @"unknown"]
+        code:[details[NSNetServicesErrorCode] integerValue] userInfo:nil];
+    NSLog(@"LAN: %@: %@", name, error);
+    return error;
+}
+- (void)netServiceBrowser:(NSNetServiceBrowser *)browser didNotSearch:(NSDictionary *)errorDict {
+    self.searchError = [self bonjourError:errorDict service:@"search _kestrel._udp"];
+}
+- (void)netServiceBrowserWillSearch:(NSNetServiceBrowser *)browser { self.searchError = nil; }
+- (void)netService:(NSNetService *)service didNotResolve:(NSDictionary *)errorDict {
+    self.resolutionError = [self bonjourError:errorDict service:service.name];
+}
 - (void)netServiceDidResolveAddress:(NSNetService *)service {
+    self.resolutionError = nil;
     for (NSData *data in service.addresses) {
         if (data.length < sizeof(struct sockaddr_in) || ((const struct sockaddr *)data.bytes)->sa_family != AF_INET) continue;
         NetAddress *address = [NetAddress addressWithSockaddr:data.bytes length:(unsigned)data.length];
-        @synchronized (self) { _resolved[service.name] = address; }
-        break;
+        @synchronized (self) {
+            if (!_resolved.count) _firstResolved = CACurrentMediaTime();
+            _resolved[service.name] = address;
+        }
+        return;
     }
+    // The transport currently supports IPv4 only; IPv6 discovery alone cannot join.
+    self.resolutionError = [NSError errorWithDomain:@"LANAddress" code:1 userInfo:nil];
+    NSLog(@"LAN: %@ resolved without a usable IPv4 address", service.name);
 }
 
 - (NSArray<LANServer *> *)servers {
@@ -139,6 +174,9 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
         // Forget servers that stopped answering.
         for (NetAddress *a in _found.allKeys) if (now - _found[a].lastSeen > 6) [_found removeObjectForKey:a];
     }
+    @synchronized (self) {
+        self.hostUnreachable = _resolved.count && !_found.count && now - _firstResolved > 6;
+    }
     NetAddress *from = nil;
     NSData *packet;
     while ((packet = [_socket receiveFrom:&from])) {
@@ -155,6 +193,7 @@ static NSString *const LANServiceType = @"_kestrel._udp.";
         s.name = [[f subarrayWithRange:NSMakeRange(4, f.count - 4)] componentsJoinedByString:@" "];
         s.lastSeen = now;
         _found[from] = s;
+        self.hostUnreachable = NO;
     }
 }
 

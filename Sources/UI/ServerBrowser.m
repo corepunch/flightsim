@@ -55,6 +55,8 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
 
 - (LANServer *)selected { return !_createSelected && _index < _servers.count ? _servers[_index] : nil; }
 
+- (NSString *)status { return _status; }
+
 - (void)setStatus:(NSString *)status {
     if ([_status ?: @"" isEqualToString:status ?: @""]) return;
     _status = [status copy];
@@ -108,7 +110,8 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
         L10n(s.width >= M(@"wideHelpWidth", 850) ? @"browser.help_wide" : @"browser.help"),
     ];
     CGFloat step = M(@"notesStep", 20);
-    ScreenRegions regions = ScreenRegionsMake(s, safe, lines.count * step);
+    CGFloat statusRows = s.width < 600 ? 4 : 2;
+    ScreenRegions regions = ScreenRegionsMake(s, safe, (lines.count + statusRows - 1) * step);
     __weak ServerBrowser *owner = self;
     UIBarAction *back = [UIBarAction title:L10n(@"browser.back") accent:UIInk handler:^{
         ServerBrowser *screen = owner; if (screen) screen->_barInput |= InputActionBack;
@@ -167,10 +170,10 @@ static SKLabelNode *Text(CGFloat size, SKColor *c) {
     for (NSUInteger i = 0; i < lines.count; i++) {
         SKLabelNode *l = Text(i == 0 ? M(@"statusSize", 14) : M(@"noteSize", 12), i == 0 ? Amber(1) : Ink(0.55));
         l.text = lines[i];
-        l.numberOfLines = 1;
+        l.numberOfLines = i == 0 ? (NSInteger)statusRows : 1;
         l.preferredMaxLayoutWidth = footer.size.width;
-        l.lineBreakMode = NSLineBreakByTruncatingTail;
-        l.position = CGPointMake(CGRectGetMinX(footer), CGRectGetMaxY(footer) - i * step);
+        l.lineBreakMode = i == 0 ? NSLineBreakByWordWrapping : NSLineBreakByTruncatingTail;
+        l.position = CGPointMake(CGRectGetMinX(footer), CGRectGetMaxY(footer) - (i == 0 ? 0 : i + statusRows - 1) * step);
         [_root addChild:l];
         [notes addObject:l];
     }
