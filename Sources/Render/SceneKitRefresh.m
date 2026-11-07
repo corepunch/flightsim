@@ -119,7 +119,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         _shadowSize = [Cvar get:@"r_shadowSize" defaultValue:TARGET_OS_IOS ? @"1024" : @"2048" flags:CVAR_ARCHIVE
                           help:@"Sun shadow map edge in pixels (restart required)"];
         _terrainGrid = [Cvar get:@"r_terrainGrid" defaultValue:TARGET_OS_IOS ? @"96" : @"128" flags:CVAR_ARCHIVE
-                           help:@"Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252 (applies on the next level)"];
+                           help:@"Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252; tree rings get three quarters as many slots (applies on the next level)"];
     }
     return self;
 }

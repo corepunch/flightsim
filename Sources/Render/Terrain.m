@@ -1,13 +1,15 @@
 #import "Render.h"
 
 typedef struct {
-    simd_float4 camera, sun, fog, misc;
+    simd_float4 camera, sun, fog, misc, trees;
 } TerrainParams;
 
 static const float kFinestSpacing = 4;      // metres between vertices of the innermost ring
 enum { kLevels = 8 };                       // 4 m to 512 m spacing; the coarsest ring reaches 32 km
 enum { kVariants = 5 };                     // 0: full square; 1-4: rings, hole shifted by (dx, dz)
 static const float kMinHeight = -60, kMaxHeight = 2600;
+static const float kTreeSpacing = 5;        // metres between tree slots in the innermost tree ring
+enum { kTreeLevels = 4 };                   // 5 m to 40 m slots; trees reach about 1.4 km at the default grid
 
 static float Snap(float v, float step) { return floorf(v / step) * step; }
 
@@ -16,6 +18,8 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
 @implementation ProceduralTerrain {
     int _cells;
     SCNNode *_variants[kLevels][kVariants];
+    SCNNode *_treeRings[kTreeLevels];
+    int _treeSlots;
     TerrainParams _params;
     NSUInteger _bytes;
     int _finest;
@@ -77,6 +81,9 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     _params.misc = simd_make_float4(12000, _cells / 2.0f, hdr ? 1 : 0, TARGET_OS_IOS ? 8 : 12);
     _node = [SCNNode node];
     _node.name = @"Terrain";
+    // Tree slots per ring edge follow the terrain grid, so the density setting scales both.
+    _treeSlots = (int)MAX(16, (_cells * 3 / 4) & ~1);
+    _params.trees = simd_make_float4(_treeSlots / 2.0f, kTreeSpacing, _treeSlots / 2.0f * kTreeSpacing * (1 << (kTreeLevels - 1)), 0);
     _skyNode = [SCNNode node];
     _skyNode.name = @"Terrain sky";
     _skyNode.categoryBitMask = RenderCategoryBackground;
@@ -118,6 +125,8 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
         [_node addChildNode:ring];
     }
 
+    [self addTreesWithLibrary:library];
+
     // The dome is a unit cube around the camera; its fragment shader only needs directions.
     static const simd_float3 corners[8] = {
         { -1, -1, -1 }, { 1, -1, -1 }, { -1, 1, -1 }, { 1, 1, -1 }, { -1, -1, 1 }, { 1, -1, 1 }, { -1, 1, 1 }, { 1, 1, 1 } };
@@ -139,6 +148,44 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     _skyNode.castsShadow = NO;
     _skyNode.renderingOrder = -1000;
     return self;
+}
+
+// One shared grid of tree slots, five vertices each (top, three corners, bottom, all at the
+// slot's indices; the shader places them), drawn by every tree ring. Two unindexed vertices
+// carry the height range so culling boxes cover hills and trees.
+- (void)addTreesWithLibrary:(id<MTLLibrary>)library {
+    int n = _treeSlots, half = n / 2, count = n * n * 5 + 2;
+    NSMutableData *vertices = [NSMutableData dataWithLength:(size_t)count * sizeof(simd_float3)];
+    NSMutableData *indices = [NSMutableData dataWithCapacity:(size_t)n * n * 18 * sizeof(uint32_t)];
+    simd_float3 *v = vertices.mutableBytes;
+    for (int z = 0; z < n; z++) {
+        for (int x = 0; x < n; x++) {
+            uint32_t f = (uint32_t)((z * n + x) * 5);
+            for (int corner = 0; corner < 5; corner++) v[f + corner] = simd_make_float3(x - half, corner, z - half);
+            uint32_t tris[18] = { f, f + 1, f + 2,  f, f + 2, f + 3,  f, f + 3, f + 1,
+                                  f + 4, f + 2, f + 1,  f + 4, f + 3, f + 2,  f + 4, f + 1, f + 3 };
+            [indices appendBytes:tris length:sizeof(tris)];
+        }
+    }
+    v[count - 2] = simd_make_float3(-half, kMinHeight, -half);
+    v[count - 1] = simd_make_float3(half, kMaxHeight, half);
+    _bytes += vertices.length + indices.length;
+    SCNGeometrySource *positions = [SCNGeometrySource geometrySourceWithData:vertices semantic:SCNGeometrySourceSemanticVertex
+                                                                 vectorCount:count floatComponents:YES componentsPerVector:3
+                                                           bytesPerComponent:sizeof(float) dataOffset:0 dataStride:sizeof(simd_float3)];
+    SCNGeometryElement *element = [SCNGeometryElement geometryElementWithData:indices primitiveType:SCNGeometryPrimitiveTypeTriangles
+                                                               primitiveCount:n * n * 6 bytesPerIndex:sizeof(uint32_t)];
+    SCNGeometry *geometry = [SCNGeometry geometryWithSources:@[positions] elements:@[element]];
+    SCNMaterial *material = [self materialWithLibrary:library vertex:@"treeVertex" fragment:@"treeFragment"];
+    geometry.materials = @[material];
+    for (int level = 0; level < kTreeLevels; level++) {
+        SCNNode *ring = [SCNNode nodeWithGeometry:geometry];
+        ring.name = [NSString stringWithFormat:@"Trees %d", level];
+        ring.castsShadow = NO;
+        ring.categoryBitMask = RenderCategoryBackground;
+        [_node addChildNode:ring];
+        _treeRings[level] = ring;
+    }
 }
 
 - (void)setEnvironment:(LevelEnvironment)environment {
@@ -179,11 +226,18 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
         previous = origin;
     }
     _finest = finest;
+
+    // Each tree ring sits on its own slot grid, which the shader repeats to find the hole.
+    for (int level = 0; level < kTreeLevels; level++) {
+        float spacing = kTreeSpacing * (1 << level);
+        _treeRings[level].simdPosition = simd_make_float3(Snap(position.x, spacing), 0, Snap(position.z, spacing));
+        _treeRings[level].simdScale = simd_make_float3(spacing, 1, spacing);
+    }
 }
 
 - (NSString *)stats {
-    return [NSString stringWithFormat:@"Terrain: %d rings of %d cells, finest ring %d, %.2f MiB grid and index data, no textures",
-            kLevels, _cells, _finest, _bytes / 1048576.0];
+    return [NSString stringWithFormat:@"Terrain: %d rings of %d cells, finest ring %d, %d tree rings of %d slots, %.2f MiB grid and index data, no textures",
+            kLevels, _cells, _finest, kTreeLevels, _treeSlots, _bytes / 1048576.0];
 }
 
 @end

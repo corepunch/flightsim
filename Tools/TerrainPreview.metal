@@ -70,15 +70,9 @@ static float coverOcclusion(float2 xz, float y, float detail) {
     return 1.0 - 0.65 * occ / 6.0;
 }
 
-static float3 applyFog(float3 col, float t, float3 ro, float3 rd, float3 sun) {
-    const float a = 0.00011, b = 0.0011;
-    float ry = abs(rd.y) < 1e-4 ? 1e-4 : rd.y;
-    float amount = saturate((a / b) * exp(-ro.y * b) * (1.0 - exp(-t * ry * b)) / ry);
-    float s = pow(max(dot(rd, sun), 0.0), 6.0);
-    float3 fogCol = mix(float3(0.62, 0.72, 0.84), float3(1.0, 0.86, 0.66), s);
-    float3 ext = exp(-t * float3(0.6, 0.8, 1.1) * 0.000025);
-    return mix(col * ext + fogCol * (1.0 - ext), fogCol, amount);
-}
+// Haze as Games/DawnPatrol/Levels/01-morning-patrol.json declares it, display-linear.
+constant float3 kHaze = float3(0.406, 0.539, 0.624);
+constant float kVisibility = 12000.0;
 
 static float3 shade(float3 ro, float3 rd, float t, float3 sun) {
     float3 p = ro + rd * t;
@@ -94,23 +88,24 @@ static float3 shade(float3 ro, float3 rd, float t, float3 sun) {
     float light = sunShadow * cloudShadow(p.xz, p.y, sun);
     if (s.kind == Water) return waterColour(s, p.xz, rd, sun, light);
     float occ = detail > 0.0 ? mix(1.0, coverOcclusion(p.xz, p.y, detail), detail) : 1.0;
+    float shade = canopyShade(s, p.xz, detail);
+    n = detailNormal(s, n, p.xz, detail);
     float3 albedo = surfaceAlbedo(s, p.xz, 1.0 - gn.y, detail);
-    return albedo * surfaceLight(n, sun, light, occ);
+    return albedo * surfaceLight(n, sun, light * shade, occ * shade);
 }
 
+// Display-linear colour, hazed and composited as the game does it.
 static float3 renderRay(float3 ro, float3 rd, float3 sun, float jitter) {
     const float tmax = 40000.0;
     float t = raymarch(ro, rd, tmax);
-    float3 col;
-    float depth = tmax;
     if (t > 0.0) {
-        col = applyFog(shade(ro, rd, t, sun), t, ro, rd, sun);
-        depth = t;
-    } else {
-        col = skyColor(rd, sun, true);
+        float3 col = aerial(tonemap(shade(ro, rd, t, sun)), t, ro, rd, sun, kHaze, kVisibility);
+        float4 c = marchClouds(ro, rd, sun, t, jitter, 40, 6);
+        return col * (1.0 - c.a) + tonemap(c.rgb / max(c.a, 1e-4)) * c.a;
     }
-    float4 c = marchClouds(ro, rd, sun, depth, jitter, 40, 6);
-    return col * (1.0 - c.a) + c.rgb;
+    float4 c = marchClouds(ro, rd, sun, tmax, jitter, 40, 6);
+    float3 col = tonemap(skyColor(rd, sun, true) * (1.0 - c.a) + c.rgb);
+    return mix(col, kHaze, exp(-max(rd.y, 0.0) * 14.0));
 }
 
 kernel void renderTerrain(texture2d<float, access::write> out [[texture(0)]],
@@ -133,7 +128,7 @@ kernel void renderTerrain(texture2d<float, access::write> out [[texture(0)]],
         float2 ndc = (float2(px) + o) / float2(P.size.xy) * 2.0 - 1.0;
         float3 rd = normalize(fwd + right * ndc.x * tanHalf * aspect - up * ndc.y * tanHalf);
         // The output texture is not sRGB, so encode gamma here.
-        acc += pow(tonemap(renderRay(ro, rd, sun, hash12(float2(px) * 1.7 + o * 31.0))), 1.0 / 2.2);
+        acc += pow(saturate(renderRay(ro, rd, sun, hash12(float2(px) * 1.7 + o * 31.0))), 1.0 / 2.2);
     }
     out.write(float4(acc / float(ss * ss), 1.0), px);
 }
