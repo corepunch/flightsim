@@ -18,6 +18,8 @@
     "briefing.loadout_many": "অস্ত্রসজ্জা: জোড়া লেজার, %d টর্পেডো",
     "combat.no_secondary": "টর্পেডো শেষ",
     "combat.out_of_range": "লক্ষ্য টর্পেডোর পাল্লার বাইরে",
+    "game.pickup.torpedoes": "টর্পেডো পুনরায় সরবরাহ হয়েছে",
+    "game.pickup.repair": "হাল মেরামত হয়েছে",
     "radio.distress_wing_01": "আমাকে গুলি করছে! এখনই সুরক্ষা চাই!",
     "radio.distress_wing_02": "বাঁচাও! ওদের আমার পেছন থেকে সরাও!",
     "radio.distress_wing_03": "ওরা সবখানে! কেউ আমাকে সুরক্ষা দাও!",

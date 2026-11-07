@@ -18,6 +18,8 @@
     "briefing.loadout_many": "Bewaffnung: Zwillingslaser, %d Torpedos",
     "combat.no_secondary": "Keine Torpedos mehr",
     "combat.out_of_range": "Ziel außerhalb der Torpedoreichweite",
+    "game.pickup.torpedoes": "Torpedos aufgefüllt",
+    "game.pickup.repair": "Rumpf repariert",
     "radio.distress_wing_01": "Ich werde beschossen! Ich brauche sofort Deckung!",
     "radio.distress_wing_02": "Hilfe! Hilfe! Haltet sie mir vom Hals!",
     "radio.distress_wing_03": "Sie sind überall! Gebt mir Deckung!",

@@ -18,6 +18,8 @@
     "briefing.loadout_many": "裝備：雙聯雷射炮，%d枚魚雷",
     "combat.no_secondary": "魚雷已耗盡",
     "combat.out_of_range": "目標超出魚雷射程",
+    "game.pickup.torpedoes": "魚雷已補充",
+    "game.pickup.repair": "船體已修復",
     "radio.distress_wing_01": "我遭到攻擊！馬上掩護我！",
     "radio.distress_wing_02": "救命！快把他們趕走！",
     "radio.distress_wing_03": "他們到處都是！誰來掩護我！",

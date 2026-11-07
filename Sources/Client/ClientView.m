@@ -32,12 +32,13 @@ typedef struct {
 typedef struct {
     uint16_t entity;
     int secondary, target;
+    float hull;
     bool hullLow;
 } CockpitCues;
 
 static CockpitCues CockpitCuesOf(const PlayerState *ps) {
     return (CockpitCues){ .entity = ps->entity, .secondary = ps->stats[STAT_SECONDARY],
-                          .target = ps->stats[STAT_TARGET], .hullLow = ps->hull < 0.25f };
+                          .target = ps->stats[STAT_TARGET], .hull = ps->hull, .hullLow = ps->hull < 0.25f };
 }
 
 // The chase camera's eased state, carried from frame to frame. Every field
@@ -236,7 +237,7 @@ static float Ease(float value, float target, float rate, float dt) {
 
 - (float)radiusOf:(EntityView *)v {
     if (v.kind == EntityFighter) return v.definition ? v.definition->radius : 2;
-    if (v.kind == EntityCapital) return [_refresh radiusOfModel:v.refModel] * (v.state.scale > 0 ? v.state.scale : 1);
+    if (v.kind == EntityCapital || v.kind == EntityPickup) return [_refresh radiusOfModel:v.refModel] * (v.state.scale > 0 ? v.state.scale : 1);
     return 2;
 }
 
@@ -427,6 +428,8 @@ static float Ease(float value, float target, float rate, float dt) {
     CockpitCues cues = CockpitCuesOf(ps);
     if (_hadPlayer && _playerEntity == _cues.entity && alive) {
         if (cues.secondary < _cues.secondary) [[GameAudio shared] play:@"secondary"];
+        // Only a pickup adds rounds or hull to a ship still in flight.
+        if (cues.secondary > _cues.secondary || cues.hull > _cues.hull + 0.01f) [[GameAudio shared] play:@"ui-success"];
         if (cues.target && cues.target != _cues.target) [[GameAudio shared] play:@"ui-hover"];
         if (cues.hullLow && !_cues.hullLow) [[GameAudio shared] play:@"ui-alert"];
     }
@@ -674,6 +677,16 @@ static float Ease(float value, float target, float rate, float dt) {
         NSString *name = [self stringAt:s.name];
         t.label = prop ? (sel ? name : nil) : name;
         [self fillTarget:&t at:s.origin velocity:s.velocity radius:[self radiusOf:v] * 0.6f size:size player:ps];
+        targets[n++] = t;
+    }
+    // Pickups within reach: a bracket and distance, no arrow when off screen.
+    for (EntityView *v in views) {
+        if (v.kind != EntityPickup || n >= MAX_HUD) continue;
+        EntityState s = v.state;
+        if (simd_distance(s.origin, me) > 3000) continue;
+        HUDTarget t = { .kind = HUDKindPickup };
+        [self fillTarget:&t at:s.origin velocity:s.velocity radius:[self radiusOf:v] * 0.6f size:size player:ps];
+        t.hasLead = NO;
         targets[n++] = t;
     }
     simd_float3 navPos;

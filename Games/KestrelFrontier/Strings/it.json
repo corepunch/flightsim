@@ -18,6 +18,8 @@
     "briefing.loadout_many": "Armamento: laser binati, %d siluri",
     "combat.no_secondary": "Siluri esauriti",
     "combat.out_of_range": "Bersaglio fuori portata dei siluri",
+    "game.pickup.torpedoes": "Siluri riforniti",
+    "game.pickup.repair": "Scafo riparato",
     "radio.distress_wing_01": "Mi stanno sparando! Mi serve copertura, subito!",
     "radio.distress_wing_02": "Aiuto! Toglietemeli di dosso!",
     "radio.distress_wing_03": "Sono dappertutto! Qualcuno mi copra!",

@@ -18,6 +18,8 @@
     "briefing.loadout_many": "التسليح: ليزر مزدوج، %d طوربيد",
     "combat.no_secondary": "نفدت الطوربيدات",
     "combat.out_of_range": "الهدف خارج مدى الطوربيدات",
+    "game.pickup.torpedoes": "تمت إعادة التزود بالطوربيدات",
+    "game.pickup.repair": "تم إصلاح الهيكل",
     "radio.distress_wing_01": "أتعرّض لإطلاق نار! أحتاج تغطية الآن!",
     "radio.distress_wing_02": "النجدة! أبعدوهم عني!",
     "radio.distress_wing_03": "إنهم في كل مكان! ليغطّني أحد!",

@@ -1,0 +1,16 @@
+{
+  "asset": "RepairCell",
+  "style": "pickup-repair",
+  "repair": 0.5,
+  "radius": 16,
+  "respawn": 30,
+  "message": "{#game.pickup.repair}",
+  "spin": 45,
+  "glow": "flare_01",
+  "tint": [
+    0.45,
+    1.6,
+    0.7
+  ],
+  "size": 32
+}

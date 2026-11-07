@@ -9,6 +9,7 @@ static SKColor *HUDColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
 static SKColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
 static SKColor *FriendColor(CGFloat a) { return UIColorWithOpacity(UIFriendly, a); }
 static SKColor *NeutralColor(CGFloat a) { return UIColorWithOpacity(UIHUDNeutral, a); }
+static SKColor *PickupColor(CGFloat a) { return UIColorWithOpacity(UIPickup, a); }
 static SKColor *ReticleColor(CGFloat a) { return UIColorWithOpacity(UIReticle, a); }
 static SKColor *TargetColor(CGFloat a) { return [SKColor colorWithRed:1 green:0.92 blue:0.18 alpha:a]; }
 static SKColor *KindColor(HUDKind k, CGFloat a) {
@@ -17,6 +18,7 @@ static SKColor *KindColor(HUDKind k, CGFloat a) {
         case HUDKindFriend: return FriendColor(a);
         case HUDKindNeutral: return NeutralColor(a);
         case HUDKindNav: return HUDColor(a);
+        case HUDKindPickup: return PickupColor(a);
     }
 }
 

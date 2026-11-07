@@ -13,8 +13,10 @@ Games/<name>/
   Data/Capitals/ capital ships and props: hp, class name, style, flags
   Data/Styles/   hull material sets
   Data/Projectiles/
+  Data/Pickups/  what pilots collect by flying through: mesh, style, glow, torpedoes,
+                 repair, respawn time
   Levels/        <name>.json: what the game module builds (entities, waves, navs,
-                 objectives, events, loadout). "name" matches the file name.
+                 objectives, events, loadout, pickups). "name" matches the file name.
   Campaign/      campaign.json: name, story, storyDefaults, and the missions in order,
                  each { "level": "<name>", "briefing": …, "debrief": … }
   Story/         characters.json (cast, player character), rooms.json (briefing rooms)

@@ -18,6 +18,8 @@
     "briefing.loadout_many": "साजोसामान: दोहरे लेज़र, %d टॉरपीडो",
     "combat.no_secondary": "टॉरपीडो खत्म",
     "combat.out_of_range": "लक्ष्य टॉरपीडो की सीमा से बाहर",
+    "game.pickup.torpedoes": "टॉरपीडो फिर से भरे गए",
+    "game.pickup.repair": "हल की मरम्मत हुई",
     "radio.distress_wing_01": "मुझ पर गोली चल रही है! अभी सुरक्षा चाहिए!",
     "radio.distress_wing_02": "बचाओ! इन्हें मेरे पीछे से हटाओ!",
     "radio.distress_wing_03": "ये हर तरफ़ हैं! कोई मुझे बचाओ!",

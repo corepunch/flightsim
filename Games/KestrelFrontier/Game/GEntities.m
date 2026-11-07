@@ -285,6 +285,9 @@ PilotSkill PilotSkillFor(LevelSkill skill, Team team) {
 @implementation GTorpedo
 @end
 
+@implementation GPickup
+@end
+
 @implementation GClient
 - (void)leaveLevel {
     _ship = nil;

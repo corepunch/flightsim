@@ -18,6 +18,8 @@
     "briefing.loadout_many": "Donanım: çift lazer, %d torpido",
     "combat.no_secondary": "Torpido kalmadı",
     "combat.out_of_range": "Hedef torpido menzili dışında",
+    "game.pickup.torpedoes": "Torpidolar yenilendi",
+    "game.pickup.repair": "Gövde onarıldı",
     "radio.distress_wing_01": "Ateş altındayım! Hemen korumaya ihtiyacım var!",
     "radio.distress_wing_02": "Yardım! Şunları üzerimden alın!",
     "radio.distress_wing_03": "Her yerdeler! Biri beni korusun!",

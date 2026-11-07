@@ -18,6 +18,8 @@
     "briefing.loadout_many": "装備：連装レーザー、魚雷%d発",
     "combat.no_secondary": "魚雷がない",
     "combat.out_of_range": "目標は魚雷の射程外",
+    "game.pickup.torpedoes": "魚雷を補給",
+    "game.pickup.repair": "船体を修理",
     "radio.distress_wing_01": "攻撃を受けている！すぐに援護を！",
     "radio.distress_wing_02": "助けてくれ！こいつらを追い払ってくれ！",
     "radio.distress_wing_03": "敵だらけだ！誰か援護してくれ！",

@@ -252,4 +252,30 @@ NSString *GSecondaryShort(const ShipDef *def) { return OrRule(def ? def->seconda
     }
 }
 
+#pragma mark - Pickups
+
+- (void)updatePickups {
+    for (GPickup *p in _pickups) {
+        if (p.readyAt > 0) {
+            if (_time < p.readyAt) continue;
+            p.readyAt = 0;
+            [self jumpFlashAt:p.position scale:0.25f];
+        }
+        const PickupDef *def = p.definition;
+        for (GClient *cl in _clients) {
+            GFighter *s = cl.ship;
+            if (!cl.inGame || !s.alive || s.disabled) continue;
+            if (simd_distance(s.position, p.position) > def->radius + s.radius) continue;
+            PilotStores stores = { .torpedoes = cl.torpedoes, .torpedoCapacity = _startTorpedoes,
+                                   .hull = s.hull, .maxHull = s.definition->hull };
+            if (!PickupApply(def, &stores)) continue;
+            cl.torpedoes = stores.torpedoes;
+            s.hull = stores.hull;
+            p.readyAt = _time + def->respawn;
+            if (def->message[0]) GCommand(cl, SVC_RADIO, @(def->message), @"", nil);
+            break;
+        }
+    }
+}
+
 @end

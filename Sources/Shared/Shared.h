@@ -69,7 +69,8 @@ id FSJSON(NSURL *url);
 
 // Version 6 distinguishes campaign results from competitive LAN matches.
 // Older front ends would record a dogfight as a campaign mission completion.
-#define PROTOCOL_VERSION 6
+// Version 7 adds pickups (EntityPickup), which older clients cannot draw.
+#define PROTOCOL_VERSION 7
 
 #define TICK_RATE 30
 #define TICK_DT (1.0f / TICK_RATE)
@@ -109,7 +110,7 @@ static inline TeamRelation TeamRelationIn(const char *csTeams, int a, int b) {
 #define CS_SECONDARY_SHORT 5    // and a short form for small buttons ("TORP")
 #define CS_MODE 6               // "campaign" or "deathmatch"
 #define CS_LAN_RULES 7           // serialized LAN match settings
-#define CS_MODELS 16            // "ship:<definition>" or "cap:<Asset>:<style>"
+#define CS_MODELS 16            // "ship:<definition>", "cap:<Asset>:<style>", "proj:<name>" or "pickup:<name>"
 #define MAX_MODELS 256
 #define CS_STRINGS (CS_MODELS + MAX_MODELS)   // names, class names
 #define MAX_STRINGS 512
@@ -125,6 +126,7 @@ typedef enum {
     EntityAsteroid,
     EntityBuoy,
     EntityProjectile,       // a guided round in flight
+    EntityPickup,           // collected by flying through it; model "pickup:<name>"
 } EntityKind;
 
 enum {
@@ -415,6 +417,49 @@ const ProjectileDef *ProjectileDefNamed(NSString *name);
 NSString *ProjectileModelName(NSString *name);             // "proj:<name>"
 const ProjectileDef *ProjectileDefForModel(NSString *model);
 
+#pragma mark - Pickup definitions
+
+// Something a pilot collects by flying through it, from Data/Pickups/<name>.json.
+// It hands over what the pilot lacks, then waits "respawn" seconds before it
+// shows again; one that would add nothing stays where it is.
+//   { "asset": "TorpedoPack", "style": "pickup-torpedo", "radius": 16, "respawn": 30,
+//     "torpedoes": 2, "repair": 0,                       // rounds; fraction of the ship's full hull
+//     "message": "{#game.pickup.torpedoes}",             // what the collector is told; tokens expand on the client
+//     "spin": 60, "glow": "flare_01", "tint": [1.6, 0.9, 0.35], "size": 32 }
+// The mesh is Models/Capital/<asset> in the hull style <style>, spun "spin"
+// degrees a second about its up axis inside a camera-facing glow, both
+// pulsing about once a second. The model
+// configstring is "pickup:<name>".
+typedef struct {
+    char name[SHIP_NAME_LENGTH];
+    char asset[SHIP_NAME_LENGTH];
+    char style[SHIP_NAME_LENGTH];
+    char glow[SHIP_NAME_LENGTH];        // Resources/Particles/<glow>.png
+    char message[SHIP_NAME_LENGTH];     // radio text, usually a catalog token; empty: nothing is said
+    simd_float3 tint;                   // HDR tint of the glow
+    float size;                         // glow, metres
+    float spin;                         // degrees per second
+    float radius;                       // collected within this of a ship's edge, metres
+    float respawn;                      // seconds hidden after it is collected
+    int torpedoes;                      // secondary rounds it carries
+    float repair;                       // hull it restores, as a fraction of the ship's full hull
+} PickupDef;
+
+const PickupDef *PickupDefNamed(NSString *name);            // NULL if there is no such definition
+NSArray<NSString *> *PickupDefNames(void);
+NSString *PickupModelName(NSString *name);                  // "pickup:<name>"
+const PickupDef *PickupDefForModel(NSString *model);
+
+// What a pilot carries against what the ship holds, for PickupApply.
+typedef struct {
+    int torpedoes, torpedoCapacity;
+    float hull, maxHull;
+} PilotStores;
+
+// Tops the stores up from the pickup, never past what the ship holds.
+// false, and the stores untouched, when it would add nothing.
+bool PickupApply(const PickupDef *pickup, PilotStores *stores);
+
 #pragma mark - JSON readers
 
 // Typed reads from parsed JSON. A value of the wrong type reads as missing,
@@ -478,6 +523,7 @@ static inline simd_float3 JSONVec3(id json, NSString *key, simd_float3 fallback)
 //     "navs":     [ { "id": "n1", "name": "Nav 1", "pos": [x, y, z] } ],
 //     "entities": [ LevelEntity ], "waves": [ LevelWave ], "fields": [ LevelField ],
 //     "objectives": [ LevelObjective ], "events": [ … ], "rules": { LevelRules },
+//     "pickups": [ LevelPickup ],
 //     "timeLimit": 600, "onTimeLimit": "failure" | "success" }
 
 typedef struct {
@@ -608,6 +654,13 @@ typedef struct {
     NSDictionary *definition;
 } LevelObjective;
 
+// A pickup's spot: Data/Pickups/<type>.json, collected and respawned there.
+//   { "type": "torpedoes", "pos": [x, y, z] }
+typedef struct {
+    NSString *type;
+    simd_float3 pos;
+} LevelPickup;
+
 // How the mission ends. All true by default.
 typedef struct {
     bool succeedWhenObjectivesDone;     // every required objective complete (ongoing ones excepted)
@@ -647,6 +700,7 @@ typedef struct {
     LevelWave *waves;           int waveCount;
     LevelField *fields;         int fieldCount;
     LevelObjective *objectives; int objectiveCount;
+    LevelPickup *pickups;       int pickupCount;
     // Scripted events stay JSON: their triggers and actions are a registered
     // vocabulary (MissionEvents), checked by MissionRunner's problems.
     NSArray<NSDictionary *> *events;

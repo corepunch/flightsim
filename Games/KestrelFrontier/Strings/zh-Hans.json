@@ -18,6 +18,8 @@
     "briefing.loadout_many": "装备：双联激光炮，%d枚鱼雷",
     "combat.no_secondary": "鱼雷已耗尽",
     "combat.out_of_range": "目标超出鱼雷射程",
+    "game.pickup.torpedoes": "鱼雷已补充",
+    "game.pickup.repair": "船体已修复",
     "radio.distress_wing_01": "我遭到攻击！马上掩护我！",
     "radio.distress_wing_02": "救命！快把他们赶走！",
     "radio.distress_wing_03": "他们到处都是！谁来掩护我！",

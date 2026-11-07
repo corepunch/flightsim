@@ -18,6 +18,8 @@
     "briefing.loadout_many": "Вооружение: спаренные лазеры, торпеды: %d",
     "combat.no_secondary": "Торпед больше нет",
     "combat.out_of_range": "Цель вне дальности торпед",
+    "game.pickup.torpedoes": "Торпеды пополнены",
+    "game.pickup.repair": "Корпус отремонтирован",
     "radio.distress_wing_01": "По мне стреляют! Немедленно прикройте меня!",
     "radio.distress_wing_02": "Помогите! Снимите их с хвоста!",
     "radio.distress_wing_03": "Они повсюду! Кто-нибудь, прикройте!",

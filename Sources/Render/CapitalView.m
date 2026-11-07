@@ -52,6 +52,22 @@ static SCNMaterial *PlainMaterial(SKColor *c, float rough, float metal) {
     return m;
 }
 
+// One painted texture over the whole model (Art/build_pickups.py), not tiled.
+// It also lights itself by `glow`, so its colours read out of the light too.
+static SCNMaterial *BakedMaterial(NSString *texture, float glow, float rough) {
+    SCNMaterial *m = [SCNMaterial material];
+    m.lightingModelName = SCNLightingModelPhysicallyBased;
+    NSURL *url = TextureURL(texture);
+    if (!url) NSLog(@"CapitalView: no baked texture \"%@\"", texture);
+    m.diffuse.contents = url ?: SKColor.grayColor;
+    m.emission.contents = url;
+    m.emission.intensity = glow;
+    m.roughness.contents = @(rough);
+    m.metalness.contents = @0;
+    for (SCNMaterialProperty *p in @[m.diffuse, m.emission]) p.mipFilter = SCNFilterModeLinear;
+    return m;
+}
+
 static SCNMaterial *EmissiveMaterial(id contents, float intensity) {
     SCNMaterial *m = [SCNMaterial material];
     m.lightingModelName = SCNLightingModelConstant;
@@ -86,6 +102,7 @@ static PlatformImage *WindowImage(void) {
 //   { "textures": "panels", "tint": [r, g, b], "normal": 1.0 }   tiling PBR set, optional "color" and "metalness"
 //   { "color": [r, g, b], "roughness": 0.35, "metalness": 0.9 }   plain PBR
 //   { "emissive": [r, g, b] | "windows", "intensity": 3.0 }      unlit emitter; "animated": "strobe" or "pulse"
+//   { "baked": "<texture>", "glow": 0.4, "roughness": 0.5 }      one painted texture over the model, partly self-lit
 
 // An [r, g, b] colour, or nil when the key is missing or not one.
 static SKColor *JSONColor(NSDictionary *json, NSString *key) {
@@ -93,30 +110,31 @@ static SKColor *JSONColor(NSDictionary *json, NSString *key) {
     return rgb.count >= 3 ? [SKColor colorWithRed:[rgb[0] floatValue] green:[rgb[1] floatValue] blue:[rgb[2] floatValue] alpha:1] : nil;
 }
 
-typedef enum { MaterialTextured, MaterialEmissive, MaterialPlain } MaterialKind;
+typedef enum { MaterialTextured, MaterialEmissive, MaterialPlain, MaterialBaked } MaterialKind;
 typedef enum { MaterialSteady, MaterialStrobe, MaterialPulse } MaterialAnimation;
 
 // One material slot of a style, read once from its JSON spec.
 typedef struct {
     MaterialKind kind;
-    NSString *textures;             // textured: the tiling PBR set
+    NSString *textures;             // textured: the tiling PBR set; baked: the painted texture
     SKColor *tint;                  // textured: over the set's colours
     SKColor *color;                 // textured: replaces the set's colour map when set; plain: the surface
     SKColor *emission;              // emissive: the glow, unless it is lit windows
     bool windows;
     float normal, roughness;
     float metalness;                // < 0: the texture set's own
-    float intensity;
+    float intensity;                // emissive: brightness; baked: how far it lights itself
     MaterialAnimation animation;
 } MaterialSpec;
 
 static MaterialSpec MaterialSpecFromJSON(NSDictionary *json) {
-    MaterialKind kind = JSONString(json, @"textures") ? MaterialTextured : json[@"emissive"] ? MaterialEmissive : MaterialPlain;
+    MaterialKind kind = JSONString(json, @"baked") ? MaterialBaked : JSONString(json, @"textures") ? MaterialTextured
+                      : json[@"emissive"] ? MaterialEmissive : MaterialPlain;
     NSDictionary *animations = @{ @"strobe": @(MaterialStrobe), @"pulse": @(MaterialPulse) };
     NSString *animated = JSONString(json, @"animated");
     return (MaterialSpec){
         .kind = kind,
-        .textures = JSONString(json, @"textures"),
+        .textures = JSONString(json, kind == MaterialBaked ? @"baked" : @"textures"),
         .tint = JSONColor(json, @"tint") ?: SKColor.whiteColor,
         .color = JSONColor(json, @"color") ?: (kind == MaterialPlain ? SKColor.grayColor : nil),
         .emission = JSONColor(json, @"emissive") ?: SKColor.whiteColor,
@@ -124,7 +142,7 @@ static MaterialSpec MaterialSpecFromJSON(NSDictionary *json) {
         .normal = JSONFloat(json, @"normal", 1),
         .roughness = JSONFloat(json, @"roughness", 0.5f),
         .metalness = JSONFloat(json, @"metalness", kind == MaterialPlain ? 0.5f : -1),
-        .intensity = JSONFloat(json, @"intensity", 1),
+        .intensity = kind == MaterialBaked ? JSONFloat(json, @"glow", 0.4f) : JSONFloat(json, @"intensity", 1),
         .animation = animated ? (MaterialAnimation)[animations[animated] intValue] : MaterialSteady,
     };
 }
@@ -163,6 +181,9 @@ static SCNMaterial *MaterialFromSpec(NSString *slot, MaterialSpec spec) {
             break;
         case MaterialPlain:
             m = PlainMaterial(spec.color, spec.roughness, spec.metalness);
+            break;
+        case MaterialBaked:
+            m = BakedMaterial(spec.textures, spec.intensity, spec.roughness);
             break;
     }
     m.name = slot;

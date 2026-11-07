@@ -111,6 +111,7 @@ static NSString *PartKindName(SubsystemKind kind) {
     [_pilots removeAllObjects];
     [_capitals removeAllObjects];
     [_torpedoes removeAllObjects];
+    [_pickups removeAllObjects];
     [_explosionQueue removeAllObjects];
     for (int i = 0; i < MAX_BOLTS; i++) _bolts[i].active = NO;
     for (GClient *c in _clients) [c leaveLevel];
@@ -193,6 +194,16 @@ static NSString *PartKindName(SubsystemKind kind) {
         }
     }
     for (int i = 0; i < level->fieldCount; i++) [self buildField:&level->fields[i]];
+    for (int i = 0; i < level->pickupCount; i++) {
+        const PickupDef *def = PickupDefNamed(level->pickups[i].type);
+        if (!def) continue;     // reported with the level's problems
+        GPickup *p = [GPickup new];
+        p.number = [self allocEntity];
+        p.definition = def;
+        p.model = gi.modelIndex(PickupModelName(@(def->name)).UTF8String);
+        p.position = level->pickups[i].pos;
+        [_pickups addObject:p];
+    }
     for (int i = 0; i < level->waveCount; i++) {
         const LevelWave *w = &level->waves[i];
         if (w->hold) {

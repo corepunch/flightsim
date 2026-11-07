@@ -18,6 +18,8 @@
     "briefing.loadout_many": "Persenjataan: laser kembar, %d torpedo",
     "combat.no_secondary": "Torpedo habis",
     "combat.out_of_range": "Target di luar jangkauan torpedo",
+    "game.pickup.torpedoes": "Torpedo diisi ulang",
+    "game.pickup.repair": "Lambung diperbaiki",
     "radio.distress_wing_01": "Aku ditembaki! Butuh perlindungan, sekarang!",
     "radio.distress_wing_02": "Tolong! Singkirkan mereka dariku!",
     "radio.distress_wing_03": "Mereka di mana-mana! Seseorang lindungi aku!",

@@ -81,6 +81,9 @@ Made for this project:
   `Games/KestrelFrontier/Art/build_schematics.py`
 - Asteroids, mines, escape pods, containers, nav buoys and the jump gate,
   modelled procedurally by `Games/KestrelFrontier/Art/build_capitals.py`
+- The torpedo and repair pickups and their painted textures
+  (`*_baked.png`), modelled, vertex-painted and baked by
+  `Games/KestrelFrontier/Art/build_pickups.py`
 
 ## Tools
 

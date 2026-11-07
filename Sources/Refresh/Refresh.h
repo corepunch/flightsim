@@ -89,7 +89,7 @@ typedef struct {
     NSString *status;       // under the boresight, e.g. "SCANNING 40%"
 } HUDFrame;
 
-typedef NS_ENUM(int, HUDKind) { HUDKindEnemy, HUDKindFriend, HUDKindNeutral, HUDKindNav };
+typedef NS_ENUM(int, HUDKind) { HUDKindEnemy, HUDKindFriend, HUDKindNeutral, HUDKindNav, HUDKindPickup };
 
 typedef struct {
     CGPoint point;          // projected position (clamped to edge if off-screen)
@@ -186,7 +186,7 @@ typedef struct {
 // Starts a level: bakes its sky and forgets nothing yet; the current level
 // keeps drawing until -endRegistration.
 - (void)beginRegistration:(uint32_t)skySeed;
-// "ship:<definition>", "cap:<asset>:<style>" or "proj:<name>". Builds and
+// "ship:<definition>", "cap:<asset>:<style>", "proj:<name>" or "pickup:<name>". Builds and
 // caches a prototype so entities that appear later are already on the GPU.
 // The same name always gives the same handle; unknown names log and still
 // get one (drawn as an empty node).

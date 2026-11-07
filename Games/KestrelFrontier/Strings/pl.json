@@ -18,6 +18,8 @@
     "briefing.loadout_many": "Uzbrojenie: podwójne lasery, torpedy: %d",
     "combat.no_secondary": "Brak torped",
     "combat.out_of_range": "Cel poza zasięgiem torped",
+    "game.pickup.torpedoes": "Torpedy uzupełnione",
+    "game.pickup.repair": "Kadłub naprawiony",
     "radio.distress_wing_01": "Ostrzeliwują mnie! Potrzebuję osłony, natychmiast!",
     "radio.distress_wing_02": "Pomocy! Zdejmijcie ich ze mnie!",
     "radio.distress_wing_03": "Są wszędzie! Niech ktoś mnie osłoni!",

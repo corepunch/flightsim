@@ -18,6 +18,8 @@
     "briefing.loadout_many": "Armamento: láseres gemelos, %d torpedos",
     "combat.no_secondary": "No quedan torpedos",
     "combat.out_of_range": "Objetivo fuera del alcance de torpedos",
+    "game.pickup.torpedoes": "Torpedos reabastecidos",
+    "game.pickup.repair": "Casco reparado",
     "radio.distress_wing_01": "¡Me disparan! ¡Necesito cobertura, ya!",
     "radio.distress_wing_02": "¡Socorro! ¡Quitádmelos de encima!",
     "radio.distress_wing_03": "¡Están por todas partes! ¡Que alguien me cubra!",

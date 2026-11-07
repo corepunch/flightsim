@@ -18,6 +18,8 @@
     "briefing.loadout_many": "무장: 쌍열 레이저, 어뢰 %d발",
     "combat.no_secondary": "어뢰 없음",
     "combat.out_of_range": "표적이 어뢰 사거리 밖에 있음",
+    "game.pickup.torpedoes": "어뢰 보급 완료",
+    "game.pickup.repair": "선체 수리 완료",
     "radio.distress_wing_01": "공격받고 있다! 당장 엄호가 필요하다!",
     "radio.distress_wing_02": "도와줘! 저놈들 좀 떼어 줘!",
     "radio.distress_wing_03": "사방에 적이다! 누가 좀 엄호해 줘!",

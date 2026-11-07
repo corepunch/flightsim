@@ -231,6 +231,58 @@ const ProjectileDef *ProjectileDefForModel(NSString *model) {
     return [model hasPrefix:@"proj:"] ? ProjectileDefNamed([model substringFromIndex:5]) : NULL;
 }
 
+#pragma mark - Pickup definitions
+
+static NSMutableDictionary<NSString *, NSValue *> *gPickupDefs;
+
+const PickupDef *PickupDefNamed(NSString *name) {
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ gPickupDefs = [NSMutableDictionary dictionary]; });
+    return CachedDefinition(gPickupDefs, name, ^void *{
+        NSDictionary *d = DefinitionFile(@"Pickups", name);
+        if (!d) return NULL;
+        PickupDef *p = calloc(1, sizeof *p);
+        CopyName(p->name, name);
+        CopyName(p->asset, JSONString(d, @"asset") ?: @"Container");
+        CopyName(p->style, JSONString(d, @"style") ?: @"default");
+        CopyName(p->glow, JSONString(d, @"glow") ?: @"flare_01");
+        CopyName(p->message, JSONString(d, @"message"));
+        p->tint = JSONVec3(d, @"tint", simd_make_float3(2, 2, 2));
+        p->size = fmaxf(0, JSONFloat(d, @"size", 20));
+        p->spin = JSONFloat(d, @"spin", 60);
+        p->radius = fmaxf(1, JSONFloat(d, @"radius", 15));
+        p->respawn = fmaxf(1, JSONFloat(d, @"respawn", 30));
+        p->torpedoes = MAX(0, JSONInt(d, @"torpedoes", 0));
+        p->repair = fmaxf(0, JSONFloat(d, @"repair", 0));
+        return p;
+    });
+}
+
+NSArray<NSString *> *PickupDefNames(void) {
+    static NSArray *names;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ names = DefinitionNames(@"Pickups"); });
+    return names;
+}
+
+NSString *PickupModelName(NSString *name) { return [@"pickup:" stringByAppendingString:name]; }
+
+const PickupDef *PickupDefForModel(NSString *model) {
+    return [model hasPrefix:@"pickup:"] ? PickupDefNamed([model substringFromIndex:7]) : NULL;
+}
+
+bool PickupApply(const PickupDef *pickup, PilotStores *stores) {
+    if (!pickup || !stores) return false;
+    PilotStores after = *stores;
+    if (after.torpedoes < after.torpedoCapacity)
+        after.torpedoes = MIN(after.torpedoCapacity, after.torpedoes + pickup->torpedoes);
+    if (after.hull < after.maxHull)
+        after.hull = fminf(after.maxHull, after.hull + pickup->repair * after.maxHull);
+    if (after.torpedoes == stores->torpedoes && after.hull == stores->hull) return false;
+    *stores = after;
+    return true;
+}
+
 #pragma mark - Levels
 
 // Reads one array of objects into a calloc'd array of structs. Entries that
@@ -395,6 +447,14 @@ static void ReadField(NSDictionary *j, LevelField *f, NSMutableArray *problems) 
     f->small = JSONBool(j, @"small", false);
 }
 
+static void ReadPickup(NSDictionary *j, LevelPickup *p, NSMutableArray *problems) {
+    Require(j, @"type", @"pickup", problems);
+    p->type = JSONString(j, @"type");
+    p->pos = JSONVec3(j, @"pos", 0);
+    if (p->type.length && !PickupDefNamed(p->type))
+        [problems addObject:[NSString stringWithFormat:@"pickup of unknown type \"%@\"", p->type]];
+}
+
 static void ReadObjective(NSDictionary *j, LevelObjective *o, NSMutableArray *problems) {
     NSString *what = [NSString stringWithFormat:@"objective %@", JSONString(j, @"id") ?: @"?"];
     Require(j, @"id", what, problems);
@@ -427,6 +487,7 @@ LevelDef *LevelCreate(NSDictionary *json) {
     LEVEL_READ(json, @"waves", LevelWave, level->waves, level->waveCount, problems, ReadWave);
     LEVEL_READ(json, @"fields", LevelField, level->fields, level->fieldCount, problems, ReadField);
     LEVEL_READ(json, @"objectives", LevelObjective, level->objectives, level->objectiveCount, problems, ReadObjective);
+    LEVEL_READ(json, @"pickups", LevelPickup, level->pickups, level->pickupCount, problems, ReadPickup);
     for (int i = 0; i < level->waveCount; i++) {
         const LevelWave *w = &level->waves[i];
         if (w->mothership && !LevelEntityNamed(level, w->mothership))
@@ -478,6 +539,7 @@ void LevelRelease(LevelDef *level) {
     LEVEL_FREE(level->waves, level->waveCount);
     LEVEL_FREE(level->fields, level->fieldCount);
     LEVEL_FREE(level->objectives, level->objectiveCount);
+    LEVEL_FREE(level->pickups, level->pickupCount);
     *level = (LevelDef){0};
     free(level);
 }

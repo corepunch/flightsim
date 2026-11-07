@@ -3,7 +3,7 @@
 
 static const NSUInteger kSkyFaceSize = TARGET_OS_IOS ? 1024 : 1536;
 
-typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, RefKindProjectile };
+typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, RefKindProjectile, RefKindPickup };
 
 // A registered model: what its name says and the prototype that keeps it on the GPU.
 @interface RefModelEntry : NSObject
@@ -11,6 +11,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @property (nonatomic) RefModelKind kind;
 @property (nonatomic) const ShipDef *ship;
 @property (nonatomic) const ProjectileDef *projectile;
+@property (nonatomic) const PickupDef *pickup;
 @property (nonatomic, copy) NSString *asset, *style;
 @property (nonatomic, strong) ModelInfo *info;
 @property (nonatomic, strong) SCNNode *prototype;
@@ -26,6 +27,10 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @property (nonatomic, strong) SCNNode *node;
 @property (nonatomic, strong) ShipView *ship;
 @property (nonatomic, strong) CapitalView *capital;
+@property (nonatomic, strong) SCNNode *spinner;     // pickups: the mesh, turned about its up axis each frame
+@property (nonatomic, strong) SCNNode *halo;        // pickups: the glow, pulsing with the mesh
+@property (nonatomic) float spin;                   // radians per second
+@property (nonatomic) float phase;                  // pickups: where in the pulse this one starts
 @property (nonatomic) BOOL seen;
 @end
 @implementation RefEntityNode
@@ -243,6 +248,16 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         m.kind = RefKindProjectile;
         m.projectile = ProjectileDefForModel(name);
         if (!m.projectile) NSLog(@"Refresh: no projectile definition for model \"%@\"", name);
+    } else if ([name hasPrefix:@"pickup:"]) {
+        m.pickup = PickupDefForModel(name);
+        if (!m.pickup) NSLog(@"Refresh: no pickup definition for model \"%@\"", name);
+        else {
+            m.kind = RefKindPickup;
+            m.asset = @(m.pickup->asset);
+            m.style = @(m.pickup->style);
+            m.info = [ModelInfo capitalAsset:m.asset];
+            m.prototype = [CapitalView prototypeForAsset:m.asset style:m.style];
+        }
     } else if ([name hasPrefix:@"cap:"]) {
         NSArray *f = [name componentsSeparatedByString:@":"];
         if (f.count >= 3) {
@@ -319,7 +334,24 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     v.model = e->model;
     v.kind = e->kind;
     RefModelEntry *m = [self entry:e->model];
-    if (e->kind == EntityProjectile) {
+    if (e->kind == EntityPickup && m.kind == RefKindPickup) {
+        // The mesh turning inside a camera-facing glow, both from the pickup definition.
+        const PickupDef *p = m.pickup;
+        SCNNode *n = [SCNNode node];
+        v.capital = [[CapitalView alloc] initWithAsset:m.asset style:m.style];
+        v.spinner = v.capital.node;
+        v.spin = p->spin * (float)M_PI / 180;
+        [n addChildNode:v.spinner];
+        SCNPlane *glow = [SCNPlane planeWithWidth:p->size height:p->size];
+        glow.firstMaterial = [Effects additiveTextureMaterial:@(p->glow) tint:p->tint];
+        SCNNode *g = [SCNNode nodeWithGeometry:glow];
+        g.constraints = @[[SCNBillboardConstraint billboardConstraint]];
+        g.castsShadow = NO;
+        [n addChildNode:g];
+        v.halo = g;
+        v.phase = (float)(e->key % 7) / 7.0f;
+        v.node = n;
+    } else if (e->kind == EntityProjectile) {
         // A camera-facing glow sized and tinted by the projectile definition.
         const ProjectileDef *p = m.projectile;
         SCNNode *n = [SCNNode node];
@@ -359,7 +391,17 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     v.seen = YES;
     v.node.simdPosition = e->origin;
     if (e->kind != EntityProjectile) v.node.simdOrientation = e->orientation;
-    if (v.ship) {
+    if (v.spinner) {
+        // Turning, and pulsing about once a second: the halo brightens and
+        // grows, the mesh swells a little.
+        v.spinner.simdOrientation = simd_quaternion((float)fmod(_time * v.spin, 2 * M_PI), simd_make_float3(0, 1, 0));
+        float pulse = 0.5f + 0.5f * sinf((float)(2 * M_PI * fmod(_time * 1.1 + v.phase, 1.0)));
+        float swell = 1 + 0.08f * pulse;
+        v.spinner.simdScale = simd_make_float3(swell, swell, swell);
+        v.halo.opacity = 0.5 + 0.5 * pulse;
+        float grow = 0.85f + 0.3f * pulse;
+        v.halo.simdScale = simd_make_float3(grow, grow, grow);
+    } else if (v.ship) {
         [v.ship updateThrottle:e->throttle boost:e->boost hull:e->hull alive:YES dt:_dt];
     } else if (v.capital) {
         float k = e->scale > 0 ? e->scale : 1;
@@ -505,7 +547,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
             mesh.eulerAngles = SCNVector3Make(0, M_PI, 0);   // OBJ +Z nose -> ship -Z nose, as ShipView
             [holder addChildNode:mesh];
             m.preview = holder;
-        } else if (m.kind == RefKindCapital) {
+        } else if (m.kind == RefKindCapital || m.kind == RefKindPickup) {
             m.preview = m.prototype;
         }
     }

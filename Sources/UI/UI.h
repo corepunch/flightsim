@@ -479,6 +479,7 @@ UIMotionStyle UIThemeMotion(void);
 #define UIBlue UIThemeColor(@"blue")
 #define UIFriendly UIThemeColor(@"friendly")
 #define UIHUDNeutral UIThemeColor(@"hudNeutral")
+#define UIPickup UIThemeColor(@"pickup")
 #define UIShield UIThemeColor(@"shield")
 #define UIReticle UIThemeColor(@"reticle")
 #define UIBoost UIThemeColor(@"boost")

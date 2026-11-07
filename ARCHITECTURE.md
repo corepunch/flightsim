@@ -94,7 +94,8 @@ dictionaries around:
 | `Data/Ships/*.json` | `ShipDef` | Shared |
 | `Data/Capitals/*.json` | `CapitalDef` | Shared |
 | `Data/Projectiles/*.json` | `ProjectileDef` | Shared |
-| `Levels/*.json` | `LevelDef` (+ nav, entity, wave, field, objective, rules structs) | Shared |
+| `Data/Pickups/*.json` | `PickupDef` (collected with `PickupApply`) | Shared |
+| `Levels/*.json` | `LevelDef` (+ nav, entity, wave, field, objective, pickup, rules structs) | Shared |
 | `Data/Styles/*.json` | `MaterialSpec` | Render/CapitalView.m |
 | `Data/rules.json` | `GameRules` | the game module |
 | `Campaign/campaign.json` | `CampaignMission`, `MissionBriefing`, `MissionDebrief`, `StoryDefaults` | Story |

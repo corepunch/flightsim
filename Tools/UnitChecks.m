@@ -328,6 +328,48 @@ static void CheckCampaign(void) {
 // Every capital definition is complete and names a hull style that exists;
 // the default style covers every material slot the models use; the
 // projectile the game fires is defined.
+// Pickup definitions name a real mesh and style, the deathmatch arena places
+// them, and collecting tops a pilot up without passing what the ship holds.
+static void CheckPickups(void) {
+    NSArray<NSString *> *names = PickupDefNames();
+    CHECK([names containsObject:@"torpedoes"] && [names containsObject:@"repair"]);
+    for (NSString *name in names) {
+        const PickupDef *def = PickupDefNamed(name);
+        CHECK(def && def->radius > 0 && def->respawn > 0 && def->size > 0);
+        if (!def) continue;
+        CHECK(def->torpedoes > 0 || def->repair > 0);
+        NSDictionary *style = DefinitionJSON(@"Styles", @(def->style));
+        CHECK(style != nil);
+        for (NSString *slot in style) {
+            NSString *baked = [style[slot] isKindOfClass:NSDictionary.class] ? style[slot][@"baked"] : nil;
+            if (baked) CHECK(FSURL(@"Textures", baked, @"png") != nil);
+        }
+        CHECK(FSURL(@"Models/Capital", @(def->asset), @"obj") != nil);
+        CHECK(PickupDefForModel(PickupModelName(name)) == def);
+    }
+    CHECK(PickupDefNamed(@"no-such-pickup") == NULL && PickupDefForModel(@"proj:torpedo") == NULL);
+
+    const LevelDef *arena = LevelNamed(@"lan-dogfight");
+    CHECK(arena && arena->pickupCount >= 2 && arena->problems.count == 0);
+    LevelDef *bad = LevelCreate(@{ @"name": @"x", @"pickups": @[ @{ @"type": @"no-such-pickup" }, @{ @"pos": @[@0, @0, @0] } ] });
+    CHECK(bad->pickupCount == 2 && bad->problems.count == 2);
+    LevelRelease(bad);
+
+    const PickupDef *torpedoes = PickupDefNamed(@"torpedoes"), *repair = PickupDefNamed(@"repair");
+    if (!torpedoes || !repair) return;
+    PilotStores full = { .torpedoes = 4, .torpedoCapacity = 4, .hull = 1, .maxHull = 1 };
+    PilotStores s = full;
+    CHECK(!PickupApply(torpedoes, &s) && !PickupApply(repair, &s) && s.torpedoes == 4 && s.hull == 1);
+    s = (PilotStores){ .torpedoes = 3, .torpedoCapacity = 4, .hull = 0.2f, .maxHull = 1.5f };
+    CHECK(PickupApply(torpedoes, &s) && s.torpedoes == 4 && s.hull == 0.2f);
+    CHECK(!PickupApply(torpedoes, &s));
+    CHECK(PickupApply(repair, &s) && fabsf(s.hull - (0.2f + repair->repair * 1.5f)) < 1e-4f && s.torpedoes == 4);
+    s.hull = 1.4f;
+    CHECK(PickupApply(repair, &s) && s.hull == 1.5f);
+    s = (PilotStores){ .torpedoes = 0, .torpedoCapacity = 0, .hull = 1, .maxHull = 1 };
+    CHECK(!PickupApply(torpedoes, &s));     // a ship that carries none takes none
+}
+
 static void CheckDefinitions(void) {
     NSArray<NSString *> *capitals = CapitalDefNames();
     CHECK(capitals.count >= 20);
@@ -352,12 +394,13 @@ static void CheckDefinitions(void) {
         CHECK(d != nil);
         for (NSString *slot in d) {
             NSDictionary *spec = d[slot];
-            CHECK([spec isKindOfClass:NSDictionary.class] && (spec[@"textures"] || spec[@"emissive"] || spec[@"color"]));
+            CHECK([spec isKindOfClass:NSDictionary.class] && (spec[@"textures"] || spec[@"emissive"] || spec[@"color"] || spec[@"baked"]));
         }
     }
     const ProjectileDef *torpedo = ProjectileDefNamed(@"torpedo");
     CHECK(torpedo && torpedo->size > 0 && strlen(torpedo->glow) > 0);
     CHECK(ProjectileDefForModel(ProjectileModelName(@"torpedo")) == torpedo && ProjectileDefForModel(@"ship:wasp") == NULL);
+    CheckPickups();
 }
 
 #pragma mark - Mission runtime

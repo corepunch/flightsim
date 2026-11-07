@@ -28,6 +28,7 @@ void GPrint(NSString *format, ...) {
         _pilots = [NSMutableArray array];
         _capitals = [NSMutableArray array];
         _torpedoes = [NSMutableArray array];
+        _pickups = [NSMutableArray array];
         _explosionQueue = [NSMutableArray array];
         _entityStates = [NSMutableData data];
     }
@@ -116,6 +117,18 @@ static EntityState FighterState(GFighter *s, GPilot *p) {
         e.deadParts = c.deadParts;
         [_entityStates appendBytes:&e length:sizeof e];
     }
+    for (GPickup *p in _pickups) {
+        if (p.readyAt > 0) continue;
+        e = (EntityState){0};
+        e.number = p.number;
+        e.kind = EntityPickup;
+        e.team = TeamNeutral;
+        e.model = (uint16_t)p.model;
+        e.origin = p.position;
+        e.orientation = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
+        e.scale = 1;
+        [_entityStates appendBytes:&e length:sizeof e];
+    }
     for (GTorpedo *t in _torpedoes) {
         e = (EntityState){0};
         e.number = t.number;
@@ -186,6 +199,7 @@ static void RunFrame(void) {
     }
     [w updateBolts:dt];
     [w updateTorpedoes:dt];
+    [w updatePickups];
     [w updateExplosions];
     [w updateMission:dt];
 

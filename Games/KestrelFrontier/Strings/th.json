@@ -18,6 +18,8 @@
     "briefing.loadout_many": "อาวุธ: เลเซอร์คู่ ตอร์ปิโด %d ลูก",
     "combat.no_secondary": "ตอร์ปิโดหมด",
     "combat.out_of_range": "เป้าหมายอยู่นอกระยะตอร์ปิโด",
+    "game.pickup.torpedoes": "เติมตอร์ปิโดแล้ว",
+    "game.pickup.repair": "ซ่อมตัวเรือแล้ว",
     "radio.distress_wing_01": "ฉันถูกยิง! ต้องการการคุ้มกันเดี๋ยวนี้!",
     "radio.distress_wing_02": "ช่วยด้วย! ไล่มันออกไปที!",
     "radio.distress_wing_03": "มันอยู่ทุกที่! ใครก็ได้คุ้มกันฉันที!",

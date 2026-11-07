@@ -22,5 +22,47 @@
     "fragLimit": 10,
     "matchSeconds": 300,
     "respawnSeconds": 3
-  }
+  },
+  "pickups": [
+    {
+      "type": "torpedoes",
+      "pos": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "torpedoes",
+      "pos": [
+        0,
+        180,
+        -450
+      ]
+    },
+    {
+      "type": "torpedoes",
+      "pos": [
+        0,
+        -180,
+        450
+      ]
+    },
+    {
+      "type": "repair",
+      "pos": [
+        450,
+        60,
+        0
+      ]
+    },
+    {
+      "type": "repair",
+      "pos": [
+        -450,
+        -60,
+        0
+      ]
+    }
+  ]
 }

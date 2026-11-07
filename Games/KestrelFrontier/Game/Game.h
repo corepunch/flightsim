@@ -217,6 +217,16 @@ typedef NS_ENUM(NSInteger, PilotLeaving) { PilotStaying, PilotDocking, PilotJump
 @property (nonatomic, weak) GSubsystem *aim;
 @end
 
+// A level's pickup spot (LevelPickup): shown until a pilot it has something
+// for flies through it, then hidden for its definition's respawn time.
+@interface GPickup : NSObject
+@property (nonatomic) uint16_t number;
+@property (nonatomic) const PickupDef *definition;
+@property (nonatomic) int model;                // "pickup:<name>" configstring index
+@property (nonatomic) simd_float3 position;
+@property (nonatomic) double readyAt;           // game time it shows again; 0: showing
+@end
+
 @interface GClient : NSObject {
 @public
     PlayerState ps;
@@ -257,6 +267,7 @@ typedef struct {
     NSMutableArray<GPilot *> *_pilots;
     NSMutableArray<GCapital *> *_capitals;
     NSMutableArray<GTorpedo *> *_torpedoes;
+    NSMutableArray<GPickup *> *_pickups;
     GBolt _bolts[MAX_BOLTS];
     uint16_t _nextBoltId;
     uint16_t _nextEntity;
@@ -335,6 +346,7 @@ const GameRules *GRules(void);
 - (void)destroyCapital:(GCapital *)c;
 - (void)collidePlayer:(GClient *)cl from:(simd_float3)before;
 - (void)fireTorpedoFor:(GClient *)cl;
+- (void)updatePickups;      // hands pickups to the ships flying through them, brings collected ones back
 @end
 
 @interface GWorld (Targeting)

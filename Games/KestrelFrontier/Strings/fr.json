@@ -18,6 +18,8 @@
     "briefing.loadout_many": "Armement : lasers jumelés, %d torpilles",
     "combat.no_secondary": "Plus de torpilles",
     "combat.out_of_range": "Cible hors de portée des torpilles",
+    "game.pickup.torpedoes": "Torpilles réapprovisionnées",
+    "game.pickup.repair": "Coque réparée",
     "radio.distress_wing_01": "On me tire dessus ! Il me faut une couverture, vite !",
     "radio.distress_wing_02": "Au secours ! Débarrassez-moi d'eux !",
     "radio.distress_wing_03": "Ils sont partout ! Couvrez-moi !",
