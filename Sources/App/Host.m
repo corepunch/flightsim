@@ -884,14 +884,13 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     return YES;
 }
 #else
-- (void)renderer:(id<SCNSceneRenderer>)renderer willRenderScene:(SCNScene *)scene atTime:(NSTimeInterval)time {
-    if (!_booted) return;   // the cockpit may still be under construction on the load queue
-    [_refresh renderDisplaysWithQueue:renderer.commandQueue time:time];
-}
-
+// The terrain and cockpit displays are baked from here, after the frame: with a
+// post-process technique set, SceneKit no longer calls willRenderScene:. Their command
+// buffers go on the renderer's queue ahead of the frame's.
 - (void)renderer:(id<SCNSceneRenderer>)renderer updateAtTime:(NSTimeInterval)time {
     [self captureScreenshots:renderer];
     [self updateFrameAtTime:time];
+    if (_booted) [_refresh renderDisplaysWithQueue:renderer.commandQueue time:time];   // the cockpit may still be under construction on the load queue
 }
 #endif
 

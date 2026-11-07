@@ -232,7 +232,7 @@ static float forestDensity(float2 xz, float y) {
     return fbm(xz / 1300.0 + 11.0, 3) + 0.35 * smoothstep(40.0, 260.0, y) - 0.06;
 }
 
-static float coniferShare(float y) { return 0.1 + 0.65 * smoothstep(140.0, 380.0, y); }
+static float coniferShare(float y) { return 0.62 + 0.3 * smoothstep(140.0, 380.0, y); }
 
 // Integer-lattice hash (pcg2d, Jarzynski and Olano). hash22 on whole numbers correlates
 // along x == y and would streak a straight line of look-alike trees through every forest.
@@ -383,7 +383,7 @@ static float3 groundColour(Surface s, float2 xz, float slope, float detail) {
 // Foliage albedo for a stand id (standId).
 static float3 foliage(float id) {
     float r = fract(id);
-    return id >= 1.0 ? float3(0.025, 0.05, 0.035) * (0.8 + 0.4 * r)
+    return id >= 1.0 ? float3(0.046, 0.072, 0.034) * (0.8 + 0.4 * r)
                      : mix(float3(0.04, 0.08, 0.03), float3(0.07, 0.10, 0.04), r);
 }
 
@@ -391,8 +391,10 @@ static float3 foliage(float id) {
 static float3 surfaceAlbedo(Surface s, float2 xz, float slope, float detail) {
     switch (s.kind) {
     case Tree:
-        // Stands of lighter and darker trees; hashing the smooth id here would band.
-        return foliage(s.id) * (0.8 + 0.4 * (0.5 + 0.5 * fbm(xz / 60.0, 2)));
+        // The forest floor and the shaded sides of crowns, under the standing trees that
+        // carry the lit tops; stands of lighter and darker trees (hashing the smooth id
+        // here would band).
+        return foliage(s.id) * 0.5 * (0.8 + 0.4 * (0.5 + 0.5 * fbm(xz / 60.0, 2)));
     case Hedge:
         return float3(0.04, 0.09, 0.03);
     case Road: {
@@ -417,8 +419,8 @@ static float3 surfaceAlbedo(Surface s, float2 xz, float slope, float detail) {
 struct StandingTree {
     float height;       // metres; 0 where no tree stands
     float radius;       // of the crown at its widest
-    float widest;       // fraction of the height where the crown is widest
-    float bottom;       // fraction of the height where the crown starts above its trunk
+    bool conifer;       // a spire of tiers, otherwise a rounded crown on a trunk
+    float crowd;        // 1 inside a forest, where neighbours shade each other; 0 for a lone tree
     float3 albedo;
 };
 
@@ -426,25 +428,24 @@ struct StandingTree {
 // their edges and stray a little beyond them; hedged field boundaries carry hedgerow trees;
 // meadows get the odd lone tree. pick and look are independent hashes in [0, 1).
 static StandingTree standingTree(float2 xz, float ground, float cavity, float pick, float look) {
-    StandingTree t = { 0.0, 0.0, 0.0, 0.0, 0.0 };
+    StandingTree t = { 0.0, 0.0, false, 0.0, 0.0 };
     if (ground < 1.0 || ground > treeLine(xz)) return t;
     Surface s = coverAt(xz, ground, cavity, 1.0, false);
     if (s.kind == Road || s.kind == House || s.kind == Water || s.village || s.roadD < 8.0) return t;
     float d = forestDensity(xz, ground);
-    float chance = s.kind == Tree ? mix(0.5, 1.0, smoothstep(0.0, 0.03, d))
+    float chance = s.kind == Tree ? mix(0.65, 1.0, smoothstep(0.0, 0.03, d))
                  : s.farm ? (s.parcel.hedged && s.parcel.edge < 5.0 ? 0.45 : 0.0)
                  : d > -0.04 ? 0.35 * smoothstep(-0.04, 0.0, d)
                  : 0.012;
     if (pick >= chance) return t;
     float id = s.kind == Tree ? s.id : standId(xz, ground);
-    bool conifer = id >= 1.0 && !s.farm;
+    t.conifer = id >= 1.0 && !s.farm;
+    t.crowd = s.kind == Tree ? smoothstep(0.0, 0.03, d) : 0.0;
     float stand = 1.0 + 0.25 * noise(xz / 70.0);
-    t.height = stand * (conifer ? 12.0 + 10.0 * look : 9.0 + 7.0 * look);
-    // Conifers are cones to the ground; broadleaf crowns are rounded and stand on trunks.
-    t.radius = t.height * (conifer ? 0.27 : 0.42 + 0.1 * look);
-    t.widest = conifer ? 0.0 : 0.5;
-    t.bottom = conifer ? 0.0 : 0.22;
-    t.albedo = foliage(conifer ? max(id, 1.0) : fract(id)) * (0.8 + 0.35 * look)
+    // Conifers are slender spires, a fifth as wide as tall; broadleaf crowns are rounder.
+    t.height = stand * (t.conifer ? 14.0 + 10.0 * look : 9.0 + 6.0 * look);
+    t.radius = t.height * (t.conifer ? 0.19 + 0.06 * look : 0.36 + 0.1 * look);
+    t.albedo = foliage(t.conifer ? max(id, 1.0) : fract(id)) * (0.8 + 0.35 * look)
              * float3(1.0 + 0.3 * (look - 0.5), 1.0, 1.0 - 0.3 * (look - 0.5));
     return t;
 }

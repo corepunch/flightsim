@@ -159,5 +159,6 @@ changed and why. Commit only when asked.
 | [TODO.md](TODO.md) | Known gaps |
 | [CREDITS.md](CREDITS.md) | Third-party assets and their licences |
 | [TERRAIN-REFERENCES.md](TERRAIN-REFERENCES.md) | Terrain papers and what shipped flight games published |
+| [POST-REFERENCES.md](POST-REFERENCES.md) | The post-process and tree look, and what Ace Combat published about theirs |
 | [Tools/IOS.md](Tools/IOS.md) | Xcode project, iOS builds and devices |
 | [Tools/NETWORK.md](Tools/NETWORK.md) | LAN configuration and manual device testing |

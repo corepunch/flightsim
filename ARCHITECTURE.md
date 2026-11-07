@@ -155,6 +155,19 @@ There are no sky textures or cubemap convolution passes. All cameras use LDR
 on every platform; HDR and camera bloom are disabled. The sky applies its own
 tone curve and edge falloff to retain the darker space palette.
 
+Terrain levels draw through a post-process technique (`PostProcess`,
+`Resources/Shaders/Post.metal`): the scene pass renders into a texture, its light
+above a knee is blurred at a quarter and a sixteenth of the drawable, and the final
+quad pass adds the two back and grades the frame (lifted blacks, eased saturation,
+warm highlights, a vignette, a trace of colour fringing), after Ace Combat's look
+([POST-REFERENCES.md](POST-REFERENCES.md)). The terrain and tree shaders still tone
+map their own output, so the grade works on a display-ready frame. With a
+technique set SceneKit stops calling `willRenderScene:`, so the host bakes the
+terrain maps and cockpit displays from `updateAtTime:`. Standing trees have three
+levels of detail: one triangle each on the far rings, a pyramid on the near ring,
+and within about 75 crown radii a ray cast inside that pyramid (a spire of cone
+tiers or a crown on a trunk) that writes its own depth.
+
 On iOS, a transparent `SKView` above the SceneKit view owns the overlay. Its
 main-thread frame callback runs the host before SpriteKit updates and draws;
 UIKit touch and focus handling use that same thread. SceneKit draws the 3D scene

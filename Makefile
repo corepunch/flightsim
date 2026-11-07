@@ -86,7 +86,7 @@ endef
 $(foreach game,$(GAMES),$(eval $(call game_module,$(game))))
 
 # Renders the procedural landscape to PNGs without starting the game (Tools/TerrainPreview.m).
-TERRAIN_PREVIEW_SOURCES := Tools/TerrainPreview.m Sources/Render/Terrain.m
+TERRAIN_PREVIEW_SOURCES := Tools/TerrainPreview.m Sources/Render/Terrain.m Sources/Render/Post.m
 build/tools/TerrainPreview: $(TERRAIN_PREVIEW_SOURCES) Sources/Render/Render.h Sources/Shared/Shared.h Makefile
 	@printf '  Linking %s\n' '$(@F)'
 	@mkdir -p "$(@D)"

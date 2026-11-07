@@ -107,6 +107,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     float _dt;
     SCNMaterial *_tracer;
     Cvar *_shadowSize, *_terrainGrid, *_terrainTrees, *_terrainMap;
+    Cvar *_post, *_bloom, *_vignette;
 }
 
 - (instancetype)initWithRenderer:(id<SCNSceneRenderer>)renderer size:(CGSize)size {
@@ -125,9 +126,15 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         _terrainGrid = [Cvar get:@"r_terrainGrid" defaultValue:TARGET_OS_IOS ? @"96" : @"128" flags:CVAR_ARCHIVE
                            help:@"Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252 (applies on the next level)"];
         _terrainTrees = [Cvar get:@"r_terrainTrees" defaultValue:TARGET_OS_IOS ? @"64" : @"96" flags:CVAR_ARCHIVE
-                            help:@"Tree slots per edge of each of the four procedural tree rings (5 to 40 m apart), up to 256; 0 draws none (applies on the next level)"];
+                            help:@"Tree slots per edge of the near procedural tree ring (5 m apart), up to 256; the three far rings have twice as many; 0 draws none (applies on the next level)"];
         _terrainMap = [Cvar get:@"r_terrainMap" defaultValue:TARGET_OS_IOS ? @"512" : @"1024" flags:CVAR_ARCHIVE
                           help:@"Texels per edge of each procedural ground map level, a power of two from 256 to 2048, 8 bytes a texel; the finest level is a metre per texel (applies on the next level)"];
+        _post = [Cvar get:@"r_post" defaultValue:@"1" flags:CVAR_ARCHIVE
+                     help:@"Post-processes terrain levels: bloom from the bright sky and a colour filter (applies on the next level)"];
+        _bloom = [Cvar get:@"r_bloom" defaultValue:@"0.3" flags:CVAR_ARCHIVE
+                      help:@"Bloom intensity in terrain levels, the share of blurred sky light added back; 0 draws none (applies on the next level)"];
+        _vignette = [Cvar get:@"r_vignette" defaultValue:@"0.3" flags:CVAR_ARCHIVE
+                         help:@"Darkening of the frame's corners in terrain levels, 0 to 1 (applies on the next level)"];
     }
     return self;
 }
@@ -435,7 +442,22 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
             [_world addChildNode:_backdrop.terrain.skyNode];
         }
     }
+    [self applyPost:_backdrop.terrain != nil];
     _playerShown = NO;
+}
+
+// The post-process technique belongs to landscapes; space keeps its own sky tone.
+- (void)applyPost:(BOOL)on {
+    if (![(id)_renderer conformsToProtocol:@protocol(SCNTechniqueSupport)]) return;
+    id<SCNTechniqueSupport> target = (id<SCNTechniqueSupport>)_renderer;
+    SCNTechnique *technique = nil;
+    if (on && _post.integer) {
+        NSURL *shaders = [[NSBundle.mainBundle URLForResource:@"Post" withExtension:@"metal" subdirectory:@"Shaders"] URLByDeletingLastPathComponent];
+        PostSettings settings = { .bloom = MAX(0, _bloom.value), .bloomKnee = 0.8f,
+                                  .vignette = MIN(1, MAX(0, _vignette.value)), .grade = 1 };
+        technique = [PostProcess techniqueWithDevice:_device shaderDirectory:shaders settings:settings];
+    }
+    if (technique || target.technique) target.technique = technique;
 }
 
 - (void)clearWorld {

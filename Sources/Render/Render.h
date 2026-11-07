@@ -311,6 +311,23 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 @end
 
+// MARK: - PostProcess
+
+// The frame's post-processing as a SceneKit technique (Resources/Shaders/Post.metal): the
+// scene is drawn into a texture, its bright sky blooms into a glow and a wide veil, and
+// the final pass grades the frame. Set on anything that supports techniques.
+typedef struct {
+    float bloom;        // share of blurred light added back; 0 draws none
+    float bloomKnee;    // display brightness where light starts to bloom
+    float vignette;     // darkening at the corners, 0 to 1
+    float grade;        // strength of the colour filter, 0 to 1
+} PostSettings;
+
+@interface PostProcess : NSObject
+// Compiles Post.metal from the directory with the settings baked in; nil on failure.
++ (SCNTechnique *)techniqueWithDevice:(id<MTLDevice>)device shaderDirectory:(NSURL *)directory settings:(PostSettings)settings;
+@end
+
 // MARK: - SpaceSky
 
 // A vertex-coloured nebula mesh with shader stars and an analytic planet.
@@ -337,14 +354,16 @@ void ApplyHullRolloff(SCNMaterial *m);
 // surface in Resources/Shaders/Terrain*.metal (height, cover: water, roads, villages,
 // fields, forest, rock; and lighting) as the windows scroll. The cloud sky is marched
 // into a quarter-size screen texture each frame and spread over a dome. Forests stand
-// as triangle trees on lattice rings of their own. A level only switches it on.
+// as trees on lattice rings of their own: one triangle each far off, ray-cast spires and
+// crowns near the camera. A level only switches it on.
 @interface ProceduralTerrain : NSObject
 
 // Compiles TerrainCommon.metal and Terrain.metal from the directory (nil on failure).
 + (id<MTLLibrary>)libraryWithDevice:(id<MTLDevice>)device shaderDirectory:(NSURL *)directory;
 
 // cells: vertices per ring edge, a multiple of 4 up to 252; more is finer and costlier.
-// treeCells: tree slots per edge of each of the four tree rings (5, 10, 20, 40 m apart), up to 256; 0 draws none.
+// treeCells: tree slots per edge of the near tree ring (5 m apart), up to 256; the three far rings
+// (5, 10 and 20 m apart) have twice as many; 0 draws none.
 // mapTexels: texels per edge of each ground map level, a power of two from 256 to 2048; the
 // finest level is a metre per texel, so 1024 holds a kilometre around the camera at full detail.
 - (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells treeCells:(NSUInteger)treeCells

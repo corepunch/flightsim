@@ -26,8 +26,11 @@ static const float kFinestSpacing = 4;      // metres between vertices of the in
 enum { kLevels = 8 };                       // 4 m to 512 m spacing; the coarsest ring reaches 32 km
 enum { kVariants = 5 };                     // 0: full square; 1-4: rings, hole shifted by (dx, dz)
 static const float kMinHeight = -60, kMaxHeight = 2600;
-static const float kTreeSpacing = 5;        // metres between tree slots in the innermost tree ring
-enum { kTreeLevels = 4 };                   // 5 m to 40 m slots; trees reach about 1.4 km at the default grid
+static const float kTreeSpacing = 5;        // metres between tree slots in the two innermost tree rings
+enum { kTreeLevels = 4 };                   // 5, 5, 10 and 20 m slots; trees reach about 1.9 km at the default grid
+enum { kTreeCorners = 8 };                  // vertices per near tree slot: top, a ring of six, bottom
+enum { kTriangleCorners = 3 };              // vertices per far tree slot: top and two feet, marked by kTriangleFlag
+enum { kTriangleFlag = 16 };
 static const float kMapSpacing = 1;         // metres per texel of the finest ground map
 enum { kMaxStrips = 2 * kMaxMapLevels };
 static const int kSkyScale = 4;             // the sky texture is the drawable over this, each way
@@ -151,7 +154,6 @@ static NSUInteger TextureBytes(id<MTLTexture> t) {
     _node = [SCNNode node];
     _node.name = @"Terrain";
     _treeSlots = (int)MIN(256, treeCells & ~(NSUInteger)1);
-    _params.trees = simd_make_float4(_treeSlots / 2.0f, kTreeSpacing, _treeSlots / 2.0f * kTreeSpacing * (1 << (kTreeLevels - 1)), 0);
     _skyNode = [SCNNode node];
     _skyNode.name = @"Terrain sky";
     _skyNode.categoryBitMask = RenderCategoryBackground;
@@ -220,22 +222,33 @@ static NSUInteger TextureBytes(id<MTLTexture> t) {
     return self;
 }
 
-// One shared grid of tree slots, five vertices each (top, three corners, bottom, all at the
-// slot's indices; the shader places them), drawn by every tree ring. Indices are 32-bit:
-// a ring of 256 slots per edge has over 300 000 vertices. Two unindexed vertices
-// carry the height range so culling boxes cover hills and trees.
-- (void)addTreesWithLibrary:(id<MTLLibrary>)library {
-    int n = _treeSlots, half = n / 2, count = n * n * 5 + 2;
+// A grid of tree slots for a ring, drawn by the tree shaders: on the near ring eight
+// vertices a slot (a top, a ring of six and a bottom, a bipyramid around the tree whose
+// shape the fragment shader ray casts inside it), on the far rings three (one triangle
+// stood up to the camera), all at the slot's indices; the shader places them. Indices are
+// 32-bit: a near ring of 256 slots per edge has over 500 000 vertices. Two unindexed
+// vertices carry the height range so culling boxes cover hills and trees.
+- (SCNGeometry *)treeGridWithSlots:(int)n triangles:(BOOL)triangles material:(SCNMaterial *)material {
+    int corners = triangles ? kTriangleCorners : kTreeCorners, trisPerSlot = triangles ? 1 : 12;
+    int half = n / 2, count = n * n * corners + 2;
     NSMutableData *vertices = [NSMutableData dataWithLength:(size_t)count * sizeof(simd_float3)];
-    NSMutableData *indices = [NSMutableData dataWithCapacity:(size_t)n * n * 18 * sizeof(uint32_t)];
+    NSMutableData *indices = [NSMutableData dataWithCapacity:(size_t)n * n * trisPerSlot * 3 * sizeof(uint32_t)];
     simd_float3 *v = vertices.mutableBytes;
     for (int z = 0; z < n; z++) {
         for (int x = 0; x < n; x++) {
-            uint32_t f = (uint32_t)((z * n + x) * 5);
-            for (int corner = 0; corner < 5; corner++) v[f + corner] = simd_make_float3(x - half, corner, z - half);
-            uint32_t tris[18] = { f, f + 1, f + 2,  f, f + 2, f + 3,  f, f + 3, f + 1,
-                                  f + 4, f + 2, f + 1,  f + 4, f + 3, f + 2,  f + 4, f + 1, f + 3 };
-            [indices appendBytes:tris length:sizeof(tris)];
+            uint32_t f = (uint32_t)((z * n + x) * corners);
+            for (int corner = 0; corner < corners; corner++)
+                v[f + corner] = simd_make_float3(x - half, corner + (triangles ? kTriangleFlag : 0), z - half);
+            if (triangles) {
+                uint32_t tri[3] = { f, f + 1, f + 2 };
+                [indices appendBytes:tri length:sizeof(tri)];
+                continue;
+            }
+            for (uint32_t i = 0; i < 6; i++) {
+                uint32_t a = f + 1 + i, b = f + 1 + (i + 1) % 6;
+                uint32_t tris[6] = { f, a, b,  f + 7, b, a };
+                [indices appendBytes:tris length:sizeof(tris)];
+            }
         }
     }
     v[count - 2] = simd_make_float3(-half, kMinHeight, -half);
@@ -245,18 +258,32 @@ static NSUInteger TextureBytes(id<MTLTexture> t) {
                                                                  vectorCount:count floatComponents:YES componentsPerVector:3
                                                            bytesPerComponent:sizeof(float) dataOffset:0 dataStride:sizeof(simd_float3)];
     SCNGeometryElement *element = [SCNGeometryElement geometryElementWithData:indices primitiveType:SCNGeometryPrimitiveTypeTriangles
-                                                               primitiveCount:n * n * 6 bytesPerIndex:sizeof(uint32_t)];
+                                                               primitiveCount:n * n * trisPerSlot bytesPerIndex:sizeof(uint32_t)];
     SCNGeometry *geometry = [SCNGeometry geometryWithSources:@[positions] elements:@[element]];
-    SCNMaterial *material = [self materialWithLibrary:library vertex:@"treeVertex" fragment:@"treeFragment"];
     geometry.materials = @[material];
+    return geometry;
+}
+
+// The slot spacing of a tree ring, and the slots along its edge: the far rings are
+// cheap triangles, so they get twice the slots of the near ring.
+static float TreeRingSpacing(int level) { return kTreeSpacing * (level == 0 ? 1 : 1 << (level - 1)); }
+- (int)treeRingSlots:(int)level { return level == 0 ? _treeSlots : MIN(512, 2 * _treeSlots); }
+- (float)treeRingReach:(int)level { return [self treeRingSlots:level] / 2.0f * TreeRingSpacing(level); }
+
+- (void)addTreesWithLibrary:(id<MTLLibrary>)library {
+    SCNMaterial *material = [self materialWithLibrary:library vertex:@"treeVertex" fragment:@"treeFragment"];
+    SCNGeometry *near = [self treeGridWithSlots:[self treeRingSlots:0] triangles:NO material:material];
+    SCNGeometry *far = [self treeGridWithSlots:[self treeRingSlots:1] triangles:YES material:material];
     for (int level = 0; level < kTreeLevels; level++) {
-        SCNNode *ring = [SCNNode nodeWithGeometry:geometry];
+        SCNNode *ring = [SCNNode nodeWithGeometry:level == 0 ? near : far];
         ring.name = [NSString stringWithFormat:@"Trees %d", level];
         ring.castsShadow = NO;
         ring.categoryBitMask = RenderCategoryBackground;
         [_node addChildNode:ring];
         _treeRings[level] = ring;
     }
+    // Thinning starts at half the second ring's reach; nothing stands beyond the last.
+    _params.trees = simd_make_float4([self treeRingReach:1] / 2, kTreeSpacing, [self treeRingReach:kTreeLevels - 1], 0);
 }
 
 - (void)setEnvironment:(LevelEnvironment)environment {
@@ -331,11 +358,14 @@ static NSUInteger TextureBytes(id<MTLTexture> t) {
     }
     _finest = finest;
 
-    // Each tree ring sits on its own slot grid, which the shader repeats to find the hole.
+    // Each tree ring sits on its own slot grid; its node tells the shader the spacing
+    // (x scale) and, to leave out what the finer ring draws, that ring's spacing (y
+    // scale) and half extent (y position).
     for (int level = 0; level < kTreeLevels; level++) {
-        float spacing = kTreeSpacing * (1 << level);
-        _treeRings[level].simdPosition = simd_make_float3(Snap(position.x, spacing), 0, Snap(position.z, spacing));
-        _treeRings[level].simdScale = simd_make_float3(spacing, 1, spacing);
+        float spacing = TreeRingSpacing(level);
+        float finer = level ? TreeRingSpacing(level - 1) : 1, hole = level ? [self treeRingReach:level - 1] : 0;
+        _treeRings[level].simdPosition = simd_make_float3(Snap(position.x, spacing), hole, Snap(position.z, spacing));
+        _treeRings[level].simdScale = simd_make_float3(spacing, finer, spacing);
     }
     if (!_heightMap) return;
     [self scrollMapsToCamera:position];
@@ -392,9 +422,9 @@ static NSUInteger TextureBytes(id<MTLTexture> t) {
 
 - (NSString *)stats {
     NSUInteger textures = TextureBytes(_groundMap) + TextureBytes(_heightMap) + TextureBytes(_skyMap);
-    return [NSString stringWithFormat:@"Terrain: %d rings of %d cells, finest ring %d, %d tree rings of %d slots, %.2f MiB grid and index data; "
+    return [NSString stringWithFormat:@"Terrain: %d rings of %d cells, finest ring %d, %d tree rings of %d and %d slots reaching %g m, %.2f MiB grid and index data; "
             @"%d ground map levels of %d texels (%g m per texel and up), sky %lux%lu, %.1f MiB of textures",
-            kLevels, _cells, _finest, kTreeLevels, _treeSlots, _bytes / 1048576.0,
+            kLevels, _cells, _finest, kTreeLevels, _treeSlots, [self treeRingSlots:1], [self treeRingReach:kTreeLevels - 1], _bytes / 1048576.0,
             _mapLevels, _mapTexels, kMapSpacing, (unsigned long)_skyMap.width, (unsigned long)_skyMap.height, textures / 1048576.0];
 }
 

@@ -128,6 +128,8 @@ static void RenderEngine(id<MTLDevice> device, NSString *outDir, CGSize size) {
     SCNRenderer *renderer = [SCNRenderer rendererWithDevice:device options:nil];
     renderer.scene = scene;
     renderer.pointOfView = eye;
+    renderer.technique = [PostProcess techniqueWithDevice:device shaderDirectory:[NSURL fileURLWithPath:@"Resources/Shaders"]
+                                                 settings:(PostSettings){ .bloom = 0.3f, .bloomKnee = 0.8f, .vignette = 0.3f, .grade = 1.0f }];
     SnapshotViews(renderer, eye, outDir, @"engine", size, ^(View v) {
         [terrain updateForCamera:eye viewport:size time:0];
         [SCNTransaction flush];     // no run loop here to commit the rings' visibility
