@@ -85,6 +85,14 @@ $(NATIVE)/games/$(1)/%.c.o: %.c Makefile $(TOOLCHAIN)
 endef
 $(foreach game,$(GAMES),$(eval $(call game_module,$(game))))
 
+# Renders the procedural landscape to PNGs without starting the game (Tools/TerrainPreview.m).
+TERRAIN_PREVIEW_SOURCES := Tools/TerrainPreview.m Sources/Render/Terrain.m
+build/tools/TerrainPreview: $(TERRAIN_PREVIEW_SOURCES) Sources/Render/Render.h Sources/Shared/Shared.h Makefile
+	@printf '  Linking %s\n' '$(@F)'
+	@mkdir -p "$(@D)"
+	@clang $(COMMON_FLAGS) $(ENGINE_FLAGS) $(TERRAIN_PREVIEW_SOURCES) \
+		-framework Cocoa -framework SceneKit -framework SpriteKit -framework Metal -framework QuartzCore -o "$@"
+
 
 .PHONY: iphone ipad ios-devices
 iphone ipad:

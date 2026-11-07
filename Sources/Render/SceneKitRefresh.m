@@ -1,5 +1,8 @@
 #import "Render.h"
 #import "Shared.h"
+#import "Common.h"
+#import <mach/mach.h>
+#import <QuartzCore/CAMetalLayer.h>
 
 static const NSUInteger kSkyFaceSize = TARGET_OS_IOS ? 1024 : 1536;
 
@@ -36,27 +39,36 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @implementation RefEntityNode
 @end
 
-// Authored scenery is game data. This view owns its scene, panorama and haze.
+// Scenery is game data: an authored model with a panorama, or the procedural terrain
+// with its own sky dome. This view owns whichever the level asks for, and the haze.
 @interface WorldBackdrop : NSObject
 @property (nonatomic, readonly) SCNNode *node;
 @property (nonatomic, readonly) LevelEnvironment definition;
 @property (nonatomic, readonly) NSURL *sky;
-- (instancetype)initWithDefinition:(LevelEnvironment)definition;
+@property (nonatomic, readonly) ProceduralTerrain *terrain;
+- (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells hdr:(BOOL)hdr;
 @end
 @implementation WorldBackdrop
-- (instancetype)initWithDefinition:(LevelEnvironment)definition {
+- (instancetype)initWithDefinition:(LevelEnvironment)definition device:(id<MTLDevice>)device cells:(NSUInteger)cells hdr:(BOOL)hdr {
     if ((self = [super init])) {
         _definition = definition;
-        NSURL *url = FSURL(@"Models", definition.model, @"scn");
-        SCNScene *scene = url ? [SCNScene sceneWithURL:url options:nil error:nil] : nil;
-        _node = [scene.rootNode clone] ?: [SCNNode node];
-        [_node enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
-            for (SCNMaterial *material in child.geometry.materials) {
-                material.lightingModelName = SCNLightingModelPhysicallyBased;
-                material.roughness.contents = @1;
-                material.metalness.contents = @0;
-            }
-        }];
+        if (definition.terrain) {
+            NSURL *shaders = [[NSBundle.mainBundle URLForResource:@"Terrain" withExtension:@"metal" subdirectory:@"Shaders"] URLByDeletingLastPathComponent];
+            _terrain = [[ProceduralTerrain alloc] initWithLibrary:[ProceduralTerrain libraryWithDevice:device shaderDirectory:shaders] cells:cells hdr:hdr];
+            _terrain.environment = definition;
+            _node = _terrain.node;
+        } else {
+            NSURL *url = FSURL(@"Models", definition.model, @"scn");
+            SCNScene *scene = url ? [SCNScene sceneWithURL:url options:nil error:nil] : nil;
+            _node = [scene.rootNode clone] ?: [SCNNode node];
+            [_node enumerateHierarchyUsingBlock:^(SCNNode *child, BOOL *stop) {
+                for (SCNMaterial *material in child.geometry.materials) {
+                    material.lightingModelName = SCNLightingModelPhysicallyBased;
+                    material.roughness.contents = @1;
+                    material.metalness.contents = @0;
+                }
+            }];
+        }
         _sky = FSURL(@"Textures", definition.sky, @"jpg");
     }
     return self;
@@ -90,6 +102,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     double _time;
     float _dt;
     SCNMaterial *_tracer;
+    Cvar *_terrainGrid;
 }
 
 - (instancetype)initWithRenderer:(id<SCNSceneRenderer>)renderer size:(CGSize)size {
@@ -102,6 +115,9 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         _pending = [NSMutableArray array];
         _entities = [NSMutableDictionary dictionary];
         _dt = 1.0f / 60.0f;
+        _terrainGrid = [Cvar get:@"r_terrainGrid" defaultValue:TARGET_OS_IOS ? @"96" : @"128" flags:CVAR_ARCHIVE
+                           help:@"Cells per edge of each procedural terrain ring, a multiple of 4 from 16 to 252 (applies on the next level)"];
+
     }
     return self;
 }
@@ -264,9 +280,13 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 }
 
 - (void)registerEnvironment:(LevelEnvironment)environment {
-    if (!environment.model.length) return;
-    _nextBackdrop = [[WorldBackdrop alloc] initWithDefinition:environment];
-    @synchronized (_pending) { [_pending addObject:_nextBackdrop.node]; }
+    if (!environment.model.length && !environment.terrain) return;
+    _nextBackdrop = [[WorldBackdrop alloc] initWithDefinition:environment device:_device
+                                                        cells:(NSUInteger)MAX(0, _terrainGrid.integer) hdr:_cameraNode.camera.wantsHDR];
+    @synchronized (_pending) {
+        [_pending addObject:_nextBackdrop.node];
+        if (_nextBackdrop.terrain) [_pending addObject:_nextBackdrop.terrain.skyNode];
+    }
 }
 
 - (RefModel)registerModel:(NSString *)name {
@@ -361,12 +381,18 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     if (_backdrop) {
         LevelEnvironment environment = _backdrop.definition;
         _scene.fogColor = [SKColor colorWithRed:environment.fogColor.x green:environment.fogColor.y blue:environment.fogColor.z alpha:1];
-        _scene.background.contents = _backdrop.sky;
+        // The procedural sky dome draws the background itself; the panorama, when the
+        // level has one, still lights the aircraft.
+        _scene.background.contents = _backdrop.terrain ? nil : _backdrop.sky;
         _scene.lightingEnvironment.contents = _backdrop.sky;
         _scene.lightingEnvironment.intensity = 0.8;
         [_dust removeFromParentNode];
         _dust = nil;
         [_world addChildNode:_backdrop.node];
+        if (_backdrop.terrain) {
+            _backdrop.terrain.sunDirection = self.sunDirection;
+            [_world addChildNode:_backdrop.terrain.skyNode];
+        }
     }
     _playerShown = NO;
 }
@@ -523,6 +549,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         [_sunLight simdLookAt:c.focus];
     }
     if (_dust) [_sky updateDust:_dust cameraPosition:c.origin velocity:c.velocity];
+    [_backdrop.terrain updateForCamera:c.origin time:_time];
 }
 
 - (SCNNode *)nodeFor:(uint16_t)key {

@@ -692,9 +692,11 @@ typedef struct {
 NSString *LANLobbyEncode(LANLobbyInfo lobby);
 BOOL LANLobbyDecode(NSString *text, LANLobbyInfo *lobby);
 
-// Optional authored landscape and panorama; absent for a space level.
+// Optional scenery; absent for a space level. Either an authored landscape model with a
+// sky panorama, or the engine's procedural terrain and sky ("terrain": true), with haze.
 typedef struct {
     NSString *model, *sky;
+    bool terrain;
     simd_float3 fogColor;
     float fogStart, fogEnd;
 } LevelEnvironment;
