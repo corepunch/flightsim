@@ -3,7 +3,7 @@
   "mesh": "Executioner",
   "texture": "Executioner_Blue",
   "radius": 5.0,
-  "guns": [[-4.38, 0.1, -2.5], [4.38, 0.1, -2.5]],
+  "guns": [[-0.93, -0.46, -6.0], [0.93, -0.46, -6.0]],
   "gun": {
     "speed": 820,
     "life": 1.8,
