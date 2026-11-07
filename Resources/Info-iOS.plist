@@ -33,7 +33,7 @@
     <key>CFBundleExecutable</key>
     <string>KestrelFrontier</string>
     <key>CFBundleIdentifier</key>
-    <string>com.igor.spacefight</string>
+    <string>com.corepunch.spacefight</string>
     <key>CFBundleDisplayName</key>
     <string>Kestrel Frontier</string>
     <key>CFBundleName</key>
@@ -41,9 +41,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1</string>
+    <string>1.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>40</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UIDeviceFamily</key>

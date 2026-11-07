@@ -1,9 +1,12 @@
 # App Store submission with Fastlane
 
-The iPhone/iPad listing is Kestrel Frontier, App Store ID `6831063163`, bundle
+The shared iPhone/iPad and Mac listing is Kestrel Frontier, App Store ID `6831063163`, bundle
 identifier `com.corepunch.spacefight`, development team `BM2R8F5YHC`. This setup
-targets iOS; the Mac target uses a different bundle identifier and needs its own
-store configuration.
+uses one app record for both platforms. The Fastlane lanes below target iOS;
+archive and distribute the native Mac target through Xcode using the same bundle
+identifier, with macOS added to that app record in App Store Connect.
+The Mac target signs with `Resources/KestrelFrontier-macOS.entitlements`, enabling
+App Sandbox and the incoming/outgoing connections used by multiplayer.
 
 Fastlane and its dependencies are pinned by `Gemfile` and `Gemfile.lock`.
 `Tools/fastlane.sh` selects Homebrew's Ruby and reuses Homebrew's installed gems,
@@ -111,11 +114,18 @@ screenshots first. Repeated uploads can add duplicates. Use actual supported
 device resolutions from [Apple's screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/).
 The screenshots themselves are excluded from Git.
 
+The submitted Mac screenshots are in `fastlane/screenshots-macos/en-US/`.
+Mac description and keywords, including trackball support, are in
+`fastlane/metadata-macos/en-US/`; the iOS lanes do not upload that directory.
+The Header and Search Results assets uploaded through App Store Connect are in
+`fastlane/artwork/`. That directory also preserves the generated banner master
+and its exact ImageGen prompt. The search image is cropped from real gameplay.
+
 The upload command takes an already signed App Store IPA, checks its bundle ID
 and marketing version, and sends it to TestFlight without inviting external
 testers. Use Xcode's existing `KestrelFrontier-iOS` scheme to archive and export
-the IPA. This setup does not build an archive automatically. The source plist
-currently declares version `0.1`; align it with the store version in
+the IPA. This setup does not build an archive automatically. Align the source
+plists with the store version in
 `fastlane/version.txt` before creating a new distribution build, and choose an
 unused build number. Signing uses your existing Xcode configuration.
 
@@ -132,6 +142,11 @@ checks the editable version, selects that build and submits it for review.
 It does not re-upload the local listing or screenshots. Release after approval
 is manual (`automatic_release: false`). Merely installing or running `check`,
 `status` or `pull` never submits the app.
+
+For the November 6, 2026 submission, both platforms use version 1.0, build 40,
+and App Store Connect is set to release each version automatically after approval.
+Those submissions used Fastlane directly with automatic release enabled; the
+lane's default above remains manual for future submissions.
 
 ## Other submission forms
 
