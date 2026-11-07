@@ -257,6 +257,48 @@ def validate_radio(game, levels):
     print(f"{game.name}: validated {len(lines)} radio recordings and their event captions")
 
 
+
+def validate_continuity(entries, rules, characters):
+    """Check authored speaking windows and required returns in campaign order.
+
+    A remote call counts as an appearance; rescued characters can first speak
+    during their rescue briefing. References to absent people are still allowed.
+    These constraints do not attempt to judge the meaning of dialogue text.
+    """
+    positions = {entry["level"]: i for i, entry in enumerate(entries)}
+    phases = {"briefing": 0, "debrief": 1}
+
+    def position(scene):
+        assert scene["level"] in positions, f"Continuity: unknown level {scene['level']}"
+        assert scene["phase"] in phases, f"Continuity: unknown phase {scene['phase']}"
+        return positions[scene["level"]] * 2 + phases[scene["phase"]]
+
+    appearances = {name: set() for name in characters}
+    for i, entry in enumerate(entries):
+        conversations = (entry["briefing"]["dialogue"]["lines"], entry["debrief"]["dialogue"])
+        for phase, lines in enumerate(conversations):
+            for line in lines:
+                # Player replies keep the listener visible on stage too.
+                for name in (line["portrait"], line.get("listener")):
+                    if name is not None:
+                        assert name in appearances, f"Continuity: unknown character {name}"
+                        appearances[name].add(i * 2 + phase)
+    for name, rule in rules["characters"].items():
+        assert name in appearances, f"Continuity: unknown character {name}"
+        first = position(rule["availableFrom"])
+        last = position(rule["unavailableFrom"]) if "unavailableFrom" in rule else len(entries) * 2
+        assert first < last, f"Continuity: inverted speaking window for {name}"
+        seen = appearances[name]
+        assert first in seen, f"Continuity: missing introduction for {name}"
+        assert all(first <= scene < last for scene in seen), f"Continuity: {name} appears outside speaking window"
+        returns = rule.get("returns", [])
+        assert len(returns) == len(set(returns)), f"Continuity: duplicate return for {name}"
+        for level in returns:
+            assert level in positions, f"Continuity: unknown return level {level}"
+            assert positions[level] > first // 2, f"Continuity: {name} must return after introduction"
+            assert any(scene // 2 == positions[level] for scene in seen), f"Continuity: missing {name} in {level}"
+
+
 def validate_game(game):
     levels = load_levels(game)
     validate_radio(game, levels)
@@ -285,6 +327,9 @@ def validate_game(game):
         assert character["faces"] in ("left", "right") and character["name"].strip(), character
     for portrait in PORTRAITS:
         check_art(art(f"{portrait}.png"), transparent=True)
+    continuity = game / "Story/continuity.json"
+    if continuity.is_file():
+        validate_continuity(entries, json.loads(continuity.read_text()), CAST["characters"])
     beats, cast = 0, set()
     for entry in entries:
         count, speakers = validate_mission({**levels[entry["level"]], **entry})
