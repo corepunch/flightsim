@@ -114,7 +114,7 @@ static void RenderCurrent(id<MTLDevice> device, NSString *outDir, CGSize size) {
 static void RenderEngine(id<MTLDevice> device, NSString *outDir, CGSize size) {
     id<MTLLibrary> library = [ProceduralTerrain libraryWithDevice:device shaderDirectory:[NSURL fileURLWithPath:@"Resources/Shaders"]];
     if (!library) return;
-    ProceduralTerrain *terrain = [[ProceduralTerrain alloc] initWithLibrary:library cells:128 hdr:NO];
+    ProceduralTerrain *terrain = [[ProceduralTerrain alloc] initWithLibrary:library cells:128 treeCells:160 hdr:NO];
     terrain.environment = PatrolEnvironment();
     terrain.sunDirection = kSun;
     SCNScene *scene = [SCNScene scene];

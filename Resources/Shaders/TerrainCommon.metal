@@ -9,8 +9,9 @@
 //   of the river, both carried over water on causeways, none on hills;
 //   villages of hard-edged houses lining the roads around some junctions;
 //   farmland only in clusters of whole hedged parcels on low ground, drawn toward roads;
-//   forest elsewhere where density allows, below a tree line, as crown bumps with hard edges,
-//   cleared along roads and in villages; rock on steep ground and above the tree line.
+//   forest elsewhere where density allows, below a tree line, as a hard-edged surface
+//   material (the mesh stays bare ground), cleared along roads and in villages;
+//   rock on steep ground and above the tree line.
 #include <metal_stdlib>
 using namespace metal;
 
@@ -220,26 +221,36 @@ static bool isFarm(Parcel p, float y, float roadD) {
     return cluster > -0.04 && y > kShore && y < 75.0;
 }
 
-static float treeLine(float2 xz) { return 430.0 + 80.0 * noise(xz / 1500.0); }
+// Only real mountains (kRelief reaches 1500 m over the plain) break the tree line.
+static float treeLine(float2 xz) { return 1500.0 + 150.0 * noise(xz / 1500.0); }
 
 static float forestDensity(float2 xz, float y) {
     return fbm(xz / 1300.0 + 11.0, 3) + 0.35 * smoothstep(40.0, 260.0, y) - 0.16;
 }
 
-static float coniferShare(float y) { return 0.1 + 0.85 * smoothstep(140.0, 380.0, y); }
+static float coniferShare(float y) { return 0.1 + 0.65 * smoothstep(140.0, 380.0, y); }
 
-// Forest canopy as one surface: a hard, ragged outline that rises over a few metres,
-// then an uneven top.
+// Integer-lattice hash (pcg2d, Jarzynski and Olano). hash22 on whole numbers correlates
+// along x == y and would streak a straight line of look-alike trees through every forest.
+static float2 cellHash(float2 cell) {
+    uint2 v = uint2(int2(cell) + 0x10000);
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * 1664525u; v.y += v.x * 1664525u;
+    v ^= v >> 16u;
+    v.x += v.y * 1664525u; v.y += v.x * 1664525u;
+    v ^= v >> 16u;
+    return float2(v & 0x00ffffffu) / float(0x01000000);
+}
+
+// Forest: where a stand's density allows, with a ragged 14 m edge. Returns the canopy
+// height; id carries the stand's species (>= 1 conifer) and a slow shade variation.
 static float trees(float2 xz, float y, float detail, thread float &id) {
     id = 0.0;
     if (y < 2.5 || y > treeLine(xz)) return 0.0;
     float d = forestDensity(xz, y) + 0.012 * noise(xz / 14.0);
     if (d <= 0.0) return 0.0;
-    float rise = smoothstep(0.0, 0.006, d);
-    float top = 13.0 + 4.0 * noise(xz / 70.0)
-              + detail * (3.0 * noise(xz / 9.0) + 1.2 * noise(xz / 3.5));
     id = (noise(xz / 900.0 + 7.0) * 0.3 + coniferShare(y) > 0.5 ? 1.0 : 0.0) + 0.5 + 0.5 * noise(xz / 120.0);
-    return top * rise;
+    return 13.0 + 4.0 * noise(xz / 70.0);
 }
 
 struct Surface {
@@ -256,8 +267,9 @@ struct Surface {
     float riverD;
 };
 
-// Cover on known bare ground. mesh: only cover wide enough for clipmap vertices (forest),
-// so thin hedges and houses never spike a single vertex, and canopy relief fades with detail.
+// Cover on known bare ground. mesh: the clipmap carries no cover at all; raising forest
+// vertices turns every wood into a slab with lit bare-ground walls around it, so canopy,
+// hedges and houses exist only per pixel.
 static Surface coverAt(float2 xz, float ground, float cavity, float detail, bool mesh) {
     Surface s;
     s.ground = ground;
@@ -298,11 +310,11 @@ static Surface coverAt(float2 xz, float ground, float cavity, float detail, bool
             s.kind = Hedge;
             s.cover = (3.0 + 7.0 * smoothstep(0.35, 0.7, noise(xz / 7.0))) * max(detail, 0.3);
         }
-    } else if (r.dist > 12.0 && !s.village) {
+    } else if ((r.dist > 12.0 || !lowland) && !s.village) {
         h = trees(xz, ground, detail, id);
         if (h > 0.0) {
             s.kind = Tree;
-            s.cover = mesh ? h * detail : h;
+            s.cover = mesh ? 0.0 : h;
             s.id = id;
         }
     }
@@ -338,11 +350,16 @@ static float3 groundColour(Surface s, float2 xz, float slope, float detail) {
     float cavityShade = mix(0.75, 1.05, smoothstep(-0.3, 0.6, s.cavity + 0.4));
     if (s.farm) return cropColour(s.parcel, xz, detail) * cavityShade;
 
-    float v = fbm(xz / 300.0, 4) * 0.5 + 0.5;
-    float3 meadow = mix(float3(0.17, 0.26, 0.08), float3(0.28, 0.31, 0.12), v);
-    meadow = mix(meadow, float3(0.34, 0.33, 0.18), smoothstep(0.15, 0.35, fbm(xz / 600.0 + 3.0, 3)) * 0.45);
-    meadow = mix(meadow, float3(0.27, 0.27, 0.15), smoothstep(150.0, 400.0, y));  // upland heath
-    float3 col = meadow;
+    // Rough grazing is a patchwork: turf and dry grass at 300 m, bracken in 40 m patches
+    // on the slopes, heather on the tops, and grass-clump speckle close up.
+    float v = fbm(xz / 300.0, 3) * 0.5 + 0.5;
+    float patch = noise(xz / 40.0) * 0.5 + 0.5;
+    float3 turf = float3(0.16, 0.22, 0.08), dry = float3(0.31, 0.29, 0.15);
+    float3 bracken = float3(0.27, 0.22, 0.11), heather = float3(0.20, 0.17, 0.15);
+    float3 col = mix(turf, dry, smoothstep(0.3, 0.7, v));
+    col = mix(col, bracken, smoothstep(0.55, 0.8, patch) * smoothstep(60.0, 200.0, y));
+    col = mix(col, heather, smoothstep(0.35, 0.6, fbm(xz / 120.0 + 5.0, 2)) * smoothstep(200.0, 450.0, y));
+    col *= 0.9 + 0.2 * noise(xz / 3.0) * detail;
 
     // Villages stand on trampled yards and gardens; road verges are dusty.
     if (s.village) col = mix(col, float3(0.36, 0.33, 0.19), 0.6);
@@ -364,11 +381,11 @@ static float3 groundColour(Surface s, float2 xz, float slope, float detail) {
 static float3 surfaceAlbedo(Surface s, float2 xz, float slope, float detail) {
     switch (s.kind) {
     case Tree: {
-        bool conifer = s.id >= 1.0;
-        float r = fract(s.id);
-        float3 albedo = conifer ? float3(0.05, 0.10, 0.06) * (0.8 + 0.4 * r)
-                                : mix(float3(0.09, 0.17, 0.05), float3(0.17, 0.21, 0.06), r) * (0.8 + 0.4 * hash12(float2(r, 3.0)));
-        return albedo * (0.75 + 0.25 * saturate(s.cover / 16.0));
+        // Tree sprites stand on this; near the camera it is the shaded floor between them,
+        // beyond their reach it is the canopy seen from above.
+        float3 canopy = mix(float3(0.06, 0.10, 0.045), float3(0.11, 0.14, 0.06), fract(s.id)) * (0.9 + 0.2 * noise(xz / 45.0));
+        if (s.id >= 1.0) canopy *= 0.8;
+        return mix(canopy, float3(0.05, 0.065, 0.035), detail);
     }
     case Hedge:
         return float3(0.08, 0.15, 0.05);
@@ -474,14 +491,14 @@ static float3 waterColour(Surface s, float2 xz, float3 rd, float3 sun, float lig
     return mix(lit, skyColor(r, sun, false), fres) + glint;
 }
 
-// Tree crowns and roofs get per-pixel relief the mesh does not carry.
+// Roofs and rough ground get per-pixel relief the mesh does not carry.
 static float3 detailNormal(Surface s, float3 n, float2 xz, float detail) {
-    if (s.kind == Tree) {
-        float3 a = noised(xz / 9.0), b = noised(xz / 3.5);
-        n += float3(-(a.y + 0.4 * b.y), 0.0, -(a.z + 0.4 * b.z)) * 0.25 * detail;
-    } else if (s.kind == House) {
+    if (s.kind == House) {
         float2 f = fract(warped(xz) / 18.0) - 0.5;
         n += float3(abs(f.x) > abs(f.y) ? sign(f.x) : 0.0, 0.0, abs(f.y) >= abs(f.x) ? sign(f.y) : 0.0) * 0.6;
+    } else if (s.kind == Ground && detail > 0.0) {
+        float3 a = noised(xz / 2.5), b = noised(xz / 18.0);
+        n += float3(-(0.25 * a.y + 0.6 * b.y), 0.0, -(0.25 * a.z + 0.6 * b.z)) * 0.3 * detail;
     }
     return normalize(n);
 }

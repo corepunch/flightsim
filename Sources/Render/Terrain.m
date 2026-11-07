@@ -1,21 +1,24 @@
 #import "Render.h"
 
 typedef struct {
-    simd_float4 camera, sun, fog, misc;
+    simd_float4 camera, sun, fog, misc, trees;
 } TerrainParams;
 
 static const float kFinestSpacing = 4;      // metres between vertices of the innermost ring
 enum { kLevels = 8 };                       // 4 m to 512 m spacing; the coarsest ring reaches 32 km
 enum { kVariants = 5 };                     // 0: full square; 1-4: rings, hole shifted by (dx, dz)
 static const float kMinHeight = -60, kMaxHeight = 2600;
+static const float kTreeSpacing = 12;       // metres between trees on the finest lattice
+enum { kTreeLevels = 3 };                   // 12, 24, 48 m spacing
 
 static float Snap(float v, float step) { return floorf(v / step) * step; }
 
 static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((c + 0.055f) / 1.055f, 2.4f); }
 
 @implementation ProceduralTerrain {
-    int _cells;
+    int _cells, _treeCells;
     SCNNode *_variants[kLevels][kVariants];
+    SCNNode *_treeRings[kTreeLevels];
     TerrainParams _params;
     NSUInteger _bytes;
     int _finest;
@@ -69,12 +72,14 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     return material;
 }
 
-- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells hdr:(BOOL)hdr {
+- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells treeCells:(NSUInteger)treeCells hdr:(BOOL)hdr {
     if (!(self = [super init])) return nil;
     _cells = (int)MAX(16, MIN(252, cells & ~(NSUInteger)3));   // multiples of 4 keep the hole on the coarser grid
+    _treeCells = (int)MIN(256, treeCells & ~(NSUInteger)1);
     _finest = -1;
     _sunDirection = simd_normalize(simd_make_float3(-0.4f, 0.7f, -0.5f));
     _params.misc = simd_make_float4(12000, _cells / 2.0f, hdr ? 1 : 0, TARGET_OS_IOS ? 8 : 12);
+    _params.trees = simd_make_float4(kTreeSpacing, _treeCells / 2.0f, 0, 0);
     _node = [SCNNode node];
     _node.name = @"Terrain";
     _skyNode = [SCNNode node];
@@ -117,6 +122,7 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
         }
         [_node addChildNode:ring];
     }
+    if (_treeCells > 0) [self addTreeRingsWithLibrary:library];
 
     // The dome is a unit cube around the camera; its fragment shader only needs directions.
     static const simd_float3 corners[8] = {
@@ -139,6 +145,42 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
     _skyNode.castsShadow = NO;
     _skyNode.renderingOrder = -1000;
     return self;
+}
+
+// Three vertices per lattice cell, each carrying the cell's indices; the shader tells
+// the corners apart by vertex id and reads the ring's place and spacing from its node.
+- (void)addTreeRingsWithLibrary:(id<MTLLibrary>)library {
+    int n = _treeCells, half = n / 2;
+    NSUInteger count = (NSUInteger)n * n * 3;
+    NSMutableData *vertices = [NSMutableData dataWithLength:count * sizeof(simd_float3)];
+    NSMutableData *indices = [NSMutableData dataWithLength:count * sizeof(uint32_t)];
+    simd_float3 *v = vertices.mutableBytes;
+    uint32_t *ix = indices.mutableBytes;
+    for (int z = 0; z < n; z++)
+        for (int x = 0; x < n; x++)
+            for (int c = 0; c < 3; c++) {
+                NSUInteger i = ((NSUInteger)z * n + x) * 3 + c;
+                v[i] = simd_make_float3(x - half, 0, z - half);
+                ix[i] = (uint32_t)i;
+            }
+    v[0].y = kMinHeight;
+    v[count - 1].y = kMaxHeight;
+    _bytes += vertices.length + indices.length;
+    SCNGeometrySource *positions = [SCNGeometrySource geometrySourceWithData:vertices semantic:SCNGeometrySourceSemanticVertex
+                                                                 vectorCount:count floatComponents:YES componentsPerVector:3
+                                                           bytesPerComponent:sizeof(float) dataOffset:0 dataStride:sizeof(simd_float3)];
+    SCNGeometryElement *element = [SCNGeometryElement geometryElementWithData:indices primitiveType:SCNGeometryPrimitiveTypeTriangles
+                                                               primitiveCount:count / 3 bytesPerIndex:sizeof(uint32_t)];
+    SCNGeometry *geometry = [SCNGeometry geometryWithSources:@[positions] elements:@[element]];
+    geometry.materials = @[[self materialWithLibrary:library vertex:@"treeVertex" fragment:@"treeFragment"]];
+    for (int level = 0; level < kTreeLevels; level++) {
+        SCNNode *ring = [SCNNode nodeWithGeometry:geometry];
+        ring.name = [NSString stringWithFormat:@"Trees %d", level];
+        ring.castsShadow = NO;
+        ring.categoryBitMask = RenderCategoryBackground;
+        [_node addChildNode:ring];
+        _treeRings[level] = ring;
+    }
 }
 
 - (void)setEnvironment:(LevelEnvironment)environment {
@@ -179,11 +221,16 @@ static float LinearChannel(float c) { return c <= 0.04045f ? c / 12.92f : powf((
         previous = origin;
     }
     _finest = finest;
+    for (int level = 0; level < kTreeLevels && _treeRings[level]; level++) {
+        float spacing = kTreeSpacing * (1 << level);
+        _treeRings[level].simdPosition = simd_make_float3(Snap(position.x, spacing), 0, Snap(position.z, spacing));
+        _treeRings[level].simdScale = simd_make_float3(spacing, 1, spacing);
+    }
 }
 
 - (NSString *)stats {
-    return [NSString stringWithFormat:@"Terrain: %d rings of %d cells, finest ring %d, %.2f MiB grid and index data, no textures",
-            kLevels, _cells, _finest, _bytes / 1048576.0];
+    return [NSString stringWithFormat:@"Terrain: %d rings of %d cells, finest ring %d, %d tree rings of %d cells, %.2f MiB grid and index data, no textures",
+            kLevels, _cells, _finest, _treeCells ? kTreeLevels : 0, _treeCells, _bytes / 1048576.0];
 }
 
 @end
