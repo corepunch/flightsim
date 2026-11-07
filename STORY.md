@@ -68,7 +68,7 @@ Hale's Directorate appearances, Korr's open-channel threats and Kesh's first cal
 
 ## Validation
 
-Run `python3 -I Tools/validate_story.py` for cast, portrait files, mission references, tactical cues and continuity. Run `python3 -I Tools/test_story_continuity.py` for premature witness, resurrection and missing-return rejection checks. CI runs these plus the existing all-mission GUI/dialogue suites and a native iOS simulator build.
+Run `python3 -I Tools/validate_story.py` for cast, portrait files, mission references, tactical cues and continuity. Run `python3 -I Tools/test_story_continuity.py` for premature witness, resurrection and missing-return rejection checks. CI runs these plus the existing all-mission GUI/dialogue suites and a native iOS simulator build. The network harness preserves a failing network result while continuing into both production campaign audits, so a Bonjour failure cannot skip campaign validation.
 
 The presentation remains the existing shared conversation stage: large illustrated characters, a stable caption area, inward-facing player/listener pairs and touch-safe navigation. Dialogue is split into short beats rather than shrinking the characters. The added Gorran gun-mount schematic uses the shipped Destroyer OBJ, with the blue hull preserved and red mounts called out for boarding cover.
 

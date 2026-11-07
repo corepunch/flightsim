@@ -17,7 +17,10 @@ clang -fobjc-arc -O1 -g -Wall -Wno-unused-function -Wno-deprecated-declarations 
     -framework Cocoa -framework SceneKit -framework SpriteKit -framework QuartzCore \
     -o "$qa/NetworkChecks"
 python3 Tools/network-fixtures.py "$qa"
-"$qa/NetworkChecks" 2>&1 | tee "$qa/results.log"
+# Preserve a networking failure while still exercising the production campaigns.
+# Bonjour availability must not hide story/objective regressions in CI.
+network_status=0
+"$qa/NetworkChecks" 2>&1 | tee "$qa/results.log" || network_status=$?
 python3 Tools/network-fixtures.py "$qa" --check-identities
 # A separate process and resource tree prevent fixture definitions leaking into
 # campaign checks. Assets are linked rather than duplicated.
@@ -33,6 +36,8 @@ for game in Games/*(N/); do
     done
     ln -s "$PWD/build/ModelCache/${game:t}/Models" "$campaign/$game/Models"
 done
+campaign_status=0
 for game in KestrelFrontier EmberReach; do
-    "$campaign/NetworkChecks" --campaign "$game" 2>&1 | tee "$qa/campaign-$game.log"
+    "$campaign/NetworkChecks" --campaign "$game" 2>&1 | tee "$qa/campaign-$game.log" || campaign_status=$?
 done
+exit $(( network_status != 0 || campaign_status != 0 ))
