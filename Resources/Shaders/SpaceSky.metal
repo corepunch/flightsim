@@ -158,6 +158,20 @@ fragment half4 skyFragment(SkyVarying in [[stage_in]],
     float3 d = normalize(in.direction);
     float pix = max(length(dfdx(d)), length(dfdy(d)));
     float3 col = float3(in.colour);
+    // The sun's disc and corona sit in the sky, so ships and the planet
+    // occlude it like any other backdrop. sunDir.w is its angular radius.
+    {
+        float3 sd = P.sunDir.xyz;
+        float sr = P.sunDir.w;
+        float a = 2.0 * asin(min(length(d - sd) * 0.5, 1.0));    // angle from the sun's centre, precise near it
+        float3 sunColour = float3(1.0, 0.93, 0.82);
+        float disc = smoothstep(sr + pix, sr - pix, a);
+        float limb = 0.55 + 0.45 * sqrt(saturate(1.0 - (a / sr) * (a / sr)));
+        float outside = max(a - sr, 0.0);
+        float corona = exp(-outside / (sr * 0.35)) * 1.6 + exp(-outside / (sr * 2.5)) * 0.25 + exp(-a / (sr * 14.0)) * 0.03;
+        col += sunColour * (disc * limb * 60.0 + corona * (1.0 - disc));
+    }
+
     // Gas giant with atmosphere.
     float3 pc = P.planetDir.xyz;
     float pr = sin(P.planetDir.w);
@@ -191,7 +205,7 @@ fragment half4 skyFragment(SkyVarying in [[stage_in]],
         }
     }
 
-    // The sun is an optical source, drawn by the screen-space glare shader.
+    // The HUD's glare shader adds the lens response on top of this disc.
     return half4(half3(displaySky(col * skyVignette(in.position.xy, scn_frame))), 1);
 }
 
@@ -202,6 +216,7 @@ struct StarVertex {
 struct StarVarying {
     float4 position [[position]];
     float size [[point_size]];
+    float scale;        // sprite size over a faint star's; bright stars get room for a halo
     half3 colour;
 };
 vertex StarVarying starVertex(StarVertex in [[stage_in]],
@@ -212,8 +227,9 @@ vertex StarVarying starVertex(StarVertex in [[stage_in]],
     out.position = scn_frame.projectionTransform * view;
     out.position.z = out.position.w;
     // Fixed angular radius keeps stars sharp independently of sky mesh density.
-    out.size = max(1.0, 0.00092 * 3.0 * scn_frame.projectionTransform[1][1] * scn_frame.viewportSize.y);
     float brightness = in.colour.a;
+    out.scale = clamp(sqrt(brightness * 0.5), 1.0, 4.0);
+    out.size = max(1.0, 0.00092 * 3.0 * scn_frame.projectionTransform[1][1] * scn_frame.viewportSize.y) * out.scale;
     if (dot(in.position, P.planetDir.xyz) > cos(P.planetDir.w)) brightness = 0;
     out.colour = half3(in.colour.rgb * brightness);
     return out;
@@ -221,7 +237,13 @@ vertex StarVarying starVertex(StarVertex in [[stage_in]],
 fragment half4 starFragment(StarVarying in [[stage_in]], float2 uv [[point_coord]],
                             constant SCNSceneBuffer &scn_frame [[buffer(0)]],
                             constant SkyParams &P [[buffer(2)]]) {
-    float2 r = (uv - 0.5) * 6;
-    float glow = exp(-dot(r, r) * 0.5) * skyVignette(in.position.xy, scn_frame);
+    // r is measured in a faint star's core widths, so every core stays sharp;
+    // the extra sprite area of a bright star holds a soft halo and faint spikes.
+    float2 r = (uv - 0.5) * 6 * in.scale;
+    float extra = in.scale - 1.0;
+    float halo = exp(-dot(r, r) / (2.0 * in.scale * in.scale)) * 0.06 * extra;
+    float spikes = (exp(-abs(r.x) * 2.5) * exp(-abs(r.y) / in.scale) + exp(-abs(r.y) * 2.5) * exp(-abs(r.x) / in.scale)) * 0.04 * extra;
+    float edge = 1.0 - smoothstep(0.7, 1.0, length(uv - 0.5) * 2.0);
+    float glow = (exp(-dot(r, r) * 0.5) + (halo + spikes) * edge) * skyVignette(in.position.xy, scn_frame);
     return half4(half3(displaySky(float3(in.colour) * glow)), 1);
 }

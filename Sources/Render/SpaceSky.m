@@ -96,7 +96,7 @@ static simd_float3 SkyRandom(uint32_t index, uint32_t seed) {
         }
     }
     SkyParams params = {0};
-    params.sunDir = simd_make_float4(_sunDirection, 0.010f);
+    params.sunDir = simd_make_float4(_sunDirection, 0.022f);     // angular radius: a large, near star
     simd_float3 normal = simd_normalize(simd_make_float3(0.25f, 0.9f, 0.35f));
     params.galaxyNormal = simd_make_float4(normal, 0);
     params.galaxyCenter = simd_make_float4(simd_normalize(simd_cross(normal, simd_make_float3(1, 0, 0))), 0);
@@ -153,6 +153,9 @@ static simd_float3 SkyRandom(uint32_t index, uint32_t seed) {
         simd_float3 cool = simd_make_float3(1, 0.62f, 0.38f), mid = simd_make_float3(1, 0.94f, 0.88f), hot = simd_make_float3(0.66f, 0.78f, 1);
         simd_float3 colour = t < 0.55f ? simd_mix(cool, mid, t / 0.55f) : simd_mix(mid, hot, (t - 0.55f) / 0.45f);
         float brightness = (0.015f + powf(random.y, 14)) * (i < 5600 ? 7 : i < 37200 ? 1.6f : 0.6f);
+        // A few dozen standouts, like the brightest named stars, so the sky
+        // has landmarks beyond the sun.
+        if (i < 48) brightness = 9 + 22 * random.y * random.y;
         simd_float4 value = simd_make_float4(colour, brightness);
         starValues[i] = __builtin_convertvector(value, simd_half4);
     }
