@@ -60,6 +60,11 @@ headers only).
 `Games/<name>/Game/` is a game module (see [Games/README.md](Games/README.md) for the
 whole game folder). `Tools/` holds build helpers, validators and the check suites.
 
+`UIHorizontalStack` composes horizontal rows using measured child bounds, centred
+vertically by default. It owns multiline label wrapping and accepts stable layout
+bounds for changing content such as progress bars. Callers supply content and row
+placement rather than correcting individual text baselines or icon offsets.
+
 ## The game module boundary
 
 The engine and a game meet at `GetGameAPI` (`Sources/Shared/Shared.h`, "GameAPI"):
@@ -136,10 +141,30 @@ The host runs one loop for menus and missions:
    (`CockpitFrame`).
 5. In menus, `FrontEnd` and `ScreenHost` drive SpriteKit scenes over the 3D view.
 
-Threads: the render thread runs the frame. Loading a mission (building the world,
-registering and uploading models) runs on a background load queue while nothing
-is drawn; the hand-off points are marked in `Client.h` and `Refresh.h`. Audio runs
-on its own queue.
+Threads: on macOS the render thread runs the frame. Loading a mission (building
+the world, registering and uploading models) runs on a background load queue
+while nothing is drawn; the hand-off points are marked in `Client.h` and
+`Refresh.h`. Audio runs on its own queue.
+
+The space sky uses a small vertex-coloured mesh for the nebula and galaxy.
+Their procedural colours are calculated once during loading; shader point
+sprites draw the stars, and a fragment shader draws the planet. The sun is a
+projected optical source: its screen-space shader draws the bright core, halo,
+diffraction rays and horizontal lens streak.
+There are no sky textures or cubemap convolution passes. All cameras use LDR
+on every platform; HDR and camera bloom are disabled. The sky applies its own
+tone curve and edge falloff to retain the darker space palette.
+
+On iOS, a transparent `SKView` above the SceneKit view owns the overlay. Its
+main-thread frame callback runs the host before SpriteKit updates and draws;
+UIKit touch and focus handling use that same thread. SceneKit draws the 3D scene
+on its own queue, with `SCNTransaction` locking around host updates. Do not attach
+the iOS overlay to SceneKit: its SpriteKit draw pass does not serialize node
+mutations with those main-thread updates.
+
+Effects in the iOS overlay must emit premultiplied colour with matching coverage
+for the system compositor. Zero-alpha additive emission works in SceneKit's
+desktop overlay but can disappear from the separate transparent iOS view.
 
 ## Networking
 

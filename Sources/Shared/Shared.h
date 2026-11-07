@@ -412,7 +412,7 @@ NSString *CapitalModelName(NSString *asset, NSString *style);      // "cap:Carri
 typedef struct {
     char name[SHIP_NAME_LENGTH];
     char glow[SHIP_NAME_LENGTH];    // Resources/Particles/<glow>.png, drawn additively, facing the camera
-    simd_float3 tint;               // HDR tint of the glow
+    simd_float3 tint;               // Emissive tint of the glow
     float size;                     // metres
 } ProjectileDef;
 
@@ -439,7 +439,7 @@ typedef struct {
     char style[SHIP_NAME_LENGTH];
     char glow[SHIP_NAME_LENGTH];        // Resources/Particles/<glow>.png
     char message[SHIP_NAME_LENGTH];     // radio text, usually a catalog token; empty: nothing is said
-    simd_float3 tint;                   // HDR tint of the glow
+    simd_float3 tint;                   // Emissive tint of the glow
     float size;                         // glow, metres
     float spin;                         // degrees per second
     float radius;                       // collected within this of a ship's edge, metres

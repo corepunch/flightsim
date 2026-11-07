@@ -2,7 +2,6 @@
 #if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
 #import "App.h"
-#import "App.h"
 #import "Common.h"
 #import "Server.h"
 
@@ -17,7 +16,7 @@
 @interface IOSSceneDelegate : UIResponder <UIWindowSceneDelegate>
 @property (nonatomic, strong) UIWindow *window;
 @property (nonatomic, strong) Host *host;
-@property (nonatomic, strong) CADisplayLink *displayLink;
+@property (nonatomic, strong) GameView *gameView;
 @end
 
 @implementation IOSSceneDelegate
@@ -33,24 +32,22 @@
     UIView *container = [[UIView alloc] initWithFrame:self.window.bounds];
     view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [container addSubview:view];
+    [container addSubview:view.overlayView];
     // Keep raw flight touches separate from SceneKit gesture handling.
     [container addSubview:view.flightControlsView];
     FlightViewController *controller = [FlightViewController new];
     controller.view = container;
     self.window.rootViewController = controller;
     self.host = [[Host alloc] initWithView:view input:input];
-    self.displayLink = [CADisplayLink displayLinkWithTarget:self.host selector:@selector(displayLinkTick:)];
-    self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(60, 60, 60);
-    self.displayLink.paused = YES;
-    [self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
+    self.gameView = view;
     [self.window makeKeyAndVisible];
 }
 
-- (void)sceneDidBecomeActive:(UIScene *)scene { self.displayLink.paused = NO; }
-- (void)sceneWillResignActive:(UIScene *)scene { self.displayLink.paused = YES; }
+- (void)sceneDidBecomeActive:(UIScene *)scene { self.gameView.overlayView.paused = NO; }
+- (void)sceneWillResignActive:(UIScene *)scene { self.gameView.overlayView.paused = YES; }
 - (void)sceneDidDisconnect:(UIScene *)scene {
-    [self.displayLink invalidate];
-    self.displayLink = nil;
+    self.gameView.overlayView.paused = YES;
+    self.gameView.overlayView.delegate = nil;
 }
 @end
 

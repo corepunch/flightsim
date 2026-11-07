@@ -198,6 +198,24 @@ CGPoint UIScrollContentPosition(CGRect region, CGSize contentSize, CGFloat offse
 
 @class UIHover;
 
+// Horizontal composition aligns measured child bounds vertically at the centre.
+// Explicit bounds reserve stable slots for changing content such as progress bars.
+@interface UIHorizontalStack : SKNode
+@property (nonatomic) CGFloat spacing;
+@property (nonatomic) SKLabelHorizontalAlignmentMode horizontalAlignmentMode;
+// Centre by default; top and bottom alignment can be selected explicitly.
+@property (nonatomic) SKLabelVerticalAlignmentMode verticalAlignmentMode;
+// A positive width shares the remaining space between multiline labels.
+@property (nonatomic) CGFloat maximumWidth;
+@property (nonatomic, readonly) CGSize contentSize;
+- (void)addArrangedNode:(SKNode *)node;
+- (void)addArrangedNode:(SKNode *)node layoutBounds:(CGRect)bounds;
+- (void)setLayoutBounds:(CGRect)bounds forArrangedNode:(SKNode *)node;
+// Refresh after text, font, size or wrapping changes. The stack's origin is its
+// vertical centre; horizontal alignment chooses its leading, centre or trailing edge.
+- (void)layout;
+@end
+
 // Framed entries shared by game browsers, rosters and match results. Geometry
 // and typography belong to the row; the caller supplies content and selection.
 @interface UIListRow : SKNode
@@ -581,6 +599,8 @@ static inline void UIFitControlLabel(SKLabelNode *label, CGFloat width) {
 // SpriteKit centres a multiline label's block; paragraph alignment centres
 // each individual line inside that block.
 void UISetCenteredButtonText(SKLabelNode *label, NSString *text);
+// Preserve SpriteKit's glyph layout when a readout still displays the same value.
+BOOL UISetLabelText(SKLabelNode *label, NSString *text);
 void UIFitMultilineButtonLabel(SKLabelNode *label, NSString *text, NSUInteger lines, CGFloat height);
 
 static inline SKShapeNode *UIActionButtonWithLines(CGRect rect, NSString *text, UIRGB accent, CGFloat fontSize, NSUInteger lines) {
@@ -867,6 +887,8 @@ typedef NS_ENUM(NSInteger, TouchControl) {
 @interface UITouchControls : SKNode
 @property (nonatomic) BOOL controllerConnected;
 @property (nonatomic, readonly) NSDictionary<NSNumber *, SKLabelNode *> *buttonLabels;
+// The HUD and pause button share the scanner scale so their clearances agree.
++ (CGFloat)scannerScaleForSize:(CGSize)size touchLayout:(BOOL)touchLayout;
 + (CGRect)pauseRectForSize:(CGSize)size insets:(ScreenInsets)insets;
 - (void)layoutWithSize:(CGSize)size insets:(ScreenInsets)insets;
 - (TouchControl)controlAt:(CGPoint)point; // top-origin view points

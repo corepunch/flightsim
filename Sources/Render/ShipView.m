@@ -21,7 +21,7 @@ static NSString *const kShieldFragment =
      "float a = (pow(f, 2.5) * 1.6 + 0.12) * ripple * level * patch;\n"
      "_output.color = float4(float3(0.35, 0.65, 1.0) * a * 2.5, a);\n";
 
-// Ceiling sits just under ClientView's bloomThreshold (0.9).
+// Keep reflected hull light below the white emission range.
 static NSString *const kHullRolloff =
     @"#pragma body\n"
      "float3 emit = _surface.emission.rgb;\n"
@@ -87,7 +87,7 @@ void ApplyHullRolloff(SCNMaterial *m) {
         }
         SCNMaterial *m = [SCNMaterial material];
         m.lightingModelName = SCNLightingModelPhysicallyBased;
-        m.diffuse.contents = FSURL(@"Models", @(def->texture), @"png");
+        m.diffuse.contents = [RenderTextures contentsOfURL:FSURL(@"Models", @(def->texture), @"png") sRGB:YES];
         m.diffuse.mipFilter = SCNFilterModeLinear;
         m.diffuse.maxAnisotropy = 8;
         m.metalness.contents = @0.55;

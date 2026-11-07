@@ -1265,6 +1265,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"A2FBA3481A755F733453A68F" = {
+			"isa" = "PBXFileReference";
+			"path" = "Textures.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"9DFEE787504F9B2C1B389B9D" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A2FBA3481A755F733453A68F";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"0D67113BEDFBDC49E396F500" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A2FBA3481A755F733453A68F";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"A1D3B476E21D1CAEB821C826" = {
 			"isa" = "PBXGroup";
 			"path" = "Render";
@@ -1281,6 +1301,7 @@
 				"E57F1961077C5380AC980E7F",
 				"1CE4AF0DAA0BED34BA1C9D51",
 				"2B1C4CDCE2BD01D82ADD5ECE",
+				"A2FBA3481A755F733453A68F",
 			);
 			"sourceTree" = "<group>";
 		};
@@ -1791,6 +1812,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"FD1CDAC4D7C5D9C37D2F17E6" = {
+			"isa" = "PBXFileReference";
+			"path" = "UIStack.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"E2CDA084031B93F1036CD148" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "FD1CDAC4D7C5D9C37D2F17E6";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"BE6D6D165CE63AD7593F621A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "FD1CDAC4D7C5D9C37D2F17E6";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"ABF8A704D28EA8A017362EDC" = {
 			"isa" = "PBXFileReference";
 			"path" = "UITheme.m";
@@ -1852,6 +1893,7 @@
 				"9797B178B7E6457C7D1BA12C",
 				"A0B7717091DC976B7BD96039",
 				"0031E18773F7BA6D5077AB1B",
+				"FD1CDAC4D7C5D9C37D2F17E6",
 				"ABF8A704D28EA8A017362EDC",
 				"18E95E50414B272DD790F5F1",
 			);
@@ -2097,6 +2139,7 @@
 				"CAF57F65F8360FE129F5413F",
 				"7D38EEA49C1737099970422C",
 				"F47A500A49569289116BF3AE",
+				"9DFEE787504F9B2C1B389B9D",
 				"3B93D4DE37B35F2F8F5C8637",
 				"EBA6D3C936ECFD0E50878A81",
 				"C5EB970F6F9D6A01AA21691D",
@@ -2120,6 +2163,7 @@
 				"41057633AA4B290221678617",
 				"53A704EC357CA4AEA1E5345C",
 				"F365BC11D11F67498EF09307",
+				"E2CDA084031B93F1036CD148",
 				"AB84E9F172D7CC4CD5F00B38",
 				"DE988AA5641270BAA21542D2",
 				"D333CB6EC38148AC7C563FB0",
@@ -2167,6 +2211,7 @@
 				"64375A3C004E4AB200A1E94F",
 				"5F272960EC8CC0CD6A184166",
 				"4851016DD82341A945ADACC8",
+				"0D67113BEDFBDC49E396F500",
 				"229DA0B7668BEBAEC34BCF51",
 				"4D47162F592440C78EC2525E",
 				"975B61AC13A2C20C93310039",
@@ -2190,6 +2235,7 @@
 				"0BF668D4129452A7FAC4D5CB",
 				"1987F5077973522EF9E86DE3",
 				"C8395B85D9BA6A172271FD30",
+				"BE6D6D165CE63AD7593F621A",
 				"088586AD122F949F4E626565",
 				"552EB49945F287EAD4C35FEA",
 			);

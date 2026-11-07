@@ -2,6 +2,12 @@
 #import "Shared.h"
 #import <CoreText/CoreText.h>
 
+BOOL UISetLabelText(SKLabelNode *label, NSString *text) {
+    if (label.text == text || [label.text isEqualToString:text]) return NO;
+    label.text = text;
+    return YES;
+}
+
 void UISetCenteredButtonText(SKLabelNode *label, NSString *text) {
     NSMutableParagraphStyle *paragraph = [NSMutableParagraphStyle new];
     paragraph.alignment = NSTextAlignmentCenter;

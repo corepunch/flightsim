@@ -26,6 +26,43 @@ static SKLabelNode *Label(CGFloat size, SKLabelHorizontalAlignmentMode align) {
     return UIMonoLabel(size, HUDColor(0.9), align, SKLabelVerticalAlignmentModeCenter);
 }
 
+// These small moving rings need no per-frame cubic subdivision in SpriteKit.
+// A 64-edge circle differs by less than a pixel at the reticle's drawn size.
+static void ReticleArc(CGMutablePathRef path, CGFloat radius, CGFloat start, CGFloat end, int steps) {
+    for (int i = 0; i <= steps; i++) {
+        CGFloat angle = start + (end - start) * i / steps;
+        CGPoint point = PointScale(CGPointMake(cos(angle), sin(angle)), radius);
+        if (i == 0) CGPathMoveToPoint(path, NULL, point.x, point.y);
+        else CGPathAddLineToPoint(path, NULL, point.x, point.y);
+    }
+}
+
+static CGPathRef ReticleShape(BOOL nearest, BOOL pip) {
+    static CGPathRef shapes[4];
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        for (int i = 0; i < 4; i++) {
+            CGMutablePathRef path = CGPathCreateMutable();
+            ReticleArc(path, 2.5, 0, M_PI * 2, 64);
+            CGPathCloseSubpath(path);
+            if (i & 1) for (int side = 0; side < 2; side++)
+                ReticleArc(path, 3.6, side * M_PI - 0.6, side * M_PI + 0.6, 16);
+            if (i & 2) {
+                ReticleArc(path, 0.4, 0, M_PI * 2, 16);
+                CGPathCloseSubpath(path);
+            }
+            shapes[i] = path;
+        }
+    });
+    return shapes[(nearest ? 1 : 0) | (pip ? 2 : 0)];
+}
+
+typedef struct {
+    NSArray<NSNumber *> *states;
+    NSArray<SKLabelNode *> *labels;
+    NSArray<UIHorizontalStack *> *rows;
+} HUDObjectives;
+
 // Four corner marks of a square of side `size`, centred on the origin.
 static CGPathRef BracketPath(CGFloat size) {
     CGMutablePathRef p = CGPathCreateMutable();
@@ -52,7 +89,7 @@ static SKShapeNode *Bracket(void) {
 // One row of the ship's condition on the right: a label, then a skewed bar.
 // What the next second of recharge adds is drawn just ahead of the fill in a
 // fainter shade of the same colour, so a fast-filling bar shows a long chunk.
-@interface ConditionBar : SKNode
+@interface ConditionBar : UIHorizontalStack
 - (instancetype)initWithTitle:(NSString *)title;
 @property (nonatomic) CGFloat width;                // of a full bar, points
 - (void)setLevel:(float)level recharge:(float)perSecond color:(SKColor *)color;
@@ -62,22 +99,30 @@ static SKShapeNode *Bracket(void) {
 
 @implementation ConditionBar {
     SKShapeNode *_fill, *_chunk;
-    SKLabelNode *_title;
+    SKNode *_bar;
 }
 
 - (instancetype)initWithTitle:(NSString *)title {
     if ((self = [super init])) {
         SKLabelNode *label = Label(12, SKLabelHorizontalAlignmentModeRight);
         label.text = title;
-        label.position = CGPointMake(-10, 3);
-        [self addChild:label];
-        _title = label;
+        self.spacing = 10;
+        self.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
+        [self addArrangedNode:label];
+        _bar = [SKNode node];
+        [self addArrangedNode:_bar layoutBounds:CGRectMake(0, 0, 200, 6)];
         _fill = [SKShapeNode node];
         _chunk = [SKShapeNode node];
-        for (SKShapeNode *n in @[_fill, _chunk]) { n.strokeColor = SKColor.clearColor; [self addChild:n]; }
-        _width = 200;
+        for (SKShapeNode *n in @[_fill, _chunk]) { n.strokeColor = SKColor.clearColor; [_bar addChild:n]; }
+        self.width = 200;
     }
     return self;
+}
+
+- (void)setWidth:(CGFloat)width {
+    _width = width;
+    [self setLayoutBounds:CGRectMake(0, 0, width, 6) forArrangedNode:_bar];
+    [self layout];
 }
 
 - (void)setLevel:(float)level recharge:(float)perSecond color:(SKColor *)color {
@@ -92,8 +137,8 @@ static SKShapeNode *Bracket(void) {
 }
 
 // Fallback scripts can extend beyond the Latin font's capital height.
-- (CGFloat)inkBottom { return MIN(0, CGRectGetMinY(_title.frame)); }
-- (CGFloat)inkHeight { return MAX(6, CGRectGetHeight(_title.frame)); }
+- (CGFloat)inkBottom { return -self.contentSize.height / 2; }
+- (CGFloat)inkHeight { return self.contentSize.height; }
 
 @end
 
@@ -118,12 +163,14 @@ static SKShapeNode *Bracket(void) {
     SKLabelNode *_statusLabel, *_secondaryLabel, *_bannerLabel;
     SKNode *_objectivePanel, *_messagePanel;
     SKNode *_secondaryRack;
+    UIHorizontalStack *_secondaryRow;
     NSMutableArray<SKShapeNode *> *_secondarySegments;
     NSMutableArray<SKLabelNode *> *_messages;
     LensFlare *_lensFlare;
     CGSize _laidOut;
     HUDInsets _laidOutInsets;
     BOOL _laidOutTouch;
+    HUDObjectives _objectives;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -139,7 +186,7 @@ static SKShapeNode *Bracket(void) {
 }
 
 - (void)build {
-    _targetReadout = [[TargetReadout alloc] initWithPreview:YES];
+    _targetReadout = [[TargetReadout alloc] initWithPreview:NO];
     _forwardScope = [[SensorScope alloc] initRear:NO];
     _rearScope = [[SensorScope alloc] initRear:YES];
     for (SKNode *instrument in @[_targetReadout, _forwardScope, _rearScope]) {
@@ -272,10 +319,14 @@ static SKShapeNode *Bracket(void) {
     [_root addChild:_statusLabel];
     _secondaryLabel = Label(12, SKLabelHorizontalAlignmentModeRight);
     _secondaryLabel.fontColor = UIColorWithOpacity(UIAmber, 0.9);
-    [_root addChild:_secondaryLabel];
+    _secondaryRow = [UIHorizontalStack node];
+    _secondaryRow.spacing = 10;
+    _secondaryRow.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
+    [_secondaryRow addArrangedNode:_secondaryLabel];
     _secondaryRack = [SKNode node];
+    [_secondaryRow addArrangedNode:_secondaryRack layoutBounds:CGRectMake(0, 0, 200, 6)];
     _secondarySegments = [NSMutableArray array];
-    [_root addChild:_secondaryRack];
+    [_root addChild:_secondaryRow];
     _bannerLabel = Label(30, SKLabelHorizontalAlignmentModeCenter);
     _bannerLabel.fontName = UIMonoBoldFont;
     _bannerLabel.alpha = 0;
@@ -287,7 +338,7 @@ static SKShapeNode *Bracket(void) {
     _messages = [NSMutableArray array];
 
     // One selected contact: dark outlines retain contrast against both the
-    // starfield and bright hulls/bloom, without making every contact louder.
+    // starfield and bright hulls, without making every contact louder.
     _selectedOutline = [SKShapeNode node];
     _selectedLeadOutline = [SKShapeNode node];
     for (SKShapeNode *outline in @[_selectedOutline, _selectedLeadOutline]) {
@@ -375,9 +426,9 @@ static SKShapeNode *Bracket(void) {
     _throttleFrame.position = CGPointMake(20, 22);
     _throttleLabel.position = CGPointMake(46, 32);
     _speedLabel.position = CGPointMake(46, 62);
-    _hullBar.position = CGPointMake(s.width - 210, 29);
-    _shieldBar.position = CGPointMake(s.width - 210, 47);
-    _laserBar.position = CGPointMake(s.width - 210, 65);
+    _hullBar.position = CGPointMake(s.width - 10, 29);
+    _shieldBar.position = CGPointMake(s.width - 10, 47);
+    _laserBar.position = CGPointMake(s.width - 10, 65);
     _scoreLabel.position = CGPointMake(s.width - 40, s.height - 40);
     _inputLabel.position = CGPointMake(40, 30);
     _deadLabel.position = CGPointMake(s.width / 2, s.height / 2 + 80);
@@ -396,9 +447,9 @@ static SKShapeNode *Bracket(void) {
     _throttleLabel.position = CGPointMake(leftStats, stats + 19);
     _speedLabel.position = CGPointMake(leftStats, stats);
     _speedLabel.fontSize = 16;
-    _hullBar.position = CGPointMake(rightStats - 80, stats + 4);
-    _shieldBar.position = CGPointMake(rightStats - 80, stats + 20);
-    _laserBar.position = CGPointMake(rightStats - 80, stats + 36);
+    _hullBar.position = CGPointMake(rightStats, stats + 4);
+    _shieldBar.position = CGPointMake(rightStats, stats + 20);
+    _laserBar.position = CGPointMake(rightStats, stats + 36);
     _objectivePanel.position = CGPointMake(left + 100, top);
     _inputLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
     _inputLabel.position = CGPointMake(right - 100, top - 44);
@@ -406,7 +457,7 @@ static SKShapeNode *Bracket(void) {
     BOOL phoneLayout = _touchLayout && MIN(s.width, s.height) < 550 && MAX(s.width, s.height) < 1100;
     CGFloat edgeBottom = phoneLayout ? 2 : (_touchLayout ? insets.bottom + 24 : 40);
     BOOL compact = s.height < 550;
-    CGFloat scopeScale = compact ? 0.56 : 0.86;
+    CGFloat scopeScale = [UITouchControls scannerScaleForSize:s touchLayout:_touchLayout];
     [_forwardScope setScale:scopeScale]; [_rearScope setScale:scopeScale];
     // Landscape sensor housings sit mid-edge. The upper corners can use a
     // uniform inset, with room above each disc for its label.
@@ -445,20 +496,12 @@ static SKShapeNode *Bracket(void) {
     if (_touchLayout) objectivesRight = MIN(objectivesRight,
         CGRectGetMinX([UITouchControls pauseRectForSize:s insets:insets]) - 12);
     CGFloat objectivesWidth = MAX(80, objectivesRight - _objectivePanel.position.x);
-    CGFloat rowY = -22;
-    CGFloat boxHalf = [PlatformFont fontWithName:UIMonoFont size:14].capHeight / 2;
-    for (SKNode *row in _objectivePanel.children) {
-        if (row == heading) continue;
-        for (SKNode *child in row.children) if ([child isKindOfClass:SKLabelNode.class]) {
-            SKLabelNode *label=(SKLabelNode *)child;
-            label.numberOfLines=0;
-            label.preferredMaxLayoutWidth=MAX(1,objectivesWidth-label.position.x);
-            label.lineBreakMode=NSLineBreakByWordWrapping;
-            label.verticalAlignmentMode=SKLabelVerticalAlignmentModeTop;
-            label.position=CGPointMake(label.position.x,boxHalf);
-        }
-        row.position=CGPointMake(0,rowY);
-        rowY=MIN(rowY-22,CGRectGetMinY([row calculateAccumulatedFrame])-boxHalf-8);
+    CGFloat rowTop = heading ? CGRectGetMinY(heading.frame) - 10 : -10;
+    for (UIHorizontalStack *row in _objectives.rows) {
+        row.maximumWidth = objectivesWidth;
+        [row layout];
+        row.position = CGPointMake(0, rowTop - row.contentSize.height / 2);
+        rowTop -= row.contentSize.height + 8;
     }
     CGFloat helpWidth = MAX(1, MIN(760, s.width - insets.left - insets.right - 48));
     CGFloat helpY = 0;
@@ -478,8 +521,7 @@ static SKShapeNode *Bracket(void) {
     [_help addChild:helpBackdrop];
     _help.position = CGPointMake(insets.left + (s.width - insets.left - insets.right - helpWidth) / 2,
         insets.bottom + (s.height - insets.top - insets.bottom + helpHeight) / 2);
-    _secondaryRack.position = CGPointMake(_laserBar.position.x, _laserBar.position.y + rowStep);
-    _secondaryLabel.position = CGPointMake(_secondaryRack.position.x - 10, _secondaryRack.position.y + 3);
+    _secondaryRow.position = PointAdd(_laserBar.position, CGPointMake(0, rowStep));
     for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar]) bar.width = _touchLayout ? 80 : 200;
     [self layoutSecondary];
     CGPathRef dp = CGPathCreateWithRect(CGRectMake(0, 0, s.width, s.height), NULL);
@@ -515,8 +557,10 @@ static SKShapeNode *Bracket(void) {
 
 - (void)layoutSecondary {
     NSUInteger count = _secondarySegments.count;
-    if (!count) return;
     CGFloat width = _touchLayout ? 80 : 200;
+    [_secondaryRow setLayoutBounds:CGRectMake(0, 0, width, 6) forArrangedNode:_secondaryRack];
+    [_secondaryRow layout];
+    if (!count) return;
     CGFloat gap = MIN(4, width / (count * 4));
     CGFloat segmentWidth = (width - gap * (count - 1)) / count;
     for (NSUInteger i = 0; i < count; i++) {
@@ -545,7 +589,7 @@ static SKShapeNode *Bracket(void) {
         _secondarySegments[i].fillColor = UIColorWithOpacity(UIAmber, loaded ? 0.9 : 0.04);
         _secondarySegments[i].strokeColor = UIColorWithOpacity(UIAmber, loaded ? 0.95 : 0.4);
     }
-    _secondaryLabel.text = name.length ? name : @"";
+    if (UISetLabelText(_secondaryLabel, name.length ? name : @"")) [_secondaryRow layout];
 }
 
 - (void)updateInstruments:(CockpitFrame)frame contacts:(const CockpitContact *)contacts count:(NSUInteger)count cockpit:(BOOL)cockpit {
@@ -563,7 +607,7 @@ static SKShapeNode *Bracket(void) {
                   color:frame.weaponEnergy < frame.weaponShotEnergy ? EnemyColor(0.9) : UIColorWithOpacity(UIYellow, 0.85)];
 }
 
-- (NSArray<SKNode *> *)conditionRows { return @[_hullBar, _shieldBar, _laserBar, _secondaryRack]; }
+- (NSArray<SKNode *> *)conditionRows { return @[_hullBar, _shieldBar, _laserBar, _secondaryRow]; }
 - (SKLabelNode *)scoreLabel { return _scoreLabel; }
 - (SKNode *)forwardScope { return _forwardScope; }
 - (SKNode *)rearScope { return _rearScope; }
@@ -583,6 +627,22 @@ static SKShapeNode *Bracket(void) {
 }
 
 - (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {
+    if ([_objectives.states isEqualToArray:states] && _objectives.labels.count == lines.count) {
+        // A ticking countdown keeps its rows, checkbox paths and heading.
+        for (NSUInteger i = 0; i < lines.count; i++) {
+            SKLabelNode *label = _objectives.labels[i];
+            if ([label.text isEqualToString:lines[i]]) continue;
+            UIHorizontalStack *row = _objectives.rows[i];
+            CGFloat height = row.contentSize.height;
+            UISetLabelText(label, lines[i]);
+            [row layout];
+            if (fabs(row.contentSize.height - height) > 0.5) _laidOut = CGSizeZero;
+        }
+        [self layoutIfNeeded];
+        return;
+    }
+    NSMutableArray<SKLabelNode *> *labels = [NSMutableArray array];
+    NSMutableArray<UIHorizontalStack *> *rows = [NSMutableArray array];
     [_objectivePanel removeAllChildren];
     SKLabelNode *head = Label(13, SKLabelHorizontalAlignmentModeLeft);
     head.text = L10n(@"hud.objectives");
@@ -595,8 +655,10 @@ static SKShapeNode *Bracket(void) {
     CGFloat side = font.capHeight;
     for (NSUInteger i = 0; i < lines.count; i++) {
         int st = states[i].intValue;
-        SKNode *row = [SKNode node];
-        row.position = CGPointMake(0, -22.0 * (i + 1));
+        UIHorizontalStack *row = [UIHorizontalStack node];
+        row.spacing = 8;
+        [rows addObject:row];
+        SKNode *checkbox = [SKNode node];
         SKColor *ink = st == 2 ? EnemyColor(0.95) : HUDColor(0.95);
         const CGFloat border = 1.0;
         SKShapeNode *box = [SKShapeNode shapeNodeWithRect:CGRectMake(border / 2, -side / 2 + border / 2,
@@ -604,7 +666,7 @@ static SKShapeNode *Bracket(void) {
         box.strokeColor = ink;
         box.fillColor = SKColor.clearColor;
         box.lineWidth = border;
-        [row addChild:box];
+        [checkbox addChild:box];
         if (st == 1 || st == 2) {
             CGMutablePathRef path = CGPathCreateMutable();
             if (st == 1) {
@@ -623,16 +685,19 @@ static SKShapeNode *Bracket(void) {
             mark.lineWidth = 1.35;
             mark.lineCap = kCGLineCapRound;
             mark.lineJoin = kCGLineJoinRound;
-            [row addChild:mark];
+            [checkbox addChild:mark];
         }
         SKLabelNode *l = Label(14, SKLabelHorizontalAlignmentModeLeft);
-        l.verticalAlignmentMode = SKLabelVerticalAlignmentModeBaseline;
+        l.numberOfLines = 0;
+        l.lineBreakMode = NSLineBreakByWordWrapping;
         l.text = lines[i];
+        [labels addObject:l];
         l.fontColor = ink;
-        l.position = CGPointMake(side + 8, -side / 2);
-        [row addChild:l];
+        [row addArrangedNode:checkbox layoutBounds:CGRectMake(0, -side / 2, side, side)];
+        [row addArrangedNode:l];
         [_objectivePanel addChild:row];
     }
+    _objectives = (HUDObjectives){ [states copy], [labels copy], [rows copy] };
     [self layoutIfNeeded];
 }
 
@@ -677,22 +742,13 @@ static CGAffineTransform RingTransform(HUDRing r) {
 // shows which way the guns point. The nearest ring carries side arcs, the
 // farthest the pip.
 - (void)drawReticle:(HUDFrame)f hidden:(BOOL)hidden {
-    const CGFloat radius = 2.5, arc = 3.6;
     int count = hidden ? 0 : f.reticleRings;
     for (int i = 0; i < HUD_RETICLE_RINGS; i++) {
         SKShapeNode *node = _reticleRings[i];
         node.hidden = i >= count;
         if (node.hidden) continue;
         CGAffineTransform t = RingTransform(f.reticle[i]);
-        CGMutablePathRef p = CGPathCreateMutable();
-        CGPathAddEllipseInRect(p, &t, CGRectMake(-radius, -radius, radius * 2, radius * 2));
-        if (i == 0)
-            for (int side = 0; side < 2; side++) {
-                CGFloat mid = side ? M_PI : 0, half = 0.6;
-                CGPathMoveToPoint(p, &t, cos(mid - half) * arc, sin(mid - half) * arc);
-                CGPathAddArc(p, &t, 0, 0, arc, mid - half, mid + half, false);
-            }
-        if (i == count - 1) CGPathAddEllipseInRect(p, &t, CGRectMake(-0.4, -0.4, 0.8, 0.8));
+        CGPathRef p = CGPathCreateCopyByTransformingPath(ReticleShape(i == 0, i == count - 1), &t);
         node.path = p;
         CGPathRelease(p);
     }
@@ -713,22 +769,24 @@ static CGAffineTransform RingTransform(HUDRing r) {
     _ring.xScale = _ring.yScale = ringR / 100.0;
     CGPoint cur = PointAdd(center, PointScale(f.mouseStick, ringR));
     _cursor.position = cur;
-    CGMutablePathRef lp = CGPathCreateMutable();
-    CGPathMoveToPoint(lp, NULL, center.x, center.y);
-    CGPathAddLineToPoint(lp, NULL, cur.x, cur.y);
-    _cursorLine.path = lp;
-    CGPathRelease(lp);
+    if (!_cursorLine.hidden) {
+        CGMutablePathRef lp = CGPathCreateMutable();
+        CGPathMoveToPoint(lp, NULL, center.x, center.y);
+        CGPathAddLineToPoint(lp, NULL, cur.x, cur.y);
+        _cursorLine.path = lp;
+        CGPathRelease(lp);
+    }
 
     SetBar(_throttleFill, 12, 214 * MIN(f.throttle, 1.0f));
     _throttleFill.position = CGPointMake(3, 3);
     _throttleFill.fillColor = f.boosting ? UIColorWithOpacity(UIBoost, 0.9) : HUDColor(0.75);
     SetBar(_boostFill, 3, 214 * f.boostEnergy);
     _boostFill.position = CGPointMake(-7, 3);
-    _throttleLabel.text = L10nFormat(f.boosting ? @"hud.throttle_boost" : @"hud.throttle", (int)lroundf(f.throttle * 100));
-    _speedLabel.text = L10nFormat(@"hud.speed", (int)lroundf(f.speed));
-    _scoreLabel.text = L10nFormat(@"hud.score", f.kills, f.deaths);
-    _deadLabel.text = L10n(f.respawning ? @"hud.destroyed" : @"hud.destroyed_campaign");
-    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _scoreLabel, _secondaryLabel, _secondaryRack])
+    UISetLabelText(_throttleLabel, L10nFormat(f.boosting ? @"hud.throttle_boost" : @"hud.throttle", (int)lroundf(f.throttle * 100)));
+    UISetLabelText(_speedLabel, L10nFormat(@"hud.speed", (int)lroundf(f.speed)));
+    UISetLabelText(_scoreLabel, L10nFormat(@"hud.score", f.kills, f.deaths));
+    UISetLabelText(_deadLabel, L10n(f.respawning ? @"hud.destroyed" : @"hud.destroyed_campaign"));
+    for (SKNode *n in @[_throttleFrame, _throttleLabel, _speedLabel, _scoreLabel, _secondaryRow])
         n.hidden = f.cockpit;
     _scoreLabel.hidden = !f.respawning || !_help.hidden;
     _scoreLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeLeft;
@@ -742,7 +800,7 @@ static CGAffineTransform RingTransform(HUDRing r) {
     _aimMark.hidden = !f.aimVisible || f.playerDead;
     _aimMark.position = f.aim;
     _aimMark.zRotation = 0.0;
-    _statusLabel.text = f.status ?: @"";
+    UISetLabelText(_statusLabel, f.status ?: @"");
     _statusLabel.position = CGPointMake(f.boresight.x, f.boresight.y - 40);
     _deadLabel.hidden = !f.playerDead;
     _damage.alpha = f.damageFlash * 0.35;
@@ -800,8 +858,8 @@ static CGAffineTransform RingTransform(HUDRing r) {
             NSString *dist = t.distance >= 1000 ? L10nFormat(@"units.km1_short", t.distance / 1000.0)
                                                 : L10nFormat(@"units.m_short", (int)t.distance);
             BOOL named = t.label && (t.selected || t.capital || nav);
-            d.text = named ? [NSString stringWithFormat:@"%@ %@", t.label, dist] : dist;
-            if (t.selected) d.text = L10nFormat(@"hud.target_prefix", d.text);
+            NSString *text = named ? [NSString stringWithFormat:@"%@ %@", t.label, dist] : dist;
+            UISetLabelText(d, t.selected ? L10nFormat(@"hud.target_prefix", text) : text);
             CGFloat half = nav ? 12 : (t.selected ? MAX(44, t.size) : t.size) * 0.5;
             d.position = PointAdd(t.point, CGPointMake(half + 6, half + (t.selected ? 10 : -4)));
             if (t.selected) {

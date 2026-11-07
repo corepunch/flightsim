@@ -137,7 +137,8 @@ static void WriteContactSheet(NSArray *images, NSString *path) {
             RefEntity e = { .key = kShip, .kind = EntityFighter, .model = ship, .orientation = q, .throttle = 0.4f, .hull = 1 };
             [refresh addEntity:&e];
             if (frame % 40 == 10) {
-                [refresh flashShieldOn:kShip];
+                simd_float3 hit = simd_make_float3(0, 1.5f, 3.0f);
+                [refresh flashShieldOn:kShip from:simd_act(simd_inverse(q), hit)];
                 [refresh impactAt:simd_make_float3(0, 1.5f, 3.0f) friendly:NO shielded:YES];
             }
         };

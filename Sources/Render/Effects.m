@@ -69,7 +69,7 @@ static SCNMaterial *GlowMaterial(simd_float3 tint) {
 - (instancetype)initWithScene:(SCNScene *)scene {
     if ((self = [super init])) {
         _scene = scene;
-        // Cores read as white; the over-driven glow colour is what bloom spreads.
+        // White cores sit inside separate, softer coloured glow geometry.
         _playerCore = GlowMaterial(simd_make_float3(5.0f, 9.0f, 6.0f));
         _playerGlow = GlowMaterial(simd_make_float3(0.25f, 2.4f, 0.6f));
         _enemyCore = GlowMaterial(simd_make_float3(9.0f, 5.5f, 4.5f));
