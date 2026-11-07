@@ -9,6 +9,9 @@
 # Naming contract with Sources/Cockpit.m (keyed by material name):
 #   Screen_<Name>   flat quad, UV 0..1, gets a live SpriteKit texture
 #   Lamp_<Name>     annunciator / LED, emission driven from game state
+#   Lamp_Key        backlit bezel keys, a steady dim glow
+#   Lamp_Ind<C><p>  indicator lights: C is the colour letter (G A R B C W),
+#                   p the blink pattern 0-3; many lights share one material
 #   Stick, Throttle objects are animated (pivot = bottom of their bounds)
 #   everything else is static trim (Panel, Frame, Trim, Rubber, Glass ...)
 
@@ -16,6 +19,7 @@ import bpy
 import bmesh
 import math
 import os
+import random
 from mathutils import Matrix, Vector
 
 GAME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -57,12 +61,25 @@ M = {
     "Glass":  material("Glass",  (0.6, 0.9, 0.8), 0.05, 0.0, alpha=0.15),
     "Seat":   material("Seat",   (0.07, 0.065, 0.06), 0.85, 0.0),
 }
+M["Key"] = material("Lamp_Key", (0.03, 0.03, 0.03), 0.3, 0.0, emit=(0.2, 1, 0.9))
 
 def lamp_mat(name, color):
     return material("Lamp_" + name, (0.03, 0.03, 0.03), 0.3, 0.0, emit=color)
 
+def ind_mat(color, pattern):
+    return lamp_mat("Ind%s%d" % (color, pattern), IND_RGB[color])
+
 def screen_mat(name):
     return material("Screen_" + name, (0.0, 0.0, 0.0), 0.15, 0.0, emit=(0.1, 0.5, 0.45))
+
+IND_RGB = {"G": (0.2, 1, 0.4), "A": (1, 0.6, 0.1), "R": (1, 0.12, 0.08),
+           "B": (0.3, 0.6, 1), "C": (0.2, 1, 0.9), "W": (0.9, 0.95, 1)}
+# Fixed seed: the light pattern is part of the art and must not change
+# between rebuilds.
+rng = random.Random(1993)
+
+def any_ind(colors="GGGAACBR"):
+    return ind_mat(rng.choice(colors), rng.randrange(4))
 
 # ---------------------------------------------------------------- helpers
 
@@ -208,8 +225,9 @@ def screen(name, w, h, at, cx, cy):
     if w > 0.12:
         for i in range(4):
             for sx in (-1, 1):
-                box(name + "Key", (0.008, 0.012, 0.006), M["Trim"], at,
-                    (cx + sx * (w / 2 + 0.0165), cy - h * 0.3 + i * h * 0.2, 0.012), bevel=0.0015, segments=1)
+                kx, ky = cx + sx * (w / 2 + 0.0165), cy - h * 0.3 + i * h * 0.2
+                box(name + "Key", (0.009, 0.013, 0.006), M["Bezel"], at, (kx, ky, 0.012), bevel=0.0015, segments=1)
+                quad(name + "KeyFace", 0.006, 0.009, M["Key"], at, (kx, ky, 0.0152))
     quad(name, w, h, screen_mat(name), at, (cx, cy, 0.0105))
 
 # The central CMD keeps the historic Radar material key for runtime lookup.
@@ -230,10 +248,73 @@ for i, (name, col) in enumerate((("Lock", GREEN), ("Guns", GREEN), ("Boost", AMB
 box("MasterCautionFrame", (0.084, 0.032, 0.012), M["Hazard"], PANEL, (0, 0.226, 0.004), bevel=0.003)
 quad("MasterCaution", 0.072, 0.022, lamp_mat("Caution", AMBER), PANEL, (0, 0.226, 0.0105))
 
-# Small rocker switches under the MFDs, partly in view when looking down.
-for at, cx0 in ((WING_L, -0.2), (WING_R, 0.05)):
-    for i in range(5):
-        box("Rocker", (0.012, 0.02, 0.008), M["Trim"], at, (cx0 + i * 0.03, 0.012, 0.004), bevel=0.002, segments=1)
+def button(at, cx, cy, mat, w=0.014, h=0.012):
+    """Square push-button: dark cap with a lit face."""
+    box("Button", (w + 0.004, h + 0.004, 0.007), M["Bezel"], at, (cx, cy, 0.0035), bevel=0.0015, segments=1)
+    quad("ButtonFace", w, h, mat, at, (cx, cy, 0.0072))
+
+# Lit push-buttons along the bottom of every panel, under the MFDs.
+for at, cx0, n in ((WING_L, -0.215, 6), (WING_R, 0.035, 6), (PANEL, -0.1, 8)):
+    for i in range(n):
+        button(at, cx0 + i * 0.0285, 0.0105, any_ind(), h=0.009)
+
+# ---------------------------------------------------------------- dash body
+# The panels above are faces; this is the moulding they sit in. A side
+# profile extruded wall to wall closes the dash from the floor up to the
+# coaming, so no view down or sideways looks out under the panel.
+N = Vector((0, -V.z, V.y)).normalized()     # panel normal, toward the pilot
+BODY_X = 0.64
+behind = -0.008 * N
+prof = [Vector((0, 1.30, -1.06)),
+        Vector((0, 0.70, -1.06)),                  # knee panel foot
+        B + behind + Vector((0, 0, -0.02)),        # under the panel's lower edge
+        T + behind + Vector((0, 0, 0.004)),        # panel top
+        Vector((0, T.y + 0.03, -0.135)),           # coaming
+        Vector((0, 1.30, -0.135))]
+bm = bmesh.new()
+left = [bm.verts.new((-BODY_X, p.y, p.z)) for p in prof]
+right = [bm.verts.new((BODY_X, p.y, p.z)) for p in prof]
+bm.faces.new(list(reversed(left)))
+bm.faces.new(right)
+for i in range(len(prof)):
+    j = (i + 1) % len(prof)
+    bm.faces.new((left[i], left[j], right[j], right[i]))
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+me = bpy.data.meshes.new("DashBody")
+bm.to_mesh(me)
+bm.free()
+body = link("DashBody", me, M["Panel"])
+bv = body.modifiers.new("Bevel", 'BEVEL')
+bv.width, bv.segments, bv.limit_method = 0.012, 2, 'ANGLE'
+
+# Knee panel: a recessed footwell plate and a hazard-striped kick plate.
+knee = frame(B + behind + Vector((0, 0.045, -0.31)), (1, 0, 0), (0, 0.08, 1))
+box("KneeRecess", (0.36, 0.42, 0.01), M["Bezel"], knee, (0, 0, -0.003), bevel=0.004)
+box("KickPlate", (0.18, 0.05, 0.006), M["Hazard"], knee, (0, 0.13, 0.004), bevel=0.002)
+
+# ---------------------------------------------------------------- side consoles
+# The dash corners between the MFD wings and the canopy walls: a raised
+# switch pod in each, with blocks of little red and green lights that make
+# an old cockpit feel busy.
+
+for s in (-1, 1):
+    pod = PANEL @ trans(s * 0.5, 0.25, 0.05) @ rot_y(-s * 34)
+    box("CornerPod", (0.2, 0.15, 0.06), M["Panel"], pod, (0, 0, -0.028), bevel=0.01, segments=3)
+    box("CornerStand", (0.16, 0.1, 0.08), M["Panel"], pod, (0, -0.05, -0.07), bevel=0.01, segments=2)
+    box("CornerFace", (0.185, 0.135, 0.006), M["Bezel"], pod, (0, 0, 0.003), bevel=0.003)
+    # Two rows of lit push-buttons over a lamp grid.
+    for r in range(2):
+        for c in range(5):
+            button(pod, -0.068 + c * 0.034, 0.045 - r * 0.026, any_ind("GGACB"), w=0.02, h=0.013)
+    for r in range(2):
+        for c in range(9):
+            quad("Ind", 0.011, 0.009, any_ind("GGGRRAAB"), pod, (-0.072 + c * 0.018, -0.03 - r * 0.017, 0.0066))
+
+    at = PANEL @ trans(s * 0.5, 0.11, 0.03) @ rot_y(-s * 30)
+    box("IndField", (0.17, 0.07, 0.012), M["Bezel"], at, (0, 0, 0.002), bevel=0.003)
+    for r in range(3):
+        for c in range(7):
+            quad("Ind", 0.014, 0.011, any_ind("GGGRRAAB"), at, (-0.069 + c * 0.023, -0.019 + r * 0.019, 0.0085))
 
 # ---------------------------------------------------------------- glareshield + HUD
 
@@ -256,10 +337,15 @@ hud_glass = frame(hud_base + Vector((0, -0.018, 0.058)), (1, 0, 0), (0, -0.3, 1)
 quad("HudGlass", 0.135, 0.105, M["Glass"], hud_glass)
 
 # Status display on the left hood corner, facing the pilot.
-status_at = frame(Vector((-0.47, T.y - 0.09, HOOD_Z + 0.075)), (0.85, 0.53, 0), (0, -0.25, 1))
+status_at = frame(Vector((-0.2, T.y + 0.03, HOOD_Z + 0.06)), (0.97, 0.24, 0), (0, -0.3, 1))
 box("StatusHousing", (0.13, 0.085, 0.03), M["Panel"], status_at, (0, 0, -0.012), bevel=0.006)
 screen("Status", 0.11, 0.065, status_at, 0, 0)
-cylinder("StatusArm", 0.008, 0.11, M["Frame"], trans(-0.47, T.y - 0.07, HOOD_Z - 0.04))
+cylinder("StatusArm", 0.008, 0.05, M["Frame"], trans(-0.2, T.y + 0.04, HOOD_Z))
+# A row of small lamps along the hood's rear lip, both sides of the HUD.
+for s in (-1, 1):
+    for i in range(5):
+        quad("LipLed", 0.012, 0.007, any_ind("AAGGR"),
+             frame(Vector((s * (0.11 + i * 0.026), T.y - 0.012, HOOD_Z + 0.0115)), (1, 0, 0), (0, 1, 0)))
 
 # ---------------------------------------------------------------- canopy frame
 
@@ -299,6 +385,7 @@ for s, side in ((-1, "L"), (1, "R")):
                 continue
             box("SwitchPlate", (0.03, 0.04, 0.006), M["Bezel"], con, (px - s * 0.45, py, 0.004), bevel=0.0015, segments=1)
             tube("Toggle", [con @ Vector((px - s * 0.45, py, 0.007)), con @ Vector((px - s * 0.45, py + 0.008, 0.028))], 0.0025, M["Trim"], smooth_curve=False)
+            quad("ToggleLed", 0.007, 0.007, any_ind("GGAR"), con, (px - s * 0.45, py + 0.026, 0.0035))
     # Air vent at the front of each console.
     vent = frame(Vector((s * 0.5, 0.36 + DY, -0.42)), (1, 0, 0), (0, 0, 1))
     cylinder("Vent" + side, 0.035, 0.03, M["Bezel"], vent @ Matrix.Rotation(math.radians(90), 4, 'X'), (0, 0, -0.03))
@@ -307,8 +394,6 @@ for s, side in ((-1, "L"), (1, "R")):
 
 # Floor, footwell walls and the pedestal under the panel.
 box("Floor", (1.25, 1.6 + DY, 0.04), M["Panel"], Matrix.Identity(4), (0, 0.1 + DY / 2, -1.04), bevel=0.01)
-box("Pedestal", (0.3, 0.3, 0.5), M["Panel"], Matrix.Identity(4), (0, 0.55 + DY, -0.75), bevel=0.02)
-box("PedestalPlate", (0.18, 0.006, 0.14), M["Hazard"], Matrix.Identity(4), (0, 0.398 + DY, -0.62), bevel=0.002)
 
 # ---------------------------------------------------------------- seat
 

@@ -204,6 +204,10 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
 @interface Lamp : NSObject
 @property (nonatomic, strong) SCNMaterial *material;
 @property (nonatomic) float level, peak;
+// Decorative indicators run on their own: a pattern (0-3) and a phase so
+// lights sharing a pattern don't all switch together.
+@property (nonatomic) int pattern;
+@property (nonatomic) double phase;
 @end
 @implementation Lamp
 @end
@@ -226,6 +230,7 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     NSMutableDictionary<NSString *, Lamp *> *_lamps;
 
     SKScene *_radar, *_self, *_target, *_status;
+    NSMutableArray<Lamp *> *_indicators;
 
     // Power panel; hemisphere scopes live at the top edges of the HUD.
     SKLabelNode *_energyEngine, *_energyLaser, *_energyShield, *_energyBoost, *_rechargeRates;
@@ -256,6 +261,7 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
         _node = [SCNNode node];
         _node.name = @"Cockpit";
         _lamps = [NSMutableDictionary dictionary];
+        _indicators = [NSMutableArray array];
         [self buildDisplays];
         [self loadModel];
     }
@@ -376,6 +382,10 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     NSArray *legend = legends[key];
     m.metalness.contents = @0;
     m.roughness.contents = @0.25;
+    if ([key isEqualToString:@"Key"] || ([key hasPrefix:@"Ind"] && key.length == 5)) {
+        [self styleIndicator:m key:key];
+        return;
+    }
     if (legend) {
         m.diffuse.contents = LampImage(legend[0], legend[1], NO);
         m.emission.contents = LampImage(legend[0], legend[1], YES);
@@ -391,6 +401,28 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
     lamp.material = m;
     lamp.peak = legend ? 2.6f : 3.2f;
     _lamps[key] = lamp;
+}
+
+// Backlit keys and the indicator lights scattered over the panels. The
+// material name carries the colour letter and the blink pattern.
+- (void)styleIndicator:(SCNMaterial *)m key:(NSString *)key {
+    NSDictionary<NSString *, SKColor *> *colors = @{
+        @"G" : [SKColor colorWithRed:0.3 green:1 blue:0.45 alpha:1], @"A" : WarnColor(1), @"R" : EnemyColor(1),
+        @"B" : ShieldColor(1), @"C" : ScreenColor(1), @"W" : [SKColor colorWithRed:0.9 green:0.95 blue:1 alpha:1],
+    };
+    BOOL backlight = [key isEqualToString:@"Key"];
+    SKColor *c = backlight ? ScreenColor(1) : colors[[key substringWithRange:NSMakeRange(3, 1)]] ?: ScreenColor(1);
+    m.diffuse.contents = [SKColor colorWithWhite:0.06 alpha:1];
+    m.emission.contents = c;
+    Lamp *lamp = [Lamp new];
+    lamp.material = m;
+    lamp.peak = backlight ? 0.9f : 2.4f;
+    lamp.pattern = backlight ? -1 : [key substringFromIndex:4].intValue;
+    lamp.phase = (double)(key.hash % 97) / 97.0 * 3.7;
+    // An unlit lamp still shows its coloured lens.
+    lamp.level = -1;
+    _lamps[key] = lamp;
+    [_indicators addObject:lamp];
 }
 
 - (Display *)displayForScene:(SKScene *)scene {
@@ -610,6 +642,8 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
     [self setLamp:@"Boost" level:alive ? (f.boosting ? 1 : (f.boostEnergy < 0.2f ? 0.25f : 0)) : 0];
     [self setLamp:@"Prox" level:prox ? 1 : 0];
 
+    for (Lamp *l in _indicators) [self setIndicator:l time:t alive:alive alarm:caution];
+
     // Throttle ladder: ten LEDs, all of them pulse while boosting.
     float thr = alive ? f.throttle : 0;
     for (int i = 0; i < 10; i++) {
@@ -617,6 +651,24 @@ static SKLabelNode *Row(SKScene *s, NSString *name, CGFloat y, Bar * __strong *b
         if (alive && f.boosting) on = Blink(t, 6) ? 1 : 0.6f;
         [self setLamp:[NSString stringWithFormat:@"Thr%d", i] level:on];
     }
+}
+
+// Steady, a slow blink, a short flash, a slow breath. The panel goes dark
+// with the ship, and under a master caution the blinking lights hurry.
+- (void)setIndicator:(Lamp *)l time:(double)t alive:(BOOL)alive alarm:(BOOL)alarm {
+    double p = t + l.phase;
+    float level;
+    switch (l.pattern) {
+        case 0: level = 1; break;
+        case 1: level = Blink(p, alarm ? 2.5 : 0.7) ? 1 : 0.12f; break;
+        case 2: level = fmod(p, alarm ? 0.6 : 1.9) < 0.14 ? 1 : 0.18f; break;
+        case 3: level = 0.55f + 0.45f * sinf((float)(p * 2.4)); break;
+        default: level = 1; break;
+    }
+    if (!alive) level *= 0.1f;
+    if (fabsf(l.level - level) < 0.005f) return;
+    l.level = level;
+    l.material.emission.intensity = level * l.peak;
 }
 
 - (void)updateSelf:(CockpitFrame)f {
