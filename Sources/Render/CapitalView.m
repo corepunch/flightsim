@@ -17,13 +17,13 @@ static void Repeat(SCNMaterialProperty *p) {
 static SCNMaterial *TexturedMaterial(NSString *set, SKColor *tint, float normalStrength) {
     SCNMaterial *m = [SCNMaterial material];
     m.lightingModelName = SCNLightingModelPhysicallyBased;
-    m.diffuse.contents = TextureURL([set stringByAppendingString:@"_color"]);
+    m.diffuse.contents = [RenderTextures contentsOfURL:TextureURL([set stringByAppendingString:@"_color"]) sRGB:YES];
     m.multiply.contents = tint;
-    m.normal.contents = TextureURL([set stringByAppendingString:@"_normal"]);
+    m.normal.contents = [RenderTextures contentsOfURL:TextureURL([set stringByAppendingString:@"_normal"]) sRGB:NO];
     m.normal.intensity = normalStrength;
-    m.roughness.contents = TextureURL([set stringByAppendingString:@"_rough"]);
+    m.roughness.contents = [RenderTextures contentsOfURL:TextureURL([set stringByAppendingString:@"_rough"]) sRGB:NO];
     NSURL *metal = TextureURL([set stringByAppendingString:@"_metal"]);
-    m.metalness.contents = metal ?: @0.6;
+    m.metalness.contents = metal ? [RenderTextures contentsOfURL:metal sRGB:NO] : @0.6;
     // The plate sets are fully metallic, which reads as black mirror against
     // space; keep some diffuse so the hulls show their colour.
     m.metalness.intensity = 0.3;
@@ -32,7 +32,7 @@ static SCNMaterial *TexturedMaterial(NSString *set, SKColor *tint, float normalS
     // and running lights, and one tile spans ~40 m instead of the UVs' 24.
     NSURL *emit = TextureURL([set stringByAppendingString:@"_emit"]);
     if (emit) {
-        m.emission.contents = emit;
+        m.emission.contents = [RenderTextures contentsOfURL:emit sRGB:YES];
         m.emission.intensity = 1.6;
         [props addObject:m.emission];
         for (SCNMaterialProperty *p in props) p.contentsTransform = SCNMatrix4MakeScale(0.6, 0.6, 1);
@@ -59,8 +59,9 @@ static SCNMaterial *BakedMaterial(NSString *texture, float glow, float rough) {
     m.lightingModelName = SCNLightingModelPhysicallyBased;
     NSURL *url = TextureURL(texture);
     if (!url) NSLog(@"CapitalView: no baked texture \"%@\"", texture);
-    m.diffuse.contents = url ?: SKColor.grayColor;
-    m.emission.contents = url;
+    id contents = [RenderTextures contentsOfURL:url sRGB:YES];
+    m.diffuse.contents = contents ?: SKColor.grayColor;
+    m.emission.contents = contents;
     m.emission.intensity = glow;
     m.roughness.contents = @(rough);
     m.metalness.contents = @0;
@@ -195,24 +196,62 @@ static NSDictionary *StyleFile(NSString *style) {
     return [json isKindOfClass:NSDictionary.class] ? json : nil;
 }
 
-static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) {
+@interface HullMaterialDefinition : NSObject
+@property (nonatomic) MaterialSpec spec;
+@end
+@implementation HullMaterialDefinition
+@end
+
+// A style describes many possible slots; only slots on a loaded mesh should
+// allocate textures. Several styles can still share the same texture objects.
+@interface HullStyle : NSObject
+- (instancetype)initWithName:(NSString *)name;
+- (SCNMaterial *)materialForSlot:(NSString *)slot;
+@end
+@implementation HullStyle {
+    NSDictionary<NSString *, HullMaterialDefinition *> *_definitions;
+    NSMutableDictionary<NSString *, SCNMaterial *> *_materials;
+}
+- (instancetype)initWithName:(NSString *)name {
+    if ((self = [super init])) {
+        NSMutableDictionary *specs = [StyleFile(@"default") mutableCopy] ?: [NSMutableDictionary dictionary];
+        NSDictionary *own = StyleFile(name);
+        if (!own) NSLog(@"CapitalView: no style \"%@\"; using default", name);
+        [specs addEntriesFromDictionary:own ?: @{}];
+        NSMutableDictionary *definitions = [NSMutableDictionary dictionary];
+        for (NSString *slot in specs) {
+            NSDictionary *json = JSONObject(specs, slot);
+            if (!json) continue;
+            HullMaterialDefinition *definition = [HullMaterialDefinition new];
+            definition.spec = MaterialSpecFromJSON(json);
+            definitions[slot] = definition;
+        }
+        _definitions = [definitions copy];
+        _materials = [NSMutableDictionary dictionary];
+    }
+    return self;
+}
+- (SCNMaterial *)materialForSlot:(NSString *)slot {
+    SCNMaterial *material = _materials[slot];
+    if (material) return material;
+    HullMaterialDefinition *definition = _definitions[slot];
+    if (definition) material = MaterialFromSpec(slot, definition.spec);
+    else if (![slot isEqualToString:@"Hull"]) return [self materialForSlot:@"Hull"];
+    else material = PlainMaterial(SKColor.grayColor, 0.5f, 0.5f);
+    _materials[slot] = material;
+    return material;
+}
+@end
+
+static HullStyle *StyleMaterials(NSString *style) {
     static NSMutableDictionary *cache;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ cache = [NSMutableDictionary dictionary]; });
     @synchronized (cache) {
         if (cache[style]) return cache[style];
-        NSMutableDictionary *specs = [StyleFile(@"default") mutableCopy] ?: [NSMutableDictionary dictionary];
-        NSDictionary *own = StyleFile(style);
-        if (!own) NSLog(@"CapitalView: no style \"%@\"; using default", style);
-        [specs addEntriesFromDictionary:own ?: @{}];
-        NSMutableDictionary *m = [NSMutableDictionary dictionary];
-        for (NSString *slot in specs) {
-            NSDictionary *spec = JSONObject(specs, slot);
-            if (spec) m[slot] = MaterialFromSpec(slot, MaterialSpecFromJSON(spec));
-        }
-        if (!m[@"Hull"]) m[@"Hull"] = PlainMaterial(SKColor.grayColor, 0.5f, 0.5f);   // never leave a hull unlit
-        cache[style] = m;
-        return m;
+        HullStyle *materials = [[HullStyle alloc] initWithName:style];
+        cache[style] = materials;
+        return materials;
     }
 }
 
@@ -231,11 +270,11 @@ static NSDictionary<NSString *, SCNMaterial *> *StyleMaterials(NSString *style) 
     @synchronized (cache) {
         if (cache[key]) return cache[key];
         SCNNode *root = [SCNNode node];
-        NSDictionary *mats = StyleMaterials(style);
+        HullStyle *mats = StyleMaterials(style);
         for (SCNNode *src in [ModelInfo capitalAsset:asset].nodes) {
             SCNGeometry *g = [src.geometry copy];
             NSMutableArray *ms = [NSMutableArray array];
-            for (SCNMaterial *m in src.geometry.materials) [ms addObject:mats[m.name] ?: mats[@"Hull"]];
+            for (SCNMaterial *m in src.geometry.materials) [ms addObject:[mats materialForSlot:m.name ?: @"Hull"]];
             g.materials = ms;
             SCNNode *n = [SCNNode nodeWithGeometry:g];
             n.name = src.name;

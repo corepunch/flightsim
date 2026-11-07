@@ -4,7 +4,7 @@ static const CGFloat ThrottleHeight = 136, ThrottleTravel = 112;
 static const CGFloat StickRadius = 66, StickTravel = 132;
 
 static CGPoint PauseCenter(CGSize size, ScreenInsets insets) {
-    CGFloat scannerScale = size.height < 550 ? 0.56 : 0.86;
+    CGFloat scannerScale = [UITouchControls scannerScaleForSize:size touchLayout:YES];
     return CGPointMake(size.width - insets.right - 12 - 128 * scannerScale - 54, insets.top + 30);
 }
 
@@ -42,6 +42,12 @@ static void ButtonTitle(SKLabelNode *label, NSString *text, CGFloat radius) {
     CGPoint _centers[TouchControlCount];
     CGFloat _radii[TouchControlCount];
     SKLabelNode *_secondaryLabel;
+}
+
++ (CGFloat)scannerScaleForSize:(CGSize)size touchLayout:(BOOL)touchLayout {
+    CGFloat scale = size.height < 550 ? 0.56 : 0.86;
+    BOOL phone = touchLayout && MIN(size.width, size.height) < 550 && MAX(size.width, size.height) < 1100;
+    return scale * (phone ? 1.5 : 1);
 }
 
 + (CGRect)pauseRectForSize:(CGSize)size insets:(ScreenInsets)insets {

@@ -1,18 +1,40 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 #import "App.h"
-#import "App.h"
 #import "Refresh.h"
-#import "UI.h"
 #import "UI.h"
 
 @implementation GameView {
+    SKView *_overlayView;
     TouchFlightControls *_flightControls;
     // The one touch a front-end screen is following: a tap becomes a click,
     // a drag becomes scrolling.
     UITouch *_screenTouch;
     CGPoint _touchStart, _touchLast;
     BOOL _touchDragged;
+}
+
+- (SKView *)overlayView {
+    if (!_overlayView) {
+        _overlayView = [[SKView alloc] initWithFrame:self.bounds];
+        _overlayView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        _overlayView.allowsTransparency = YES;
+        _overlayView.backgroundColor = UIColor.clearColor;
+        _overlayView.asynchronous = NO;
+        _overlayView.userInteractionEnabled = NO; // GameView routes taps through Input.
+        _overlayView.preferredFramesPerSecond = 60;
+        _overlayView.paused = YES;
+    }
+    return _overlayView;
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    Cvar *ratio = [Cvar get:@"r_pixelRatio" defaultValue:@"2" flags:CVAR_ARCHIVE
+                      help:@"3D pixels per view point; 0 uses native resolution (HUD stays native)"];
+    CGFloat native = self.window.screen.scale ?: UIScreen.mainScreen.scale;
+    CGFloat scale = ratio.value > 0 ? MIN(native, MAX(1, ratio.value)) : native;
+    if (self.contentScaleFactor != scale) self.contentScaleFactor = scale;
 }
 
 - (void)setInput:(Input *)input {
@@ -39,9 +61,9 @@
 - (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 
 - (void)updateFlightControls {
-    BOOL flying = [self.overlaySKScene isKindOfClass:HUD.class];
+    BOOL flying = [self.overlayScene isKindOfClass:HUD.class];
     [_flightControls updateController];
-    [_flightControls showInHUD:flying ? self.overlaySKScene : nil];
+    [_flightControls showInHUD:flying ? self.overlayScene : nil];
     [_input setFlightInputActive:flying];
 }
 
@@ -59,9 +81,11 @@
     [_flightControls updateController];
 }
 
-- (void)setOverlaySKScene:(SKScene *)scene {
+- (void)setOverlayScene:(SKScene *)scene {
     _screenTouch = nil;
-    [super setOverlaySKScene:scene];
+    // SceneKit's overlay renderer walks SpriteKit nodes on its render queue,
+    // outside the main-thread cycle that also owns touch and focus updates.
+    [self.overlayView presentScene:scene];
     [self updateFlightControls];
     [self updateOverlayInsets];
     BOOL keepAwake=[scene isKindOfClass:HUD.class] || [scene isKindOfClass:LANGame.class] || [scene isKindOfClass:ServerBrowser.class];
@@ -69,7 +93,18 @@
     dispatch_async(dispatch_get_main_queue(), ^{ UIApplication.sharedApplication.idleTimerDisabled=keepAwake; });
 }
 
-- (void)updateOverlayInsets { [self applySafeAreaTo:self.overlaySKScene]; }
+- (SKScene *)overlayScene { return _overlayView.scene; }
+
+- (UIImage *)snapshotWithOverlay {
+    UIImage *world = [super snapshot];
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithBounds:self.bounds];
+    return [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        [world drawInRect:self.bounds];
+        [self.overlayView drawViewHierarchyInRect:self.bounds afterScreenUpdates:YES];
+    }];
+}
+
+- (void)updateOverlayInsets { [self applySafeAreaTo:self.overlayScene]; }
 
 - (void)applySafeAreaTo:(SKScene *)scene {
     UIEdgeInsets safe = self.safeAreaInsets;
@@ -93,7 +128,7 @@
                        1 - (point.y - CGRectGetMinY(bounds)) / CGRectGetHeight(bounds));
 }
 
-- (BOOL)screenShown { return [self.overlaySKScene conformsToProtocol:@protocol(ScreenInput)]; }
+- (BOOL)screenShown { return [self.overlayScene conformsToProtocol:@protocol(ScreenInput)]; }
 
 - (void)push:(PointerEventKind)kind at:(CGPoint)point delta:(CGFloat)delta {
     [_input.pointer push:(PointerEvent){ kind, [self fractionForPoint:point], delta }];

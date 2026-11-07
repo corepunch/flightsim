@@ -16,7 +16,7 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
 // A catalog entry keeps the subtitle key and its authored recording together.
 @interface RadioLine : NSObject
 @property (nonatomic, readonly) NSString *identifier, *text;
-@property (nonatomic, readonly) AVAudioPlayer *player;
+@property (nonatomic, readonly) NSURL *url;
 - (instancetype)initWithJSON:(id)json;
 @end
 
@@ -26,12 +26,9 @@ static const float MusicLevel = 0.28f, EffectsLevel = 0.8f;
     NSString *text = JSONString(json, @"text");
     if (!file.length || ![file.lastPathComponent isEqualToString:file] || !text.length) return nil;
     NSURL *url = FSURL(@"Audio/Radio", file.stringByDeletingPathExtension, file.pathExtension);
-    NSError *error;
-    AVAudioPlayer *player = url ? [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error] : nil;
-    if (!player) { NSLog(@"Radio: missing or invalid %@", file); return nil; }
+    if (!url) { NSLog(@"Radio: missing %@", file); return nil; }
     if ((self = [super init])) {
-        _identifier = [JSONString(json, @"key") copy]; _text = [text copy]; _player = player;
-        [_player prepareToPlay];
+        _identifier = [JSONString(json, @"key") copy]; _text = [text copy]; _url = url;
     }
     return self;
 }
@@ -52,6 +49,7 @@ typedef struct { RadioLine *line; CFTimeInterval until; } PendingRadio;
     NSString *_game;
     NSArray<RadioLine *> *_lines;
     RadioLine *_current;
+    AVAudioPlayer *_voice;
     PendingRadio _waiting;
     CFTimeInterval _nextAt;
     Cvar *_volume;
@@ -61,11 +59,11 @@ typedef struct { RadioLine *line; CFTimeInterval until; } PendingRadio;
         _volume = [Cvar get:@"s_radioVolume" defaultValue:@"0.32" flags:CVAR_ARCHIVE help:@"Background radio voice volume (0–1)"];
     return self;
 }
-- (BOOL)playing { return _current.player.playing; }
+- (BOOL)playing { return _voice.playing; }
 - (BOOL)pending { return _waiting.line != nil; }
 - (NSString *)text { return _current.text ?: @""; }
 - (void)clear {
-    [_current.player stop]; _current.player.currentTime = 0;
+    [_voice stop]; _voice = nil;
     _current = nil; _waiting = (PendingRadio){0}; _nextAt = 0;
 }
 - (void)loadCatalog {
@@ -81,10 +79,14 @@ typedef struct { RadioLine *line; CFTimeInterval until; } PendingRadio;
     _lines = [lines copy];
 }
 - (void)start:(RadioLine *)line {
+    // Keep a decoder only for the recording on air, rather than preparing the
+    // entire campaign catalog when the first radio message arrives.
+    NSError *error = nil;
+    _voice = [[AVAudioPlayer alloc] initWithContentsOfURL:line.url error:&error];
+    if (!_voice) { NSLog(@"Radio: cannot play %@: %@", line.url.lastPathComponent, error); return; }
     _current = line;
-    line.player.currentTime = 0;
-    line.player.volume = fminf(1, fmaxf(0, _volume.value));
-    [line.player play];
+    _voice.volume = fminf(1, fmaxf(0, _volume.value));
+    [_voice play];
 }
 - (void)transmit:(NSString *)text {
     [self loadCatalog];
@@ -103,7 +105,7 @@ typedef struct { RadioLine *line; CFTimeInterval until; } PendingRadio;
 - (void)update {
     CFTimeInterval now = CACurrentMediaTime();
     if (_volume.value <= 0) { [self clear]; return; }
-    if (_current && !_current.player.playing) { _current = nil; _nextAt = now + 1.25; }
+    if (_current && !_voice.playing) { _current = nil; _voice = nil; _nextAt = now + 1.25; }
     if (_waiting.line && now > _waiting.until) _waiting = (PendingRadio){0};
     if (!_current && _waiting.line && now >= _nextAt) {
         RadioLine *line = _waiting.line;

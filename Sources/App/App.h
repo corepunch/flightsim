@@ -10,7 +10,12 @@
 @interface GameView : SCNView
 @property (nonatomic, strong) Input *input;
 #if TARGET_OS_IOS
+// SpriteKit owns the overlay's main-thread update and draw cycle separately
+// from SceneKit's background rendering queue.
+@property (nonatomic, readonly) SKView *overlayView;
+@property (nonatomic, strong) SKScene *overlayScene;
 @property (nonatomic, readonly) UIView *flightControlsView;
+- (UIImage *)snapshotWithOverlay;   // main thread: captures both rendering views
 - (void)setSecondaryLabel:(NSString *)label;   // the touch controls' secondary weapon button
 // Gives a front-end screen or the HUD this view's safe area. Main thread.
 - (void)applySafeAreaTo:(SKScene *)scene;
@@ -27,10 +32,6 @@
 @interface Host : NSObject <SCNSceneRendererDelegate>
 
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input;
-
-#if TARGET_OS_IOS
-- (void)displayLinkTick:(CADisplayLink *)link;
-#endif
 
 @end
 

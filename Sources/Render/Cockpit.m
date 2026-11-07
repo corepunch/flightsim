@@ -264,6 +264,13 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
         _indicators = [NSMutableArray array];
         [self buildDisplays];
         [self loadModel];
+        // Compile SpriteKit's display passes while the loading queue owns these
+        // scenes, before the first cockpit switch can block the flight frame.
+        id<MTLCommandQueue> queue = [_device newCommandQueue];
+        [self renderDisplaysWithQueue:queue time:0];
+        id<MTLCommandBuffer> ready = [queue commandBuffer];
+        [ready commit];
+        [ready waitUntilCompleted];
     }
     return self;
 }
@@ -322,8 +329,7 @@ static PlatformImage *LampImage(NSString *legend, SKColor *color, BOOL lit) {
         NSString *key = [name substringFromIndex:7];
         SKScene *s = [self screenNamed:key];
         Display *d = [self displayForScene:s];
-        // Constant model: the display is self-lit, and intensity > 1 lets
-        // bright strokes bloom.
+        // Constant lighting keeps the display self-lit and its strokes legible.
         m.lightingModelName = SCNLightingModelConstant;
         m.diffuse.contents = d.texture;
         m.diffuse.mipFilter = SCNFilterModeNone;
