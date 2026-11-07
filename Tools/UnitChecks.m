@@ -532,7 +532,10 @@ static void CheckDawnPatrol(void) {
     FSSetGame(@"DawnPatrol");
     LevelDef *level = LevelCreate(FSJSON(FSURL(@"Levels", @"01-morning-patrol", @"json")));
     const ShipDef *aircraft = ShipDefNamed(@"se5a");
-    CHECK(level && [level->environment.model isEqual:@"PatrolLandscape"]);
+    CHECK(level && level->environment.terrain && !level->environment.model);
+    LevelDef *both = LevelCreate(@{ @"environment": @{ @"terrain": @YES, @"model": @"PatrolLandscape" } });
+    CHECK(both->problems.count > 0);
+    LevelRelease(both);
     CHECK(aircraft && aircraft->params.gravity > 0 && aircraft->shield == 0 && aircraft->secondary.rounds == 0);
     CHECK(aircraft && !aircraft->texture[0] && aircraft->propeller.w > 0);
     CHECK([MissionRunner problemsWithLevel:level].count == 0);

@@ -485,12 +485,15 @@ LevelDef *LevelCreate(NSDictionary *json) {
     if (json[@"environment"] && !environment) [problems addObject:@"\"environment\" is not an object"];
     level->environment = (LevelEnvironment){
         .model = JSONString(environment, @"model"), .sky = JSONString(environment, @"sky"),
+        .terrain = JSONBool(environment, @"terrain", false),
         .fogColor = JSONVec3(environment, @"fogColor", simd_make_float3(0.64f, 0.75f, 0.81f)),
         .fogStart = fmaxf(0, JSONFloat(environment, @"fogStart", 3000)),
         .fogEnd = fmaxf(1, JSONFloat(environment, @"fogEnd", 12000)),
     };
     if (level->environment.fogEnd <= level->environment.fogStart)
         [problems addObject:@"environment fogEnd must be beyond fogStart"];
+    if (level->environment.terrain && level->environment.model.length)
+        [problems addObject:@"environment names a model and asks for procedural terrain; use one"];
     NSDictionary *player = JSONObject(json, @"player");
     level->playerPos = JSONVec3(player, @"pos", 0);
     level->playerFacing = simd_normalize(JSONVec3(player, @"facing", Forward));

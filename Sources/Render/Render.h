@@ -11,6 +11,15 @@
 #import "Shared.h"
 #import "Refresh.h"
 
+// MARK: - Scene visibility
+
+// SceneKit nodes default to the geometry category. Sky decoration remains
+// visible to cameras but does not participate in world visibility queries.
+typedef NS_OPTIONS(NSUInteger, RenderCategory) {
+    RenderCategoryGeometry = 1 << 0,
+    RenderCategoryBackground = 1 << 1,
+};
+
 // MARK: - CapitalView
 
 // What a capital ship, station, prop or rock looks like: a clone of the
@@ -266,5 +275,30 @@ void ApplyHullRolloff(SCNMaterial *m);
 // Infinite field of dust streaks that wraps around the camera.
 - (SCNNode *)makeDustNode;
 - (void)updateDust:(SCNNode *)dust cameraPosition:(simd_float3)cameraPosition velocity:(simd_float3)velocity;
+
+@end
+
+// MARK: - ProceduralTerrain
+
+// A landscape evaluated entirely on the GPU: geometry-clipmap rings of one shared grid
+// follow the camera, and Resources/Shaders/Terrain*.metal compute height, cover
+// (water, roads, villages, fields, forest, rock), lighting and a cloud sky dome from
+// noise. There are no height or colour maps; a level only switches it on.
+@interface ProceduralTerrain : NSObject
+
+// Compiles TerrainCommon.metal and Terrain.metal from the directory (nil on failure).
++ (id<MTLLibrary>)libraryWithDevice:(id<MTLDevice>)device shaderDirectory:(NSURL *)directory;
+
+// cells: vertices per ring edge, a multiple of 4 up to 252; more is finer and costlier.
+- (instancetype)initWithLibrary:(id<MTLLibrary>)library cells:(NSUInteger)cells hdr:(BOOL)hdr;
+
+@property (nonatomic, readonly) SCNNode *node;        // the clipmap rings
+@property (nonatomic, readonly) SCNNode *skyNode;     // the dome; follows the camera
+@property (nonatomic) simd_float3 sunDirection;       // toward the sun
+@property (nonatomic) LevelEnvironment environment;   // fog colour and range
+
+// Recentres the rings and picks the finest ring for the camera's height.
+- (void)updateForCamera:(simd_float3)position time:(double)time;
+- (NSString *)stats;
 
 @end
