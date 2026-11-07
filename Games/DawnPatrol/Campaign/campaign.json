@@ -1,0 +1,161 @@
+{
+  "campaign": "Dawn Patrol",
+  "storyDefaults": {
+    "officer": "Mercer",
+    "room": "BriefingHut",
+    "briefingPages": [
+      "dialogue",
+      "situation",
+      "tactical",
+      "objectives",
+      "intel"
+    ]
+  },
+  "story": {
+    "title": "THE QUIET SKY",
+    "logline": "A new pilot joins a tired squadron in France. His first routine patrol reveals enemy scouts watching the roads behind their lines.",
+    "antagonists": [
+      "An opposing German scout flight"
+    ],
+    "chapters": [
+      {
+        "title": "First Light",
+        "missions": [
+          1
+        ]
+      }
+    ]
+  },
+  "missions": [
+    {
+      "level": "01-morning-patrol",
+      "briefing": {
+        "location": "Bertincourt aerodrome, France",
+        "stardate": "May 1918 · 05:40",
+        "officer": "Mercer",
+        "speaker": "Captain Edward Mercer",
+        "dialogue": {
+          "room": "BriefingHut",
+          "cast": [
+            "Mercer",
+            "Bennett",
+            "Reed"
+          ],
+          "focus": "river",
+          "lines": [
+            {
+              "speaker": "Captain Edward Mercer",
+              "portrait": "Mercer",
+              "text": "Reed, your first patrol. Saint-Martin church, the Scarpe bend, then the mill at Mercatel. Stay this side of the lines."
+            },
+            {
+              "speaker": "Lieutenant Thomas Bennett",
+              "portrait": "Bennett",
+              "text": "I will be off your right wing. Keep your speed above twenty metres a second. The S.E. will forgive nerves. She will not forgive an empty sky beneath a stalled wing."
+            },
+            {
+              "speaker": "Second Lieutenant Arthur Reed",
+              "portrait": "Reed",
+              "text": "And if the morning is less quiet than promised, sir?",
+              "listener": "Mercer"
+            },
+            {
+              "speaker": "Captain Edward Mercer",
+              "portrait": "Mercer",
+              "text": "Two German scouts were seen over the river yesterday. Drive them off before they can watch the supply road. No lone pursuit across the lines."
+            },
+            {
+              "speaker": "Lieutenant Thomas Bennett",
+              "portrait": "Bennett",
+              "text": "Look around as often as you look ahead. And when it is over, bring yourself home. The mess has only just learned your name."
+            },
+            {
+              "speaker": "Second Lieutenant Arthur Reed",
+              "portrait": "Reed",
+              "text": "Three landmarks, one wingman, and home for breakfast. Understood.",
+              "listener": "Bennett"
+            }
+          ]
+        },
+        "text": [
+          "Fly an airborne patrol from Bertincourt at 400 metres with Bennett in a second S.E.5a.",
+          "Follow the marked route through Saint-Martin, the Scarpe bend and Mercatel. Intercept any German scouts that appear at the river.",
+          "Clear the patrol and return to the Bertincourt marker. This training sortie ends on the return pass; a landing is not required."
+        ],
+        "steps": [
+          {
+            "caption": "Already airborne north of Bertincourt. Bennett forms on your right wing.",
+            "show": [
+              "start",
+              "wing",
+              "home"
+            ],
+            "focus": "start"
+          },
+          {
+            "caption": "Patrol the church, river bend and mill in order. Keep enough speed to fly.",
+            "show": [
+              "tower",
+              "river",
+              "mill"
+            ],
+            "route": [
+              "start",
+              "tower",
+              "river",
+              "mill"
+            ]
+          },
+          {
+            "caption": "Two German scouts may cross your route at the river. Clear them together.",
+            "show": [
+              "river",
+              "patrol"
+            ],
+            "focus": "river"
+          },
+          {
+            "caption": "When the route and interception are complete, return for a pass over Bertincourt.",
+            "show": [
+              "home"
+            ],
+            "route": [
+              "mill",
+              "home"
+            ]
+          }
+        ],
+        "intel": [
+          "Your aircraft: Royal Aircraft Factory S.E.5a, two machine guns, no shields or secondary weapon.",
+          "Wingman: Lieutenant Bennett. His survival is an optional objective.",
+          "Expected opposition: two Fokker D.VII scouts.",
+          "Controls: click to capture the mouse; mouse steers; left click or Space fires; T selects a target; W/S or scroll changes throttle; Z full throttle; Q/E rolls.",
+          "Stay above the ground and keep flying speed. Mission starts airborne and finishes at the home marker."
+        ]
+      },
+      "debrief": {
+        "room": "Aerodrome",
+        "win": "Patrol complete. The scouts have been driven off the supply road and you are back over Bertincourt. First sortie entered in the log.",
+        "lose": "The morning patrol did not return safely. Review the route, keep flying speed, and try the sortie again.",
+        "dialogue": [
+          {
+            "speaker": "Captain Edward Mercer",
+            "portrait": "Mercer",
+            "text": "You have your first patrol in the book, Reed. Those scouts were looking inland, not toward our trenches. I want to know what drew their attention."
+          },
+          {
+            "speaker": "Second Lieutenant Arthur Reed",
+            "portrait": "Reed",
+            "text": "The supply road below the river bend. There was a convoy on it.",
+            "listener": "Mercer"
+          },
+          {
+            "speaker": "Captain Edward Mercer",
+            "portrait": "Mercer",
+            "text": "Then tomorrow we fly over that road before the lorries move. For now, get something warm and write your report."
+          }
+        ]
+      }
+    }
+  ]
+}

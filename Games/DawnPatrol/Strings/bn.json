@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "সকালের টহল",
+    "mission.patrol.route": "টহলের তিনটি স্থান ক্রমানুসারে অতিক্রম করুন",
+    "mission.patrol.intercept": "দুটি জার্মান যুদ্ধবিমান ধ্বংস করুন",
+    "mission.patrol.return": "বার্তাঁকুরে ফিরুন",
+    "mission.patrol.wingman": "বেনেটকে নিরাপদে ফিরিয়ে আনুন",
+    "radio.patrol.start": "চিহ্ন ধরে এগোন। উড়ানের গতি রাখুন এবং উচ্চতা দেখুন।",
+    "radio.patrol.contact": "নদীর ওপর দুটি জার্মান যুদ্ধবিমান। একসঙ্গে আক্রমণ করি!",
+    "radio.patrol.clear": "আকাশ পরিষ্কার। টহল শেষ করে বার্তাঁকুরে ফিরুন।",
+    "game.aircraft.raf": "RAF যুদ্ধবিমান",
+    "game.aircraft.german": "জার্মান যুদ্ধবিমান",
+    "game.aircraft.neutral": "যুদ্ধবিমান",
+    "hud.laser": "মেশিনগান",
+    "combat.no_secondary": "কোনো সহায়ক অস্ত্র নেই",
+    "game.weapon.none": "নেই",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "চিহ্ন ধরে এগোন। উড়ানের গতি রাখুন এবং উচ্চতা দেখুন।",
+      "নদীর ওপর দুটি জার্মান যুদ্ধবিমান। একসঙ্গে আক্রমণ করি!",
+      "আকাশ পরিষ্কার। টহল শেষ করে বার্তাঁকুরে ফিরুন।"
+    ],
+    "hud.help": [
+      "LMB / SPACE → মেশিনগান",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

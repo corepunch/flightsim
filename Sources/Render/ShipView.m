@@ -38,6 +38,7 @@ void ApplyHullRolloff(SCNMaterial *m) {
     float _hull;
     float _sinceHit;    // seconds since the hull last dropped; drives the burn-out
     BOOL _alive;
+    SCNNode *_propeller;
     SCNParticleSystem *_damageFire, *_damageCore, *_damageSmoke;
 }
 
@@ -61,6 +62,20 @@ void ApplyHullRolloff(SCNMaterial *m) {
         }];
         g = [found copy] ?: [SCNBox boxWithWidth:4 height:1 length:6 chamferRadius:0];
 
+        if (!def->texture[0]) {
+            NSMutableArray *materials = [NSMutableArray array];
+            for (SCNMaterial *source in g.materials) {
+                SCNMaterial *material = [source copy];
+                material.lightingModelName = SCNLightingModelPhysicallyBased;
+                material.metalness.contents = @0;
+                material.roughness.contents = @0.85;
+                material.doubleSided = YES;
+                [materials addObject:material];
+            }
+            g.materials = materials;
+            cache[key] = g;
+            return g;
+        }
         SCNMaterial *m = [SCNMaterial material];
         m.lightingModelName = SCNLightingModelPhysicallyBased;
         m.diffuse.contents = FSURL(@"Models", @(def->texture), @"png");
@@ -92,6 +107,14 @@ void ApplyHullRolloff(SCNMaterial *m) {
         _model.eulerAngles = SCNVector3Make(0, M_PI, 0);   // OBJ +Z nose -> ship -Z nose
         _model.castsShadow = YES;
         [_node addChildNode:_model];
+        if (def->propeller.w > 0) {
+            _propeller = [SCNNode node];
+            _propeller.simdPosition = simd_make_float3(def->propeller);
+            SCNBox *blade = [SCNBox boxWithWidth:0.13 height:def->propeller.w * 2 length:0.06 chamferRadius:0.03];
+            blade.firstMaterial.diffuse.contents = [SKColor colorWithRed:0.27 green:0.13 blue:0.05 alpha:1];
+            [_propeller addChildNode:[SCNNode nodeWithGeometry:blade]];
+            [_node addChildNode:_propeller];
+        }
 
         _exhaust = [[Exhaust alloc] initWithNozzles:def->nozzles count:(NSUInteger)def->nozzleCount
                                               color:def->exhaustColor parent:_node smoke:smoke];
@@ -263,6 +286,7 @@ static void BurnLevels(float sinceHit, float *fire, float *smoke) {
     _alive = alive;
     [self updateFx:dt];
     [_exhaust updateThrottle:throttle boost:boost dt:dt];
+    if (alive && _propeller) _propeller.eulerAngles = SCNVector3Make(0, 0, _propeller.eulerAngles.z + dt * (45 + throttle * 130));
 }
 
 - (void)setAlive:(BOOL)alive {

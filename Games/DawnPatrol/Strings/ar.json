@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "دورية الصباح",
+    "mission.patrol.route": "حلّق فوق معالم الدورية الثلاثة بالترتيب",
+    "mission.patrol.intercept": "أسقط طائرتي الاستطلاع الألمانيتين",
+    "mission.patrol.return": "عد إلى بيرتانكور",
+    "mission.patrol.wingman": "أعد بينيت سالمًا",
+    "radio.patrol.start": "اتبع المعالم. حافظ على سرعة الطيران وراقب الارتفاع.",
+    "radio.patrol.contact": "طائرتان ألمانيتان فوق النهر. لنهجم معًا!",
+    "radio.patrol.clear": "السماء صافية. أكمل الدورية وعد إلى بيرتانكور.",
+    "game.aircraft.raf": "مقاتلة سلاح الجو الملكي",
+    "game.aircraft.german": "مقاتلة ألمانية",
+    "game.aircraft.neutral": "مقاتلة",
+    "hud.laser": "رشاشات",
+    "combat.no_secondary": "لا يوجد سلاح ثانوي",
+    "game.weapon.none": "لا شيء",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "اتبع المعالم. حافظ على سرعة الطيران وراقب الارتفاع.",
+      "طائرتان ألمانيتان فوق النهر. لنهجم معًا!",
+      "السماء صافية. أكمل الدورية وعد إلى بيرتانكور."
+    ],
+    "hud.help": [
+      "LMB / SPACE → رشاشات",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

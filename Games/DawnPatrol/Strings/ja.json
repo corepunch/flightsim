@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "早朝哨戒",
+    "mission.patrol.route": "3つの哨戒地点を順番に通過する",
+    "mission.patrol.intercept": "ドイツ軍偵察戦闘機2機を撃墜する",
+    "mission.patrol.return": "ベルタンクールへ帰還する",
+    "mission.patrol.wingman": "ベネットを無事に帰還させる",
+    "radio.patrol.start": "目印に沿って飛ぼう。速度と高度に気をつけて。",
+    "radio.patrol.contact": "川の上にドイツ軍機2機。一緒に攻撃するぞ！",
+    "radio.patrol.clear": "敵影なし。哨戒を終えてベルタンクールへ帰還しよう。",
+    "game.aircraft.raf": "RAF戦闘機",
+    "game.aircraft.german": "ドイツ軍戦闘機",
+    "game.aircraft.neutral": "戦闘機",
+    "hud.laser": "機銃",
+    "combat.no_secondary": "副武装なし",
+    "game.weapon.none": "なし",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "目印に沿って飛ぼう。速度と高度に気をつけて。",
+      "川の上にドイツ軍機2機。一緒に攻撃するぞ！",
+      "敵影なし。哨戒を終えてベルタンクールへ帰還しよう。"
+    ],
+    "hud.help": [
+      "LMB / SPACE → 機銃",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

@@ -37,7 +37,6 @@ static NSString *const PortraitDeparture = @"portraitDeparture";
 // Reserve room for the widest portrait canvas at the shared height.
 static const CGFloat MaxPortraitAspect = 1.04;
 static const CGFloat PortraitFaceBand = 0.30, CaptionFaceGap = 8;
-static const CGFloat CaptionDrop = 42;
 static const CGFloat PortraitDepth = 1, CaptionDepth = 2, NavigationDepth = 3;
 static const CGFloat MonitorInset = 6;
 
@@ -283,7 +282,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
 // The mission seen from above: contacts on the x/z plane, a dashed route and
 // a lock on the focus. Each briefing step lights some of it.
 @interface TacticalMap : SKCropNode
-- (instancetype)initWithLevel:(const LevelDef *)level rect:(CGRect)rect;
+- (instancetype)initWithLevel:(const LevelDef *)level rect:(CGRect)rect boardStyle:(StoryBoardStyle)boardStyle;
 // Applies a step's show/focus/route, animated from what was shown before;
 // returns what this cue shows. A nil step dims nothing in particular.
 - (MapEmphasis)applyCue:(BriefingStep *)step style:(CueStyle)style after:(MapEmphasis)shown;
@@ -291,6 +290,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
 @end
 
 @implementation TacticalMap {
+    StoryBoardStyle _boardStyle;
     CGRect _rect;
     CGFloat _fitScale;              // map points per metre when everything fits
     CGFloat _scale;                 // map points per metre under the current camera
@@ -307,8 +307,9 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
     MapItem *_focusItem;
 }
 
-- (instancetype)initWithLevel:(const LevelDef *)level rect:(CGRect)rect {
+- (instancetype)initWithLevel:(const LevelDef *)level rect:(CGRect)rect boardStyle:(StoryBoardStyle)boardStyle {
     if (!(self = [super init])) return nil;
+    _boardStyle = boardStyle;
     _rect = rect;
     _items = [NSMutableDictionary dictionary];
     _scenery = [NSMutableArray array];
@@ -383,7 +384,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
 - (void)addGrid {
     CGRect rect = _rect;
     CGPoint mid = RectCenter(rect);
-    for (int i = 1; i < 8; i++) {
+    for (int i = 1; _boardStyle == StoryBoardStyleHolographic && i < 8; i++) {
         CGPoint grid = PointAdd(rect.origin, PointMultiply(CGPointMake(i / 8.0, i / 8.0), rect.size));
         SKSpriteNode *v = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.07) size:CGSizeMake(1, rect.size.height)];
         v.position = CGPointMake(grid.x, mid.y);
@@ -531,6 +532,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
     _focusRing.strokeColor = UIColorWithOpacity(UIAmber, 1);
     _focusRing.lineWidth = 2;
     [_focusLock addChild:_focusRing];
+    if (_boardStyle == StoryBoardStyleBlackboard) return;
     CGMutablePathRef corners = CGPathCreateMutable();
     const CGFloat r = 27, arm = 7;
     for (int i = 0; i < 4; i++) {
@@ -548,6 +550,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
 }
 
 - (MapEmphasis)applyCue:(BriefingStep *)st style:(CueStyle)style after:(MapEmphasis)shown {
+    if (_boardStyle == StoryBoardStyleBlackboard) style = CueStyleStill;
     NSSet *show = [NSSet setWithArray:st.show ?: @[]];
     // Lit: named in the step, or a member of a group named in the step.
     for (MapItem *it in _items.allValues) {
@@ -701,6 +704,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
 }
 
 - (void)pulse:(double)time {
+    if (_boardStyle == StoryBoardStyleBlackboard) return;
     CGFloat wave = sin(time * 5.0);
     [_focusRing setScale:1.0 + 0.25 * wave];
     _focusRing.alpha = 0.6 + 0.4 * wave;
@@ -875,7 +879,6 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 // Phone-sized story screens are seen from farther away relative to their size:
 // larger portraits, captions and controls.
 static const CGFloat PhoneSpeakerFont = 16;
-static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
 - (UIBarAction *)barAction:(NSString *)title icon:(UICommandIcon)icon input:(InputAction)input {
     __weak Briefing *owner = self;
@@ -1228,11 +1231,21 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     CGSize size = self.size;
     CGSize source = room.size.x > 0 ? CGSizeMake(room.size.x, room.size.y) : [self artTextureNamed:room.image].size;
     if (source.width <= 0 || source.height <= 0) return CGRectZero;
+    BOOL blackboard = room.boardStyle == StoryBoardStyleBlackboard;
+    CGRect sourceBoard = CGRectNull;
+    for (NSUInteger i = 0; i < room.bezelCount; i++) {
+        simd_float2 bezel = [room bezelPoint:i];
+        sourceBoard = CGRectUnion(sourceBoard, (CGRect){ CGPointMake(bezel.x, source.height - bezel.y), CGSizeZero });
+    }
     const CGFloat boardBottom = room.boardBottom / source.height, boardHeight = room.boardHeight / source.height;
     CGFloat scale = MAX(size.width / source.width, size.height / source.height * (raiseBoard ? 1.15 : 1));
+    if (blackboard && !CGRectIsNull(sourceBoard)) {
+        CGFloat width = MAX(1, size.width - self.contentInsets.left - self.contentInsets.right - 24);
+        scale = MIN(scale, MIN(width / CGRectGetWidth(sourceBoard), size.height * 0.48 / CGRectGetHeight(sourceBoard)));
+    }
     CGSize artSize = CGSizeMake(source.width * scale, source.height * scale);
     CGFloat centerY = size.height / 2;
-    if (raiseBoard && room.hasBoard) {
+    if (raiseBoard && room.hasBoard && !blackboard) {
         // Give the caption more room while keeping the top of the monitor visible.
         CGFloat boardTop = artSize.height * (boardBottom + boardHeight);
         CGFloat originY = MIN(0, size.height * 0.96 - boardTop);
@@ -1246,15 +1259,21 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         board = CGRectUnion(board, (CGRect){ PointMultiply(fraction, artSize), CGSizeZero });
     }
     CGPoint origin = CGPointMake(size.width / 2 - artSize.width / 2, centerY - artSize.height / 2);
+    if (blackboard && !CGRectIsNull(board)) {
+        CGFloat left = self.contentInsets.left + 12 - CGRectGetMinX(board);
+        CGFloat right = size.width - self.contentInsets.right - 12 - CGRectGetMaxX(board);
+        origin = CGPointMake(MIN(right, MAX(left, origin.x)), origin.y);
+    }
     CGFloat drop = 0;
     for (NSValue *value in clear) {
         CGRect rect = UnboxRect(value), placed = CGRectOffset(board, origin.x, origin.y);
         if (CGRectGetMaxX(rect) > CGRectGetMinX(placed) && CGRectGetMinX(rect) < CGRectGetMaxX(placed))
             drop = MAX(drop, CGRectGetMaxY(placed) - CGRectGetMinY(rect) + 4);
     }
-    // Never so far that the art's top edge comes into view.
-    centerY -= MIN(drop, MAX(0, origin.y + artSize.height - size.height));
-    return (CGRect){ CGPointMake(size.width / 2 - artSize.width / 2, centerY - artSize.height / 2), artSize };
+    // A blackboard must remain inside the safe body, even when the room needs
+    // letterboxing on a portrait display. Other rooms keep their full bleed.
+    centerY -= blackboard ? drop : MIN(drop, MAX(0, origin.y + artSize.height - size.height));
+    return (CGRect){ CGPointMake(origin.x, centerY - artSize.height / 2), artSize };
 }
 
 - (SKShapeNode *)monitorForRoom:(StoryRoom *)room frame:(CGRect)frame {
@@ -1277,11 +1296,16 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     if (!art) return CGRectZero;
     _backdropRoom = roomName;
     CGRect frame = [self backdropFrameForRoom:room raiseBoard:raiseBoard clear:clear];
+    if (room.boardStyle == StoryBoardStyleBlackboard) {
+        SKSpriteNode *backing = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBlack, 1) size:self.size];
+        backing.position = RectCenter((CGRect){ CGPointZero, self.size });
+        [_root addChild:backing];
+    }
     CGFloat scale = CGRectGetWidth(frame) / art.size.width;
     [art setScale:scale];
     art.position = RectCenter(frame);
     [_root addChild:art];
-    if ([self intro] && !UIMotionReduced()) {
+    if ([self intro] && !UIMotionReduced() && room.boardStyle != StoryBoardStyleBlackboard) {
         art.alpha = 0;
         [art setScale:scale * 1.04];
         [art runAction:[SKAction group:@[
@@ -1298,15 +1322,11 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 }
 
 - (CGRect)portraitArea:(CGRect)area {
-    // Keep faces inside the usable landscape width, while the illustration
-    // can still extend behind the bottom caption.
-    BriefingInsets safe = self.contentInsets;
-    // On a phone the outer shoulder may pass under the notch so the figure can
-    // grow without its face crowding the monitor.
-    CGFloat side = MAX(safe.left, safe.right) * ([self compactStoryLayout] ? PhonePortraitInset : 1);
-    CGRect portraitBounds = CGRectMake(side, 0, MAX(1, self.size.width - 2 * side),
-                                       MAX(1, self.size.height - safe.top));
-    return CGRectIntersection(area, portraitBounds);
+    // Outer shoulders may bleed off-screen; clipping their layout rectangle
+    // would also shrink the face and make portrait size depend on room art.
+    CGRect verticalBounds = CGRectMake(CGRectGetMinX(area), 0, CGRectGetWidth(area),
+                                       MAX(1, self.size.height - self.contentInsets.top));
+    return CGRectIntersection(area, verticalBounds);
 }
 
 - (void)addPortrait:(NSString *)name expression:(NSString *)expression facingRight:(BOOL)facingRight
@@ -1319,9 +1339,17 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     if (!_portraitLayer.parent) [_root addChild:_portraitLayer];
     CGFloat dim = active ? 0 : 0.38;
     CGPoint home = CGPointMake(CGRectGetMidX(area), CGRectGetMinY(area));
+    CGFloat height = MIN(CGRectGetHeight(area), CGRectGetWidth(area) / MaxPortraitAspect);
+    CGFloat scale = height / texture.size.height;
+    CGFloat direction = StoryPortraitFacesRight(name) == facingRight ? 1 : -1;
+    CGSize portraitSize = CGSizeMake(texture.size.width * scale, height);
     SKSpriteNode *existing = (SKSpriteNode *)[_portraitLayer childNodeWithName:name];
     if (existing) {
         existing.texture = texture;
+        existing.xScale = direction;
+        existing.yScale = 1;
+        existing.size = portraitSize;
+        existing.position = home;
         [_portraitsToDismiss removeObject:existing];
         if ([existing actionForKey:PortraitDeparture]) {
             [existing removeActionForKey:PortraitDeparture];
@@ -1337,12 +1365,8 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 
     SKSpriteNode *portrait = [SKSpriteNode spriteNodeWithTexture:texture];
     portrait.name = name;
-    // Both sides use the same height budget, regardless of the current cast.
-    CGFloat height = MIN(area.size.height, area.size.width / MaxPortraitAspect);
-    CGFloat scale = height / portrait.size.height;
-    [portrait setScale:scale];
-    BOOL sourceFacesRight = StoryPortraitFacesRight(name);
-    if (sourceFacesRight != facingRight) portrait.xScale = -scale;
+    portrait.xScale = direction;
+    portrait.size = portraitSize;
     portrait.anchorPoint = CGPointMake(0.5, 0);
     portrait.position = home;
     portrait.color = UIColorWithOpacity(UIBackground, 1);
@@ -1390,6 +1414,22 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     SKNode *layer = [SKNode node];
     layer.zPosition = CaptionDepth;
     [_root addChild:layer];
+    CGFloat edge = speakerOnRight ? CGRectGetMaxX(rect) : CGRectGetMinX(rect);
+    CGFloat inward = speakerOnRight ? -1 : 1;
+    CGFloat topEdge = CGRectGetMaxY(rect);
+    const CGPoint pointer[] = {
+        {edge + inward * 12, topEdge - 16},
+        {edge - inward * 22, topEdge + 12},
+        {edge + inward * 38, topEdge - 2},
+    };
+    CGMutablePathRef pointerPath = CGPathCreateMutable();
+    CGPathAddLines(pointerPath, NULL, pointer, 3);
+    CGPathCloseSubpath(pointerPath);
+    SKShapeNode *tail = [SKShapeNode shapeNodeWithPath:pointerPath];
+    CGPathRelease(pointerPath);
+    tail.fillColor = UIColorWithOpacity(UIConsoleSteel, 0.95);
+    tail.strokeColor = UIColorWithOpacity(UIConsoleEdge, 0.95);
+    [layer addChild:tail];
     SKShapeNode *panel = UIReadoutPanel(rect, UIColorWithOpacity(UIConsoleEdge, 0.95),
                                         UIColorWithOpacity(UIConsoleSteel, 0.95));
     [layer addChild:panel];
@@ -1480,7 +1520,8 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         SKShapeNode *monitor = [self monitorForRoom:briefingRoom frame:frame];
         screen = monitor ? CGPathGetBoundingBox(monitor.path) : CGRectZero;
     }
-    BOOL paintedBoard = !narrow && !CGRectIsEmpty(screen);
+    StoryBoardStyle boardStyle = StoryRoomNamed(mission.briefingRoom).boardStyle;
+    BOOL paintedBoard = !CGRectIsEmpty(screen) && (!narrow || boardStyle == StoryBoardStyleBlackboard);
     if (!paintedBoard) {
         CGFloat margin = size.width * 0.06, panelTop = size.height * 0.93;
         if (bar) panelTop = MIN(panelTop, CGRectGetMinY(bar.row) - 8);
@@ -1499,65 +1540,46 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         screen = CGPathGetBoundingBox(_monitorMask.path);
     }
 
-    CGFloat wing = CGRectGetMinX(screen);
-    CGRect speakerArea = CGRectZero, playerArea = CGRectZero;
-    if (phone) {
-        CGFloat side = MAX(self.contentInsets.left, self.contentInsets.right) * PhonePortraitInset;
-        CGFloat width = size.width * 0.36, height = MAX(1, CGRectGetMinY(bar.row) - 4);
-        speakerArea = CGRectMake(side, 0, width, height);
-        playerArea = CGRectMake(size.width - side - width, 0, width, height);
-    } else if (!narrow) {
-        CGFloat width = MIN(size.width * 0.31, wing * 1.45);
-        CGFloat bottom = compact ? 0 : floor - 10;
-        CGFloat height = MAX(1, size.height - bottom - 48);
-        CGFloat center = wing * 0.65;
-        speakerArea = CGRectMake(center - width / 2, bottom, width, height);
-        playerArea = CGRectMake(size.width - center - width / 2, bottom, width, height);
-    }
-    if (!narrow) {
-        speakerArea = [self portraitArea:speakerArea];
-        playerArea = [self portraitArea:playerArea];
-    }
+    // Portrait scale comes from the usable stage, never the margin beside a
+    // painted board. Both games and both speakers share this same framing.
+    CGFloat usableWidth = size.width - self.contentInsets.left - self.contentInsets.right;
+    CGFloat stageTop = bar ? CGRectGetMinY(bar.row) - 12 : size.height - self.contentInsets.top - 12;
+    CGFloat portraitHeight = MIN((stageTop - floor) * 0.68, usableWidth * 0.46 / MaxPortraitAspect);
+    CGFloat portraitWidth = portraitHeight * MaxPortraitAspect;
+    CGFloat leftCenter = self.contentInsets.left + usableWidth * 0.14;
+    CGFloat rightCenter = size.width - self.contentInsets.right - usableWidth * 0.14;
+    CGRect speakerArea = CGRectMake(leftCenter - portraitWidth / 2, floor - 10, portraitWidth, portraitHeight);
+    CGRect playerArea = CGRectMake(rightCenter - portraitWidth / 2, floor - 10, portraitWidth, portraitHeight);
 
-    // The portrait height budget determines the caption ceiling on every
-    // landscape stage, independently of the speaking character or room art.
-    CGFloat captionWidth = screen.size.width * (phone ? 0.9 : 0.70);
-    CGFloat laneLeft = CGRectGetMinX(screen), laneRight = CGRectGetMaxX(screen);
-    const CGFloat captionPadding = [self captionHeader] + (phone ? 8 : 12);
+    CGFloat captionWidth = usableWidth * (narrow ? 0.94 : 0.50);
+    const CGFloat captionPadding = [self captionHeader] + 12;
     CGFloat tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
-    // Leave a gap below the monitor while keeping the caption inside the safe area.
-    CGFloat captionTop = CGRectGetMinY(screen) + (paintedBoard ? 0 : 3) - CaptionDrop;
-    if (!narrow) {
-        CGFloat portraitHeight = MIN(CGRectGetHeight(speakerArea), CGRectGetWidth(speakerArea) / MaxPortraitAspect);
-        CGFloat faceCeiling = CGRectGetMinY(speakerArea) + portraitHeight * (1 - PortraitFaceBand) - CaptionFaceGap;
-        captionTop = MIN(MAX(captionTop, floor + tallestCaption), faceCeiling);
-    }
+    CGFloat faceCeiling = CGRectGetMinY(speakerArea) + portraitHeight * (1 - PortraitFaceBand) - CaptionFaceGap;
+    CGFloat captionTop = MIN(faceCeiling, CGRectGetMinY(screen) - 16);
     while (tallestCaption > captionTop - floor && textSize > minTextSize) {
         textSize = MAX(minTextSize, textSize - 1);
         tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
     }
-    CGFloat maxCaptionWidth = size.width - self.contentInsets.left - self.contentInsets.right - 24;
-    while (phone && tallestCaption > captionTop - floor && captionWidth < maxCaptionWidth) {
-        captionWidth = MIN(maxCaptionWidth, captionWidth + 24);
-        tallestCaption = [self captionTextHeightForLines:lines width:captionWidth fontSize:textSize] + captionPadding;
-    }
-    // Short screens can exhaust the font budget. Anchor every bubble to the
-    // same raised top instead of moving just the longer lines upward.
     captionTop = MAX(captionTop, floor + tallestCaption);
     CGFloat captionHeight = [self captionTextHeightForLines:@[line] width:captionWidth fontSize:textSize] + captionPadding;
-    CGFloat captionBottom = MAX(floor, captionTop - captionHeight);
-
+    CGFloat captionBottom = captionTop - captionHeight;
+    if (narrow) {
+        // A portrait display stacks the conversation below the map: the text
+        // sits below the figures instead of covering their faces.
+        captionBottom = floor;
+        captionTop = floor + tallestCaption;
+        CGFloat base = captionTop + CaptionFaceGap;
+        CGFloat height = MIN(MAX(1, CGRectGetMinY(screen) - base - 8), usableWidth * 0.64);
+        CGFloat width = height * MaxPortraitAspect;
+        speakerArea = CGRectMake(leftCenter - width / 2, base, width, height);
+        playerArea = CGRectMake(rightCenter - width / 2, base, width, height);
+    }
     if (_mode == ModeBriefing) [self buildMonitor:screen mission:mission page:_pages[_page] titled:!bar];
 
-    if (narrow) {
-        CGFloat height = MAX(1, MAX(floor, captionTop - tallestCaption) - CaptionFaceGap);
-        speakerArea = CGRectMake(0, 0, size.width / 2, height);
-        playerArea = CGRectOffset(speakerArea, size.width / 2, 0);
-    }
     BOOL playerSpeaking = [self addPortraitsForLine:line speakerArea:speakerArea playerArea:playerArea];
 
-    CGFloat captionLeft = playerSpeaking ? laneRight - captionWidth : laneLeft;
-    if (phone) captionLeft = (size.width - captionWidth) / 2;
+    CGFloat captionLeft = self.contentInsets.left + (usableWidth - captionWidth) / 2;
+    if (!narrow) captionLeft += (playerSpeaking ? 1 : -1) * usableWidth * 0.015;
     [self addCaption:line inRect:CGRectMake(captionLeft, captionBottom, captionWidth, captionHeight)
              fontSize:textSize speakerOnRight:playerSpeaking];
     [self navigationAction:action];
@@ -1566,6 +1588,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
 // titled: the monitor heads its readouts with the mission's name; screens with
 // a title bar carry the name there instead.
 - (void)buildMonitor:(CGRect)screen mission:(CampaignMission *)mission page:(BriefingPage *)page titled:(BOOL)titled {
+    BOOL holographic = StoryRoomNamed(mission.briefingRoom).boardStyle == StoryBoardStyleHolographic;
     SKNode *display = _root;
     if (!CGRectIsEmpty(screen)) {
         CGPoint center = RectCenter(screen);
@@ -1574,7 +1597,7 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
         [_root addChild:crop];
 
         display = crop;
-        if (!UIMotionReduced()) {
+        if (holographic && !UIMotionReduced()) {
             SKEffectNode *effect = [SKEffectNode node];
             effect.name = @"monitor.signal";
             effect.shader = UIMonitorSignalShader(NO);
@@ -1584,30 +1607,32 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
             [crop addChild:effect];
             display = effect;
         }
-        // A stable screen-sized buffer, with the honeycomb behind all readouts.
-        SKSpriteNode *glass = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIConsoleGlass, 0.01)
-                                                          size:screen.size];
-        glass.position = center;
-        [display addChild:glass];
-        CGFloat radius = MAX(10, MIN(18, screen.size.height / 17));
-        CGFloat dy = sqrt(3) * radius;
-        CGMutablePathRef honeycomb = CGPathCreateMutable();
-        NSInteger column = 0;
-        for (CGFloat x = CGRectGetMinX(screen); x < CGRectGetMaxX(screen) + radius; x += radius * 1.5, column++) {
-            for (CGFloat y = CGRectGetMinY(screen) + (column % 2) * dy / 2; y < CGRectGetMaxY(screen) + dy; y += dy) {
-                // Three shared edges per cell; adjacent cells supply the others.
-                CGPathMoveToPoint(honeycomb, NULL, x - radius / 2, y - dy / 2);
-                CGPathAddLineToPoint(honeycomb, NULL, x + radius / 2, y - dy / 2);
-                CGPathAddLineToPoint(honeycomb, NULL, x + radius, y);
-                CGPathAddLineToPoint(honeycomb, NULL, x + radius / 2, y + dy / 2);
+        if (holographic) {
+            // A stable screen-sized buffer, with the honeycomb behind all readouts.
+            SKSpriteNode *glass = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIConsoleGlass, 0.01)
+                                                              size:screen.size];
+            glass.position = center;
+            [display addChild:glass];
+            CGFloat radius = MAX(10, MIN(18, screen.size.height / 17));
+            CGFloat dy = sqrt(3) * radius;
+            CGMutablePathRef honeycomb = CGPathCreateMutable();
+            NSInteger column = 0;
+            for (CGFloat x = CGRectGetMinX(screen); x < CGRectGetMaxX(screen) + radius; x += radius * 1.5, column++) {
+                for (CGFloat y = CGRectGetMinY(screen) + (column % 2) * dy / 2; y < CGRectGetMaxY(screen) + dy; y += dy) {
+                    // Three shared edges per cell; adjacent cells supply the others.
+                    CGPathMoveToPoint(honeycomb, NULL, x - radius / 2, y - dy / 2);
+                    CGPathAddLineToPoint(honeycomb, NULL, x + radius / 2, y - dy / 2);
+                    CGPathAddLineToPoint(honeycomb, NULL, x + radius, y);
+                    CGPathAddLineToPoint(honeycomb, NULL, x + radius / 2, y + dy / 2);
+                }
             }
+            SKShapeNode *hex = [SKShapeNode shapeNodeWithPath:honeycomb];
+            CGPathRelease(honeycomb);
+            hex.name = @"monitor.honeycomb";
+            hex.strokeColor = UIColorWithOpacity(UIInk, 0.085);
+            hex.lineWidth = 0.8;
+            [display addChild:hex];
         }
-        SKShapeNode *hex = [SKShapeNode shapeNodeWithPath:honeycomb];
-        CGPathRelease(honeycomb);
-        hex.name = @"monitor.honeycomb";
-        hex.strokeColor = UIColorWithOpacity(UIInk, 0.085);
-        hex.lineWidth = 0.8;
-        [display addChild:hex];
     }
 
     MissionBriefing *brief = mission.briefing;
@@ -1651,14 +1676,14 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     BOOL map = [kind hasPrefix:@"map"];
     BOOL fresh = ![kind isEqualToString:_shown.content];
 
-    if ([self intro]) {
+    if (holographic && [self intro]) {
         UIMotionSweep(_root, screen, UIColorWithOpacity(UIInk, 0.5), YES, 0.1, 0.6);
         if (title) UIMotionDecode(title, 0.25, 0.5);
         UIMotionDecode(location, 0.32, 0.45);
         UIMotionDecode(channel, 0.4, 0.35);
         UIMotionDecode(counter, 0.4, 0.35);
         if (!map && content) UIMotionWipe(content, contentRect, UIColorWithOpacity(UIInk, 0.7), 0.45, 0.45);
-    } else if ([self paging]) {
+    } else if (holographic && [self paging]) {
         if (![page.channel isEqual:_shown.channel]) UIMotionDecode(channel, 0, 0.3);
         UIMotionDecode(counter, 0, 0.2);
         if (fresh && content) UIMotionWipe(content, contentRect, UIColorWithOpacity(UIInk, 0.7), 0.04, 0.38);
@@ -1715,7 +1740,9 @@ static const CGFloat PhonePortraitInset = 0.3;   // of the side safe-area inset
     }
 
     *kind = [NSString stringWithFormat:@"map:%lu", (unsigned long)_index];
-    _map = [[TacticalMap alloc] initWithLevel:mission.level rect:RectFromEdges(left, bottom, right, MAX(bottom + 1, contentTop))];
+    _map = [[TacticalMap alloc] initWithLevel:mission.level
+                                      rect:RectFromEdges(left, bottom, right, MAX(bottom + 1, contentTop))
+                                boardStyle:StoryRoomNamed(mission.briefingRoom).boardStyle];
     return _map;
 }
 

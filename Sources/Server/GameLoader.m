@@ -17,6 +17,14 @@ NSString *GameLoaderSelectGame(void) {
         [Cvar setInitializing:NO];
     }
     FSSetGame(name);
+    NSURL *defaultsURL = FSURL(nil, @"default", @"cfg");
+    NSString *defaults = defaultsURL ? [NSString stringWithContentsOfURL:defaultsURL encoding:NSUTF8StringEncoding error:nil] : nil;
+    if (defaults.length) {
+        [Cvar setInitializing:YES];
+        [Cmd execute:defaults];
+        [Cvar setInitializing:NO];
+        [Cmd executeEarlyCommands];   // explicit launch arguments take precedence over game defaults
+    }
     return name;
 }
 

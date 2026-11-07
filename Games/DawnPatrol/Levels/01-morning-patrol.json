@@ -1,0 +1,195 @@
+{
+  "name": "01-morning-patrol",
+  "title": "{#mission.patrol.title}",
+  "seed": 1918,
+  "environment": {
+    "model": "PatrolLandscape",
+    "sky": "PatrolSky",
+    "fogColor": [
+      0.67,
+      0.76,
+      0.81
+    ],
+    "fogStart": 3500,
+    "fogEnd": 12000
+  },
+  "loadout": {
+    "torpedoes": 0
+  },
+  "player": {
+    "ship": "se5a",
+    "pos": [
+      0,
+      400,
+      600
+    ],
+    "facing": [
+      0,
+      0,
+      -1
+    ]
+  },
+  "entities": [],
+  "navs": [
+    {
+      "id": "tower",
+      "name": "Saint-Martin",
+      "pos": [
+        0,
+        400,
+        -250
+      ]
+    },
+    {
+      "id": "river",
+      "name": "Scarpe",
+      "pos": [
+        500,
+        420,
+        -1350
+      ]
+    },
+    {
+      "id": "mill",
+      "name": "Mercatel",
+      "pos": [
+        -600,
+        400,
+        -2100
+      ]
+    },
+    {
+      "id": "home",
+      "name": "Bertincourt",
+      "pos": [
+        0,
+        350,
+        650
+      ]
+    }
+  ],
+  "waves": [
+    {
+      "id": "wing",
+      "ship": "se5a",
+      "count": 1,
+      "team": "friend",
+      "pos": [
+        65,
+        410,
+        645
+      ],
+      "order": "attack-fighters",
+      "callsigns": [
+        "Bennett"
+      ],
+      "skill": "veteran"
+    },
+    {
+      "id": "patrol",
+      "ship": "fokker-d7",
+      "count": 2,
+      "team": "enemy",
+      "pos": [
+        720,
+        470,
+        -1720
+      ],
+      "spread": 100,
+      "order": "attack-fighters",
+      "callsigns": [
+        "Falke 1",
+        "Falke 2"
+      ],
+      "skill": "rookie",
+      "hold": true
+    }
+  ],
+  "objectives": [
+    {
+      "id": "route",
+      "type": "reach",
+      "navs": [
+        "tower",
+        "river",
+        "mill"
+      ],
+      "range": 250,
+      "text": "{#mission.patrol.route}"
+    },
+    {
+      "id": "intercept",
+      "type": "destroy",
+      "targets": [
+        "patrol"
+      ],
+      "text": "{#mission.patrol.intercept}"
+    },
+    {
+      "id": "return",
+      "type": "reach",
+      "navs": [
+        "home"
+      ],
+      "range": 350,
+      "after": [
+        "route",
+        "intercept"
+      ],
+      "text": "{#mission.patrol.return}"
+    },
+    {
+      "id": "wingman",
+      "type": "protect",
+      "targets": [
+        "wing"
+      ],
+      "optional": true,
+      "text": "{#mission.patrol.wingman}"
+    }
+  ],
+  "events": [
+    {
+      "when": {
+        "time": 3
+      },
+      "do": [
+        {
+          "radio": {
+            "from": "Bennett",
+            "text": "{#radio.patrol.start}"
+          }
+        }
+      ]
+    },
+    {
+      "when": {
+        "nav": "river"
+      },
+      "do": [
+        {
+          "spawn": "patrol"
+        },
+        {
+          "radio": {
+            "from": "Bennett",
+            "text": "{#radio.patrol.contact}"
+          }
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "intercept"
+      },
+      "do": [
+        {
+          "radio": {
+            "from": "Reed",
+            "text": "{#radio.patrol.clear}"
+          }
+        }
+      ]
+    }
+  ]
+}

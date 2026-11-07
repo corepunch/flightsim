@@ -1,0 +1,55 @@
+newmtl red
+Kd 1.000000 0.000000 0.000000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl blue
+Kd 0.000000 0.000000 1.000000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl wood
+Kd 0.123710 0.059116 0.015172
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl black
+Kd 0.010022 0.010022 0.010022
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl drk_gray
+Kd 0.057803 0.057803 0.057803
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl tan
+Kd 0.685958 0.424956 0.215920
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl brass
+Kd 0.800000 0.507971 0.018567
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2
+
+newmtl white
+Kd 1.000000 1.000000 1.000000
+Ks 0.02 0.02 0.02
+Ns 8
+d 1
+illum 2

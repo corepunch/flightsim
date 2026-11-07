@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "Morning Patrol",
+    "mission.patrol.route": "Fly the three patrol landmarks in order",
+    "mission.patrol.intercept": "Destroy the two German scouts",
+    "mission.patrol.return": "Return to Bertincourt",
+    "mission.patrol.wingman": "Bring Bennett home",
+    "radio.patrol.start": "Follow the landmarks. Keep flying speed and watch your height.",
+    "radio.patrol.contact": "Two German scouts over the river. Engage together!",
+    "radio.patrol.clear": "Sky clear. Finish the patrol and return to Bertincourt.",
+    "game.aircraft.raf": "RAF scout",
+    "game.aircraft.german": "German scout",
+    "game.aircraft.neutral": "Scout",
+    "hud.laser": "GUNS",
+    "combat.no_secondary": "No secondary weapon fitted",
+    "game.weapon.none": "None",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "Follow the landmarks. Keep flying speed and watch your height.",
+      "Two German scouts over the river. Engage together!",
+      "Sky clear. Finish the patrol and return to Bertincourt."
+    ],
+    "hud.help": [
+      "LMB / SPACE → GUNS",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

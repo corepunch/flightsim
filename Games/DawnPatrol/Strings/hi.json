@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "सुबह की गश्त",
+    "mission.patrol.route": "गश्त के तीन स्थलों से क्रम में उड़ें",
+    "mission.patrol.intercept": "दो जर्मन लड़ाकू विमानों को गिराएँ",
+    "mission.patrol.return": "बर्टिनकूर लौटें",
+    "mission.patrol.wingman": "बेनेट को सुरक्षित वापस लाएँ",
+    "radio.patrol.start": "चिह्नों का अनुसरण करें। उड़ान की गति रखें और ऊँचाई पर नज़र रखें।",
+    "radio.patrol.contact": "नदी के ऊपर दो जर्मन लड़ाकू विमान। साथ में हमला करें!",
+    "radio.patrol.clear": "आसमान साफ़ है। गश्त पूरी करके बर्टिनकूर लौटें।",
+    "game.aircraft.raf": "RAF लड़ाकू विमान",
+    "game.aircraft.german": "जर्मन लड़ाकू विमान",
+    "game.aircraft.neutral": "लड़ाकू विमान",
+    "hud.laser": "मशीनगन",
+    "combat.no_secondary": "कोई सहायक हथियार नहीं लगा है",
+    "game.weapon.none": "कोई नहीं",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "चिह्नों का अनुसरण करें। उड़ान की गति रखें और ऊँचाई पर नज़र रखें।",
+      "नदी के ऊपर दो जर्मन लड़ाकू विमान। साथ में हमला करें!",
+      "आसमान साफ़ है। गश्त पूरी करके बर्टिनकूर लौटें।"
+    ],
+    "hud.help": [
+      "LMB / SPACE → मशीनगन",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

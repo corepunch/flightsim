@@ -189,6 +189,7 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
 @end
 
 @implementation CampaignMission
+- (NSString *)title { return L10nExpand(_level->title); }
 + (instancetype)missionWithJSON:(NSDictionary *)json index:(NSUInteger)index defaults:(StoryDefaults *)defaults {
     NSString *levelName = JSONString(json, @"level");
     const LevelDef *level = LevelNamed(levelName);
@@ -200,7 +201,6 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
     mission->_index = index;
     mission->_levelName = levelName;
     mission->_level = level;
-    mission->_title = level->title;
     mission->_briefing = [MissionBriefing briefingWithJSON:JSONObject(json, @"briefing")];
     mission->_debrief = [MissionDebrief debriefWithJSON:JSONObject(json, @"debrief")];
     mission->_briefingRoom = mission->_briefing.dialogue.room ?: defaults.room;
@@ -275,6 +275,8 @@ NSUInteger CampaignIndexOfLevel(NSString *level) {
     room->_size = size.count == 2 ? simd_make_float2([size[0] floatValue], [size[1] floatValue]) : 0;
     NSDictionary *board = JSONObject(json, @"board");
     room->_hasBoard = board != nil;
+    room->_boardStyle = [JSONString(board, @"style") isEqualToString:@"blackboard"]
+        ? StoryBoardStyleBlackboard : StoryBoardStyleHolographic;
     room->_boardBottom = JSONFloat(board, @"bottom", 0);
     room->_boardHeight = JSONFloat(board, @"height", 0);
     NSMutableData *bezel = [NSMutableData data];

@@ -67,6 +67,10 @@ static simd_quatf BankedOrientation(const ShipMoveState *m) {
     return simd_normalize(simd_mul(m->orientation, simd_quaternion(BankAngle(m), simd_make_float3(0, 0, 1))));
 }
 
+static simd_quatf ViewOrientation(const PlayerState *ps) {
+    return ps->params.gravity > 0 ? ps->move.orientation : BankedOrientation(&ps->move);
+}
+
 // A rotation from a rotation vector (axis times angle).
 static simd_quatf QuatFromRotation(simd_float3 v) {
     float a = simd_length(v);
@@ -168,6 +172,8 @@ static float Ease(float value, float target, float rate, float dt) {
     memset(_refModels, 0, sizeof _refModels);
     uint32_t seed = (uint32_t)[self cs:CS_SKY].longLongValue;
     [_refresh beginRegistration:seed];
+    const LevelDef *level = LevelNamed([self cs:CS_LEVEL]);
+    if (level) [_refresh registerEnvironment:level->environment];
     if (progress) progress(0.5f);
     // Every model the mission can show, so ships that jump in later are
     // already on the GPU.
@@ -436,7 +442,7 @@ static float Ease(float value, float target, float rate, float dt) {
     _cues = cues;
     RefEntity me = {
         .key = ps->entity, .kind = EntityFighter, .model = [self refModel:ps->model],
-        .origin = ps->move.origin, .orientation = BankedOrientation(&ps->move), .scale = 1,
+        .origin = ps->move.origin, .orientation = ViewOrientation(ps), .scale = 1,
         .throttle = ps->move.throttle, .hull = ps->hull, .boost = ps->move.boosting,
     };
     [_refresh setPlayer:&me alive:alive interior:_cockpit];
@@ -495,7 +501,7 @@ static float Ease(float value, float target, float rate, float dt) {
                                simd_quaternion(chase.roll, simd_make_float3(0, 0, 1)));
     // The cockpit eye leans with the ship; the chase view only partly, so the
     // rest of the lean shows on the hull.
-    simd_quatf q = simd_mul(_cockpit ? BankedOrientation(&ps->move) : view, look);
+    simd_quatf q = simd_mul(_cockpit ? ViewOrientation(ps) : view, look);
 
     float speed = simd_length(ps->move.velocity);
     // Ease boost effects in and out so toggling boost never pops the camera.
@@ -508,12 +514,13 @@ static float Ease(float value, float target, float rate, float dt) {
     // Dynamic: low and close behind the ship, which sits in the lower part of
     // the frame with the reticle and whatever it is chasing above it. Fixed:
     // farther back, looking along the ship's nose.
-    simd_float3 offset = _cockpit ? RefCockpitEye
+    simd_float3 eye = _playerDef ? _playerDef->cockpitEye : RefCockpitEye;
+    simd_float3 offset = _cockpit ? eye
                        : dynamic ? simd_make_float3(0, 3.2f, 14.0f + speed * 0.008f + boostFx * 3.0f)
                                  : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
     offset += deathPull;
     simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : chase.orientation, simd_act(look, offset));
-    if (_cockpit) pos = ps->move.origin + simd_act(BankedOrientation(&ps->move), offset);
+    if (_cockpit) pos = ps->move.origin + simd_act(ViewOrientation(ps), offset);
     // Aim down the line of fire at the farthest reticle ring, which puts it
     // at the centre of the screen and the ship below it.
     if (dynamic) q = simd_mul(q, simd_quaternion(-atan2f(offset.y, offset.z + ReticleDistances[HUD_RETICLE_RINGS - 1]),
@@ -602,7 +609,7 @@ static float Ease(float value, float target, float rate, float dt) {
     // The chase reticle is a row of rings ahead of the ship on its line of
     // fire, leaning with the hull, so its perspective shows where the guns point.
     if (!_cockpit) {
-        simd_quatf banked = BankedOrientation(&ps->move);
+        simd_quatf banked = ViewOrientation(ps);
         simd_float3 right = simd_act(banked, simd_make_float3(1, 0, 0)), up = simd_act(banked, simd_make_float3(0, 1, 0));
         for (int i = 0; i < HUD_RETICLE_RINGS; i++) {
             simd_float3 centre = me + fwd * ReticleDistances[i];
@@ -831,7 +838,7 @@ static float Ease(float value, float target, float rate, float dt) {
         contacts[n++] = k;
     }
     if (_cockpit) [_refresh updateCockpit:f contacts:contacts count:n];
-    [_hud updateInstruments:f contacts:contacts count:n cockpit:_cockpit];
+    [_hud updateInstruments:f contacts:contacts count:n cockpit:(_cockpit && ps->params.gravity <= 0)];
 }
 
 @end

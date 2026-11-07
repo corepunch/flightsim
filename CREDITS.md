@@ -114,3 +114,28 @@ They build on these published techniques:
 - License: SIL Open Font License 1.1, included in `Resources/Fonts/OFL.txt`
 - Unmodified Regular, Medium and Bold TTFs are bundled for front-end text,
   briefing/debriefing dialogue, readouts, and loading screens.
+
+## Dawn Patrol
+
+**WW1 aircraft #1** by **Captain_Ahab_62**
+- Source: https://opengameart.org/content/ww1-aircraft-1
+- License: CC0 1.0, as declared on the source page
+- Used: the S.E.5a and Fokker D.VII meshes and their assigned material colors.
+  `Games/DawnPatrol/Art/Sources/` preserves the source archive and provenance;
+  `Games/DawnPatrol/Art/build_models.py` exports the selected airframes without
+  unrelated reference-image or terrain datablocks. Propeller blades are original.
+
+**Kloofendal 48d Partly Cloudy (Pure Sky)** by **Greg Zaal** and **Jarod Guest**
+- Source: https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky
+- License: CC0 1.0
+- Used: the tonemapped panorama, reduced to 2048 × 1024 in
+  `Games/DawnPatrol/Textures/PatrolSky.jpg`.
+
+Original Dawn Patrol content:
+- Mercer, Bennett and Reed portraits, briefing hut and aerodrome paintings,
+  generated with built-in ImageGen on 2026-11-07. The full prompts and original
+  output references are recorded in `Games/DawnPatrol/Art/story-art.json`.
+  Generated illustrations are separate from the CC0 third-party assets above.
+- Patrol landscape, first mission and fictional squadron story.
+- Compact synthesized piston-engine, machine-gun, impact and instrumental audio;
+  `Games/DawnPatrol/Art/build_audio.py` reproduces the WAV files without samples.

@@ -46,11 +46,26 @@ print '{ "displayName": "Gunship", "mesh": "Spitfire", "guns": [[0, 0, -3]], "no
                  "maxSpeed": 600, "damage": 0.8, "capitalDamage": 2 } }' > "$qa/Games/ZCheckMod/Data/Ships/zcheck-gunship.json"
 # The app's Info.plist (FSDefaultGame), embedded as a bare executable's bundle info.
 cp Resources/Info.plist "$qa/Info.plist"
-clang -fobjc-arc -Wall -Wno-unused-function -mmacosx-version-min=13.0 \
-    -ISources/Shared -ISources/Common -ISources/Net -ISources/Mission -ISources/Story \
-    Tools/UnitChecks.m Sources/Shared/*.m Sources/Shared/*.c Sources/Common/*.m Sources/Mission/*.m Sources/Story/*.m \
-    Sources/Net/NetMsg.m Sources/Net/NetProtocol.m \
-    -framework Foundation -framework QuartzCore \
+# Compile the same headless sources concurrently so compiler startup does not
+# consume the ten-second budget on a busy development machine.
+flags=(-fobjc-arc -Wall -Wno-unused-function -mmacosx-version-min=13.0
+       -ISources/Shared -ISources/Common -ISources/Net -ISources/Mission -ISources/Story)
+sources=(Tools/UnitChecks.m Sources/Shared/*.m Sources/Shared/*.c Sources/Common/*.m Sources/Mission/*.m Sources/Story/*.m
+         Sources/Net/NetMsg.m Sources/Net/NetProtocol.m)
+objects=() pids=()
+unsetopt BGNICE
+for source in $sources; do
+    object=$qa/${source//\//_}.o
+    objects+=("$object")
+    clang $flags -c "$source" -o "$object" &
+    pids+=($!)
+    if (( $#pids == 8 )); then
+        for pid in $pids; do wait "$pid"; done
+        pids=()
+    fi
+done
+for pid in $pids; do wait "$pid"; done
+clang $objects -framework Foundation -framework QuartzCore \
     -sectcreate __TEXT __info_plist "$qa/Info.plist" -o "$qa/UnitChecks"
 if ! "$qa/UnitChecks"; then
     print -u2 "Unit checks failed. Binary: $qa"

@@ -113,6 +113,34 @@ static void CheckShipMove(void) {
     CHECK(simd_dot(QuatForward(s.orientation), simd_make_float3(0, 0, -1)) < 0.9f);
 }
 
+static void CheckAtmosphericFlight(void) {
+    ShipParams p = { .maxSpeed = 55, .turnRate = 1, .pitchRate = 0.8f, .yawRate = 0.6f,
+        .rollRate = 1.8f, .agility = 4, .grip = 0.7f, .gravity = 9.81f, .stallSpeed = 20,
+        .boostSpeed = 1, .boostDrain = 0.2f, .boostRecharge = 0.1f };
+    simd_quatf facing = simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
+    ShipMoveState cruise, stalled, repeat;
+    ShipMoveReset(&cruise, simd_make_float3(0, 400, 0), facing);
+    stalled = cruise;
+    stalled.velocity = simd_make_float3(0, 0, -10);
+    repeat = cruise;
+    for (int i = 0; i < 300; i++) {
+        ShipInput input = { .throttle = 1, .boost = true };
+        ShipMove(&cruise, &p, input, TICK_DT);
+        ShipMove(&repeat, &p, input, TICK_DT);
+        ShipMove(&stalled, &p, (ShipInput){0}, TICK_DT);
+    }
+    CHECK(MoveEqual(&cruise, &repeat));
+    CHECK(!cruise.boosting && NEAR(simd_length(cruise.velocity), p.maxSpeed, 0.1f));
+    CHECK(NEAR(cruise.origin.y, 400, 0.01f) && stalled.origin.y < 300);
+    ShipMoveState banked;
+    ShipMoveReset(&banked, simd_make_float3(0, 400, 0), simd_quaternion((float)M_PI_2, simd_make_float3(0, 0, 1)));
+    ShipMove(&banked, &p, (ShipInput){ .throttle = 1 }, TICK_DT);
+    CHECK(banked.velocity.y < 0 && banked.origin.y < 400);
+    LevelDef *bad = LevelCreate(@{ @"environment": @"invalid" });
+    CHECK(bad->problems.count > 0);
+    LevelRelease(bad);
+}
+
 static void CheckAimAssist(void) {
     simd_float3 fwd = simd_make_float3(0, 0, -1), muzzle = 0, still = 0;
     float speed = 900, range = 900 * 1.6f, cone = 3 * (float)M_PI / 180;
@@ -494,6 +522,58 @@ static NSValue *V3(float x, float y, float z) { simd_float3 v = {x, y, z}; retur
 
 static void Run(FakeWorld *w, float seconds) {
     for (float t = 0; t < seconds && !w.ended; t += 0.05f) [w.runner update:0.05f];
+}
+
+static void CheckDawnPatrol(void) {
+    NSString *saved = FSGame();
+    FSSetGame(@"DawnPatrol");
+    LevelDef *level = LevelCreate(FSJSON(FSURL(@"Levels", @"01-morning-patrol", @"json")));
+    const ShipDef *aircraft = ShipDefNamed(@"se5a");
+    CHECK(level && [level->environment.model isEqual:@"PatrolLandscape"]);
+    CHECK(aircraft && aircraft->params.gravity > 0 && aircraft->shield == 0 && aircraft->secondary.rounds == 0);
+    CHECK(aircraft && !aircraft->texture[0] && aircraft->propeller.w > 0);
+    CHECK([MissionRunner problemsWithLevel:level].count == 0);
+    for (int outcome = 0; outcome < 2; outcome++) {
+        FakeWorld *w = [FakeWorld new];
+        NSMutableDictionary *navs = [NSMutableDictionary dictionary];
+        for (int i = 0; i < level->navCount; i++) {
+            simd_float3 v = level->navs[i].pos;
+            navs[level->navs[i].identifier] = V3(v.x, v.y, v.z);
+        }
+        w.navs = navs;
+        FakeUnit *player = Unit(@"player", nil, level->playerPos);
+        [w.players addObject:player];
+        FakeUnit *wing = Unit(@"Bennett", @"wing", level->playerPos);
+        [w.units addObject:wing];
+        w.held[@"patrol"] = Unit(@"Falke 1", @"patrol", level->waves[1].pos);
+        w.runner = [[MissionRunner alloc] initWithLevel:level world:w];
+        [w.runner noteSpawned:@"wing"];
+        Run(w, 0.1f);
+        CHECK(!w.ended && [w.runner objectiveNamed:@"return"].state == MissionObjectiveHidden);
+        if (outcome) {
+            player.missionAlive = NO;
+            Run(w, 5);
+            CHECK(w.ended == 2);
+            continue;
+        }
+        for (int i = 0; i < 3; i++) {
+            player.missionPosition = level->navs[i].pos;
+            Run(w, 0.2f);
+        }
+        CHECK(!w.held[@"patrol"] && !w.ended);
+        FakeUnit *second = Unit(@"Falke 2", @"patrol", level->waves[1].pos);
+        [w.units addObject:second];
+        [w.runner noteSpawned:second.missionKey];
+        for (FakeUnit *enemy in [w missionUnitsNamed:@"patrol"]) enemy.missionAlive = NO;
+        wing.missionAlive = NO;    // optional loss must not fail the patrol
+        Run(w, 0.2f);
+        CHECK(!w.ended && [w.runner objectiveNamed:@"return"].state == MissionObjectiveActive);
+        player.missionPosition = level->navs[3].pos;
+        Run(w, 5);
+        CHECK(w.ended == 1 && [w.runner objectiveNamed:@"wingman"].state == MissionObjectiveFailed);
+    }
+    LevelRelease(level);
+    FSSetGame(saved);
 }
 
 // A game-registered objective type (the escape hatch): complete once a flag is set.
@@ -885,6 +965,11 @@ static void CheckMissionRuntime(void) {
 // The story front end's data: every briefing builds pages from the cast and
 // rooms in Story/, in the order storyDefaults lists, and a game can add a page kind.
 static void CheckStory(void) {
+    StoryRoom *plainBoard = [StoryRoom roomWithJSON:@{ @"board": @{ @"style": @"blackboard" } } identifier:@"plain"];
+    StoryRoom *legacyBoard = [StoryRoom roomWithJSON:@{ @"board": @{} } identifier:@"legacy"];
+    StoryRoom *unknownBoard = [StoryRoom roomWithJSON:@{ @"board": @{ @"style": @"future" } } identifier:@"unknown"];
+    CHECK(plainBoard.hasBoard && plainBoard.boardStyle == StoryBoardStyleBlackboard);
+    CHECK(legacyBoard.boardStyle == StoryBoardStyleHolographic && unknownBoard.boardStyle == StoryBoardStyleHolographic);
     // The search path: the game's folder over the engine's resources.
     CHECK(FSGames().count >= 1 && [FSGames() containsObject:FSGame()]);
     CHECK(FSURL(@"Data/Ships", @"wasp", @"json") && [FSURL(@"Data/Ships", @"wasp", @"json").path containsString:@"/Games/"]);
@@ -1044,6 +1129,7 @@ static void CheckLANSettings(void) {
 int main(void) {
     @autoreleasepool {
         CheckShipMove();
+        CheckAtmosphericFlight();
         CheckAimAssist();
         CheckEntityDeltas();
         CheckPlayerState();
@@ -1057,6 +1143,7 @@ int main(void) {
         CheckGameChain();
         CheckOtherGames();
         CheckMissionRuntime();
+        CheckDawnPatrol();
         if (failures) {
             fprintf(stderr, "%d check(s) failed\n", failures);
             return 1;

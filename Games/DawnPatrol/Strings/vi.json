@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "Tuần tra buổi sáng",
+    "mission.patrol.route": "Bay qua ba mốc tuần tra theo thứ tự",
+    "mission.patrol.intercept": "Bắn hạ hai máy bay trinh sát Đức",
+    "mission.patrol.return": "Trở về Bertincourt",
+    "mission.patrol.wingman": "Đưa Bennett trở về an toàn",
+    "radio.patrol.start": "Bay theo các mốc. Giữ tốc độ và chú ý độ cao.",
+    "radio.patrol.contact": "Hai tiêm kích Đức trên sông. Cùng tấn công!",
+    "radio.patrol.clear": "Bầu trời an toàn. Hoàn tất tuần tra rồi trở về Bertincourt.",
+    "game.aircraft.raf": "Tiêm kích RAF",
+    "game.aircraft.german": "Tiêm kích Đức",
+    "game.aircraft.neutral": "Tiêm kích",
+    "hud.laser": "SÚNG MÁY",
+    "combat.no_secondary": "Không trang bị vũ khí phụ",
+    "game.weapon.none": "Không có",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "Bay theo các mốc. Giữ tốc độ và chú ý độ cao.",
+      "Hai tiêm kích Đức trên sông. Cùng tấn công!",
+      "Bầu trời an toàn. Hoàn tất tuần tra rồi trở về Bertincourt."
+    ],
+    "hud.help": [
+      "LMB / SPACE → SÚNG MÁY",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

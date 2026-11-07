@@ -1,0 +1,13 @@
+{
+  "defaultShip": "se5a",
+  "secondary": {
+    "projectile": "torpedo",
+    "name": "{#game.weapon.none}",
+    "short": "—"
+  },
+  "fighterClass": {
+    "friend": "{#game.aircraft.raf}",
+    "enemy": "{#game.aircraft.german}",
+    "neutral": "{#game.aircraft.neutral}"
+  }
+}

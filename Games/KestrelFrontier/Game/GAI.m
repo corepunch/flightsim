@@ -264,6 +264,12 @@ static BOOL UnitCaptured(id u) {
 // on its target but not ram it, unless it is docking with it.
 - (void)steer:(GFighter *)s to:(simd_float3)aimPoint throttle:(float)throttle boost:(BOOL)boost target:(id)target
       docking:(BOOL)docking dt:(float)dt {
+    if (s->params.gravity > 0) {
+        // An aircraft cannot stop to turn, and needs room to recover above the ground.
+        throttle = fmaxf(throttle, s->params.stallSpeed * 1.3f / s->params.maxSpeed);
+        if (s.position.y < 100) aimPoint = s.position + s.forward * 200 + simd_make_float3(0, 300, 0);
+        aimPoint.y = fmaxf(aimPoint.y, 160);
+    }
     for (GCapital *c in _capitals) {
         if (!c.alive || c.radius < 15) continue;
         if (docking && c == target) continue;

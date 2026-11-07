@@ -133,7 +133,7 @@ typedef struct { RadioLine *line; CFTimeInterval until; } PendingRadio;
 }
 
 - (AVAudioPlayer *)load:(NSString *)name loop:(BOOL)loop {
-    NSURL *url = FSURL(@"Audio", name, @"mp3");
+    NSURL *url = FSURL(@"Audio", name, @"wav") ?: FSURL(@"Audio", name, @"mp3");
     if (!url) { NSLog(@"Audio: missing %@.mp3", name); return nil; }
     NSError *error;
     AVAudioPlayer *player = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];

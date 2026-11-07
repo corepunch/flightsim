@@ -236,7 +236,7 @@ def validate_radio(game, levels):
         return
     catalog = json.loads(path.read_text())
     lines = catalog["lines"]
-    assert lines and catalog["language"].strip(), path
+    assert isinstance(lines, list) and catalog["language"].strip(), path
     captions = {"{#" + line["key"] + "}" for line in lines}
     files = {line["file"] for line in lines}
     assert len(captions) == len(lines) == len(files), f"{path}: duplicate caption or recording"
@@ -322,6 +322,7 @@ def validate_game(game):
         assert room["size"] == [width, height], f"Room {name}: size differs from its art"
         bezel = room.get("bezel", [])
         assert (not bezel and "board" not in room) or len(bezel) >= 3, name
+        assert room.get("board", {}).get("style", "holographic") in ("holographic", "blackboard"), name
         assert all(0 <= x <= width and 0 <= y <= height for x, y in bezel), name
     for character in CAST["characters"].values():
         assert character["faces"] in ("left", "right") and character["name"].strip(), character

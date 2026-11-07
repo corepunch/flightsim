@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "아침 초계",
+    "mission.patrol.route": "세 초계 지점을 순서대로 통과하세요",
+    "mission.patrol.intercept": "독일 정찰 전투기 두 대를 격추하세요",
+    "mission.patrol.return": "베르탱쿠르로 귀환하세요",
+    "mission.patrol.wingman": "베넷을 무사히 귀환시키세요",
+    "radio.patrol.start": "지형지물을 따라가세요. 속도와 고도를 유지하세요.",
+    "radio.patrol.contact": "강 위에 독일 전투기 두 대! 함께 공격하자!",
+    "radio.patrol.clear": "상공 이상 없음. 초계를 마치고 베르탱쿠르로 귀환하자.",
+    "game.aircraft.raf": "RAF 전투기",
+    "game.aircraft.german": "독일 전투기",
+    "game.aircraft.neutral": "전투기",
+    "hud.laser": "기관총",
+    "combat.no_secondary": "보조 무장 없음",
+    "game.weapon.none": "없음",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "지형지물을 따라가세요. 속도와 고도를 유지하세요.",
+      "강 위에 독일 전투기 두 대! 함께 공격하자!",
+      "상공 이상 없음. 초계를 마치고 베르탱쿠르로 귀환하자."
+    ],
+    "hud.help": [
+      "LMB / SPACE → 기관총",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

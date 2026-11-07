@@ -1,0 +1,66 @@
+{
+  "displayName": "S.E.5a",
+  "mesh": "SE5a",
+  "texture": "",
+  "radius": 4.5,
+  "propellerHub": [
+    0,
+    0.08,
+    -3.35
+  ],
+  "propellerRadius": 1.25,
+  "guns": [
+    [
+      -0.25,
+      0.35,
+      -2.1
+    ],
+    [
+      0.1,
+      1.1,
+      -0.8
+    ]
+  ],
+  "gun": {
+    "speed": 740,
+    "life": 0.9,
+    "energy": 0.012,
+    "recharge": 0.32,
+    "interval": 0.08,
+    "damage": 0.09,
+    "capitalDamage": 0.02,
+    "assist": 4
+  },
+  "aiGun": {
+    "interval": 0.17,
+    "damage": 0.035
+  },
+  "nozzles": [],
+  "params": {
+    "maxSpeed": 57,
+    "turnRate": 0.9,
+    "pitchRate": 0.8,
+    "yawRate": 0.65,
+    "rollRate": 1.9,
+    "agility": 3.7,
+    "grip": 0.7,
+    "gravity": 9.81,
+    "stallSpeed": 20
+  },
+  "ai": {
+    "maxSpeed": 55,
+    "turnRate": 0.9,
+    "speedSpread": 0
+  },
+  "hull": 1.3,
+  "shield": 0,
+  "shieldRegen": 0,
+  "secondary": {
+    "rounds": 0
+  },
+  "cockpitEye": [
+    0,
+    0.9,
+    0.2
+  ]
+}

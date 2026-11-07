@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "mission.patrol.title": "Patroli pagi",
+    "mission.patrol.route": "Lewati tiga titik patroli secara berurutan",
+    "mission.patrol.intercept": "Jatuhkan dua pesawat pengintai Jerman",
+    "mission.patrol.return": "Kembali ke Bertincourt",
+    "mission.patrol.wingman": "Bawa Bennett pulang",
+    "radio.patrol.start": "Ikuti penanda. Jaga kecepatan terbang dan ketinggian.",
+    "radio.patrol.contact": "Dua pesawat Jerman di atas sungai. Serang bersama!",
+    "radio.patrol.clear": "Langit aman. Selesaikan patroli dan kembali ke Bertincourt.",
+    "game.aircraft.raf": "Pesawat tempur RAF",
+    "game.aircraft.german": "Pesawat tempur Jerman",
+    "game.aircraft.neutral": "Pesawat tempur",
+    "hud.laser": "SENAPAN MESIN",
+    "combat.no_secondary": "Tidak ada senjata sekunder",
+    "game.weapon.none": "Tidak ada",
+    "game.title": "Dawn Patrol",
+    "game.kicker": "1918",
+    "game.unit": "RAF / LARK",
+    "menu.unit": "RAF / LARK",
+    "menu.wordmark": [
+      "DAWN",
+      "PATROL"
+    ],
+    "briefing.map_player": "LARK 1",
+    "briefing.default_speaker": "Mercer",
+    "briefing.loadout_one": "S.E.5a / 2 MG / %d",
+    "briefing.loadout_many": "S.E.5a / 2 MG / %d",
+    "loading.charting_starfield": "Bertincourt · 1918",
+    "loading.plotting_capital_ships": "S.E.5a / Fokker D.VII",
+    "loading.tips": [
+      "Ikuti penanda. Jaga kecepatan terbang dan ketinggian.",
+      "Dua pesawat Jerman di atas sungai. Serang bersama!",
+      "Langit aman. Selesaikan patroli dan kembali ke Bertincourt."
+    ],
+    "hud.help": [
+      "LMB / SPACE → SENAPAN MESIN",
+      "T → ◎   W/S / Z → ↑↓   Q/E → ↻",
+      "20 m/s ↑   0 m ↓   ESC → ☰"
+    ],
+    "loading.mission_kicker": "DAWN PATROL / %02lu",
+    "missions.kicker": "BERTINCOURT / 1918",
+    "controls.kicker": "S.E.5a / RAF",
+    "browser.kicker": "DAWN PATROL / LAN",
+    "briefing.location": "%@ / %@",
+    "loading.location_stardate": "%@ / %@"
+  }
+}

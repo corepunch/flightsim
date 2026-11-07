@@ -24,6 +24,7 @@ if ! zsystem flock -t 0 -f build_lock build/.lock 2>/dev/null; then
 fi
 
 GAME=${GAME:-KestrelFrontier}
+APP=build/$GAME.app
 jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null) || jobs=1
 platform=
 case "$1" in
@@ -70,6 +71,11 @@ else
 fi
 /bin/zsh Tools/bundle-resources.sh "$bundle_resources" build
 plutil -replace FSDefaultGame -string "$GAME" "$info_plist"
+if [[ $GAME != KestrelFrontier ]]; then
+    game_title=$(plutil -extract title raw -o - "Games/$GAME/game.json")
+    plutil -replace CFBundleName -string "$game_title" "$info_plist"
+    plutil -replace CFBundleIdentifier -string "com.corepunch.spacefight.${GAME:l}" "$info_plist"
+fi
 if [[ $1 == iphone || $1 == ipad ]]; then
     log "Signing and deploying $APP"
     python3 Tools/deploy-ios.py "$1" "$APP"

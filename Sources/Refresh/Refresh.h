@@ -186,6 +186,8 @@ typedef struct {
 // Starts a level: bakes its sky and forgets nothing yet; the current level
 // keeps drawing until -endRegistration.
 - (void)beginRegistration:(uint32_t)skySeed;
+// Optional authored atmosphere and landscape, prepared on the load queue.
+- (void)registerEnvironment:(LevelEnvironment)environment;
 // "ship:<definition>", "cap:<asset>:<style>", "proj:<name>" or "pickup:<name>". Builds and
 // caches a prototype so entities that appear later are already on the GPU.
 // The same name always gives the same handle; unknown names log and still
