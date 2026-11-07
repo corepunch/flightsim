@@ -196,6 +196,7 @@ def generate(args):
     mac_platform = dict(SDKROOT="macosx", SUPPORTED_PLATFORMS="macosx", MACOSX_DEPLOYMENT_TARGET="13.0")
     mac_settings = dict(app_settings, **mac_platform,
                         PRODUCT_BUNDLE_IDENTIFIER=bundle_ids["macos"],
+                        CODE_SIGN_ENTITLEMENTS="$(SRCROOT)/Resources/KestrelFrontier-macOS.entitlements",
                         INFOPLIST_FILE="$(PROJECT_FILE_PATH)/Generated/macos-Info.plist",
                         OTHER_LDFLAGS=["$(inherited)"] +
                         [item for framework in MAC_FRAMEWORKS for item in ("-framework", framework)])

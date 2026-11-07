@@ -1,0 +1,7 @@
+Built-in ImageGen. Reference image: Games/KestrelFrontier/Menu/background.jpg
+
+Use case: ads-marketing. Asset type: premium App Store product page header artwork for Kestrel Frontier, a space flight combat game. Use the supplied game's own key art as the visual reference, preserving the recognizable angular blue-and-gray Executioner fighter with four cylindrical engine pods, its blue engine glow, and the gray carrier. Create a polished cinematic widescreen 21:9 banner, ideally exactly 3840 x 1646 pixels. A bold, clearly readable central fighter banks across a starfield above the blue limb of a planet, with the carrier behind and restrained laser streaks and a small distant orange blast. Keep the main fighter and carrier fully readable in the central 60% safe area so it works on mobile header crops. Match the original game's painted low-poly sci-fi identity, not a photorealistic movie redesign. Strong cyan-blue versus amber lighting, dark navy space, crisp silhouettes, beautiful restrained atmosphere. One coherent composition, no collage. No text, logos, captions, badges, UI, device frame, watermark, people, or transparent areas. Do not invent a new ship design. The supplied reference is supporting game key art to adapt into the banner.
+
+Master: fastlane/artwork/header-master.png
+Final export: fastlane/artwork/header-3840x1646.png (size conversion only)
+Search Results: fastlane/artwork/search-results-gameplay-1920x1280.jpg, cropped from the actual iPhone gameplay capture; no generated gameplay or composited effects.
