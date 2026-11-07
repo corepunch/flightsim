@@ -50,6 +50,10 @@ cp Resources/Info.plist "$qa/Info.plist"
 # consume the ten-second budget on a busy development machine.
 flags=(-fobjc-arc -Wall -Wno-unused-function -mmacosx-version-min=13.0
        -ISources/Shared -ISources/Common -ISources/Net -ISources/Mission -ISources/Story)
+# Parse Foundation once rather than in every Objective-C compiler process.
+# This keeps cold CI builds within the same compile-and-test budget.
+print '#import <Foundation/Foundation.h>' > "$qa/Foundation.h"
+clang $flags -x objective-c-header "$qa/Foundation.h" -o "$qa/Foundation.pch"
 sources=(Tools/UnitChecks.m Sources/Shared/*.m Sources/Shared/*.c Sources/Common/*.m Sources/Mission/*.m Sources/Story/*.m
          Sources/Net/NetMsg.m Sources/Net/NetProtocol.m)
 objects=() pids=()
@@ -57,7 +61,9 @@ unsetopt BGNICE
 for source in $sources; do
     object=$qa/${source//\//_}.o
     objects+=("$object")
-    clang $flags -c "$source" -o "$object" &
+    prefix=()
+    if [[ $source == *.m ]]; then prefix=(-include-pch "$qa/Foundation.pch"); fi
+    clang $flags $prefix -c "$source" -o "$object" &
     pids+=($!)
     if (( $#pids == 8 )); then
         for pid in $pids; do wait "$pid"; done
