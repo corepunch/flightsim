@@ -213,7 +213,8 @@ fragment half4 terrainFragment(TerrainVarying in [[stage_in]],
 // finest lattice, and a tree's place, size and look come from that lattice cell alone,
 // so a tree is the same tree whichever ring draws it. Trees thin out with distance by
 // lattice rank (how coarse a lattice the cell belongs to), which every ring judges the
-// same way, so none appears or vanishes as the rings move; they grow a little to make up
+// same way, so none appears or vanishes as the rings move; a tree due at a distance
+// grows in from nothing as the camera nears it, and they all grow a little to make up
 // for the thinning.
 
 struct TreeVertexIn {
@@ -261,14 +262,16 @@ vertex TreeVarying treeVertex(TreeVertexIn in [[stage_in]],
     // cell of the rank just below fades out by its own dice over that doubling.
     float level = max(log2(dist / near), 0.0);
     float fade = 1.0 - smoothstep(0.8 * T.trees.z, T.trees.z, dist);
-    if (float(rank) + dice.x < level || fade <= 0.0) return out;
+    // A tree grows from nothing over the last fifth of the distance to where it is due.
+    float shown = saturate((float(rank) + dice.x - level) / 0.3) * fade;
+    if (shown <= 0.0) return out;
 
     float blend;
     float2 groundLight = heightAt(heightMap, T, mapLevelAt(T, xz, blend), xz);
     float ground = groundLight.x;
     StandingTree tree = standingTree(xz, ground, 0.0, dice.y, shape.x);
     if (tree.height <= 0.0) return out;
-    float grow = (1.0 + 0.5 * smoothstep(300.0, 2500.0, dist)) * fade;
+    float grow = (1.0 + 0.5 * smoothstep(300.0, 2500.0, dist)) * shown;
     int corner = int(in.position.y + 0.5);
     float height = tree.height * grow;
     // Sunk a little, so trees on coarse terrain triangles never float.
