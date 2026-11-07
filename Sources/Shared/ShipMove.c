@@ -27,6 +27,14 @@ void ShipMove(ShipMoveState *s, const ShipParams *p, ShipInput c, float dt) {
     // Angular rates chase the stick, giving a little weight to the controls.
     simd_float3 target = simd_make_float3(c.pitch * p->pitchRate, -c.yaw * p->yawRate, -c.roll * p->rollRate) * p->turnRate;
     float airspeed = fmaxf(0, simd_dot(s->velocity, QuatForward(s->orientation)));
+    if (aircraft) {
+        // Assisted flight levels the wings whenever the stick is not rolling: a turn
+        // leaves the aircraft banked, and it rolls back upright (the short way, through
+        // the vertical if inverted) at up to half its roll rate.
+        simd_float3 right = QuatRight(s->orientation), up = QuatUp(s->orientation);
+        float bank = atan2f(-right.y, up.y);
+        target.z += clampf(bank * 1.5f, -1, 1) * p->rollRate * p->turnRate * 0.5f * (1 - fabsf(c.roll));
+    }
     if (aircraft) target *= clampf(airspeed / fmaxf(p->stallSpeed, 1), 0.2f, 1);
     if (boost) target *= p->boostTurn;
     s->angularVelocity += (target - s->angularVelocity) * (1.0f - expf(-p->agility * dt));

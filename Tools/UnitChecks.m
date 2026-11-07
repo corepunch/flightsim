@@ -136,6 +136,22 @@ static void CheckAtmosphericFlight(void) {
     ShipMoveReset(&banked, simd_make_float3(0, 400, 0), simd_quaternion((float)M_PI_2, simd_make_float3(0, 0, 1)));
     ShipMove(&banked, &p, (ShipInput){ .throttle = 1 }, TICK_DT);
     CHECK(banked.velocity.y < 0 && banked.origin.y < 400);
+    // With the stick centred a banked aircraft rolls back to wings level within a few
+    // seconds; holding the roll keeps it banked, and a ship in space keeps any attitude.
+    ShipMoveState space;
+    ShipMoveReset(&banked, simd_make_float3(0, 400, 0), simd_quaternion(1.0f, simd_make_float3(0, 0, 1)));
+    ShipMoveReset(&space, simd_make_float3(0, 400, 0), simd_quaternion(1.0f, simd_make_float3(0, 0, 1)));
+    ShipParams spaceParams = p;
+    spaceParams.gravity = 0;
+    ShipMoveState held = banked;
+    for (int i = 0; i < 90; i++) {
+        ShipMove(&banked, &p, (ShipInput){ .throttle = 1 }, TICK_DT);
+        ShipMove(&held, &p, (ShipInput){ .roll = 1, .throttle = 1 }, TICK_DT);
+        ShipMove(&space, &spaceParams, (ShipInput){ .throttle = 1 }, TICK_DT);
+    }
+    CHECK(fabsf(QuatRight(banked.orientation).y) < 0.05f && QuatUp(banked.orientation).y > 0.99f);
+    CHECK(fabsf(QuatRight(held.orientation).y) > 0.3f);
+    CHECK(NEAR(QuatRight(space.orientation).y, sinf(1.0f), 1e-3f));
     LevelDef *bad = LevelCreate(@{ @"environment": @"invalid" });
     CHECK(bad->problems.count > 0);
     LevelRelease(bad);
