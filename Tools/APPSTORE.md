@@ -128,6 +128,9 @@ the IPA. This setup does not build an archive automatically. Align the source
 plists with the store version in
 `fastlane/version.txt` before creating a new distribution build, and choose an
 unused build number. Signing uses your existing Xcode configuration.
+Both Info.plists declare `ITSAppUsesNonExemptEncryption` false (the app makes no
+encrypted connections; it only hashes asset files), so uploaded builds skip the
+export compliance questions. Revisit it if the app ever adds encryption.
 
 ## Submitting for review
 
