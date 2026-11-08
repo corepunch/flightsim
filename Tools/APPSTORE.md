@@ -29,11 +29,12 @@ instead. To intentionally update the pinned version, change `Gemfile` and run
 
 ## Account access
 
-The team key named **Kestrel Frontier Fastlane** has the **App Manager** role.
-Apple team keys apply across the team's apps. Its local configuration is
-`fastlane/private/api_key.json`, with the key itself alongside it. Both are
-excluded from Git. Keep a secure backup: Apple allows each private key to be
-downloaded once. The original download remains in Downloads on this Mac.
+Fastlane and the `asc` CLI use the active team key named **Default API Key**.
+The `asc` profile **corepunch** keeps it in macOS Keychain. Fastlane's local
+configuration is `fastlane/private/api_key.json`, with a private-key copy
+alongside it; both are excluded from Git. Apple team keys apply across the
+team's apps. Keep a secure backup: Apple allows each private key to be
+downloaded once. The previous Fastlane configuration is preserved privately.
 
 On a new machine, copy `fastlane/api_key.example.json` to
 `fastlane/private/api_key.json`, fill in the key ID and issuer ID, and put the
@@ -113,6 +114,16 @@ The screenshots command uploads images only and does not clear the existing
 screenshots first. Repeated uploads can add duplicates. Use actual supported
 device resolutions from [Apple's screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/).
 The screenshots themselves are excluded from Git.
+
+Reproducible staged gameplay renders use the actual renderer, ships, HUD and
+projectile trails. Their scene layouts and timing are in `Tools/Capture/`:
+
+```sh
+./Tools/render-store-scenes.sh
+```
+
+See [Capture/README.md](Capture/README.md) for camera and scene adjustments.
+Rendering is a manual art workflow, separate from the headless unit suite.
 
 The submitted Mac screenshots are in `fastlane/screenshots-macos/en-US/`.
 Mac description and keywords, including trackball support, are in

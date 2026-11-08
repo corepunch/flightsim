@@ -15,5 +15,6 @@ fastlane/private/
 fastlane/report.xml
 fastlane/README.md
 fastlane/Preview.html
+.asc/reports/
 fastlane/screenshots/*/
 *.p8

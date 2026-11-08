@@ -145,6 +145,23 @@ static inline void ParticleSet(SCNParticleSystem *ps, NSString *key, CGFloat val
 
 @end
 
+// MARK: - SceneCapture
+
+// Reproducible, staged images rendered through the game's normal backend.
+@interface SceneCapture : NSObject
++ (int)renderFile:(NSString *)definition toFile:(NSString *)path size:(CGSize)size;
+@end
+
+// MARK: - ProjectileTrail
+
+// A camera-facing smoke ribbon through a guided round's recent world positions.
+// Its older sections widen and fade, including after the round disappears.
+@interface ProjectileTrail : NSObject
+- (instancetype)initWithParent:(SCNNode *)parent size:(float)size;
+- (void)addOrigin:(simd_float3)origin time:(double)time;
+- (BOOL)drawAtTime:(double)time camera:(simd_float3)camera;
+@end
+
 // MARK: - ShipView
 
 // Soft-knee roll-off on a lit hull's reflected light (emission untouched),

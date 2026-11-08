@@ -1,0 +1,176 @@
+{
+  "skySeed": 4,
+  "time": 1.35,
+  "eye": [
+    9,
+    7,
+    17
+  ],
+  "lookAt": [
+    3,
+    5,
+    -65
+  ],
+  "fov": 62,
+  "objective": "{#mission.objective.corvette_hunt.kill}",
+  "objects": [
+    {
+      "model": "ship:executioner",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "facing": [
+        -0.25,
+        0.22,
+        -1
+      ],
+      "throttle": 0.72,
+      "bank": 0.8,
+      "velocity": [
+        -18,
+        16,
+        -90
+      ],
+      "angularVelocity": [
+        0,
+        0.12,
+        0.65
+      ]
+    },
+    {
+      "model": "ship:executioner",
+      "position": [
+        24,
+        17,
+        -48
+      ],
+      "facing": [
+        0.8,
+        0.4,
+        -0.5
+      ],
+      "bank": -1.05,
+      "throttle": 0.85,
+      "velocity": [
+        65,
+        25,
+        -35
+      ]
+    },
+    {
+      "model": "cap:Corvette:skarn",
+      "position": [
+        24,
+        18,
+        -165
+      ],
+      "facing": [
+        -0.8,
+        0.15,
+        -0.4
+      ],
+      "label": "Skarn Corvette Vesk"
+    },
+    {
+      "model": "ship:wasp",
+      "position": [
+        -28,
+        24,
+        -80
+      ],
+      "facing": [
+        -0.7,
+        0.35,
+        1
+      ],
+      "bank": 1.15,
+      "throttle": 0.8,
+      "velocity": [
+        -50,
+        20,
+        60
+      ]
+    },
+    {
+      "model": "cap:AsteroidA:rock",
+      "position": [
+        -95,
+        42,
+        -220
+      ],
+      "scale": 0.25
+    },
+    {
+      "model": "cap:AsteroidB:rock",
+      "position": [
+        145,
+        -25,
+        -310
+      ],
+      "scale": 0.3
+    }
+  ],
+  "missiles": [
+    {
+      "launch": [
+        0,
+        -1,
+        -6
+      ],
+      "approach": [
+        31,
+        25,
+        -70
+      ],
+      "target": [
+        32,
+        25,
+        -130
+      ],
+      "start": 0.3,
+      "duration": 1.9,
+      "fromPlayer": true
+    },
+    {
+      "launch": [
+        0,
+        -1,
+        -6
+      ],
+      "approach": [
+        -28,
+        26,
+        -50
+      ],
+      "target": [
+        -40,
+        32,
+        -85
+      ],
+      "start": 0.5,
+      "duration": 1.65,
+      "fromPlayer": true
+    }
+  ],
+  "roll": -0.12,
+  "explosions": [
+    {
+      "position": [
+        -9,
+        6,
+        -5
+      ],
+      "velocity": [
+        -10,
+        4,
+        8
+      ],
+      "time": 1.1,
+      "scale": 0.48,
+      "model": "ship:wasp"
+    }
+  ],
+  "followPlayer": true
+}

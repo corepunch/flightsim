@@ -127,6 +127,9 @@ int main(int argc, const char *argv[]) {
         [Cmd setArguments:NSProcessInfo.processInfo.arguments];
         [Cmd executeEarlyCommands];
         GameLoaderSelectGame();
+        if (argc >= 4 && !strcmp(argv[1], "--render-scene"))
+            return [SceneCapture renderFile:@(argv[2]) toFile:@(argv[3])
+                                      size:argc >= 6 ? CGSizeMake(atoi(argv[4]), atoi(argv[5])) : CGSizeMake(2622, 1206)];
         // Offline effect preview: KestrelFrontier --record-fx <effect> <out.mp4> [seconds]
         if (argc >= 4 && !strcmp(argv[1], "--record-fx"))
             return [FXRecorder recordEffect:@(argv[2]) toFile:@(argv[3]) seconds:argc >= 5 ? atof(argv[4]) : 3.0];
