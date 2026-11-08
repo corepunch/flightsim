@@ -1206,11 +1206,51 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"68BB6B464B11E4E1AAD0ED0D" = {
+			"isa" = "PBXFileReference";
+			"path" = "ProjectileTrail.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"7209192B408563E50E57038D" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "68BB6B464B11E4E1AAD0ED0D";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"FD6D9DB2863DB3936FC28378" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "68BB6B464B11E4E1AAD0ED0D";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"2EB4A381A384CBA2046C68A0" = {
 			"isa" = "PBXFileReference";
 			"path" = "Render.h";
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"57BDBFE9D35D75BA0FC7328F" = {
+			"isa" = "PBXFileReference";
+			"path" = "SceneCapture.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"4C07D63357FB0A67CD470DDE" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "57BDBFE9D35D75BA0FC7328F";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"F212FBC30E28B618A815455C" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "57BDBFE9D35D75BA0FC7328F";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
 		};
 		"D96C15D203EDCEFA454177E9" = {
 			"isa" = "PBXFileReference";
@@ -1337,7 +1377,9 @@
 				"CB0FD2D4981B4AA53E2D78EA",
 				"358FCA6A1ECFF95196BC9395",
 				"3C98085EE220467BB4B2B42D",
+				"68BB6B464B11E4E1AAD0ED0D",
 				"2EB4A381A384CBA2046C68A0",
+				"57BDBFE9D35D75BA0FC7328F",
 				"D96C15D203EDCEFA454177E9",
 				"9032307364044338ED22D266",
 				"E57F1961077C5380AC980E7F",
@@ -2178,6 +2220,8 @@
 				"72E056BBFE7450D3E746E4EC",
 				"CABAEEA3EEA2B76EFA3C3D0E",
 				"3E3FFC604A3345D7F5380488",
+				"7209192B408563E50E57038D",
+				"4C07D63357FB0A67CD470DDE",
 				"136A014B9F6DCBBD38CE8217",
 				"CAF57F65F8360FE129F5413F",
 				"7D38EEA49C1737099970422C",
@@ -2252,6 +2296,8 @@
 				"7489EE6B4A86150E22E5D9AD",
 				"3BAF4C688458894C79A6FE6C",
 				"8CBEF584B087DB11286F8550",
+				"FD6D9DB2863DB3936FC28378",
+				"F212FBC30E28B618A815455C",
 				"186438697A22B416E7411AA6",
 				"1231CDA57E32C818819FC3E1",
 				"64375A3C004E4AB200A1E94F",

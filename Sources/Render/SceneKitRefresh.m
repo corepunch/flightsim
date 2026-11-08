@@ -29,6 +29,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @property (nonatomic, strong) SCNNode *node;
 @property (nonatomic, strong) ShipView *ship;
 @property (nonatomic, strong) CapitalView *capital;
+@property (nonatomic, strong) ProjectileTrail *trail;
 @property (nonatomic, strong) SCNNode *spinner;     // pickups: the mesh, turned about its up axis each frame
 @property (nonatomic, strong) SCNNode *halo;        // pickups: the glow, pulsing with the mesh
 @property (nonatomic) float spin;                   // radians per second
@@ -96,6 +97,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     simd_float3 _boltSpawn[REF_MAX_BOLTS];     // where the bolt left the gun; the streak grows from there
 
     NSMutableDictionary<NSNumber *, RefEntityNode *> *_entities;
+    NSMutableArray<ProjectileTrail *> *_trails;
 
     SCNNode *_playerNode;
     ShipView *_playerView;
@@ -120,6 +122,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         _handles = [NSMutableDictionary dictionary];
         _pending = [NSMutableArray array];
         _entities = [NSMutableDictionary dictionary];
+        _trails = [NSMutableArray array];
         _dt = 1.0f / 60.0f;
         _shadowSize = [Cvar get:@"r_shadowSize" defaultValue:TARGET_OS_IOS ? @"512" : @"1024" flags:CVAR_ARCHIVE
                           help:@"Sun shadow map edge in pixels (restart required)"];
@@ -413,6 +416,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 #pragma mark - Level
 
 - (void)endRegistration {
+    [_trails removeAllObjects];
     if (_nextSky) [self applySky:_nextSky dust:_nextDust];
     _nextSky = nil;
     _nextDust = nil;
@@ -461,6 +465,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 }
 
 - (void)clearWorld {
+    [_trails removeAllObjects];
     [_entities removeAllObjects];
     [_world removeFromParentNode];
     _world = nil;
@@ -507,6 +512,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         g.castsShadow = NO;
         [n addChildNode:g];
         v.node = n;
+        v.trail = [[ProjectileTrail alloc] initWithParent:_world size:size];
+        [_trails addObject:v.trail];
     } else if (e->kind == EntityFighter) {
         v.ship = [ShipView shipWithDefinition:m.ship smoke:YES];
         v.node = v.ship.node ?: [SCNNode node];
@@ -534,6 +541,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     if (!v) _entities[@(e->key)] = v = [self makeEntity:e];
     v.seen = YES;
     v.node.simdPosition = e->origin;
+    [v.trail addOrigin:e->origin time:_time];
     if (e->kind != EntityProjectile) v.node.simdOrientation = e->orientation;
     if (v.spinner) {
         // Turning, and pulsing about once a second: the halo brightens and
@@ -561,6 +569,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         [v.node removeFromParentNode];
         [_entities removeObjectForKey:k];
     }
+    for (ProjectileTrail *trail in [_trails copy])
+        if (![trail drawAtTime:_time camera:_cameraNode.simdWorldPosition]) [_trails removeObject:trail];
 }
 
 // The player state names our ship's model; (re)build the view of it when
