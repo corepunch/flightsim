@@ -62,6 +62,29 @@ static SKShapeNode *MonitorMask(const CGPoint *corners, NSUInteger count) {
 
 // MARK: - Speech bubble
 
+// One contour keeps the tail's root seamless and includes it in panel motion.
+static SKShapeNode *CaptionPanel(CGRect rect, BOOL speakerOnRight) {
+    CGFloat width = CGRectGetWidth(rect), height = CGRectGetHeight(rect);
+    CGFloat cut = MIN(UIReadoutChamfer, MIN(width, height) * 0.25);
+    CGFloat tailScale = MIN(1, MIN(width / 100, height / 48));
+    const CGPoint corners[] = {
+        {cut, -height}, {width, -height}, {width, -cut}, {width - cut, 0},
+        {38 * tailScale, 0}, {-18 * tailScale, 18 * tailScale}, {12 * tailScale, 0},
+        {0, 0}, {0, -height + cut},
+    };
+    CGAffineTransform placement = CGAffineTransformMake(speakerOnRight ? -1 : 1, 0, 0, 1,
+        speakerOnRight ? CGRectGetMaxX(rect) : CGRectGetMinX(rect), CGRectGetMaxY(rect));
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPathAddLines(path, &placement, corners, sizeof(corners) / sizeof(*corners));
+    CGPathCloseSubpath(path);
+    SKShapeNode *panel = [SKShapeNode shapeNodeWithPath:path];
+    CGPathRelease(path);
+    panel.strokeColor = UIColorWithOpacity(UIConsoleEdge, 0.95);
+    panel.fillColor = UIColorWithOpacity(UIConsoleSteel, 0.95);
+    panel.lineWidth = 1.5;
+    return panel;
+}
+
 // A speech bubble on screen: the panel (pivoting from its top edge), the
 // speaker's name and the line, and where it stands.
 typedef struct {
@@ -1414,24 +1437,7 @@ static const CGFloat PhoneSpeakerFont = 16;
     SKNode *layer = [SKNode node];
     layer.zPosition = CaptionDepth;
     [_root addChild:layer];
-    CGFloat edge = speakerOnRight ? CGRectGetMaxX(rect) : CGRectGetMinX(rect);
-    CGFloat inward = speakerOnRight ? -1 : 1;
-    CGFloat topEdge = CGRectGetMaxY(rect);
-    const CGPoint pointer[] = {
-        {edge + inward * 12, topEdge - 16},
-        {edge - inward * 22, topEdge + 12},
-        {edge + inward * 38, topEdge - 2},
-    };
-    CGMutablePathRef pointerPath = CGPathCreateMutable();
-    CGPathAddLines(pointerPath, NULL, pointer, 3);
-    CGPathCloseSubpath(pointerPath);
-    SKShapeNode *tail = [SKShapeNode shapeNodeWithPath:pointerPath];
-    CGPathRelease(pointerPath);
-    tail.fillColor = UIColorWithOpacity(UIConsoleSteel, 0.95);
-    tail.strokeColor = UIColorWithOpacity(UIConsoleEdge, 0.95);
-    [layer addChild:tail];
-    SKShapeNode *panel = UIReadoutPanel(rect, UIColorWithOpacity(UIConsoleEdge, 0.95),
-                                        UIColorWithOpacity(UIConsoleSteel, 0.95));
+    SKShapeNode *panel = CaptionPanel(rect, speakerOnRight);
     [layer addChild:panel];
     CGFloat left = CGRectGetMinX(rect) + 16, top = CGRectGetMaxY(rect);
     CGFloat width = MAX(1, rect.size.width - 32);
