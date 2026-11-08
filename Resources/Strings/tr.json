@@ -12,7 +12,7 @@
     "loading.loading_mission": "Görev yükleniyor…",
     "loading.preparing_ship": "Uzay aracı hazırlanıyor…",
     "loading.mission_ready": "Görev hazır",
-    "loading.continue_prompt": "Görevi başlatmak için herhangi bir yere dokunun",
+    "loading.continue_prompt": "Görevi başlat",
     "loading.charting_starfield": "Yıldız haritası çiziliyor…",
     "loading.plotting_capital_ships": "Ana gemiler yerleştiriliyor…",
     "loading.scrambling_fighter_wings": "Avcı filoları hazırlanıyor…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "GÖREV %02lu  /  %@",
     "controls.kicker": "UÇUŞ KILAVUZU",
     "controls.title": "Uçuş kontrolleri",
-    "controls.touch.actions": [
-      "Yönlendirme",
-      "Hız",
-      "Birincil / ikincil ateş",
-      "Sonraki hedef",
-      "Yatış / art yakıcı",
-      "Kamera",
-      "Duraklat / uçuş seçenekleri"
-    ],
-    "controls.touch.keys": [
-      "SOL DOKUNMATİK ÇUBUK / SOL ÇUBUK",
-      "KAYDIRICI / OMUZ DÜĞMELERİ",
-      "ATEŞ VE FÜZE / RT + B",
-      "HEDEF / Y",
-      "SAĞ ÇUBUK / LT",
-      "X (KONTROLCÜ)",
-      "DURAKLAT / MENÜ"
-    ],
     "controls.desktop.actions": [
       "Yönlendirme",
       "Lazer / birincil ateş",
@@ -328,6 +310,21 @@
     "browser.duration": "Maç süresi",
     "browser.guest_waiting": "Bağlandı. Ev sahibinin maçı başlatması bekleniyor.",
     "browser.arena": "Arena",
-    "browser.settings": "AYARLAR"
+    "browser.settings": "AYARLAR",
+    "controls.guide.actions": [
+      "Yönlendir",
+      "Hız",
+      "Birincil ateş",
+      "İkincil ateş",
+      "Sonraki hedef",
+      "Yatış",
+      "Takviye",
+      "Kamera",
+      "Duraklat"
+    ],
+    "controls.guide.boost": "Tam hızda ↑ basılı tut",
+    "controls.device.touch": "Dokunmatik kontroller",
+    "controls.device.keyboard": "Klavye / fare",
+    "controls.guide.lever": "Gaz kolu / W S"
   }
 }

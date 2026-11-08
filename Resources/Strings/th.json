@@ -12,7 +12,7 @@
     "loading.loading_mission": "กำลังโหลดภารกิจ…",
     "loading.preparing_ship": "กำลังเตรียมยานอวกาศ…",
     "loading.mission_ready": "ภารกิจพร้อมแล้ว",
-    "loading.continue_prompt": "แตะที่ใดก็ได้เพื่อเริ่มภารกิจ",
+    "loading.continue_prompt": "เริ่มภารกิจ",
     "loading.charting_starfield": "กำลังจัดทำแผนที่ดวงดาว…",
     "loading.plotting_capital_ships": "กำลังวางตำแหน่งยานรบหลัก…",
     "loading.scrambling_fighter_wings": "กำลังเตรียมฝูงบินขับไล่…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "ภารกิจ %02lu  /  %@",
     "controls.kicker": "คู่มือการบิน",
     "controls.title": "การควบคุมการบิน",
-    "controls.touch.actions": [
-      "บังคับทิศทาง",
-      "ความเร็ว",
-      "ยิงอาวุธหลัก / รอง",
-      "เป้าหมายถัดไป",
-      "หมุนแกน / เร่งพิเศษ",
-      "กล้อง",
-      "หยุด / ตัวเลือกการบิน"
-    ],
-    "controls.touch.keys": [
-      "คันบังคับสัมผัสซ้าย / ก้านซ้าย",
-      "แถบเลื่อน / ปุ่มไหล่",
-      "ยิงและขีปนาวุธ / RT + B",
-      "เป้าหมาย / Y",
-      "ก้านขวา / LT",
-      "X (คอนโทรลเลอร์)",
-      "หยุด / เมนู"
-    ],
     "controls.desktop.actions": [
       "บังคับทิศทาง",
       "เลเซอร์ / ยิงอาวุธหลัก",
@@ -328,6 +310,21 @@
     "browser.duration": "ระยะเวลาการแข่ง",
     "browser.guest_waiting": "เชื่อมต่อแล้ว กำลังรอเจ้าห้องเริ่มการแข่งขัน",
     "browser.arena": "สนามประลอง",
-    "browser.settings": "การตั้งค่า"
+    "browser.settings": "การตั้งค่า",
+    "controls.guide.actions": [
+      "บังคับทิศทาง",
+      "ความเร็ว",
+      "ยิงอาวุธหลัก",
+      "ยิงอาวุธรอง",
+      "เป้าหมายถัดไป",
+      "หมุนลำ",
+      "เร่งกำลัง",
+      "กล้อง",
+      "หยุดชั่วคราว"
+    ],
+    "controls.guide.boost": "กด ↑ ค้างไว้เมื่อความเร็วเต็ม",
+    "controls.device.touch": "การควบคุมแบบสัมผัส",
+    "controls.device.keyboard": "แป้นพิมพ์ / เมาส์",
+    "controls.guide.lever": "คันเร่ง / W S"
   }
 }

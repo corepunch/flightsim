@@ -12,7 +12,7 @@
     "loading.loading_mission": "মিশন লোড হচ্ছে…",
     "loading.preparing_ship": "মহাকাশযান প্রস্তুত হচ্ছে…",
     "loading.mission_ready": "মিশন প্রস্তুত",
-    "loading.continue_prompt": "মিশন শুরু করতে যেকোনো জায়গায় ট্যাপ করুন",
+    "loading.continue_prompt": "মিশন শুরু করুন",
     "loading.charting_starfield": "নক্ষত্রের মানচিত্র তৈরি হচ্ছে…",
     "loading.plotting_capital_ships": "প্রধান যুদ্ধজাহাজ স্থাপন করা হচ্ছে…",
     "loading.scrambling_fighter_wings": "যুদ্ধবিমান স্কোয়াড্রন প্রস্তুত হচ্ছে…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "মিশন %02lu  /  %@",
     "controls.kicker": "উড়ানের নির্দেশিকা",
     "controls.title": "উড়ান নিয়ন্ত্রণ",
-    "controls.touch.actions": [
-      "দিক নিয়ন্ত্রণ",
-      "গতি",
-      "প্রধান / গৌণ গোলা",
-      "পরের লক্ষ্য",
-      "রোল / বুস্ট",
-      "ক্যামেরা",
-      "বিরতি / উড়ানের বিকল্প"
-    ],
-    "controls.touch.keys": [
-      "বাঁ টাচ স্টিক / বাঁ স্টিক",
-      "স্লাইডার / বাম্পার",
-      "গুলি ও ক্ষেপণাস্ত্র / RT + B",
-      "লক্ষ্য / Y",
-      "ডান স্টিক / LT",
-      "X (কন্ট্রোলার)",
-      "বিরতি / মেনু"
-    ],
     "controls.desktop.actions": [
       "দিক নিয়ন্ত্রণ",
       "লেজার / প্রধান গোলা",
@@ -328,6 +310,21 @@
     "browser.duration": "ম্যাচের সময়",
     "browser.guest_waiting": "সংযুক্ত। হোস্টের ম্যাচ শুরু করার অপেক্ষায়।",
     "browser.arena": "অ্যারেনা",
-    "browser.settings": "সেটিংস"
+    "browser.settings": "সেটিংস",
+    "controls.guide.actions": [
+      "দিক নিয়ন্ত্রণ",
+      "গতি",
+      "প্রধান অস্ত্র",
+      "সহায়ক অস্ত্র",
+      "পরবর্তী লক্ষ্য",
+      "রোল",
+      "বুস্ট",
+      "ক্যামেরা",
+      "বিরতি"
+    ],
+    "controls.guide.boost": "পূর্ণ গতিতে ↑ ধরে রাখুন",
+    "controls.device.touch": "স্পর্শ নিয়ন্ত্রণ",
+    "controls.device.keyboard": "কীবোর্ড / মাউস",
+    "controls.guide.lever": "থ্রটল লিভার / W S"
   }
 }

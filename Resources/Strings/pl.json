@@ -12,7 +12,7 @@
     "loading.loading_mission": "Wczytywanie misji…",
     "loading.preparing_ship": "Przygotowywanie statku…",
     "loading.mission_ready": "Misja gotowa",
-    "loading.continue_prompt": "Dotknij dowolnego miejsca, aby rozpocząć misję",
+    "loading.continue_prompt": "Rozpocznij misję",
     "loading.charting_starfield": "Tworzenie mapy gwiazd…",
     "loading.plotting_capital_ships": "Rozmieszczanie okrętów liniowych…",
     "loading.scrambling_fighter_wings": "Mobilizowanie eskadr myśliwców…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "MISJA %02lu  /  %@",
     "controls.kicker": "PODRĘCZNIK LOTU",
     "controls.title": "Sterowanie lotem",
-    "controls.touch.actions": [
-      "Sterowanie",
-      "Prędkość",
-      "Broń główna / dodatkowa",
-      "Następny cel",
-      "Przechył / dopalacz",
-      "Kamera",
-      "Pauza / opcje lotu"
-    ],
-    "controls.touch.keys": [
-      "LEWY DRĄŻEK DOTYKOWY / LEWY DRĄŻEK",
-      "SUWAK / BUMPERY",
-      "OGIEŃ I POCISK / RT + B",
-      "CEL / Y",
-      "PRAWY DRĄŻEK / LT",
-      "X (KONTROLER)",
-      "PAUZA / MENU"
-    ],
     "controls.desktop.actions": [
       "Sterowanie",
       "Laser / broń główna",
@@ -328,6 +310,21 @@
     "browser.duration": "Czas meczu",
     "browser.guest_waiting": "Połączono. Oczekiwanie na rozpoczęcie meczu przez gospodarza.",
     "browser.arena": "Arena",
-    "browser.settings": "USTAWIENIA"
+    "browser.settings": "USTAWIENIA",
+    "controls.guide.actions": [
+      "Sterowanie",
+      "Prędkość",
+      "Ogień główny",
+      "Ogień dodatkowy",
+      "Następny cel",
+      "Przechył",
+      "Dopalacz",
+      "Kamera",
+      "Pauza"
+    ],
+    "controls.guide.boost": "Przy pełnej prędkości trzymaj ↑",
+    "controls.device.touch": "Sterowanie dotykowe",
+    "controls.device.keyboard": "Klawiatura / mysz",
+    "controls.guide.lever": "Przepustnica / W S"
   }
 }

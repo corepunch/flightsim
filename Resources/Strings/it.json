@@ -12,7 +12,7 @@
     "loading.loading_mission": "Caricamento missione…",
     "loading.preparing_ship": "Preparazione della navicella…",
     "loading.mission_ready": "Missione pronta",
-    "loading.continue_prompt": "Tocca un punto qualsiasi per avviare la missione",
+    "loading.continue_prompt": "Avvia missione",
     "loading.charting_starfield": "Mappatura del campo stellare…",
     "loading.plotting_capital_ships": "Posizionamento delle navi capitali…",
     "loading.scrambling_fighter_wings": "Mobilitazione delle squadriglie…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "MISSIONE %02lu  /  %@",
     "controls.kicker": "MANUALE DI VOLO",
     "controls.title": "Comandi di volo",
-    "controls.touch.actions": [
-      "Pilotaggio",
-      "Velocità",
-      "Fuoco primario / secondario",
-      "Bersaglio successivo",
-      "Rollio / turbo",
-      "Visuale",
-      "Pausa / opzioni di volo"
-    ],
-    "controls.touch.keys": [
-      "STICK TATTILE SINISTRO / STICK SINISTRO",
-      "CURSORE / TASTI DORSALI",
-      "FUOCO + MISSILE / RT + B",
-      "BERSAGLIO / Y",
-      "STICK DESTRO / LT",
-      "X (CONTROLLER)",
-      "PAUSA / MENU"
-    ],
     "controls.desktop.actions": [
       "Pilotaggio",
       "Laser / fuoco primario",
@@ -328,6 +310,21 @@
     "browser.duration": "Durata partita",
     "browser.guest_waiting": "Connesso. In attesa che l’host avvii la partita.",
     "browser.arena": "Arena",
-    "browser.settings": "IMPOSTAZIONI"
+    "browser.settings": "IMPOSTAZIONI",
+    "controls.guide.actions": [
+      "Virata",
+      "Velocità",
+      "Fuoco primario",
+      "Fuoco secondario",
+      "Prossimo bersaglio",
+      "Rollio",
+      "Turbo",
+      "Visuale",
+      "Pausa"
+    ],
+    "controls.guide.boost": "Tieni ↑ alla massima velocità",
+    "controls.device.touch": "Comandi touch",
+    "controls.device.keyboard": "Tastiera / mouse",
+    "controls.guide.lever": "Manetta / W S"
   }
 }

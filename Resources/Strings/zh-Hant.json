@@ -12,7 +12,7 @@
     "loading.loading_mission": "正在加載任務…",
     "loading.preparing_ship": "正在準備飛船…",
     "loading.mission_ready": "任務已就緒",
-    "loading.continue_prompt": "點一下任意位置開始任務",
+    "loading.continue_prompt": "開始任務",
     "loading.charting_starfield": "正在繪制星圖…",
     "loading.plotting_capital_ships": "正在部署主力艦…",
     "loading.scrambling_fighter_wings": "正在集結戰鬥機編隊…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "任務 %02lu  /  %@",
     "controls.kicker": "飛行手冊",
     "controls.title": "飛行控制",
-    "controls.touch.actions": [
-      "轉向",
-      "速度",
-      "主要武器 / 次要武器開火",
-      "下一個目標",
-      "滾轉 / 加速",
-      "視角",
-      "暫停 / 飛行選項"
-    ],
-    "controls.touch.keys": [
-      "左側觸控搖桿 / 左搖桿",
-      "滑塊 / 肩鍵",
-      "開火和飛彈 / RT + B",
-      "目標 / Y",
-      "右搖桿 / LT",
-      "X（控制器）",
-      "暫停 / 菜單"
-    ],
     "controls.desktop.actions": [
       "轉向",
       "雷射 / 主要武器開火",
@@ -328,6 +310,21 @@
     "browser.duration": "對局時長",
     "browser.guest_waiting": "已連線。等待房主開始對局。",
     "browser.arena": "競技場",
-    "browser.settings": "設定"
+    "browser.settings": "設定",
+    "controls.guide.actions": [
+      "轉向",
+      "速度",
+      "主武器開火",
+      "副武器開火",
+      "下一個目標",
+      "橫滾",
+      "加速",
+      "視角",
+      "暫停"
+    ],
+    "controls.guide.boost": "全速時按住 ↑",
+    "controls.device.touch": "觸控操作",
+    "controls.device.keyboard": "鍵盤 / 滑鼠",
+    "controls.guide.lever": "油門桿 / W S"
   }
 }

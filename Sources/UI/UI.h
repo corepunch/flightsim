@@ -110,6 +110,7 @@ typedef NSEdgeInsets BriefingInsets;
 @interface FrontEnd : NSObject
 
 - (instancetype)initWithSize:(CGSize)size services:(id<UIServices>)services;
+@property (nonatomic, strong) Input *input;
 
 // The screen the menus show now (for the host's reveal after loading).
 @property (nonatomic, readonly) SKScene *currentScreen;
@@ -149,6 +150,8 @@ typedef NSEdgeInsets BriefingInsets;
 // built on a background queue: title card, progress bar, status line and a
 // rotating tip. Game drives it from the render loop with -tick:.
 @interface Loading : SKScene <ScreenInput>
+@property (nonatomic, strong) Input *input;
+@property (atomic) ScreenInsets contentInsets;
 
 // kicker: small line above the title ("MISSION 03"), detail: line under it.
 - (void)showTitle:(NSString *)title kicker:(NSString *)kicker detail:(NSString *)detail;
@@ -168,6 +171,16 @@ typedef NSEdgeInsets BriefingInsets;
 @property (nonatomic, readonly) BOOL faded;
 - (void)tick:(double)time;
 
+@end
+
+// MARK: - Control guide
+
+// Native controller glyphs and a wrapping binding guide, shared by loading,
+// pause and settings. Compact guides show the six essentials before launch.
+SKNode *UIInputGlyph(NSString *symbol, NSString *text, CGFloat size);
+@interface UIControlGuide : SKNode
+- (instancetype)initWithGuide:(InputGuide *)guide width:(CGFloat)width compact:(BOOL)compact;
+@property (nonatomic, readonly) CGFloat height;
 @end
 
 // MARK: - MainMenu
@@ -240,6 +253,7 @@ CGPoint UIScrollContentPosition(CGRect region, CGSize contentSize, CGFloat offse
 // The engine's flight options and fixed bindings, reused in the menu and pause.
 // The title stays visible while the body scrolls on small screens.
 @interface ControlsPanel : SKNode <ScreenInput>
+@property (nonatomic, strong) Input *input;
 @property (nonatomic) BOOL touchNavigationEnabled;
 - (void)layoutIn:(CGRect)bounds sceneSize:(CGSize)size;
 - (BOOL)handle:(InputAction)actions; // YES when Back is chosen
@@ -268,6 +282,7 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
 
 // Takes pointer input through <ScreenInput>.
 @interface MainMenu : SKScene <ScreenInput>
+@property (nonatomic, strong) Input *input;
 @property (nonatomic) BOOL touchNavigationEnabled;
 
 // Insets are in scene points. When used as a SceneKit overlay, the host
@@ -302,6 +317,7 @@ typedef NS_ENUM(NSInteger, PauseCommand) {
 // other ids do nothing. Flags for "when": "online" (a remote game, where the
 // mission keeps running) and "cockpit" (the cockpit camera is on).
 @interface PauseMenu : SKScene <ScreenInput>
+@property (nonatomic, strong) Input *input;
 @property (atomic) ScreenInsets contentInsets;
 @property (nonatomic, readonly) UILayoutResult *layout;
 @property (nonatomic, readonly) ControlsPanel *controlsPanel;

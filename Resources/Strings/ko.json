@@ -12,7 +12,7 @@
     "loading.loading_mission": "임무 불러오는 중…",
     "loading.preparing_ship": "우주선 준비 중…",
     "loading.mission_ready": "임무 준비 완료",
-    "loading.continue_prompt": "아무 곳이나 탭하여 임무 시작",
+    "loading.continue_prompt": "임무 시작",
     "loading.charting_starfield": "성도 작성 중…",
     "loading.plotting_capital_ships": "주력함 배치 중…",
     "loading.scrambling_fighter_wings": "전투기 편대 준비 중…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "임무 %02lu  /  %@",
     "controls.kicker": "비행 설명서",
     "controls.title": "비행 조작",
-    "controls.touch.actions": [
-      "조종",
-      "속도",
-      "주무기 / 보조무기 발사",
-      "다음 표적",
-      "롤 / 부스트",
-      "시점",
-      "일시 정지 / 비행 옵션"
-    ],
-    "controls.touch.keys": [
-      "왼쪽 터치 스틱 / 왼쪽 스틱",
-      "슬라이더 / 범퍼",
-      "발사 및 미사일 / RT + B",
-      "표적 / Y",
-      "오른쪽 스틱 / LT",
-      "X (컨트롤러)",
-      "일시 정지 / 메뉴"
-    ],
     "controls.desktop.actions": [
       "조종",
       "레이저 / 주무기 발사",
@@ -328,6 +310,21 @@
     "browser.duration": "경기 시간",
     "browser.guest_waiting": "연결됨. 호스트가 경기를 시작하기를 기다리는 중입니다.",
     "browser.arena": "경기장",
-    "browser.settings": "설정"
+    "browser.settings": "설정",
+    "controls.guide.actions": [
+      "조종",
+      "속도",
+      "주 무기 발사",
+      "보조 무기 발사",
+      "다음 목표",
+      "롤",
+      "부스트",
+      "카메라",
+      "일시 정지"
+    ],
+    "controls.guide.boost": "최고 속도에서 ↑ 유지",
+    "controls.device.touch": "터치 조작",
+    "controls.device.keyboard": "키보드 / 마우스",
+    "controls.guide.lever": "스로틀 레버 / W S"
   }
 }

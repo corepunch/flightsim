@@ -12,7 +12,7 @@
     "loading.loading_mission": "Đang tải nhiệm vụ…",
     "loading.preparing_ship": "Đang chuẩn bị tàu vũ trụ…",
     "loading.mission_ready": "Nhiệm vụ đã sẵn sàng",
-    "loading.continue_prompt": "Chạm vào vị trí bất kỳ để bắt đầu nhiệm vụ",
+    "loading.continue_prompt": "Bắt đầu nhiệm vụ",
     "loading.charting_starfield": "Đang lập bản đồ sao…",
     "loading.plotting_capital_ships": "Đang bố trí chiến hạm chủ lực…",
     "loading.scrambling_fighter_wings": "Đang chuẩn bị các phi đội tiêm kích…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "NHIỆM VỤ %02lu  /  %@",
     "controls.kicker": "SỔ TAY BAY",
     "controls.title": "Điều khiển bay",
-    "controls.touch.actions": [
-      "Lái",
-      "Tốc độ",
-      "Bắn vũ khí chính / phụ",
-      "Mục tiêu kế tiếp",
-      "Lăn / tăng lực",
-      "Góc nhìn",
-      "Tạm dừng / tùy chọn bay"
-    ],
-    "controls.touch.keys": [
-      "CẦN CẢM ỨNG TRÁI / CẦN TRÁI",
-      "THANH TRƯỢT / NÚT VAI",
-      "BẮN VÀ TÊN LỬA / RT + B",
-      "MỤC TIÊU / Y",
-      "CẦN PHẢI / LT",
-      "X (TAY CẦM)",
-      "TẠM DỪNG / MENU"
-    ],
     "controls.desktop.actions": [
       "Lái",
       "Laser / bắn vũ khí chính",
@@ -328,6 +310,21 @@
     "browser.duration": "Thời lượng trận",
     "browser.guest_waiting": "Đã kết nối. Đang chờ chủ phòng bắt đầu trận.",
     "browser.arena": "Đấu trường",
-    "browser.settings": "CÀI ĐẶT"
+    "browser.settings": "CÀI ĐẶT",
+    "controls.guide.actions": [
+      "Điều hướng",
+      "Tốc độ",
+      "Bắn chính",
+      "Bắn phụ",
+      "Mục tiêu kế tiếp",
+      "Lăn",
+      "Tăng tốc",
+      "Camera",
+      "Tạm dừng"
+    ],
+    "controls.guide.boost": "Giữ ↑ khi đạt tốc độ tối đa",
+    "controls.device.touch": "Điều khiển cảm ứng",
+    "controls.device.keyboard": "Bàn phím / chuột",
+    "controls.guide.lever": "Cần ga / W S"
   }
 }

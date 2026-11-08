@@ -12,7 +12,7 @@
     "loading.loading_mission": "جارٍ تحميل المهمة…",
     "loading.preparing_ship": "جارٍ تجهيز المركبة الفضائية…",
     "loading.mission_ready": "المهمة جاهزة",
-    "loading.continue_prompt": "انقر في أي مكان لبدء المهمة",
+    "loading.continue_prompt": "بدء المهمة",
     "loading.charting_starfield": "جارٍ رسم خريطة النجوم…",
     "loading.plotting_capital_ships": "جارٍ تحديد مواقع السفن الرئيسية…",
     "loading.scrambling_fighter_wings": "جارٍ تجهيز أسراب المقاتلات…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "المهمة %02lu  /  %@",
     "controls.kicker": "دليل الطيران",
     "controls.title": "التحكم بالطيران",
-    "controls.touch.actions": [
-      "التوجيه",
-      "السرعة",
-      "إطلاق رئيسي / ثانوي",
-      "الهدف التالي",
-      "دوران محوري / تعزيز",
-      "الكاميرا",
-      "إيقاف مؤقت / خيارات الطيران"
-    ],
-    "controls.touch.keys": [
-      "عصا اللمس اليسرى / العصا اليسرى",
-      "شريط التمرير / أزرار الكتف",
-      "إطلاق وصاروخ / RT + B",
-      "هدف / Y",
-      "العصا اليمنى / LT",
-      "X (يد التحكم)",
-      "إيقاف / القائمة"
-    ],
     "controls.desktop.actions": [
       "التوجيه",
       "ليزر / إطلاق رئيسي",
@@ -328,6 +310,21 @@
     "browser.duration": "مدة المباراة",
     "browser.guest_waiting": "تم الاتصال. بانتظار بدء المضيف للمباراة.",
     "browser.arena": "الساحة",
-    "browser.settings": "الإعدادات"
+    "browser.settings": "الإعدادات",
+    "controls.guide.actions": [
+      "التوجيه",
+      "السرعة",
+      "إطلاق أساسي",
+      "إطلاق ثانوي",
+      "الهدف التالي",
+      "التدحرج",
+      "التعزيز",
+      "الكاميرا",
+      "إيقاف مؤقت"
+    ],
+    "controls.guide.boost": "استمر بالضغط على ↑ بأقصى سرعة",
+    "controls.device.touch": "تحكم باللمس",
+    "controls.device.keyboard": "لوحة المفاتيح / الفأرة",
+    "controls.guide.lever": "ذراع الدفع / W S"
   }
 }

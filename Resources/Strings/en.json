@@ -12,7 +12,7 @@
     "loading.loading_mission": "Loading mission…",
     "loading.preparing_ship": "Preparing spacecraft…",
     "loading.mission_ready": "Mission ready",
-    "loading.continue_prompt": "Tap anywhere to start mission",
+    "loading.continue_prompt": "Start mission",
     "loading.charting_starfield": "Charting starfield…",
     "loading.plotting_capital_ships": "Plotting capital ships…",
     "loading.scrambling_fighter_wings": "Scrambling fighter wings…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "MISSION %02lu  /  %@",
     "controls.kicker": "FLIGHT MANUAL",
     "controls.title": "Flight controls",
-    "controls.touch.actions": [
-      "Steer",
-      "Speed",
-      "Primary / secondary fire",
-      "Next target",
-      "Roll / boost",
-      "Camera",
-      "Pause / flight options"
-    ],
-    "controls.touch.keys": [
-      "LEFT TOUCH STICK / LEFT STICK",
-      "SLIDER / BUMPERS",
-      "FIRE + MISSILE / RT + B",
-      "TARGET / Y",
-      "RIGHT STICK / LT",
-      "X (CONTROLLER)",
-      "PAUSE / MENU"
-    ],
     "controls.desktop.actions": [
       "Steer",
       "Laser / primary fire",
@@ -328,6 +310,21 @@
     "browser.duration": "Match duration",
     "browser.guest_waiting": "Connected. Waiting for the host to start the match.",
     "browser.arena": "Arena",
-    "browser.settings": "SETTINGS"
+    "browser.settings": "SETTINGS",
+    "controls.guide.actions": [
+      "Steer",
+      "Speed",
+      "Primary fire",
+      "Secondary fire",
+      "Next target",
+      "Roll",
+      "Boost",
+      "Camera",
+      "Pause"
+    ],
+    "controls.guide.boost": "Hold ↑ at full speed",
+    "controls.device.touch": "Touch controls",
+    "controls.device.keyboard": "Keyboard / mouse",
+    "controls.guide.lever": "Throttle lever / W S"
   }
 }

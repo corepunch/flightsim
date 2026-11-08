@@ -9,131 +9,6 @@ static float Deadzone(float value) {
     return copysignf(fmaxf(fabsf(value) - 0.06f, 0) / 0.94f, value);
 }
 
-// Icons for the on-screen face buttons, drawn centred on the origin. The
-// system fills each path in place of the button's letter, scaling the path's
-// bounds to the button with y pointing up. IconFrame turns the UIKit drawing
-// (y down) the right way up and pads its bounds so the icon keeps a margin
-// inside the disc.
-static UIBezierPath *IconFrame(UIBezierPath *icon) {
-    [icon applyTransform:CGAffineTransformMakeScale(1, -1)];
-    const CGFloat half = 20;
-    for (CGFloat corner = -half; corner <= half; corner += 2 * half) {
-        [icon moveToPoint:CGPointMake(corner, corner)];
-        [icon addLineToPoint:CGPointMake(corner, corner)];
-    }
-    return icon;
-}
-static UIBezierPath *Rotated(UIBezierPath *path, CGFloat angle) {
-    [path applyTransform:CGAffineTransformMakeRotation(angle)];
-    return path;
-}
-
-// The virtual controller fills geometry; lineWidth and line caps on a
-// UIBezierPath are not part of its CGPath. Expand strokes before handing
-// them to the system so the reticle keeps its rounded ends.
-static UIBezierPath *IconStroke(UIBezierPath *line, CGFloat width) {
-    CGPathRef outline = CGPathCreateCopyByStrokingPath(line.CGPath, NULL, width,
-        kCGLineCapRound, kCGLineJoinRound, 0);
-    UIBezierPath *icon = [UIBezierPath bezierPathWithCGPath:outline];
-    CGPathRelease(outline);
-    return icon;
-}
-
-// An elliptical muzzle and the gap around the breech give the barrel depth
-// in a single colour. Both weapon icons aim diagonally toward the screen.
-static UIBezierPath *LaserIcon(void) {
-    UIBezierPath *icon = [UIBezierPath bezierPath];
-    [icon moveToPoint:CGPointMake(-4.5, -6.5)];
-    [icon addCurveToPoint:CGPointMake(-8, 0) controlPoint1:CGPointMake(-6.5, -6.5) controlPoint2:CGPointMake(-8, -4)];
-    [icon addCurveToPoint:CGPointMake(-4.5, 6.5) controlPoint1:CGPointMake(-8, 4) controlPoint2:CGPointMake(-6.5, 6.5)];
-    [icon addQuadCurveToPoint:CGPointMake(-1.5, 4.5) controlPoint:CGPointMake(-2, 6.5)];
-    [icon addLineToPoint:CGPointMake(5, 4.5)];
-    [icon addQuadCurveToPoint:CGPointMake(7, 2.5) controlPoint:CGPointMake(7, 4.5)];
-    [icon addLineToPoint:CGPointMake(7, -2.5)];
-    [icon addQuadCurveToPoint:CGPointMake(5, -4.5) controlPoint:CGPointMake(7, -4.5)];
-    [icon addLineToPoint:CGPointMake(-1.5, -4.5)];
-    [icon addQuadCurveToPoint:CGPointMake(-4.5, -6.5) controlPoint:CGPointMake(-2, -6.5)];
-    [icon closePath];
-    // The bore winds opposite to the outer contour to preserve its opening.
-    UIBezierPath *bore = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(-6.7, -3.8, 3, 7.6)];
-    [icon appendPath:bore];
-    UIBezierPath *breech = [UIBezierPath bezierPath];
-    [breech moveToPoint:CGPointMake(2, -7.5)];
-    [breech addLineToPoint:CGPointMake(8, -7.5)];
-    [breech addCurveToPoint:CGPointMake(8, 7.5) controlPoint1:CGPointMake(18, -7.5) controlPoint2:CGPointMake(18, 7.5)];
-    [breech addLineToPoint:CGPointMake(2, 7.5)];
-    [breech addLineToPoint:CGPointMake(2, 6)];
-    [breech addLineToPoint:CGPointMake(6, 6)];
-    [breech addQuadCurveToPoint:CGPointMake(8.5, 3.5) controlPoint:CGPointMake(8.5, 6)];
-    [breech addLineToPoint:CGPointMake(8.5, -3.5)];
-    [breech addQuadCurveToPoint:CGPointMake(6, -6) controlPoint:CGPointMake(8.5, -6)];
-    [breech addLineToPoint:CGPointMake(2, -6)];
-    [breech closePath];
-    [icon appendPath:breech];
-    [icon appendPath:[UIBezierPath bezierPathWithRoundedRect:CGRectMake(-18, -1.4, 8, 2.8) cornerRadius:1.4]];
-    return Rotated(icon, M_PI / 4);
-}
-
-// One continuous outline avoids holes where the body and swept fins meet
-// when the system rasterizes the compound path.
-static UIBezierPath *TorpedoIcon(void) {
-    UIBezierPath *icon = [UIBezierPath bezierPath];
-    [icon moveToPoint:CGPointMake(0, -15)];
-    [icon addCurveToPoint:CGPointMake(3.5, -6) controlPoint1:CGPointMake(2, -13) controlPoint2:CGPointMake(3.5, -10)];
-    [icon addLineToPoint:CGPointMake(6, -3.5)];
-    [icon addQuadCurveToPoint:CGPointMake(6.3, -2.8) controlPoint:CGPointMake(6.3, -3.2)];
-    [icon addLineToPoint:CGPointMake(6.3, -1.8)];
-    [icon addQuadCurveToPoint:CGPointMake(5.6, -1.3) controlPoint:CGPointMake(6.3, -1)];
-    [icon addLineToPoint:CGPointMake(3.5, -2.2)];
-    [icon addLineToPoint:CGPointMake(3.5, 2.5)];
-    [icon addLineToPoint:CGPointMake(7.2, 7.5)];
-    [icon addQuadCurveToPoint:CGPointMake(7.5, 8.5) controlPoint:CGPointMake(7.5, 8)];
-    [icon addLineToPoint:CGPointMake(7.5, 10)];
-    [icon addQuadCurveToPoint:CGPointMake(6.5, 10.7) controlPoint:CGPointMake(7.5, 11.3)];
-    [icon addLineToPoint:CGPointMake(3, 9)];
-    [icon addLineToPoint:CGPointMake(3, 10.5)];
-    [icon addQuadCurveToPoint:CGPointMake(2.3, 11.2) controlPoint:CGPointMake(3, 11.2)];
-    [icon addLineToPoint:CGPointMake(-2.3, 11.2)];
-    [icon addQuadCurveToPoint:CGPointMake(-3, 10.5) controlPoint:CGPointMake(-3, 11.2)];
-    [icon addLineToPoint:CGPointMake(-3, 9)];
-    [icon addLineToPoint:CGPointMake(-6.5, 10.7)];
-    [icon addQuadCurveToPoint:CGPointMake(-7.5, 10) controlPoint:CGPointMake(-7.5, 11.3)];
-    [icon addLineToPoint:CGPointMake(-7.5, 8.5)];
-    [icon addQuadCurveToPoint:CGPointMake(-7.2, 7.5) controlPoint:CGPointMake(-7.5, 8)];
-    [icon addLineToPoint:CGPointMake(-3.5, 2.5)];
-    [icon addLineToPoint:CGPointMake(-3.5, -2.2)];
-    [icon addLineToPoint:CGPointMake(-5.6, -1.3)];
-    [icon addQuadCurveToPoint:CGPointMake(-6.3, -1.8) controlPoint:CGPointMake(-6.3, -1)];
-    [icon addLineToPoint:CGPointMake(-6.3, -2.8)];
-    [icon addQuadCurveToPoint:CGPointMake(-6, -3.5) controlPoint:CGPointMake(-6.3, -3.2)];
-    [icon addLineToPoint:CGPointMake(-3.5, -6)];
-    [icon addCurveToPoint:CGPointMake(0, -15) controlPoint1:CGPointMake(-3.5, -10) controlPoint2:CGPointMake(-2, -13)];
-    [icon closePath];
-    [icon appendPath:[UIBezierPath bezierPathWithRoundedRect:CGRectMake(-1.3, 13.5, 2.6, 4) cornerRadius:1.3]];
-    return Rotated(icon, -M_PI / 4);
-}
-
-// Two upright bars.
-static UIBezierPath *PauseIcon(void) {
-    UIBezierPath *icon = [UIBezierPath bezierPath];
-    for (CGFloat x = -5; x <= 5; x += 10)
-        [icon appendPath:[UIBezierPath bezierPathWithRoundedRect:CGRectMake(x - 2.3, -10, 4.6, 20) cornerRadius:1.5]];
-    return icon;
-}
-
-// Four circular arcs and a centre dot stay readable inside a small disc.
-static UIBezierPath *TargetIcon(void) {
-    UIBezierPath *icon = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(-2, -2, 4, 4)];
-    for (int quadrant = 0; quadrant < 4; quadrant++) {
-        CGFloat angle = quadrant * M_PI / 2;
-        UIBezierPath *arc = [UIBezierPath bezierPath];
-        [arc addArcWithCenter:CGPointZero radius:10.5 startAngle:angle + M_PI / 10
-                    endAngle:angle + 2 * M_PI / 5 clockwise:YES];
-        [icon appendPath:IconStroke(arc, 3)];
-    }
-    return icon;
-}
-
 // The on-screen pad shown while flying without a physical controller. The
 // left stick steers. The right stick works the throttle up and down and
 // rolls left and right; held fully forward at full throttle it boosts. X
@@ -146,24 +21,17 @@ static GCVirtualController *MakeVirtualController(void) {
         GCInputLeftThumbstick, GCInputRightThumbstick,
         GCInputButtonA, GCInputButtonB, GCInputButtonX, GCInputButtonY,
     ]];
-    GCVirtualController *pad = [GCVirtualController virtualControllerWithConfiguration:config];
-    NSDictionary<NSString *, UIBezierPath *> *icons = @{
-        GCInputButtonX: IconFrame(LaserIcon()), GCInputButtonA: IconFrame(TorpedoIcon()),
-        GCInputButtonY: IconFrame(TargetIcon()), GCInputButtonB: IconFrame(PauseIcon()),
-    };
-    [icons enumerateKeysAndObjectsUsingBlock:^(NSString *button, UIBezierPath *icon, BOOL *stop) {
-        [pad updateConfigurationForElement:button configuration:^(GCVirtualControllerElementConfiguration *element) {
-            element.path = icon;
-            return element;
-        }];
-    }];
-    return pad;
+    return [GCVirtualController virtualControllerWithConfiguration:config];
 }
 
 // How far forward the on-screen throttle stick must be held to boost.
 static const float BoostPush = 0.9f;
 
 typedef NS_ENUM(NSInteger, VirtualPadState) { VirtualPadOff, VirtualPadConnecting, VirtualPadOn };
+
+@interface Input ()
+@property (atomic, readwrite, strong) InputGuide *controlGuide;
+@end
 
 @implementation Input {
     os_unfair_lock _lock;
@@ -233,6 +101,14 @@ typedef NS_ENUM(NSInteger, VirtualPadState) { VirtualPadOff, VirtualPadConnectin
 // Shows the virtual pad while flying without a physical controller, and
 // listens to whichever pad is in use.
 - (void)updateVirtualController {
+    GCExtendedGamepad *pad = _controller.extendedGamepad;
+    self.controlGuide = InputGuideMake(pad ? InputSchemeGamepad : InputSchemeTouch, _controller.vendorName, (InputPadSymbols){
+        .leftStick = pad.leftThumbstick.sfSymbolsName, .rightStick = pad.rightThumbstick.sfSymbolsName,
+        .a = pad.buttonA.sfSymbolsName, .b = pad.buttonB.sfSymbolsName, .x = pad.buttonX.sfSymbolsName, .y = pad.buttonY.sfSymbolsName,
+        .leftTrigger = pad.leftTrigger.sfSymbolsName, .rightTrigger = pad.rightTrigger.sfSymbolsName,
+        .leftShoulder = pad.leftShoulder.sfSymbolsName, .rightShoulder = pad.rightShoulder.sfSymbolsName,
+        .menu = pad.buttonMenu.sfSymbolsName,
+    });
     os_unfair_lock_lock(&_lock);
     BOOL wanted = _active && _flying && !_controller;
     os_unfair_lock_unlock(&_lock);

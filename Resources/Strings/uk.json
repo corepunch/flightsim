@@ -12,7 +12,7 @@
     "loading.loading_mission": "Завантаження місії…",
     "loading.preparing_ship": "Підготовка корабля…",
     "loading.mission_ready": "Місія готова",
-    "loading.continue_prompt": "Торкніться екрана будь-де, щоб почати місію",
+    "loading.continue_prompt": "Почати місію",
     "loading.charting_starfield": "Побудова зоряної карти…",
     "loading.plotting_capital_ships": "Розміщення великих кораблів…",
     "loading.scrambling_fighter_wings": "Підготовка ескадрилей винищувачів…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "МІСІЯ %02lu  /  %@",
     "controls.kicker": "ЛЬОТНИЙ ПОСІБНИК",
     "controls.title": "Керування польотом",
-    "controls.touch.actions": [
-      "Керування",
-      "Швидкість",
-      "Основна / додаткова зброя",
-      "Наступна ціль",
-      "Крен / форсаж",
-      "Камера",
-      "Пауза / параметри польоту"
-    ],
-    "controls.touch.keys": [
-      "ЛІВИЙ СЕНСОРНИЙ СТІК / ЛІВИЙ СТІК",
-      "ПОВЗУНОК / БАМПЕРИ",
-      "ВОГОНЬ І РАКЕТА / RT + B",
-      "ЦІЛЬ / Y",
-      "ПРАВИЙ СТІК / LT",
-      "X (КОНТРОЛЕР)",
-      "ПАУЗА / МЕНЮ"
-    ],
     "controls.desktop.actions": [
       "Керування",
       "Лазер / основна зброя",
@@ -328,6 +310,21 @@
     "browser.duration": "Тривалість бою",
     "browser.guest_waiting": "Підключено. Очікування початку бою ведучим.",
     "browser.arena": "Арена",
-    "browser.settings": "НАЛАШТУВАННЯ"
+    "browser.settings": "НАЛАШТУВАННЯ",
+    "controls.guide.actions": [
+      "Напрямок",
+      "Швидкість",
+      "Основний вогонь",
+      "Додатковий вогонь",
+      "Наступна ціль",
+      "Крен",
+      "Форсаж",
+      "Камера",
+      "Пауза"
+    ],
+    "controls.guide.boost": "Тримайте ↑ на повній швидкості",
+    "controls.device.touch": "Сенсорне керування",
+    "controls.device.keyboard": "Клавіатура / миша",
+    "controls.guide.lever": "Важіль тяги / W S"
   }
 }

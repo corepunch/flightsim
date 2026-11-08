@@ -9,12 +9,18 @@ static SKLabelNode *Text(CGFloat size, SKColor *c, SKLabelHorizontalAlignmentMod
 }
 
 // Gameplay tips where the locale has them; otherwise one generic line.
-static NSArray<NSString *> *Tips(void) {
+static NSArray<NSString *> *Tips(InputGuide *guide) {
+    // The generic tip is input-neutral; device-specific bindings live in the
+    // guide instead of rotating keyboard advice onto a phone or a gamepad.
+    if (guide && guide.scheme != InputSchemeKeyboard) return L10nList(@"loading.mission_tip");
     return L10nHasOwn(@"loading.tips") ? L10nList(@"loading.tips") : L10nList(@"loading.mission_tip");
 }
 
 @implementation Loading {
     SKNode *_root;
+    SKNode *_progressContent, *_readyContent;
+    InputGuide *_guideSnapshot;
+    ScreenInsets _usedInsets;
     CGSize _laidOut;
     NSString *_title, *_kicker, *_detail, *_status;
     SKLabelNode *_titleLabel, *_kickerLabel, *_detailLabel, *_statusLabel, *_percentLabel, *_tipLabel;
@@ -39,7 +45,7 @@ static NSArray<NSString *> *Tips(void) {
         _root = [SKNode node];
         [self addChild:_root];
         _stars = [NSMutableArray array];
-        _tip = arc4random_uniform((uint32_t)Tips().count);
+        _tip = arc4random_uniform((uint32_t)Tips(self.input.controlGuide).count);
         _title = _kicker = _detail = @"";
         _status = L10n(@"loading.loading_mission");
     }
@@ -74,7 +80,7 @@ static NSArray<NSString *> *Tips(void) {
     _fadeRequested = NO;
     _fadeStart = _fadeLength = 0;
     _root.alpha = 1;
-    _tip = (_tip + 1) % Tips().count;
+    _tip = (_tip + 1) % Tips(self.input.controlGuide).count;
     _tipChanged = _now;
     [self layout];
 }
@@ -95,7 +101,7 @@ static NSArray<NSString *> *Tips(void) {
     _startRequested = NO;
     _armed = NO;
     _readyToStart = ready;
-    _startLabel.hidden = !ready;
+    [self layout];
 }
 
 static BOOL Inside(CGPoint fraction) {
@@ -155,6 +161,9 @@ static BOOL Inside(CGPoint fraction) {
     [_stars removeAllObjects];
     CGSize s = self.size;
     _laidOut = s;
+    _usedInsets = self.contentInsets;
+    _guideSnapshot = self.input.controlGuide;
+    _tip %= Tips(_guideSnapshot).count;
     [_root addChild:[self motionBackdropWithSize:s]];
 
     SKTexture *hangar = self.hangarTexture;
@@ -195,7 +204,8 @@ static BOOL Inside(CGPoint fraction) {
         [_root addChild:rule];
     }
 
-    CGFloat x = MIN(60, s.width * 0.08), mid = MAX(250, s.height * 0.57);
+    ScreenInsets safe = self.contentInsets;
+    CGFloat x = MAX(MIN(60, s.width * 0.08), safe.left + 18), mid = MAX(250, s.height * 0.57);
     _kickerLabel = Text(15, UIColorWithOpacity(UIInk, 0.6), SKLabelHorizontalAlignmentModeLeft);
     _kickerLabel.text = _kicker;
     _kickerLabel.position = CGPointMake(x, mid + 52);
@@ -213,19 +223,22 @@ static BOOL Inside(CGPoint fraction) {
     [_root addChild:_detailLabel];
 
     // Progress bar along the bottom.
+    _progressContent = [SKNode node];
+    _progressContent.hidden = self.readyToStart;
+    [_root addChild:_progressContent];
     _barWidth = MAX(1, MIN(720, s.width - 2 * x - 80));
     CGFloat barY = 104;
-    [_root addChild:UISkewedShape(CGRectMake(x - 3, barY - 3, _barWidth + 6, 12),
+    [_progressContent addChild:UISkewedShape(CGRectMake(x - 3, barY - 3, _barWidth + 6, 12),
                                     UIColorWithOpacity(UIInk, 0.45), UIColorWithOpacity(UIInk, 0.05))];
     _barFill = [SKShapeNode node];
     _barFill.lineWidth = 0;
     _barFill.fillColor = UIColorWithOpacity(UIInk, 0.9);
     _barFill.position = CGPointMake(x, barY);
-    [_root addChild:_barFill];
+    [_progressContent addChild:_barFill];
     for (int i = 1; i < 10; i++) {   // tick marks every 10%
         SKSpriteNode *t = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.3) size:CGSizeMake(1, 4)];
         t.position = CGPointMake(x + _barWidth * i / 10.0, barY - 7);
-        [_root addChild:t];
+        [_progressContent addChild:t];
     }
 
     _statusLabel = Text(13, UIColorWithOpacity(UIInk, 0.75), SKLabelHorizontalAlignmentModeLeft);
@@ -238,10 +251,10 @@ static BOOL Inside(CGPoint fraction) {
         _statusLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
         _statusLabel.position = CGPointMake(x + _barWidth - 64, barY + 20);
     }
-    [_root addChild:_statusLabel];
+    [_progressContent addChild:_statusLabel];
     _percentLabel = Text(13, UIColorWithOpacity(UIInk, 0.75), SKLabelHorizontalAlignmentModeRight);
     _percentLabel.position = CGPointMake(x + _barWidth, barY + 20);
-    [_root addChild:_percentLabel];
+    [_progressContent addChild:_percentLabel];
 
     _tipLabel = Text(13, UIColorWithOpacity(UIInk, 0.45), SKLabelHorizontalAlignmentModeLeft);
     _tipLabel.numberOfLines = 0;
@@ -249,22 +262,12 @@ static BOOL Inside(CGPoint fraction) {
     _tipLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
     _tipLabel.position = CGPointMake(x, barY - 22);
     _tipLabel.fontName = UIBodyFont;
-    _tipLabel.text = Tips()[_tip];
+    _tipLabel.text = Tips(self.input.controlGuide)[_tip];
     if (L10nIsRightToLeft()) {
         _tipLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
         _tipLabel.position = CGPointMake(x + _barWidth, barY - 22);
     }
-    [_root addChild:_tipLabel];
-
-    _startLabel = Text(18, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeCenter);
-    _startLabel.fontName = UIBodyFont;
-    _startLabel.numberOfLines = 0;
-    _startLabel.preferredMaxLayoutWidth = MAX(1, s.width - 2 * x);
-    _startLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeBottom;
-    _startLabel.text = L10n(@"loading.continue_prompt");
-    _startLabel.position = CGPointMake(s.width * 0.5, 172);
-    _startLabel.hidden = !self.readyToStart;
-    [_root addChild:_startLabel];
+    [_progressContent addChild:_tipLabel];
 
     // Three-segment ring that spins while work is in flight.
     _spinner = [SKNode node];
@@ -284,7 +287,32 @@ static BOOL Inside(CGPoint fraction) {
     inner.strokeColor = UIColorWithOpacity(UIInk, 0.25);
     inner.lineWidth = 1;
     [_spinner addChild:inner];
-    [_root addChild:_spinner];
+    [_progressContent addChild:_spinner];
+
+    _readyContent = [SKNode node];
+    _readyContent.hidden = !self.readyToStart;
+    [_root addChild:_readyContent];
+    if (self.readyToStart && _guideSnapshot) {
+        CGFloat width = MAX(1, MIN(980, s.width - x - MAX(x, safe.right + 18)));
+        UIControlGuide *guide = [[UIControlGuide alloc] initWithGuide:_guideSnapshot width:width compact:YES];
+        UIHorizontalStack *prompt = [UIHorizontalStack new];
+        prompt.spacing = 12;
+        prompt.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeCenter;
+        prompt.maximumWidth = width;
+        [prompt addArrangedNode:UIInputGlyph(_guideSnapshot.confirmSymbol, _guideSnapshot.confirmText, 25)];
+        _startLabel = Text(16, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
+        _startLabel.fontName = UIBodyFont;
+        _startLabel.numberOfLines = 0;
+        _startLabel.text = L10n(@"loading.continue_prompt");
+        [prompt addArrangedNode:_startLabel];
+        [prompt layout];
+        CGFloat bottom = safe.bottom + 18;
+        prompt.position = CGPointMake(x + width / 2, bottom + prompt.contentSize.height / 2);
+        CGFloat guideBottom = bottom + prompt.contentSize.height + 20;
+        guide.position = CGPointMake(x, guideBottom + guide.height);
+        [_readyContent addChild:guide];
+        [_readyContent addChild:prompt];
+    }
 
     [self applyProgress];
 }
@@ -301,7 +329,8 @@ static BOOL Inside(CGPoint fraction) {
     double dt = _lastTick > 0 ? fmin(time - _lastTick, 0.1) : 1.0 / 60.0;
     _lastTick = time;
     _now = time;
-    if (!CGSizeEqualToSize(self.size, _laidOut)) [self layout];
+    if (!CGSizeEqualToSize(self.size, _laidOut) || memcmp(&_usedInsets, &_contentInsets, sizeof _usedInsets) ||
+        _guideSnapshot != self.input.controlGuide) [self layout];
 
     // Ease toward the reported progress; never stall completely so the bar
     // always reads as alive, but never run past the real value.
@@ -325,8 +354,8 @@ static BOOL Inside(CGPoint fraction) {
 
     if (time - _tipChanged > 6.5) {
         _tipChanged = time;
-        _tip = (_tip + 1) % Tips().count;
-        _tipLabel.text = Tips()[_tip];
+        _tip = (_tip + 1) % Tips(self.input.controlGuide).count;
+        _tipLabel.text = Tips(self.input.controlGuide)[_tip];
     }
 
     if (_fadeRequested) {
