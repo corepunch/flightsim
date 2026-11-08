@@ -12,7 +12,7 @@
     "loading.loading_mission": "Mission wird geladen…",
     "loading.preparing_ship": "Raumschiff wird vorbereitet…",
     "loading.mission_ready": "Mission bereit",
-    "loading.continue_prompt": "Tippe irgendwo, um die Mission zu starten",
+    "loading.continue_prompt": "Mission starten",
     "loading.charting_starfield": "Sternenfeld wird kartiert…",
     "loading.plotting_capital_ships": "Großkampfschiffe werden positioniert…",
     "loading.scrambling_fighter_wings": "Jägerstaffeln werden mobilisiert…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "MISSION %02lu  /  %@",
     "controls.kicker": "FLUGHANDBUCH",
     "controls.title": "Flugsteuerung",
-    "controls.touch.actions": [
-      "Steuern",
-      "Geschwindigkeit",
-      "Primär- / Sekundärwaffe",
-      "Nächstes Ziel",
-      "Rollen / Boost",
-      "Kamera",
-      "Pause / Flugoptionen"
-    ],
-    "controls.touch.keys": [
-      "LINKER TOUCHSTICK / LINKER STICK",
-      "REGLER / SCHULTERTASTEN",
-      "FEUERN + RAKETE / RT + B",
-      "ZIEL / Y",
-      "RECHTER STICK / LT",
-      "X (CONTROLLER)",
-      "PAUSE / MENÜ"
-    ],
     "controls.desktop.actions": [
       "Steuern",
       "Laser / Primärwaffe",
@@ -328,6 +310,21 @@
     "browser.duration": "Spieldauer",
     "browser.guest_waiting": "Verbunden. Warten auf den Spielstart durch den Host.",
     "browser.arena": "Arena",
-    "browser.settings": "EINSTELLUNGEN"
+    "browser.settings": "EINSTELLUNGEN",
+    "controls.guide.actions": [
+      "Steuern",
+      "Tempo",
+      "Primärfeuer",
+      "Sekundärfeuer",
+      "Nächstes Ziel",
+      "Rollen",
+      "Schub",
+      "Kamera",
+      "Pause"
+    ],
+    "controls.guide.boost": "Bei vollem Tempo ↑ halten",
+    "controls.device.touch": "Touchsteuerung",
+    "controls.device.keyboard": "Tastatur / Maus",
+    "controls.guide.lever": "Schubhebel / W S"
   }
 }

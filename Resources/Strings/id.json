@@ -12,7 +12,7 @@
     "loading.loading_mission": "Memuat misi…",
     "loading.preparing_ship": "Menyiapkan pesawat antariksa…",
     "loading.mission_ready": "Misi siap",
-    "loading.continue_prompt": "Ketuk di mana saja untuk memulai misi",
+    "loading.continue_prompt": "Mulai misi",
     "loading.charting_starfield": "Memetakan bintang…",
     "loading.plotting_capital_ships": "Menempatkan kapal induk tempur…",
     "loading.scrambling_fighter_wings": "Menyiapkan skuadron tempur…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "MISI %02lu  /  %@",
     "controls.kicker": "PANDUAN PENERBANGAN",
     "controls.title": "Kontrol penerbangan",
-    "controls.touch.actions": [
-      "Kemudi",
-      "Kecepatan",
-      "Tembakan utama / sekunder",
-      "Sasaran berikutnya",
-      "Guling / pendorong",
-      "Kamera",
-      "Jeda / opsi penerbangan"
-    ],
-    "controls.touch.keys": [
-      "STIK SENTUH KIRI / STIK KIRI",
-      "PENGGESER / TOMBOL BAHU",
-      "TEMBAK DAN RUDAL / RT + B",
-      "SASARAN / Y",
-      "STIK KANAN / LT",
-      "X (PENGONTROL)",
-      "JEDA / MENU"
-    ],
     "controls.desktop.actions": [
       "Kemudi",
       "Laser / tembakan utama",
@@ -328,6 +310,21 @@
     "browser.duration": "Durasi pertandingan",
     "browser.guest_waiting": "Terhubung. Menunggu tuan rumah memulai pertandingan.",
     "browser.arena": "Arena",
-    "browser.settings": "PENGATURAN"
+    "browser.settings": "PENGATURAN",
+    "controls.guide.actions": [
+      "Kemudi",
+      "Kecepatan",
+      "Tembakan utama",
+      "Tembakan sekunder",
+      "Target berikutnya",
+      "Berguling",
+      "Pendorong",
+      "Kamera",
+      "Jeda"
+    ],
+    "controls.guide.boost": "Tahan ↑ pada kecepatan penuh",
+    "controls.device.touch": "Kontrol sentuh",
+    "controls.device.keyboard": "Keyboard / mouse",
+    "controls.guide.lever": "Tuas gas / W S"
   }
 }

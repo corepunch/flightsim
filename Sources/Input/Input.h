@@ -86,6 +86,33 @@ static inline void ScreenInputDeliver(id screen, PointerEvent e) {
 
 // MARK: - Input
 
+// A snapshot of the bindings actually used by the input backend. Screens share
+// these descriptions instead of inferring a controller layout from the platform.
+typedef NS_ENUM(NSInteger, InputScheme) { InputSchemeKeyboard, InputSchemeJoystick, InputSchemeTouch, InputSchemeGamepad };
+typedef NS_ENUM(NSInteger, InputHintAction) {
+    InputHintSteer, InputHintSpeed, InputHintFire, InputHintSecondary, InputHintTarget,
+    InputHintRoll, InputHintBoost, InputHintCamera, InputHintPause,
+};
+
+@interface InputBinding : NSObject
+@property (nonatomic, readonly) InputHintAction action;
+@property (nonatomic, readonly, copy) NSArray<NSString *> *symbols;
+@property (nonatomic, readonly, copy) NSString *text;
+@end
+
+typedef struct {
+    __unsafe_unretained NSString *leftStick, *rightStick, *a, *b, *x, *y;
+    __unsafe_unretained NSString *leftTrigger, *rightTrigger, *leftShoulder, *rightShoulder, *menu;
+} InputPadSymbols;
+
+@interface InputGuide : NSObject
+@property (nonatomic, readonly) InputScheme scheme;
+@property (nonatomic, readonly, copy) NSString *name;
+@property (nonatomic, readonly, copy) NSArray<InputBinding *> *bindings;
+@property (nonatomic, readonly, copy) NSString *confirmSymbol, *confirmText;
+@end
+InputGuide *InputGuideMake(InputScheme scheme, NSString *name, InputPadSymbols symbols);
+
 #if TARGET_OS_OSX
 #import <AppKit/AppKit.h>
 #endif
@@ -153,5 +180,6 @@ typedef struct {
 @property (nonatomic, readonly) PointerQueue *pointer;
 @property (atomic, readonly) CGPoint mouseStick;          // -1..1, for the HUD
 @property (atomic, readonly, copy) NSString *joystickName; // nil if none
+@property (atomic, readonly, strong) InputGuide *controlGuide;
 
 @end

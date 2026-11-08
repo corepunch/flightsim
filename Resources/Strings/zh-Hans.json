@@ -12,7 +12,7 @@
     "loading.loading_mission": "正在加载任务…",
     "loading.preparing_ship": "正在准备飞船…",
     "loading.mission_ready": "任务已就绪",
-    "loading.continue_prompt": "点击任意位置开始任务",
+    "loading.continue_prompt": "开始任务",
     "loading.charting_starfield": "正在绘制星图…",
     "loading.plotting_capital_ships": "正在部署主力舰…",
     "loading.scrambling_fighter_wings": "正在集结战斗机编队…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "任务 %02lu  /  %@",
     "controls.kicker": "飞行手册",
     "controls.title": "飞行控制",
-    "controls.touch.actions": [
-      "转向",
-      "速度",
-      "主武器 / 副武器开火",
-      "下一个目标",
-      "滚转 / 加速",
-      "视角",
-      "暂停 / 飞行选项"
-    ],
-    "controls.touch.keys": [
-      "左侧触控摇杆 / 左摇杆",
-      "滑块 / 肩键",
-      "开火和导弹 / RT + B",
-      "目标 / Y",
-      "右摇杆 / LT",
-      "X（手柄）",
-      "暂停 / 菜单"
-    ],
     "controls.desktop.actions": [
       "转向",
       "激光 / 主武器开火",
@@ -328,6 +310,21 @@
     "browser.duration": "对局时长",
     "browser.guest_waiting": "已连接。等待房主开始对局。",
     "browser.arena": "竞技场",
-    "browser.settings": "设置"
+    "browser.settings": "设置",
+    "controls.guide.actions": [
+      "转向",
+      "速度",
+      "主武器开火",
+      "副武器开火",
+      "下一个目标",
+      "横滚",
+      "加速",
+      "视角",
+      "暂停"
+    ],
+    "controls.guide.boost": "全速时按住 ↑",
+    "controls.device.touch": "触控操作",
+    "controls.device.keyboard": "键盘 / 鼠标",
+    "controls.guide.lever": "油门杆 / W S"
   }
 }

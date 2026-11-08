@@ -11,6 +11,7 @@
     TitleBar *_bar;
     UIHover *_hover;
     CGPoint _click;
+    InputGuide *_guideSnapshot;
 }
 
 - (instancetype)init {
@@ -95,6 +96,7 @@
     _scrollContent = _body;
     _form=nil; _settingRects=@[];
     CGFloat y=0;
+    _guideSnapshot = self.input.controlGuide;
     if (!_showBindings) {
         _form = [[UISettingsForm alloc] initWithItems:[self settings] width:width compact:compact];
         _form.selectedIndex = _selected;
@@ -102,9 +104,14 @@
         _settingRects = _form.rowRects;
         y=-_form.height;
     } else {
-    NSArray *actions = L10nList(self.touchNavigationEnabled ? @"controls.touch.actions" : @"controls.desktop.actions");
-    NSArray *keys = L10nList(self.touchNavigationEnabled ? @"controls.touch.keys" : @"controls.desktop.keys");
-    for (NSUInteger i = 0; i < MIN(actions.count, keys.count); i++) {
+    InputGuide *guide = _guideSnapshot ?: InputGuideMake(self.touchNavigationEnabled ? InputSchemeTouch : InputSchemeKeyboard, nil, (InputPadSymbols){0});
+    UIControlGuide *bindings = [[UIControlGuide alloc] initWithGuide:guide width:width compact:NO];
+    [_body addChild:bindings];
+    y -= bindings.height + 24;
+    NSArray *actions = L10nList(@"controls.desktop.actions");
+    NSArray *keys = L10nList(@"controls.desktop.keys");
+    BOOL desktop = guide.scheme == InputSchemeKeyboard || guide.scheme == InputSchemeJoystick;
+    for (NSUInteger i = 7; desktop && i < MIN(actions.count, keys.count); i++) {
         [self label:actions[i] at:CGPointMake(0, y) size:13 color:UIMenuTitle parent:_body];
         if (narrow) {
             y -= 21;
@@ -116,7 +123,8 @@
         }
     }
     y -= 10;
-    y -= [self paragraph:L10n(self.touchNavigationEnabled ? @"controls.touch_tip" : @"controls.trackball_tip") y:y width:width - 12];
+    if (guide.scheme == InputSchemeTouch || desktop)
+        y -= [self paragraph:L10n(desktop ? @"controls.trackball_tip" : @"controls.touch_tip") y:y width:width - 12];
     }
     _contentHeight = -y;
     [self setOffset:_scrollOffset];
@@ -146,6 +154,7 @@
 - (void)showBindings { _showBindings=YES; _scrollOffset=0; [self rebuild]; }
 
 - (BOOL)handle:(InputAction)actions {
+    if (_guideSnapshot != self.input.controlGuide) [self rebuild];
     if (actions & InputActionToggleHelp) { if(_showBindings) return [self handle:InputActionBack]; [self showBindings]; return NO; }
     if (actions & InputActionBack) {
         _hasClick = NO;

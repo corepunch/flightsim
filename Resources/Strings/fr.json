@@ -12,7 +12,7 @@
     "loading.loading_mission": "Chargement de la mission…",
     "loading.preparing_ship": "Préparation du vaisseau…",
     "loading.mission_ready": "Mission prête",
-    "loading.continue_prompt": "Touchez n’importe où pour lancer la mission",
+    "loading.continue_prompt": "Lancer la mission",
     "loading.charting_starfield": "Cartographie du champ d’étoiles…",
     "loading.plotting_capital_ships": "Positionnement des vaisseaux capitaux…",
     "loading.scrambling_fighter_wings": "Mobilisation des escadrilles…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "MISSION %02lu  /  %@",
     "controls.kicker": "MANUEL DE VOL",
     "controls.title": "Commandes de vol",
-    "controls.touch.actions": [
-      "Piloter",
-      "Vitesse",
-      "Tir principal / secondaire",
-      "Cible suivante",
-      "Roulis / boost",
-      "Caméra",
-      "Pause / options de vol"
-    ],
-    "controls.touch.keys": [
-      "STICK TACTILE GAUCHE / STICK GAUCHE",
-      "CURSEUR / GÂCHETTES HAUTES",
-      "TIR + MISSILE / RT + B",
-      "CIBLE / Y",
-      "STICK DROIT / LT",
-      "X (MANETTE)",
-      "PAUSE / MENU"
-    ],
     "controls.desktop.actions": [
       "Piloter",
       "Laser / tir principal",
@@ -328,6 +310,21 @@
     "browser.duration": "Durée du match",
     "browser.guest_waiting": "Connecté. En attente du lancement du match par l’hôte.",
     "browser.arena": "Arène",
-    "browser.settings": "PARAMÈTRES"
+    "browser.settings": "PARAMÈTRES",
+    "controls.guide.actions": [
+      "Diriger",
+      "Vitesse",
+      "Tir principal",
+      "Tir secondaire",
+      "Cible suivante",
+      "Roulis",
+      "Boost",
+      "Caméra",
+      "Pause"
+    ],
+    "controls.guide.boost": "Maintenir ↑ à pleine vitesse",
+    "controls.device.touch": "Commandes tactiles",
+    "controls.device.keyboard": "Clavier / souris",
+    "controls.guide.lever": "Manette des gaz / W S"
   }
 }

@@ -12,7 +12,7 @@
     "loading.loading_mission": "मिशन लोड हो रहा है…",
     "loading.preparing_ship": "अंतरिक्ष यान तैयार हो रहा है…",
     "loading.mission_ready": "मिशन तैयार है",
-    "loading.continue_prompt": "मिशन शुरू करने के लिए कहीं भी टैप करें",
+    "loading.continue_prompt": "मिशन शुरू करें",
     "loading.charting_starfield": "तारों का नक्शा तैयार हो रहा है…",
     "loading.plotting_capital_ships": "बड़े युद्धपोत तैनात हो रहे हैं…",
     "loading.scrambling_fighter_wings": "लड़ाकू दस्ते तैयार हो रहे हैं…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "मिशन %02lu  /  %@",
     "controls.kicker": "उड़ान पुस्तिका",
     "controls.title": "उड़ान नियंत्रण",
-    "controls.touch.actions": [
-      "दिशा",
-      "गति",
-      "प्राथमिक / द्वितीयक गोलीबारी",
-      "अगला लक्ष्य",
-      "रोल / बूस्ट",
-      "कैमरा",
-      "विराम / उड़ान विकल्प"
-    ],
-    "controls.touch.keys": [
-      "बायाँ टच स्टिक / बायाँ स्टिक",
-      "स्लाइडर / बंपर",
-      "गोली और मिसाइल / RT + B",
-      "लक्ष्य / Y",
-      "दायाँ स्टिक / LT",
-      "X (कंट्रोलर)",
-      "विराम / मेनू"
-    ],
     "controls.desktop.actions": [
       "दिशा",
       "लेज़र / प्राथमिक गोलीबारी",
@@ -328,6 +310,21 @@
     "browser.duration": "मैच की अवधि",
     "browser.guest_waiting": "कनेक्ट हो गया। होस्ट के मैच शुरू करने की प्रतीक्षा है।",
     "browser.arena": "अखाड़ा",
-    "browser.settings": "सेटिंग्स"
+    "browser.settings": "सेटिंग्स",
+    "controls.guide.actions": [
+      "दिशा",
+      "गति",
+      "मुख्य गोलीबारी",
+      "द्वितीयक गोलीबारी",
+      "अगला लक्ष्य",
+      "रोल",
+      "बूस्ट",
+      "कैमरा",
+      "विराम"
+    ],
+    "controls.guide.boost": "पूरी गति पर ↑ दबाए रखें",
+    "controls.device.touch": "टच नियंत्रण",
+    "controls.device.keyboard": "कीबोर्ड / माउस",
+    "controls.guide.lever": "थ्रॉटल लीवर / W S"
   }
 }

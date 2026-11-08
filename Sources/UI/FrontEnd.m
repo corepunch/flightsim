@@ -32,6 +32,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 }
 
 - (NSUInteger)levelCount { return CampaignMissions().count; }
+- (void)setInput:(Input *)input { _input = input; _mainMenu.input = input; }
 
 - (SKScene *)currentScreen {
     switch (_screen) {

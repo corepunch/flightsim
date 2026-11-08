@@ -168,6 +168,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _frontEnd = [[FrontEnd alloc] initWithSize:view.bounds.size services:self];
         _pauseMenu = [[PauseMenu alloc] initWithSize:view.bounds.size];
         _loading = [[Loading alloc] initWithSize:view.bounds.size];
+        _frontEnd.input = _pauseMenu.input = _loading.input = input;
         [_loading showTitle:L10n(@"game.title") kicker:L10n(@"game.kicker") detail:L10n(@"game.unit")];
         _refresh = [[SceneKitRefresh alloc] initWithRenderer:view size:view.bounds.size];
         _clientView = [[ClientView alloc] initWithRefresh:_refresh input:input];

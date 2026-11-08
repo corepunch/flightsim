@@ -109,6 +109,7 @@
 - (void)applySafeAreaTo:(SKScene *)scene {
     UIEdgeInsets safe = self.safeAreaInsets;
     if ([scene isKindOfClass:PauseMenu.class]) ((PauseMenu *)scene).contentInsets = safe;
+    if ([scene isKindOfClass:Loading.class]) ((Loading *)scene).contentInsets = safe;
     if ([scene isKindOfClass:MainMenu.class]) ((MainMenu *)scene).contentInsets = safe;
     if ([scene isKindOfClass:HUD.class]) ((HUD *)scene).contentInsets = safe;
     if ([scene isKindOfClass:Briefing.class]) ((Briefing *)scene).contentInsets = safe;

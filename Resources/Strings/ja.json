@@ -12,7 +12,7 @@
     "loading.loading_mission": "ミッションを読み込み中…",
     "loading.preparing_ship": "宇宙船を準備中…",
     "loading.mission_ready": "ミッション準備完了",
-    "loading.continue_prompt": "画面のどこかをタップしてミッションを開始",
+    "loading.continue_prompt": "ミッション開始",
     "loading.charting_starfield": "星図を作成中…",
     "loading.plotting_capital_ships": "主力艦を配置中…",
     "loading.scrambling_fighter_wings": "戦闘機部隊を準備中…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "ミッション %02lu  /  %@",
     "controls.kicker": "フライトマニュアル",
     "controls.title": "操作設定",
-    "controls.touch.actions": [
-      "操縦",
-      "速度",
-      "主武装 / 副武装の射撃",
-      "次の目標",
-      "ロール / ブースト",
-      "視点",
-      "一時停止 / フライト設定"
-    ],
-    "controls.touch.keys": [
-      "左タッチスティック / 左スティック",
-      "スライダー / ショルダーボタン",
-      "射撃とミサイル / RT + B",
-      "目標 / Y",
-      "右スティック / LT",
-      "X（コントローラー）",
-      "一時停止 / メニュー"
-    ],
     "controls.desktop.actions": [
       "操縦",
       "レーザー / 主武装",
@@ -328,6 +310,21 @@
     "browser.duration": "試合時間",
     "browser.guest_waiting": "接続済み。ホストが試合を開始するのを待っています。",
     "browser.arena": "アリーナ",
-    "browser.settings": "設定"
+    "browser.settings": "設定",
+    "controls.guide.actions": [
+      "操縦",
+      "速度",
+      "主武器",
+      "副武器",
+      "次の目標",
+      "ロール",
+      "ブースト",
+      "カメラ",
+      "ポーズ"
+    ],
+    "controls.guide.boost": "最高速度で ↑ を押し続ける",
+    "controls.device.touch": "タッチ操作",
+    "controls.device.keyboard": "キーボード / マウス",
+    "controls.guide.lever": "スロットルレバー / W S"
   }
 }

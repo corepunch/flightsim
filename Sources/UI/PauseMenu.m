@@ -19,6 +19,7 @@ static PauseCommand CommandFor(NSString *itemId) {
     CGPoint _click;
     CGSize _layoutSize;
     ScreenInsets _usedInsets;
+    InputGuide *_guideSnapshot;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -43,6 +44,7 @@ static PauseCommand CommandFor(NSString *itemId) {
     [self removeAllChildren];
     _layoutSize = self.size;
     _usedInsets = self.contentInsets;
+    _guideSnapshot = self.input.controlGuide;
     if (_controlsPanel) {
         SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIMenuNight, 0.97) size:self.size];
         shade.position = RectCenter(RectWithSize(self.size));
@@ -66,18 +68,41 @@ static PauseCommand CommandFor(NSString *itemId) {
     if (self.view) safe = self.view.safeAreaInsets;
 #endif
     CGRect bounds = RectInsetEdges(RectWithSize(self.size), safe.left, safe.top, safe.right, safe.bottom);
+    CGRect menuBounds = bounds, guideRegion = CGRectZero;
+    if (_guideSnapshot && CGRectGetWidth(bounds) >= 680) {
+        [flags addObject:@"withGuide"];
+        if ([flags containsObject:@"short"]) [flags addObject:@"shortGuide"];
+        CGFloat split = CGRectGetMinX(bounds) + CGRectGetWidth(bounds) * 0.51;
+        menuBounds = RectFromEdges(CGRectGetMinX(bounds), CGRectGetMinY(bounds), split, CGRectGetMaxY(bounds));
+        guideRegion = RectFromEdges(split + 18, CGRectGetMinY(bounds) + 24, CGRectGetMaxX(bounds) - 24, CGRectGetMaxY(bounds) - 24);
+    } else if (_guideSnapshot && CGRectGetHeight(bounds) >= 650) {
+        CGFloat width = MAX(1, CGRectGetWidth(bounds) - 48);
+        UIControlGuide *measure = [[UIControlGuide alloc] initWithGuide:_guideSnapshot width:width compact:YES];
+        CGFloat split = CGRectGetMinY(bounds) + measure.height + 48;
+        guideRegion = RectFromEdges(CGRectGetMinX(bounds) + 24, CGRectGetMinY(bounds) + 18, CGRectGetMaxX(bounds) - 24, split - 18);
+        menuBounds = RectFromEdges(CGRectGetMinX(bounds), split, CGRectGetMaxX(bounds), CGRectGetMaxY(bounds));
+    }
     NSArray *previous = [self items];
     NSString *selected = _selected < (NSInteger)previous.count ? [@"items." stringByAppendingString:previous[_selected]] : nil;
     UILayout *layout = [UILayout named:@"pause"];
-    _layout = [layout buildIn:bounds sceneSize:self.size flags:flags
+    _layout = [layout buildIn:menuBounds sceneSize:self.size flags:flags
                     variables:@{ @"sound": [[GameAudio shared] mixTitle] } selected:selected];
     if (!selected && self.items.count) {
         // First build: highlight the first button.
-        _layout = [layout buildIn:bounds sceneSize:self.size flags:flags
+        _layout = [layout buildIn:menuBounds sceneSize:self.size flags:flags
                         variables:@{ @"sound": [[GameAudio shared] mixTitle] }
                          selected:[@"items." stringByAppendingString:self.items[0]]];
     }
     if (_layout.node) [self addChild:_layout.node];
+    if (!CGRectIsEmpty(guideRegion)) {
+        UIControlGuide *guide = [[UIControlGuide alloc] initWithGuide:_guideSnapshot width:CGRectGetWidth(guideRegion) compact:NO];
+        if (guide.height > CGRectGetHeight(guideRegion))
+            guide = [[UIControlGuide alloc] initWithGuide:_guideSnapshot width:CGRectGetWidth(guideRegion) compact:YES];
+        if (guide.height <= CGRectGetHeight(guideRegion)) {
+            guide.position = CGPointMake(CGRectGetMinX(guideRegion), CGRectGetMidY(guideRegion) + guide.height / 2);
+            [self addChild:guide];
+        }
+    }
 }
 
 - (BOOL)disabled:(NSInteger)i {
@@ -103,7 +128,8 @@ static PauseCommand CommandFor(NSString *itemId) {
 - (void)pointerHover:(CGPoint)at { [_controlsPanel pointerHover:at]; }
 
 - (PauseCommand)handle:(InputAction)actions {
-    if (!CGSizeEqualToSize(_layoutSize, self.size) || memcmp(&_usedInsets, &_contentInsets, sizeof _usedInsets)) [self rebuild];
+    if (!CGSizeEqualToSize(_layoutSize, self.size) || memcmp(&_usedInsets, &_contentInsets, sizeof _usedInsets) ||
+        _guideSnapshot != self.input.controlGuide) [self rebuild];
     if (_controlsPanel) {
         if ([_controlsPanel handle:actions]) {
             _controlsPanel = nil;
@@ -127,6 +153,7 @@ static PauseCommand CommandFor(NSString *itemId) {
     if (!(actions & InputActionConfirm) || _selected >= count || [self disabled:_selected]) return PauseCommandNone;
     if ([self.items[_selected] isEqualToString:@"controls"]) {
         _controlsPanel = [ControlsPanel new];
+        _controlsPanel.input = self.input;
         [[GameAudio shared] play:@"ui-confirm"];
         [self rebuild];
         return PauseCommandNone;

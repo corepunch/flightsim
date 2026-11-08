@@ -32,6 +32,7 @@ static float deadzone(float v, float dz) {
 @property (atomic, readwrite, copy) NSString *joystickName;
 @property (atomic, readwrite, copy) NSString *axisDescription;
 @property (atomic, readwrite) BOOL throttleFromJoystick;
+@property (atomic, readwrite, strong) InputGuide *controlGuide;
 - (void)hidValue:(IOHIDValueRef)value;
 - (void)hidAttached:(IOHIDDeviceRef)device;
 - (void)hidRemoved:(IOHIDDeviceRef)device;
@@ -72,6 +73,7 @@ static void HIDRemoveCallback(void *ctx, IOReturn result, void *sender, IOHIDDev
 - (instancetype)init {
     if ((self = [super init])) {
         _pointer = [PointerQueue new];
+        self.controlGuide = InputGuideMake(InputSchemeKeyboard, nil, (InputPadSymbols){0});
         [FlightControls shared];
         _lock = OS_UNFAIR_LOCK_INIT;
         _keys = [NSMutableIndexSet indexSet];
@@ -176,6 +178,7 @@ static float Normalise(IOHIDElementRef el, CFIndex raw) {
 
     NSString *name = (__bridge NSString *)IOHIDDeviceGetProperty(device, CFSTR(kIOHIDProductKey));
     self.joystickName = name ?: L10n(@"input.joystick");
+    self.controlGuide = InputGuideMake(InputSchemeJoystick, self.joystickName, (InputPadSymbols){0});
     [self updateAxisDescription];
     NSLog(@"Input: joystick attached: %@ (%d axes) %@", self.joystickName, _axisCount, self.axisDescription);
 }
@@ -190,7 +193,10 @@ static float Normalise(IOHIDElementRef el, CFIndex raw) {
         self.throttleFromJoystick = NO;
     }
     os_unfair_lock_unlock(&_lock);
-    if (!_joystick) self.joystickName = nil;
+    if (!_joystick) {
+        self.joystickName = nil;
+        self.controlGuide = InputGuideMake(InputSchemeKeyboard, nil, (InputPadSymbols){0});
+    }
 }
 
 static NSString *AxisName(uint32_t key) {

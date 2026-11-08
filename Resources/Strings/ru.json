@@ -12,7 +12,7 @@
     "loading.loading_mission": "Загрузка миссии…",
     "loading.preparing_ship": "Подготовка корабля…",
     "loading.mission_ready": "Миссия готова",
-    "loading.continue_prompt": "Коснитесь экрана в любом месте, чтобы начать миссию",
+    "loading.continue_prompt": "Начать миссию",
     "loading.charting_starfield": "Построение звёздной карты…",
     "loading.plotting_capital_ships": "Размещение крупных кораблей…",
     "loading.scrambling_fighter_wings": "Подготовка истребительных эскадрилий…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "МИССИЯ %02lu  /  %@",
     "controls.kicker": "ЛЁТНОЕ РУКОВОДСТВО",
     "controls.title": "Управление полётом",
-    "controls.touch.actions": [
-      "Управление",
-      "Скорость",
-      "Основное / дополнительное оружие",
-      "Следующая цель",
-      "Крен / форсаж",
-      "Камера",
-      "Пауза / параметры полёта"
-    ],
-    "controls.touch.keys": [
-      "ЛЕВЫЙ СЕНСОРНЫЙ СТИК / ЛЕВЫЙ СТИК",
-      "ПОЛЗУНОК / БАМПЕРЫ",
-      "ОГОНЬ И РАКЕТА / RT + B",
-      "ЦЕЛЬ / Y",
-      "ПРАВЫЙ СТИК / LT",
-      "X (ГЕЙМПАД)",
-      "ПАУЗА / МЕНЮ"
-    ],
     "controls.desktop.actions": [
       "Управление",
       "Лазер / основное оружие",
@@ -328,6 +310,21 @@
     "browser.duration": "Длительность боя",
     "browser.guest_waiting": "Подключено. Ожидание начала боя ведущим.",
     "browser.arena": "Арена",
-    "browser.settings": "НАСТРОЙКИ"
+    "browser.settings": "НАСТРОЙКИ",
+    "controls.guide.actions": [
+      "Направление",
+      "Скорость",
+      "Основной огонь",
+      "Вторичный огонь",
+      "Следующая цель",
+      "Крен",
+      "Форсаж",
+      "Камера",
+      "Пауза"
+    ],
+    "controls.guide.boost": "Держите ↑ на полной скорости",
+    "controls.device.touch": "Сенсорное управление",
+    "controls.device.keyboard": "Клавиатура / мышь",
+    "controls.guide.lever": "Рычаг тяги / W S"
   }
 }

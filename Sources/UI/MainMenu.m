@@ -202,6 +202,7 @@ static SKShader *MenuArtShader(void) {
 - (void)drawControlsIn:(CGRect)bounds {
     if (!_controlsPanel) _controlsPanel = [ControlsPanel new];
     _controlsPanel.touchNavigationEnabled = self.touchNavigationEnabled;
+    _controlsPanel.input = self.input;
     [_controlsPanel layoutIn:bounds sceneSize:self.size];
     [_root addChild:_controlsPanel];
 }

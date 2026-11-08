@@ -12,7 +12,7 @@
     "loading.loading_mission": "Carregando missão…",
     "loading.preparing_ship": "Preparando a nave…",
     "loading.mission_ready": "Missão pronta",
-    "loading.continue_prompt": "Toque em qualquer lugar para iniciar a missão",
+    "loading.continue_prompt": "Iniciar missão",
     "loading.charting_starfield": "Mapeando o campo estelar…",
     "loading.plotting_capital_ships": "Posicionando as naves capitais…",
     "loading.scrambling_fighter_wings": "Mobilizando os esquadrões de caças…",
@@ -74,24 +74,6 @@
     "menu.mission_line": "MISSÃO %02lu  /  %@",
     "controls.kicker": "MANUAL DE VOO",
     "controls.title": "Controles de voo",
-    "controls.touch.actions": [
-      "Pilotar",
-      "Velocidade",
-      "Tiro primário / secundário",
-      "Próximo alvo",
-      "Rolagem / impulso",
-      "Câmera",
-      "Pausa / opções de voo"
-    ],
-    "controls.touch.keys": [
-      "ANALÓGICO TÁTIL ESQUERDO / ANALÓGICO ESQUERDO",
-      "CONTROLE DESLIZANTE / BOTÕES SUPERIORES",
-      "TIRO + MÍSSIL / RT + B",
-      "ALVO / Y",
-      "ANALÓGICO DIREITO / LT",
-      "X (CONTROLE)",
-      "PAUSA / MENU"
-    ],
     "controls.desktop.actions": [
       "Pilotar",
       "Laser / tiro primário",
@@ -328,6 +310,21 @@
     "browser.duration": "Duração da partida",
     "browser.guest_waiting": "Conectado. Aguardando o anfitrião iniciar a partida.",
     "browser.arena": "Arena",
-    "browser.settings": "CONFIGURAÇÕES"
+    "browser.settings": "CONFIGURAÇÕES",
+    "controls.guide.actions": [
+      "Pilotar",
+      "Velocidade",
+      "Disparo primário",
+      "Disparo secundário",
+      "Próximo alvo",
+      "Rolagem",
+      "Impulso",
+      "Câmera",
+      "Pausa"
+    ],
+    "controls.guide.boost": "Segure ↑ na velocidade máxima",
+    "controls.device.touch": "Controles de toque",
+    "controls.device.keyboard": "Teclado / mouse",
+    "controls.guide.lever": "Manete de potência / W S"
   }
 }

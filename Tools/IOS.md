@@ -76,7 +76,9 @@ stick to pitch and yaw (dragging up climbs). Push the right stick up or down to
 raise or lower the throttle and left or right to roll; hold it fully up at full
 throttle to boost. X fires the guns, A fires a torpedo at the target and Y
 cycles the target. B, the outer corner of the button cluster, opens the pause
-menu; the buttons show icons instead of letters.
+menu. The buttons use the system's X, A, Y and B glyphs. A matching control
+guide appears before mission launch, in pause and in the fixed-button settings;
+it switches to the connected controller's symbols when a physical pad is used.
 
 When iOS exposes a connected controller through the extended Game Controller
 profile, the on-screen controller hides. The left stick steers (pushed forward

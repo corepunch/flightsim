@@ -211,7 +211,7 @@
         BOOL disabled = [item[@"disabled"] boolValue];
         NSUInteger lines = MAX(1, (NSUInteger)[self number:n[@"textLines"] fallback:1]);
         SKShapeNode *button = UIActionButtonWithLines(rect, [self text:item[@"text"]],
-            [key isEqualToString:_selected] ? UIAmber : UIInk, 17, lines);
+            [key isEqualToString:_selected] ? UIAmber : UIInk, [self number:n[@"fontSize"] fallback:17], lines);
         button.alpha = disabled ? 0.35 : 1;
         button.name = key;
         [into addChild:button];
