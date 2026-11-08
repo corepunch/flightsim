@@ -10,7 +10,7 @@ fi
 mkdir -p "$output"
 "$app" --render-scene Tools/Capture/torpedo-run.json "$output/iPhone-05-torpedo-ribbon.jpg" 2622 1206
 "$app" --render-scene Tools/Capture/corvette-strike.json "$output/iPhone-06-corvette-strike.jpg" 2622 1206
-"$app" --render-scene Tools/Capture/missile-evasion.json "$output/iPhone-07-missile-evasion.jpg" 2622 1206
+"$app" --render-scene Tools/Capture/cockpit-formation.json "$output/iPhone-08-cockpit-formation.jpg" 2622 1206
 "$app" --render-scene Tools/Capture/torpedo-run.json "$output/iPad-05-torpedo-ribbon.jpg" 2752 2064
 "$app" --render-scene Tools/Capture/corvette-strike.json "$output/iPad-06-corvette-strike.jpg" 2752 2064
-"$app" --render-scene Tools/Capture/missile-evasion.json "$output/iPad-07-missile-evasion.jpg" 2752 2064
+"$app" --render-scene Tools/Capture/cockpit-formation.json "$output/iPad-08-cockpit-formation.jpg" 2752 2064

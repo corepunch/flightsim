@@ -20,6 +20,15 @@
 @implementation CaptureMissile
 @end
 
+// A laser bolt in world space: it leaves `from` at `start` and flies for `life` seconds.
+@interface CaptureBolt : NSObject
+@property (nonatomic) simd_float3 origin, velocity;
+@property (nonatomic) double start, life;
+@property (nonatomic) BOOL friendly;
+@end
+@implementation CaptureBolt
+@end
+
 @interface CaptureExplosion : NSObject
 @property (nonatomic, copy) NSString *model;
 @property (nonatomic) simd_float3 origin, velocity;
@@ -33,11 +42,12 @@
 @interface CaptureDefinition : NSObject
 @property (nonatomic) uint32_t seed;
 @property (nonatomic) double time;
-@property (nonatomic) BOOL followPlayer;
+@property (nonatomic) BOOL followPlayer, cockpit;
 @property (nonatomic) RefCamera camera;
 @property (nonatomic, copy) NSArray<CaptureObject *> *objects;
 @property (nonatomic, copy) NSArray<CaptureMissile *> *missiles;
 @property (nonatomic, copy) NSArray<CaptureExplosion *> *explosions;
+@property (nonatomic, copy) NSArray<CaptureBolt *> *bolts;
 @property (nonatomic, copy) NSString *objective;
 @end
 
@@ -59,6 +69,7 @@ static simd_quatf CaptureFacing(simd_float3 forward, float bank) {
     d.seed = (uint32_t)JSONInt(json, @"skySeed", 4);
     d.time = fmaxf(0.1f, fminf(JSONFloat(json, @"time", 1.5f), 10));
     d.followPlayer = JSONBool(json, @"followPlayer", YES);
+    d.cockpit = JSONBool(json, @"cockpit", NO);
     simd_float3 eye = JSONVec3(json, @"eye", simd_make_float3(0, 4, 19));
     simd_float3 aim = JSONVec3(json, @"lookAt", simd_make_float3(8, 3, -60));
     d.camera = (RefCamera){ .origin = eye, .focus = aim, .orientation = CaptureFacing(aim - eye, JSONFloat(json, @"roll", 0)),
@@ -126,6 +137,19 @@ static simd_quatf CaptureFacing(simd_float3 forward, float bank) {
         [explosions addObject:explosion];
     }
     d.explosions = explosions;
+    NSMutableArray *bolts = [NSMutableArray array];
+    entries = [json[@"bolts"] isKindOfClass:NSArray.class] ? json[@"bolts"] : @[];
+    for (id item in entries) {
+        if (![item isKindOfClass:NSDictionary.class] || bolts.count == REF_MAX_BOLTS) continue;
+        CaptureBolt *bolt = [CaptureBolt new];
+        bolt.origin = JSONVec3(item, @"from", simd_make_float3(0, 0, -30));
+        bolt.velocity = JSONVec3(item, @"velocity", simd_make_float3(0, 0, -900));
+        bolt.start = JSONFloat(item, @"start", 1);
+        bolt.life = fmaxf(0.05f, JSONFloat(item, @"life", 1));
+        bolt.friendly = JSONBool(item, @"friendly", NO);
+        [bolts addObject:bolt];
+    }
+    d.bolts = bolts;
     return d;
 }
 @end
@@ -144,6 +168,10 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
     }
     [NSApplication sharedApplication];
     id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+    id<MTLCommandQueue> queue = [device newCommandQueue];
+    CaptureObject *pilot = d.objects.firstObject;
+    const ShipDef *pilotDef = [pilot.model hasPrefix:@"ship:"] ? ShipDefNamed([pilot.model substringFromIndex:5]) : NULL;
+    simd_float3 eye = pilotDef ? pilotDef->cockpitEye : RefCockpitEye;
     SCNRenderer *renderer = [SCNRenderer rendererWithDevice:device options:nil];
     CGFloat logicalWidth = size.width / size.height > 1.8 ? 874 : 1376;
     CGSize points = CGSizeMake(logicalWidth, logicalWidth * size.height / size.width);
@@ -174,16 +202,28 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
         @autoreleasepool {
             double time = fmin(frame / 60.0, d.time);
             [refresh beginFrame:time + 1];
+            RefEntity player = pilot.entity;
+            player.origin += pilot.velocity * (float)(time - d.time);
+            float pilotSpin = simd_length(pilot.angularVelocity);
+            if (pilotSpin > 0) player.orientation = simd_mul(player.orientation,
+                simd_quaternion(pilotSpin * (float)(time - d.time), pilot.angularVelocity / pilotSpin));
             RefCamera camera = d.camera;
-            if (d.followPlayer) {
+            if (d.cockpit) {
+                // The pilot's eye, looking along the nose; `roll` and `fov` still apply.
+                camera.origin = player.origin + simd_act(player.orientation, eye);
+                camera.orientation = player.orientation;
+                camera.focus = player.origin + simd_act(player.orientation, simd_make_float3(0, 0, -60));
+                camera.velocity = pilot.velocity;
+            } else if (d.followPlayer) {
                 simd_float3 offset = d.objects.firstObject.velocity * (float)(time - d.time);
                 camera.origin += offset;
                 camera.focus += offset;
                 camera.velocity = d.objects.firstObject.velocity;
             }
             [refresh setCamera:camera];
+            if (d.cockpit) [refresh setPlayer:&player alive:YES interior:YES];
             for (CaptureObject *object in d.objects) {
-                if (time > object.until) continue;
+                if (time > object.until || (d.cockpit && object == pilot)) continue;
                 RefEntity entity = object.entity;
                 entity.origin += object.velocity * (float)(time - d.time);
                 float spin = simd_length(object.angularVelocity);
@@ -194,6 +234,16 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
             for (CaptureExplosion *explosion in d.explosions)
                 if (time >= explosion.time && (frame == 0 || (frame - 1) / 60.0 < explosion.time))
                     [refresh explosionAt:explosion.origin velocity:explosion.velocity model:explosion.handle scale:explosion.scale];
+            int slot = 0;
+            for (CaptureBolt *bolt in d.bolts) {
+                double age = time - bolt.start;
+                if (age >= 0 && age <= bolt.life) {
+                    simd_float3 p = bolt.origin + bolt.velocity * (float)age;
+                    if (age < 1.5 / 60) [refresh showBolt:slot at:p velocity:bolt.velocity friendly:bolt.friendly ion:NO];
+                    else [refresh moveBolt:slot to:p];
+                } else [refresh hideBolt:slot];
+                slot++;
+            }
             NSUInteger index = 0;
             for (CaptureMissile *missile in d.missiles) {
                 if (time >= missile.start && time <= missile.start + missile.duration) {
@@ -207,7 +257,16 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
             [refresh endFrame];
             CGPoint centre = RectCenter((CGRect){ .size = points });
             HUDFrame hf = { .boresight = centre, .boresightVisible = YES, .throttle = 0.75, .boostEnergy = 1,
-                .secondary = 3, .secondaryCapacity = 4, .secondaryName = @"TORPEDO", .deltaTime = 1.0f / 60 };
+                .secondary = 3, .secondaryCapacity = 4, .secondaryName = @"TORPEDO", .deltaTime = 1.0f / 60,
+                .cockpit = d.cockpit };
+            // The sun's lens flare, as the live view finds it.
+            simd_float3 sunDirection = refresh.sunDirection;
+            CGPoint sun;
+            if ([refresh projectPoint:camera.origin + sunDirection * 20000.0f to:&sun]) {
+                hf.sun = sun;
+                hf.sunVisibility = CGRectContainsPoint((CGRect){ .size = points }, sun) &&
+                    ![refresh traceOpaqueFrom:camera.origin to:camera.origin + sunDirection * 5000.0f] ? 1 : 0;
+            }
             HUDTarget target = {0};
             NSUInteger targets = 0;
             for (CaptureObject *object in d.objects) if (object.label.length) {
@@ -224,12 +283,12 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
             CockpitFrame cf = { .alive = YES, .hull = 1, .shield = 1, .boostEnergy = 1, .weaponEnergy = 0.95,
                 .weaponShotEnergy = 0.035f, .weaponRecharge = 0.22f, .shieldRecharge = 0.06f,
                 .throttle = 0.75, .speed = 120, .maxSpeed = 160, .target = -1, .secondary = 3,
-                .secondaryName = @"TORP", .time = time };
+                .secondaryName = @"TORP", .time = time,
+                .sun = simd_act(simd_inverse(player.orientation), sunDirection) };
             CockpitContact contacts[COCKPIT_MAX_CONTACTS];
             NSUInteger contactCount = 0;
-            RefEntity player = d.objects.firstObject.entity;
             for (CaptureObject *object in d.objects) {
-                if (object == d.objects.firstObject || contactCount == COCKPIT_MAX_CONTACTS) continue;
+                if (object == pilot || contactCount == COCKPIT_MAX_CONTACTS) continue;
                 if (![object.model hasPrefix:@"ship:"] && !object.label.length) continue;
                 RefEntity entity = object.entity;
                 contacts[contactCount++] = (CockpitContact){
@@ -239,8 +298,13 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
                     .capital = entity.kind == EntityCapital, .hull = 1, .shield = 1, .systems = 1,
                     .name = L10nExpand(object.label),
                 };
+                if (object.label.length && cf.target < 0) cf.target = (int)contactCount - 1;
             }
-            [hud updateInstruments:cf contacts:contacts count:contactCount cockpit:NO];
+            if (d.cockpit) {
+                [refresh updateCockpit:cf contacts:contacts count:contactCount];
+                [refresh renderDisplaysWithQueue:queue time:time + 1];
+            }
+            [hud updateInstruments:cf contacts:contacts count:contactCount cockpit:d.cockpit];
             CGSize renderSize = frame == frames ? size : points;
             last = [renderer snapshotAtTime:time + 1 withSize:renderSize antialiasingMode:SCNAntialiasingModeMultisampling4X];
         }

@@ -1,0 +1,379 @@
+{
+  "skySeed": 4,
+  "time": 2.0,
+  "cockpit": true,
+  "fov": 70,
+  "objective": "{#mission.objective.hammerfall.shields}",
+  "objects": [
+    {
+      "model": "ship:executioner",
+      "position": [
+        0.0,
+        0,
+        -0.0
+      ],
+      "facing": [
+        -0.87,
+        0,
+        0.5
+      ],
+      "velocity": [
+        -103.92,
+        0,
+        60.0
+      ],
+      "throttle": 0.8
+    },
+    {
+      "model": "cap:Carrier:concord",
+      "position": [
+        -180.79,
+        30,
+        346.87
+      ],
+      "facing": [
+        -0.88,
+        0,
+        0.47
+      ],
+      "velocity": [
+        -60.62,
+        0,
+        35.0
+      ]
+    },
+    {
+      "model": "cap:Dreadnought:skarn",
+      "position": [
+        -598.18,
+        135,
+        483.92
+      ],
+      "facing": [
+        -0.72,
+        0,
+        -0.74
+      ],
+      "label": "Hammer of Skarn"
+    },
+    {
+      "model": "ship:executioner",
+      "position": [
+        -26.28,
+        6,
+        2.47
+      ],
+      "facing": [
+        0.82,
+        -0.07,
+        -0.59
+      ],
+      "bank": -0.6,
+      "velocity": [
+        167.21,
+        -5.0,
+        -110.39
+      ],
+      "throttle": 1,
+      "boost": true
+    },
+    {
+      "model": "ship:executioner",
+      "position": [
+        -31.18,
+        12,
+        18.0
+      ],
+      "facing": [
+        0.82,
+        -0.07,
+        -0.59
+      ],
+      "bank": -0.6,
+      "velocity": [
+        167.21,
+        -5.0,
+        -110.39
+      ],
+      "throttle": 1,
+      "boost": true
+    },
+    {
+      "model": "ship:executioner",
+      "position": [
+        -29.87,
+        16,
+        32.26
+      ],
+      "facing": [
+        0.82,
+        -0.07,
+        -0.59
+      ],
+      "bank": -0.6,
+      "velocity": [
+        167.21,
+        -5.0,
+        -110.39
+      ],
+      "throttle": 1,
+      "boost": true
+    },
+    {
+      "model": "ship:wasp",
+      "position": [
+        -304.81,
+        45,
+        72.06
+      ],
+      "facing": [
+        0.99,
+        -0.1,
+        0.12
+      ],
+      "bank": 1.0,
+      "velocity": [
+        148.92,
+        -10,
+        17.94
+      ],
+      "throttle": 0.9
+    }
+  ],
+  "missiles": [
+    {
+      "launch": [
+        137.83,
+        5,
+        -92.28
+      ],
+      "bend": [
+        -45.0,
+        31,
+        19.05
+      ],
+      "approach": [
+        -413.01,
+        115,
+        284.64
+      ],
+      "target": [
+        -580.86,
+        145,
+        473.92
+      ],
+      "start": 1.15,
+      "duration": 2.6
+    },
+    {
+      "launch": [
+        109.03,
+        11,
+        -62.95
+      ],
+      "bend": [
+        -73.8,
+        37,
+        48.38
+      ],
+      "approach": [
+        -413.01,
+        115,
+        284.64
+      ],
+      "target": [
+        -595.86,
+        145,
+        447.94
+      ],
+      "start": 1.27,
+      "duration": 2.6
+    },
+    {
+      "launch": [
+        86.43,
+        15,
+        -34.89
+      ],
+      "bend": [
+        -96.4,
+        41,
+        76.44
+      ],
+      "approach": [
+        -413.01,
+        115,
+        284.64
+      ],
+      "target": [
+        -610.86,
+        145,
+        421.96
+      ],
+      "start": 1.39,
+      "duration": 2.6
+    }
+  ],
+  "bolts": [
+    {
+      "from": [
+        -536.22,
+        110,
+        471.24
+      ],
+      "velocity": [
+        612.82,
+        -130,
+        -538.56
+      ],
+      "start": 0.9,
+      "life": 1.6
+    },
+    {
+      "from": [
+        -546.22,
+        130,
+        453.92
+      ],
+      "velocity": [
+        612.82,
+        -130,
+        -538.56
+      ],
+      "start": 1.2,
+      "life": 1.6
+    },
+    {
+      "from": [
+        -561.22,
+        100,
+        427.94
+      ],
+      "velocity": [
+        612.82,
+        -130,
+        -538.56
+      ],
+      "start": 1.5,
+      "life": 1.6
+    },
+    {
+      "from": [
+        -521.22,
+        120,
+        497.22
+      ],
+      "velocity": [
+        612.82,
+        -130,
+        -538.56
+      ],
+      "start": 1.7,
+      "life": 1.6
+    },
+    {
+      "from": [
+        -551.22,
+        115,
+        445.26
+      ],
+      "velocity": [
+        612.82,
+        -130,
+        -538.56
+      ],
+      "start": 1.8,
+      "life": 1.6
+    },
+    {
+      "from": [
+        -37.91,
+        5.5,
+        10.34
+      ],
+      "velocity": [
+        -644.78,
+        140,
+        603.21
+      ],
+      "start": 1.86,
+      "life": 1.2,
+      "friendly": true
+    },
+    {
+      "from": [
+        -38.91,
+        5.5,
+        8.61
+      ],
+      "velocity": [
+        -644.78,
+        140,
+        603.21
+      ],
+      "start": 1.86,
+      "life": 1.2,
+      "friendly": true
+    },
+    {
+      "from": [
+        -42.8,
+        11.5,
+        25.87
+      ],
+      "velocity": [
+        -644.78,
+        140,
+        603.21
+      ],
+      "start": 1.93,
+      "life": 1.2,
+      "friendly": true
+    },
+    {
+      "from": [
+        -43.8,
+        11.5,
+        24.13
+      ],
+      "velocity": [
+        -644.78,
+        140,
+        603.21
+      ],
+      "start": 1.93,
+      "life": 1.2,
+      "friendly": true
+    },
+    {
+      "from": [
+        -41.5,
+        15.5,
+        40.12
+      ],
+      "velocity": [
+        -644.78,
+        140,
+        603.21
+      ],
+      "start": 1.9,
+      "life": 1.2,
+      "friendly": true
+    },
+    {
+      "from": [
+        -42.5,
+        15.5,
+        38.39
+      ],
+      "velocity": [
+        -644.78,
+        140,
+        603.21
+      ],
+      "start": 1.9,
+      "life": 1.2,
+      "friendly": true
+    }
+  ]
+}
