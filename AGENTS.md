@@ -120,7 +120,8 @@ iPad and desktop use icons with text. Center content within the safe body region
 when it fits; keep overflow scrollable below the fixed title bar. Reuse
 the same control across scenes. Extend or refactor the shared control when a
 composition is missing instead of adding screen-specific offsets. Touch flight
-artwork and layout belong to `UITouchControls`; the platform adapter routes input.
+controls, pause included, are the system `GCVirtualController`, owned by
+`Input`; the HUD keeps its readouts clear of it.
 
 Keep automated coverage in fast unit tests of logic and data. Do not restore
 rendered UI fixture catalogues or long-running integration suites.

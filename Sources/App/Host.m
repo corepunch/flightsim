@@ -772,9 +772,6 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 - (void)finishMission {
     _precaching = NO;
     [_clientView attachMission];
-#if TARGET_OS_IOS
-    if ([_view isKindOfClass:GameView.class]) [(GameView *)_view setSecondaryLabel:L10nExpand(_client.configStrings[CS_SECONDARY_SHORT])];
-#endif
     [_client begin];
     if (!self.deathmatch) [_frontEnd levelStarted:_missionIndex remote:self.remote];
     [_frontEnd flightStarted];
@@ -930,7 +927,16 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
         [_client sendInput:(ControlState){ .hat = -1 } actions:0 dt:dt];
         [_server frame:dt paused:_booted && (_state == HostStateLoading || _state == HostStatePaused) && !self.remote && !_server.publicHosting];
     }
-    if (_state == HostStatePaused) { [self updatePause:actions]; return; }
+    if (_state == HostStatePaused) {
+        [self updatePause:actions];
+        // The world stays drawn behind the menu's shade. Online the match runs
+        // on, so it keeps moving; alone, the server holds, and a zero step
+        // keeps the render time where it stopped.
+        BOOL online = self.remote || _server.publicHosting;
+        if (_state == HostStatePaused)
+            [_client drawWithControls:(ControlState){ .hat = -1 } time:_time dt:online ? dt : 0];
+        return;
+    }
     if (_state == HostStateLoading) { [self updateLoading:actions]; return; }
     if (_revealing) {
         [self updateReveal];

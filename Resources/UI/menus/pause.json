@@ -1,9 +1,9 @@
 {
   "children": [
-    { "type": "shade", "color": "black", "opacity": 0.72 },
+    { "type": "shade", "color": "black", "opacity": 0.5 },
     {
       "type": "panel", "id": "panel", "size": [400, 410], "margin": [24, 12],
-      "stroke": ["ink", 0.8], "fill": ["panel", 0.98],
+      "stroke": ["ink", 0], "fill": ["panel", 0],
       "when": { "short": { "size": [600, 270] } },
       "children": [
         { "type": "label", "id": "title", "anchor": [0.5, 1], "pivot": [0.5, 0.5], "offset": [0, -28], "size": [0, 20],

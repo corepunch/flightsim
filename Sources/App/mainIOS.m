@@ -33,8 +33,6 @@
     view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [container addSubview:view];
     [container addSubview:view.overlayView];
-    // Keep raw flight touches separate from SceneKit gesture handling.
-    [container addSubview:view.flightControlsView];
     FlightViewController *controller = [FlightViewController new];
     controller.view = container;
     self.window.rootViewController = controller;

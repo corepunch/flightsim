@@ -406,19 +406,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
-		"08A9666DA9DC070D9563AE9C" = {
-			"isa" = "PBXFileReference";
-			"path" = "TouchFlightControls.m";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.objc";
-		};
-		"8637A91DA4FFD28DC0E39366" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "08A9666DA9DC070D9563AE9C";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
-			};
-		};
 		"575BCDD207F8BC89BFA38E48" = {
 			"isa" = "PBXFileReference";
 			"path" = "main.m";
@@ -453,7 +440,6 @@
 				"F7002270A6A5B131B52691AD",
 				"0EBE7A3E70954C83118AA5F4",
 				"0F147D9BCBB6A630F43CFF85",
-				"08A9666DA9DC070D9563AE9C",
 				"575BCDD207F8BC89BFA38E48",
 				"CCC9E382B794D0D8267BC779",
 			);
@@ -1887,26 +1873,6 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
-		"18E95E50414B272DD790F5F1" = {
-			"isa" = "PBXFileReference";
-			"path" = "UITouchControls.m";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.objc";
-		};
-		"DE988AA5641270BAA21542D2" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "18E95E50414B272DD790F5F1";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
-			};
-		};
-		"552EB49945F287EAD4C35FEA" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "18E95E50414B272DD790F5F1";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
-			};
-		};
 		"4BDF5C49E56F258E9C706DEA" = {
 			"isa" = "PBXGroup";
 			"path" = "UI";
@@ -1930,7 +1896,6 @@
 				"0031E18773F7BA6D5077AB1B",
 				"FD1CDAC4D7C5D9C37D2F17E6",
 				"ABF8A704D28EA8A017362EDC",
-				"18E95E50414B272DD790F5F1",
 			);
 			"sourceTree" = "<group>";
 		};
@@ -2140,7 +2105,6 @@
 			"files" = (
 				"EB710594B764E3E6CE780997",
 				"E8E056314BCCDFD8E6C7F008",
-				"8637A91DA4FFD28DC0E39366",
 				"9CD8B5EE31E3D88107FAFEE7",
 				"15ED79DD27C6D039080D9F94",
 				"1A55723AA4135000E6160CFA",
@@ -2201,7 +2165,6 @@
 				"F365BC11D11F67498EF09307",
 				"E2CDA084031B93F1036CD148",
 				"AB84E9F172D7CC4CD5F00B38",
-				"DE988AA5641270BAA21542D2",
 				"D333CB6EC38148AC7C563FB0",
 				"9A8F4D5042691289620BFD69",
 				"895AE943B6B4278E975BE9D4",
@@ -2275,7 +2238,6 @@
 				"C8395B85D9BA6A172271FD30",
 				"BE6D6D165CE63AD7593F621A",
 				"088586AD122F949F4E626565",
-				"552EB49945F287EAD4C35FEA",
 			);
 			"buildActionMask" = 2147483647;
 			"runOnlyForDeploymentPostprocessing" = 0;

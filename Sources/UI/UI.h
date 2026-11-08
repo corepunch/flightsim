@@ -880,28 +880,3 @@ SKTexture *UICommandTexture(UICommandIcon icon, UICommandState state);
 - (void)revealAfter:(NSTimeInterval)delay;
 @end
 
-// MARK: - UITouchControls
-
-// Shared flight control artwork and hit geometry. The UIKit adapter supplies
-// touches; the reference renderer uses the same layout and visual states.
-typedef NS_ENUM(NSInteger, TouchControl) {
-    TouchControlNone = -1,
-    TouchControlStick, TouchControlThrottle, TouchControlFire,
-    TouchControlSecondary, TouchControlTarget, TouchControlPause, TouchControlCount
-};
-
-@interface UITouchControls : SKNode
-@property (nonatomic) BOOL controllerConnected;
-@property (nonatomic, readonly) NSDictionary<NSNumber *, SKLabelNode *> *buttonLabels;
-// The HUD and pause button share the scanner scale so their clearances agree.
-+ (CGFloat)scannerScaleForSize:(CGSize)size touchLayout:(BOOL)touchLayout;
-+ (CGRect)pauseRectForSize:(CGSize)size insets:(ScreenInsets)insets;
-- (void)layoutWithSize:(CGSize)size insets:(ScreenInsets)insets;
-- (TouchControl)controlAt:(CGPoint)point; // top-origin view points
-- (CGPoint)centerForControl:(TouchControl)control;
-- (CGRect)rectForControl:(TouchControl)control; // scene points
-- (void)setSecondaryLabel:(NSString *)label;
-- (void)displayStick:(CGPoint)position stretched:(BOOL)stretched;
-- (void)displayThrottle:(float)value;
-- (void)setPressed:(BOOL)pressed control:(TouchControl)control;
-@end

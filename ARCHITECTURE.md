@@ -44,7 +44,7 @@ headers only).
 |---|---|
 | `Shared/` | Everything the engine and a game module agree on: the file system search path (`FSURL`, `FSJSON`), the wire protocol (`EntityState`, `PlayerState`, `UserCmd`, events, configstrings), the deterministic flight model (`ShipMove.c`), ship/capital/projectile definitions, levels (`LevelDef`), JSON readers and the `GameAPI` boundary. Plain C structs and functions only. |
 | `Common/` | Engine services: `Cvar` and `Cmd` (the console), localisation (`L10n`), and the CGPoint/CGRect geometry helpers. |
-| `App/` | `Host`, the application loop and state machine (menus, loading, mission); the platform views; touch flight controls; `main`. |
+| `App/` | `Host`, the application loop and state machine (menus, loading, mission); the platform views; `main`. |
 | `Server/` | Hosts the game module through `GameImport`/`GameExport`, ticks it at `TICK_RATE` (30 Hz) and sends delta-compressed snapshots. `GameLoader` picks the game (`fs_game`) and finds its module. |
 | `Client/` | `Client`: connection, snapshots, interpolation, prediction of the player's ship. `ClientView`: turns a frame into renderer calls and fills the HUD and cockpit. Never imports SceneKit. |
 | `Net/` | `NetChannel` (sequencing, reliable fragments), `NetMsg` (bit-level codec), `NetProtocol` (deltas), transports (in-process loopback, UDP), LAN discovery. |
@@ -53,8 +53,8 @@ headers only).
 | `Collision/` | `ModelInfo`: capital models' parts and subsystems for server traces and renderer dressing; baked-scene loading. |
 | `Mission/` | The mission runtime (objectives, scripted events, scheduled arrivals and departures, win/lose rules) that runs a `LevelDef` against a `MissionWorld` the game supplies. Linked into game modules, not the engine binary. |
 | `Story/` | The campaign and its story data: missions with briefings and debriefs, cast, rooms, briefing pages (immutable classes). |
-| `UI/` | SpriteKit screens: `FrontEnd` (which screen shows), main menu, mission list/briefing/debrief (`Briefing`), loading card, pause menu, server browser, `ScreenHost` (transitions), `UILayout` (menus from JSON), `ScreenRegions` (header and centered body), theme and motion. Scenes compose `TitleBar` (back, title, icon commands) and `UISettingsForm` with content and callbacks; these controls own their layout and hit geometry. `UITouchControls` shares flight artwork, states and hit geometry between the native input adapter and standalone reference renderer. |
-| `Input/` | Keyboard, mouse, controllers and touch into `InputAction` and a `ControlState`; pointer events for screens (`ScreenInput`). |
+| `UI/` | SpriteKit screens: `FrontEnd` (which screen shows), main menu, mission list/briefing/debrief (`Briefing`), loading card, pause menu, server browser, `ScreenHost` (transitions), `UILayout` (menus from JSON), `ScreenRegions` (header and centered body), theme and motion. Scenes compose `TitleBar` (back, title, icon commands) and `UISettingsForm` with content and callbacks; these controls own their layout and hit geometry. Flight controls on touch screens, pause included, are the system `GCVirtualController` (see `Input/`). |
+| `Input/` | Keyboard, mouse, controllers and the iOS virtual controller into `InputAction` and a `ControlState`; pointer events for screens (`ScreenInput`). |
 | `Audio/` | `GameAudio`: music, engine sound, effects, on a private queue. |
 
 `Games/<name>/Game/` is a game module (see [Games/README.md](Games/README.md) for the

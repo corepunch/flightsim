@@ -115,23 +115,16 @@ typedef struct {
 - (void)reset;
 @end
 
-#if TARGET_OS_IOS
-extern NSNotificationName const InputControllerDidChangeNotification;
-#endif
-
-// Desktop HID/keyboard/mouse or mobile touch/GameController. Events are
-// received on the main thread and consumed on the render thread.
+// Desktop HID/keyboard/mouse, or on iOS a GameController pad: a physical one
+// when connected, otherwise the system's on-screen virtual controller while
+// flying. Events are received on the main thread and consumed on the render
+// thread.
 @interface Input : NSObject
 
 #if TARGET_OS_IOS
-- (void)setTouchStick:(CGPoint)stick; // +x yaw right, +y nose up
-- (void)setTouchThrottle:(float)value;
-- (void)setTouchFire:(BOOL)down;
-- (void)queueTouchAction:(InputAction)action;
-- (void)cancelTouchInput;            // releases spring controls and pending actions
+// Flight shows the virtual controller unless a physical one is connected.
 - (void)setFlightInputActive:(BOOL)active;
 - (void)setApplicationActive:(BOOL)active;
-@property (atomic, readonly) float currentThrottle;
 #else
 - (void)keyDown:(NSEvent *)event;
 - (void)keyUp:(NSEvent *)event;

@@ -71,18 +71,19 @@ credentials, or set `BUNDLE_ID` to the identifier covered by your profile.
 The game runs in either landscape orientation. The flight controls are centered
 vertically on both iPhone and iPad.
 
-In a mission, drag the left stick to pitch and yaw. Stay inside the ring for
-fine adjustments, or pull past it for faster turns. The stick stretches past
-the ring and reaches full steering at twice the ring's radius. It returns to
-center when released. The throttle slider on the right holds its position. Hold **Fire**
-for guns, tap **Target** to cycle the selection, and tap **Torpedo** to fire at
-the selected target. **Missions** leaves the current mission.
+In a mission, the system's on-screen game controller appears. Drag the left
+stick to pitch and yaw (dragging up climbs). Push the right stick up or down to
+raise or lower the throttle and left or right to roll; hold it fully up at full
+throttle to boost. X fires the guns, A fires a torpedo at the target and Y
+cycles the target. B, the outer corner of the button cluster, opens the pause
+menu; the buttons show icons instead of letters.
 
 When iOS exposes a connected controller through the extended Game Controller
-profile, the touch flight controls hide. Use the left stick to steer, right
-stick to roll, bumpers for throttle, right trigger for guns, left trigger for
-boost, Y for targeting, B for torpedoes, and X for the camera. Use the D-pad and
-A in menus. Disconnecting restores touch input at the current throttle.
+profile, the on-screen controller hides. The left stick steers (pushed forward
+dives), the right stick rolls, the bumpers move the throttle, the right trigger
+fires the guns, the left trigger boosts, B fires a torpedo, Y cycles the target
+and X switches the camera. Menu or Select pauses. Use the D-pad and A in menus.
+Disconnecting brings the on-screen controller back at the current throttle.
 
 Console commands and cvars (see `CONSOLE.md`) go after the bundle id as
 launch arguments, or in the scheme's arguments in Xcode. To verify the touch

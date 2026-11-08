@@ -82,7 +82,7 @@ Flags: **archive** persists in the user's defaults, **cheat** needs
 | `in_sensitivityX` | 1 | archive | Horizontal flight sensitivity, clamped to 0.25–2 |
 | `in_sensitivityY` | 1 | archive | Vertical flight sensitivity, clamped to 0.25–2 |
 | `in_invertPitch` | 0 | archive | Invert primary analog pitch (I toggles it); keyboard arrows keep their direction |
-| `in_touchOnly` | 0 | | iOS: ignores game controllers |
+| `in_touchOnly` | 0 | | iOS: ignores physical game controllers, so the on-screen controller shows |
 | `ui_timescale` | 1 | | Front-end motion runs this many times slower |
 | `ui_reduceMotion` | | | Reduce front-end motion: 0 off, 1 on, empty follows the system setting |
 | `ui_motion` | | | Front-end motion style: full, fade or none; empty follows the game's UI theme |

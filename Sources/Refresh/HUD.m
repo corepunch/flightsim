@@ -6,6 +6,14 @@
 #define MAX_TARGETS 64
 
 static SKColor *HUDColor(CGFloat a) { return UIColorWithOpacity(UIInk, a); }
+
+// The sensor scopes' scale: smaller on short screens, larger on touch phones
+// where the scopes are read at arm's length.
+static CGFloat ScannerScale(CGSize size, BOOL touchLayout) {
+    CGFloat scale = size.height < 550 ? 0.56 : 0.86;
+    BOOL phone = touchLayout && MIN(size.width, size.height) < 550 && MAX(size.width, size.height) < 1100;
+    return scale * (phone ? 1.5 : 1);
+}
 static SKColor *EnemyColor(CGFloat a) { return UIColorWithOpacity(UIRed, a); }
 static SKColor *FriendColor(CGFloat a) { return UIColorWithOpacity(UIFriendly, a); }
 static SKColor *NeutralColor(CGFloat a) { return UIColorWithOpacity(UIHUDNeutral, a); }
@@ -86,7 +94,8 @@ static SKShapeNode *Bracket(void) {
 
 #pragma mark - Condition bars
 
-// One row of the ship's condition on the right: a label, then a skewed bar.
+// One row of the ship's condition on the right: a label, then a skewed bar
+// filling a dark track that shows the bar's full length even when empty.
 // What the next second of recharge adds is drawn just ahead of the fill in a
 // fainter shade of the same colour, so a fast-filling bar shows a long chunk.
 @interface ConditionBar : UIHorizontalStack
@@ -98,7 +107,7 @@ static SKShapeNode *Bracket(void) {
 @end
 
 @implementation ConditionBar {
-    SKShapeNode *_fill, *_chunk;
+    SKShapeNode *_track, *_fill, *_chunk;
     SKNode *_bar;
 }
 
@@ -111,9 +120,11 @@ static SKShapeNode *Bracket(void) {
         [self addArrangedNode:label];
         _bar = [SKNode node];
         [self addArrangedNode:_bar layoutBounds:CGRectMake(0, 0, 200, 6)];
+        _track = [SKShapeNode node];
+        _track.fillColor = HUDColor(0.2);
         _fill = [SKShapeNode node];
         _chunk = [SKShapeNode node];
-        for (SKShapeNode *n in @[_fill, _chunk]) { n.strokeColor = SKColor.clearColor; [_bar addChild:n]; }
+        for (SKShapeNode *n in @[_track, _fill, _chunk]) { n.strokeColor = SKColor.clearColor; [_bar addChild:n]; }
         self.width = 200;
     }
     return self;
@@ -122,6 +133,7 @@ static SKShapeNode *Bracket(void) {
 - (void)setWidth:(CGFloat)width {
     _width = width;
     [self setLayoutBounds:CGRectMake(0, 0, width, 6) forArrangedNode:_bar];
+    UISetSkewedBar(_track, width, 6);
     [self layout];
 }
 
@@ -147,6 +159,10 @@ static SKShapeNode *Bracket(void) {
     TargetReadout *_targetReadout;
     SensorScope *_forwardScope, *_rearScope;
     ConditionBar *_hullBar, *_shieldBar, *_laserBar;     // bottom up, under the secondary rack
+    // Touch screens show the throttle as a bar under the hull instead of the
+    // gauge and the throttle and speed readouts in the left corner, which
+    // the on-screen controller's stick covers.
+    ConditionBar *_thrustBar;
     SKShapeNode *_boresight, *_cursor, *_cursorLine, *_ring;
     // The chase view's reticle, drawn in perspective each frame: one node per
     // ring so farther rings can be fainter.
@@ -273,7 +289,8 @@ static SKShapeNode *Bracket(void) {
     _hullBar = [[ConditionBar alloc] initWithTitle:L10n(@"hud.hull")];
     _shieldBar = [[ConditionBar alloc] initWithTitle:L10n(@"hud.shield")];
     _laserBar = [[ConditionBar alloc] initWithTitle:L10n(@"hud.laser")];
-    for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar]) [_root addChild:bar];
+    _thrustBar = [[ConditionBar alloc] initWithTitle:L10n(@"hud.thrust")];
+    for (ConditionBar *bar in @[_thrustBar, _hullBar, _shieldBar, _laserBar]) [_root addChild:bar];
 
     _scoreLabel = Label(16, SKLabelHorizontalAlignmentModeRight);
     [_root addChild:_scoreLabel];
@@ -457,7 +474,7 @@ static SKShapeNode *Bracket(void) {
     BOOL phoneLayout = _touchLayout && MIN(s.width, s.height) < 550 && MAX(s.width, s.height) < 1100;
     CGFloat edgeBottom = phoneLayout ? 2 : (_touchLayout ? insets.bottom + 24 : 40);
     BOOL compact = s.height < 550;
-    CGFloat scopeScale = [UITouchControls scannerScaleForSize:s touchLayout:_touchLayout];
+    CGFloat scopeScale = ScannerScale(s, _touchLayout);
     [_forwardScope setScale:scopeScale]; [_rearScope setScale:scopeScale];
     // Landscape sensor housings sit mid-edge. The upper corners can use a
     // uniform inset, with room above each disc for its label.
@@ -470,10 +487,9 @@ static SKShapeNode *Bracket(void) {
     [_targetReadout setScale:panelScale];
     _targetReadout.position = CGPointMake((s.width - panelWidth) / 2, edgeBottom);
     // Match the actual text edge to the bottom of the target details.
-    SKNode *heading = _objectivePanel.children.firstObject;
     CGFloat bottomMargin = edgeBottom + (compact ? 11 : 20) * panelScale;
     CGFloat rowStep = _touchLayout ? 16 : 18;
-    for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar]) rowStep = MAX(rowStep, bar.inkHeight + 4);
+    for (ConditionBar *bar in @[_thrustBar, _hullBar, _shieldBar, _laserBar]) rowStep = MAX(rowStep, bar.inkHeight + 4);
     if (phoneLayout && s.width > s.height) {
         // The corner readouts end on the same line as the target details, so
         // every bottom indicator keeps one distance from the screen edge.
@@ -487,16 +503,13 @@ static SKShapeNode *Bracket(void) {
     _shieldBar.position = PointAdd(_hullBar.position, CGPointMake(0, rowStep));
     _laserBar.position = PointAdd(_shieldBar.position, CGPointMake(0, rowStep));
     CGFloat topMargin = phoneLayout ? MAX(insets.top, bottomMargin) : (_touchLayout ? insets.top + 30 : 36);
-    CGFloat headingTop = heading ? CGRectGetMaxY(heading.frame) : 7;
-    // Clear of the forward scope's drawn edge, whatever its scale.
+    // The objective rows hang from the top margin, clear of the forward
+    // scope's drawn edge, whatever its scale.
     CGFloat scopeRight = CGRectGetMaxX(_forwardScope.discFrame);
-    _objectivePanel.position = CGPointMake(scopeRight + (compact ? 20 : 28),
-                                           s.height - topMargin - headingTop);
+    _objectivePanel.position = CGPointMake(scopeRight + (compact ? 20 : 28), s.height - topMargin);
     CGFloat objectivesRight = CGRectGetMinX(_rearScope.discFrame) - 12;
-    if (_touchLayout) objectivesRight = MIN(objectivesRight,
-        CGRectGetMinX([UITouchControls pauseRectForSize:s insets:insets]) - 12);
     CGFloat objectivesWidth = MAX(80, objectivesRight - _objectivePanel.position.x);
-    CGFloat rowTop = heading ? CGRectGetMinY(heading.frame) - 10 : -10;
+    CGFloat rowTop = 0;
     for (UIHorizontalStack *row in _objectives.rows) {
         row.maximumWidth = objectivesWidth;
         [row layout];
@@ -522,8 +535,25 @@ static SKShapeNode *Bracket(void) {
     _help.position = CGPointMake(insets.left + (s.width - insets.left - insets.right - helpWidth) / 2,
         insets.bottom + (s.height - insets.top - insets.bottom + helpHeight) / 2);
     _secondaryRow.position = PointAdd(_laserBar.position, CGPointMake(0, rowStep));
-    for (ConditionBar *bar in @[_hullBar, _shieldBar, _laserBar]) bar.width = _touchLayout ? 80 : 200;
+    for (ConditionBar *bar in @[_thrustBar, _hullBar, _shieldBar, _laserBar]) bar.width = _touchLayout ? 80 : 200;
     [self layoutSecondary];
+    if (_touchLayout) {
+        // The on-screen controller fills the bottom corners, so the thrust and
+        // condition bars stack at the bottom centre, as far from the bottom
+        // edge as the objectives list is from the top.
+        NSArray<SKNode *> *rows = @[_thrustBar, _hullBar, _shieldBar, _laserBar, _secondaryRow];
+        // The block's rows sit closer than the desktop's corner stack.
+        CGFloat blockStep = rowStep * 0.8;
+        CGPoint row = CGPointMake(0, topMargin - _thrustBar.inkBottom);
+        for (SKNode *node in rows) {
+            node.position = row;
+            row = PointAdd(row, CGPointMake(0, blockStep));
+        }
+        CGRect block = CGRectNull;
+        for (SKNode *node in rows) block = CGRectUnion(block, [node calculateAccumulatedFrame]);
+        CGPoint shift = CGPointMake(s.width / 2 - CGRectGetMidX(block), 0);
+        for (SKNode *node in rows) node.position = PointAdd(node.position, shift);
+    }
     CGPathRef dp = CGPathCreateWithRect(CGRectMake(0, 0, s.width, s.height), NULL);
     _damage.path = dp;
     CGPathRelease(dp);
@@ -538,7 +568,7 @@ static SKShapeNode *Bracket(void) {
                             : MIN(760, size.width - _contentInsets.left - _contentInsets.right - 48);
     CGRect objectives = [_objectivePanel calculateAccumulatedFrame];
     CGFloat top = size.height - _contentInsets.top - 100;
-    if (!_objectivePanel.hidden && _objectivePanel.children.count > 1) top = MIN(top, CGRectGetMinY(objectives) - 12);
+    if (!_objectivePanel.hidden && _objectivePanel.children.count) top = MIN(top, CGRectGetMinY(objectives) - 12);
     _messagePanel.position = CGPointMake(size.width / 2, top);
     CGFloat y = 0;
     for (NSUInteger i = 0; i < _messages.count; i++) {
@@ -561,7 +591,7 @@ static SKShapeNode *Bracket(void) {
     [_secondaryRow setLayoutBounds:CGRectMake(0, 0, width, 6) forArrangedNode:_secondaryRack];
     [_secondaryRow layout];
     if (!count) return;
-    CGFloat gap = MIN(4, width / (count * 4));
+    CGFloat gap = MIN(2, width / (count * 8));
     CGFloat segmentWidth = (width - gap * (count - 1)) / count;
     for (NSUInteger i = 0; i < count; i++) {
         SKShapeNode *segment = _secondarySegments[i];
@@ -622,13 +652,13 @@ static SKShapeNode *Bracket(void) {
 }
 - (void)setHelpVisible:(BOOL)visible {
     _help.hidden = !visible;
-    _objectivePanel.hidden = visible || _objectivePanel.children.count < 2;
+    _objectivePanel.hidden = visible || !_objectivePanel.children.count;
     [self layoutMessages];
 }
 
 - (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {
     if ([_objectives.states isEqualToArray:states] && _objectives.labels.count == lines.count) {
-        // A ticking countdown keeps its rows, checkbox paths and heading.
+        // A ticking countdown keeps its rows and checkbox paths.
         for (NSUInteger i = 0; i < lines.count; i++) {
             SKLabelNode *label = _objectives.labels[i];
             if ([label.text isEqualToString:lines[i]]) continue;
@@ -644,11 +674,7 @@ static SKShapeNode *Bracket(void) {
     NSMutableArray<SKLabelNode *> *labels = [NSMutableArray array];
     NSMutableArray<UIHorizontalStack *> *rows = [NSMutableArray array];
     [_objectivePanel removeAllChildren];
-    SKLabelNode *head = Label(13, SKLabelHorizontalAlignmentModeLeft);
-    head.text = L10n(@"hud.objectives");
-    head.fontColor = HUDColor(0.6);
-    [_objectivePanel addChild:head];
-    _laidOut = CGSizeZero; // Heading metrics determine the matching top margin.
+    _laidOut = CGSizeZero;
     // The border's outside edge matches the capital D, rather than the font's
     // point size. All states share exactly the same square control geometry.
     PlatformFont *font = [PlatformFont fontWithName:UIMonoFont size:14];
@@ -793,9 +819,12 @@ static CGAffineTransform RingTransform(HUDRing r) {
     _scoreLabel.fontSize = MIN(s.width, s.height) < 550 ? 12 : 16;
     _scoreLabel.position = PointAdd(_objectivePanel.position, CGPointMake(0, -20));
     BOOL objectivesWereHidden = _objectivePanel.hidden;
-    _objectivePanel.hidden = f.respawning || !_help.hidden || _objectivePanel.children.count < 2;
+    _objectivePanel.hidden = f.respawning || !_help.hidden || !_objectivePanel.children.count;
     if (objectivesWereHidden != _objectivePanel.hidden) [self layoutMessages];
-    if (_touchLayout) _throttleFrame.hidden = YES;
+    if (_touchLayout) _throttleFrame.hidden = _throttleLabel.hidden = _speedLabel.hidden = YES;
+    _thrustBar.hidden = f.cockpit || !_touchLayout;
+    [_thrustBar setLevel:f.throttle recharge:0
+                   color:f.boosting ? UIColorWithOpacity(UIBoost, 0.9) : HUDColor(0.75)];
     [self updateSecondary:f.secondary capacity:f.secondaryCapacity name:f.secondaryName];
     _aimMark.hidden = !f.aimVisible || f.playerDead;
     _aimMark.position = f.aim;

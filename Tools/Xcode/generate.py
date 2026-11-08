@@ -16,7 +16,7 @@ PRODUCT = f"{GAME}.app"
 # The game the app builds with (Games/<name>; build.sh and Makefile: GAME).
 DEFAULT_GAME = "KestrelFrontier"
 MAC_ONLY = {"FXRecorder.m", "ShipPreview.m", "GameView.m", "Input.m", "main.m"}
-IOS_ONLY = {"GameViewIOS.m", "InputIOS.m", "mainIOS.m", "TouchFlightControls.m"}
+IOS_ONLY = {"GameViewIOS.m", "InputIOS.m", "mainIOS.m"}
 IOS_FRAMEWORKS = (
     "UIKit", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "CoreText", "QuartzCore",
     "ImageIO", "GameController", "AVFoundation",

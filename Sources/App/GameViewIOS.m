@@ -6,7 +6,6 @@
 
 @implementation GameView {
     SKView *_overlayView;
-    TouchFlightControls *_flightControls;
     // The one touch a front-end screen is following: a tap becomes a click,
     // a drag becomes scrolling.
     UITouch *_screenTouch;
@@ -54,14 +53,9 @@
 
 - (void)setInput:(Input *)input {
     [NSNotificationCenter.defaultCenter removeObserver:self];
-    [_flightControls removeFromSuperview];
     _input = input;
-    _flightControls = [[TouchFlightControls alloc] initWithInput:input];
-    _flightControls.frame = self.bounds;
-    _flightControls.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
-    [nc addObserver:self selector:@selector(controllerChanged:) name:InputControllerDidChangeNotification object:input];
     [nc addObserver:self selector:@selector(resignActive:) name:UIApplicationWillResignActiveNotification object:nil];
     [nc addObserver:self selector:@selector(becomeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
     [input setApplicationActive:UIApplication.sharedApplication.applicationState == UIApplicationStateActive];
@@ -70,30 +64,21 @@
 
 @synthesize input = _input;
 
-- (UIView *)flightControlsView { return _flightControls; }
-- (void)setSecondaryLabel:(NSString *)label { [_flightControls setSecondaryLabel:label]; }
-
 - (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 
 - (void)updateFlightControls {
     BOOL flying = [self.overlayScene isKindOfClass:HUD.class];
-    [_flightControls updateController];
-    [_flightControls showInHUD:flying ? self.overlayScene : nil];
     [_input setFlightInputActive:flying];
 }
-
-- (void)controllerChanged:(NSNotification *)note { [_flightControls updateController]; }
 
 - (void)resignActive:(NSNotification *)note {
     if (_screenTouch) [_input.pointer push:(PointerEvent){ .kind = PointerEventCancel }];
     _screenTouch = nil;
     [_input setApplicationActive:NO];
-    [_flightControls cancelInput];
 }
 
 - (void)becomeActive:(NSNotification *)note {
     [_input setApplicationActive:YES];
-    [_flightControls updateController];
 }
 
 - (void)setOverlayScene:(SKScene *)scene {
@@ -134,7 +119,6 @@
 - (void)safeAreaInsetsDidChange {
     [super safeAreaInsetsDidChange];
     [self updateOverlayInsets];
-    [_flightControls setNeedsLayout];
 }
 
 - (CGPoint)fractionForPoint:(CGPoint)point {
