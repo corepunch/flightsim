@@ -97,6 +97,7 @@ static SCNNode *PointMarker(simd_float3 at, NSColor *color, CGFloat radius) {
                      L10nExpand(@(_def->displayName)), _def->mesh, FSGame()];
     [_window center];
     _view = [[PreviewView alloc] initWithFrame:frame options:@{ SCNPreferredRenderingAPIKey : @(SCNRenderingAPIMetal) }];
+    _view.antialiasingMode = SCNAntialiasingModeNone;
     _view.backgroundColor = NSColor.blackColor;
     _window.contentView = _view;
 

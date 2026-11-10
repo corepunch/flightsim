@@ -106,6 +106,7 @@ static int RunDedicated(int mission) {
 
     self.input = [Input new];
     GameView *view = [[GameView alloc] initWithFrame:frame options:@{ SCNPreferredRenderingAPIKey : @(SCNRenderingAPIMetal) }];
+    view.antialiasingMode = SCNAntialiasingModeNone;
     view.input = self.input;
     self.window.contentView = view;
     self.host = [[Host alloc] initWithView:view input:self.input];
