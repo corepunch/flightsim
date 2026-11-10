@@ -41,10 +41,19 @@
     [self.window makeKeyAndVisible];
 }
 
-- (void)sceneDidBecomeActive:(UIScene *)scene { self.gameView.overlayView.paused = NO; }
-- (void)sceneWillResignActive:(UIScene *)scene { self.gameView.overlayView.paused = YES; }
+// Both render loops (and the frame update riding on SceneKit's) stop while the
+// app is inactive or backgrounded, so a forgotten simulator or device draws nothing.
+- (void)setRendering:(BOOL)on {
+    GameView *view = self.gameView;
+    view.overlayView.paused = !on;
+    view.rendersContinuously = on;
+    view.playing = on;
+}
+
+- (void)sceneDidBecomeActive:(UIScene *)scene { [self setRendering:YES]; }
+- (void)sceneWillResignActive:(UIScene *)scene { [self setRendering:NO]; }
 - (void)sceneDidDisconnect:(UIScene *)scene {
-    self.gameView.overlayView.paused = YES;
+    [self setRendering:NO];
     self.gameView.overlayView.delegate = nil;
 }
 @end
