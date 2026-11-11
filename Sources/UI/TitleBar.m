@@ -5,7 +5,7 @@
 
 // The space a plated bar keeps above and below its row. A phone's row is a
 // touch target well taller than its icons' ink, so the plate cuts into it.
-static CGFloat PlatePadding(BOOL compact) { return compact ? -11 : 4; }
+static CGFloat PlatePadding(BOOL compact) { return compact ? -6 : 4; }
 
 ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe) {
     return ScreenRegionsMakePlated(size, safe, NO);
