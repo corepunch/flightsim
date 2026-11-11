@@ -31,12 +31,25 @@ each mission.
 Achievements are listed in `Games/KestrelFrontier/Campaign/campaign.json`
 ("achievements") and reported from the progress record, so progress made
 offline or on another device is awarded at the next sign-in. Each one exists in
-App Store Connect under the same ID (prefix `com.corepunch.spacefight.`) with
-an English title and descriptions, created with `asc game-center achievements
-create` and `… localizations create`. Each still needs a 1024×1024 image
-(`asc game-center achievements images upload`) before they go to App Review
-with an app version. A live achievement cannot be deleted and its points
-cannot change, so the set leaves 480 of the 1000 points free.
+App Store Connect under the same ID (prefix `com.corepunch.spacefight.`).
+The editable achievement versions have titles, unlock descriptions and artwork
+in all 21 game locales. The source text is in
+[`fastlane/game-center/achievement-localizations.json`](../fastlane/game-center/achievement-localizations.json).
+The same text-free 1024×1024 PNG is used for each locale of an achievement.
+The PNGs, source atlas and ImageGen prompt are in
+[`fastlane/artwork/achievements/`](../fastlane/artwork/achievements/).
+Each PNG is named for its achievement ID suffix.
+
+Use `asc game-center achievements v2 localizations list --version-id VERSION_ID`
+to find localization IDs. Upload with
+`asc game-center achievements v2 images upload --localization-id LOC_ID --file PATH`
+and check for `COMPLETE` with
+`asc game-center achievements v2 images view --localization-id LOC_ID`.
+The first Game Center components must be submitted with an app version that
+supports them. For a later, separate submission, `asc review items add` takes
+`--item-type gameCenterAchievementVersions` and the achievement **version** ID.
+A live achievement cannot be deleted and its points cannot change, so the set
+leaves 480 of the 1000 points free.
 
 | ID | Earned by | Points | Hidden |
 |---|---|---|---|
@@ -145,7 +158,42 @@ Fastlane also downloads category files. Additional locales use sibling folders
 such as `fastlane/metadata/de-DE/`. The local checker covers English (U.S.);
 Apple validates all uploaded locales.
 
-Upload your text with:
+The App Store's Languages field comes from the app bundle. Both platform
+plists and their native permission strings declare the same 21 locales as the
+game catalogs. The separate storefront translations are in
+[`fastlane/storefront/`](../fastlane/storefront/), with 21 locales in each of
+`app-info`, `ios`, and `macos`. The first folder contains the shared app
+name, subtitle, and privacy URL. The platform folders contain the descriptions,
+keywords, promotional text, and support URL. The Mac copy covers its keyboard,
+mouse, and trackball controls.
+[Apple's storefront localization instructions](https://developer.apple.com/help/app-store-connect/manage-app-information/localize-app-information/).
+
+When the next versions are editable, set their version numbers below and stage
+the files in the directory layout expected by `asc`. The shared app information
+only needs to be uploaded with the first platform.
+
+```sh
+ios_version=NEXT_IOS_VERSION
+macos_version=NEXT_MACOS_VERSION
+stage=$(mktemp -d)
+mkdir -p "$stage/ios/version/$ios_version" "$stage/macos/version/$macos_version"
+cp -R fastlane/storefront/app-info "$stage/ios/"
+cp fastlane/storefront/ios/*.json "$stage/ios/version/$ios_version/"
+cp fastlane/storefront/macos/*.json "$stage/macos/version/$macos_version/"
+
+asc --profile corepunch metadata push --app 6831063163 --platform IOS \
+  --version "$ios_version" --dir "$stage/ios" --if-exists update --dry-run
+asc --profile corepunch metadata push --app 6831063163 --platform MAC_OS \
+  --version "$macos_version" --dir "$stage/macos" --if-exists update --dry-run
+```
+
+The example uploads shared app information with iOS. If macOS goes first,
+copy `app-info` into the Mac staging directory instead. Check that each plan
+targets the intended editable version, then rerun without `--dry-run` to upload.
+Add localized What's New text once the release contents are final. These files
+contain listing text only. Upload any localized screenshots or previews separately.
+
+To upload the existing Fastlane metadata instead:
 
 ```sh
 ./Tools/fastlane.sh ios prepare

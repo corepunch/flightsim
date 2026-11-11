@@ -1,0 +1,1304 @@
+{
+  "en-US": {
+    "first_sortie": {
+      "name": "First Sortie",
+      "beforeEarnedDescription": "Finish a campaign mission.",
+      "afterEarnedDescription": "Finished your first campaign mission."
+    },
+    "chapter_1": {
+      "name": "Strange Orders",
+      "beforeEarnedDescription": "Finish the first five campaign missions.",
+      "afterEarnedDescription": "Finished the first five campaign missions."
+    },
+    "chapter_2": {
+      "name": "The People We Save",
+      "beforeEarnedDescription": "Finish ten campaign missions.",
+      "afterEarnedDescription": "Finished ten campaign missions."
+    },
+    "chapter_3": {
+      "name": "The Machine at Corvid",
+      "beforeEarnedDescription": "Finish fifteen campaign missions.",
+      "afterEarnedDescription": "Finished fifteen campaign missions."
+    },
+    "campaign": {
+      "name": "The Quiet Engine",
+      "beforeEarnedDescription": "Finish the campaign.",
+      "afterEarnedDescription": "Finished the campaign."
+    },
+    "perfect_1": {
+      "name": "By the Book",
+      "beforeEarnedDescription": "Earn three stars on a mission.",
+      "afterEarnedDescription": "Earned three stars on a mission."
+    },
+    "perfect_5": {
+      "name": "Flight Lead",
+      "beforeEarnedDescription": "Earn three stars on five missions.",
+      "afterEarnedDescription": "Earned three stars on five missions."
+    },
+    "perfect_10": {
+      "name": "Squadron Standard",
+      "beforeEarnedDescription": "Earn three stars on ten missions.",
+      "afterEarnedDescription": "Earned three stars on ten missions."
+    },
+    "perfect_20": {
+      "name": "Spotless Record",
+      "beforeEarnedDescription": "Earn three stars on every mission.",
+      "afterEarnedDescription": "Earned three stars on every mission."
+    },
+    "first_kill": {
+      "name": "First Blood",
+      "beforeEarnedDescription": "Shoot down another pilot in a LAN match.",
+      "afterEarnedDescription": "Shot down another pilot in a LAN match."
+    },
+    "match_ace": {
+      "name": "Ace in a Day",
+      "beforeEarnedDescription": "Shoot down five pilots in one LAN match.",
+      "afterEarnedDescription": "Shot down five pilots in one LAN match."
+    },
+    "match_flawless": {
+      "name": "Top of the Board",
+      "beforeEarnedDescription": "Win a LAN match with five kills.",
+      "afterEarnedDescription": "Won a LAN match with five kills."
+    }
+  },
+  "de-DE": {
+    "first_sortie": {
+      "name": "Erster Einsatz",
+      "beforeEarnedDescription": "Schließe eine Kampagnenmission ab.",
+      "afterEarnedDescription": "Du hast deine erste Kampagnenmission abgeschlossen."
+    },
+    "chapter_1": {
+      "name": "Seltsame Befehle",
+      "beforeEarnedDescription": "Schließe die ersten fünf Kampagnenmissionen ab.",
+      "afterEarnedDescription": "Du hast die ersten fünf Kampagnenmissionen abgeschlossen."
+    },
+    "chapter_2": {
+      "name": "Die Menschen, die wir retten",
+      "beforeEarnedDescription": "Schließe zehn Kampagnenmissionen ab.",
+      "afterEarnedDescription": "Du hast zehn Kampagnenmissionen abgeschlossen."
+    },
+    "chapter_3": {
+      "name": "Die Maschine bei Corvid",
+      "beforeEarnedDescription": "Schließe fünfzehn Kampagnenmissionen ab.",
+      "afterEarnedDescription": "Du hast fünfzehn Kampagnenmissionen abgeschlossen."
+    },
+    "campaign": {
+      "name": "Das stille Triebwerk",
+      "beforeEarnedDescription": "Schließe die Kampagne ab.",
+      "afterEarnedDescription": "Du hast die Kampagne abgeschlossen."
+    },
+    "perfect_1": {
+      "name": "Nach Vorschrift",
+      "beforeEarnedDescription": "Erziele drei Sterne in einer Mission.",
+      "afterEarnedDescription": "Du hast drei Sterne in einer Mission erzielt."
+    },
+    "perfect_5": {
+      "name": "Schwarmführung",
+      "beforeEarnedDescription": "Erziele drei Sterne in fünf Missionen.",
+      "afterEarnedDescription": "Du hast drei Sterne in fünf Missionen erzielt."
+    },
+    "perfect_10": {
+      "name": "Vorbild der Staffel",
+      "beforeEarnedDescription": "Erziele drei Sterne in zehn Missionen.",
+      "afterEarnedDescription": "Du hast drei Sterne in zehn Missionen erzielt."
+    },
+    "perfect_20": {
+      "name": "Makellose Bilanz",
+      "beforeEarnedDescription": "Erziele drei Sterne in jeder Mission.",
+      "afterEarnedDescription": "Du hast drei Sterne in jeder Mission erzielt."
+    },
+    "first_kill": {
+      "name": "Erster Abschuss",
+      "beforeEarnedDescription": "Schieße einen anderen Piloten in einem LAN-Match ab.",
+      "afterEarnedDescription": "Du hast einen anderen Piloten in einem LAN-Match abgeschossen."
+    },
+    "match_ace": {
+      "name": "Ein Ass an einem Tag",
+      "beforeEarnedDescription": "Schieße fünf Piloten in einem einzigen LAN-Match ab.",
+      "afterEarnedDescription": "Du hast fünf Piloten in einem einzigen LAN-Match abgeschossen."
+    },
+    "match_flawless": {
+      "name": "Ganz oben",
+      "beforeEarnedDescription": "Gewinne ein LAN-Match mit fünf Abschüssen.",
+      "afterEarnedDescription": "Du hast ein LAN-Match mit fünf Abschüssen gewonnen."
+    }
+  },
+  "es-ES": {
+    "first_sortie": {
+      "name": "Primera salida",
+      "beforeEarnedDescription": "Completa una misión de la campaña.",
+      "afterEarnedDescription": "Has completado tu primera misión de la campaña."
+    },
+    "chapter_1": {
+      "name": "Órdenes extrañas",
+      "beforeEarnedDescription": "Completa las cinco primeras misiones de la campaña.",
+      "afterEarnedDescription": "Has completado las cinco primeras misiones de la campaña."
+    },
+    "chapter_2": {
+      "name": "A quienes salvamos",
+      "beforeEarnedDescription": "Completa diez misiones de la campaña.",
+      "afterEarnedDescription": "Has completado diez misiones de la campaña."
+    },
+    "chapter_3": {
+      "name": "La máquina de Corvid",
+      "beforeEarnedDescription": "Completa quince misiones de la campaña.",
+      "afterEarnedDescription": "Has completado quince misiones de la campaña."
+    },
+    "campaign": {
+      "name": "El motor silencioso",
+      "beforeEarnedDescription": "Completa la campaña.",
+      "afterEarnedDescription": "Has completado la campaña."
+    },
+    "perfect_1": {
+      "name": "Según el manual",
+      "beforeEarnedDescription": "Consigue tres estrellas en una misión.",
+      "afterEarnedDescription": "Has conseguido tres estrellas en una misión."
+    },
+    "perfect_5": {
+      "name": "Líder de escuadrilla",
+      "beforeEarnedDescription": "Consigue tres estrellas en cinco misiones.",
+      "afterEarnedDescription": "Has conseguido tres estrellas en cinco misiones."
+    },
+    "perfect_10": {
+      "name": "Ejemplo del escuadrón",
+      "beforeEarnedDescription": "Consigue tres estrellas en diez misiones.",
+      "afterEarnedDescription": "Has conseguido tres estrellas en diez misiones."
+    },
+    "perfect_20": {
+      "name": "Historial impecable",
+      "beforeEarnedDescription": "Consigue tres estrellas en todas las misiones.",
+      "afterEarnedDescription": "Has conseguido tres estrellas en todas las misiones."
+    },
+    "first_kill": {
+      "name": "Primer derribo",
+      "beforeEarnedDescription": "Derriba a otro piloto en una partida en red local.",
+      "afterEarnedDescription": "Has derribado a otro piloto en una partida en red local."
+    },
+    "match_ace": {
+      "name": "As en un día",
+      "beforeEarnedDescription": "Derriba a cinco pilotos en una sola partida en red local.",
+      "afterEarnedDescription": "Has derribado a cinco pilotos en una sola partida en red local."
+    },
+    "match_flawless": {
+      "name": "En lo más alto",
+      "beforeEarnedDescription": "Gana una partida en red local con cinco derribos.",
+      "afterEarnedDescription": "Has ganado una partida en red local con cinco derribos."
+    }
+  },
+  "fr-FR": {
+    "first_sortie": {
+      "name": "Première sortie",
+      "beforeEarnedDescription": "Terminez une mission de la campagne.",
+      "afterEarnedDescription": "Vous avez terminé votre première mission de la campagne."
+    },
+    "chapter_1": {
+      "name": "Des ordres étranges",
+      "beforeEarnedDescription": "Terminez les cinq premières missions de la campagne.",
+      "afterEarnedDescription": "Vous avez terminé les cinq premières missions de la campagne."
+    },
+    "chapter_2": {
+      "name": "Ceux que nous sauvons",
+      "beforeEarnedDescription": "Terminez dix missions de la campagne.",
+      "afterEarnedDescription": "Vous avez terminé dix missions de la campagne."
+    },
+    "chapter_3": {
+      "name": "La machine de Corvid",
+      "beforeEarnedDescription": "Terminez quinze missions de la campagne.",
+      "afterEarnedDescription": "Vous avez terminé quinze missions de la campagne."
+    },
+    "campaign": {
+      "name": "Le moteur silencieux",
+      "beforeEarnedDescription": "Terminez la campagne.",
+      "afterEarnedDescription": "Vous avez terminé la campagne."
+    },
+    "perfect_1": {
+      "name": "Dans les règles de l’art",
+      "beforeEarnedDescription": "Obtenez trois étoiles dans une mission.",
+      "afterEarnedDescription": "Vous avez obtenu trois étoiles dans une mission."
+    },
+    "perfect_5": {
+      "name": "Chef de patrouille",
+      "beforeEarnedDescription": "Obtenez trois étoiles dans cinq missions.",
+      "afterEarnedDescription": "Vous avez obtenu trois étoiles dans cinq missions."
+    },
+    "perfect_10": {
+      "name": "Fierté de l’escadron",
+      "beforeEarnedDescription": "Obtenez trois étoiles dans dix missions.",
+      "afterEarnedDescription": "Vous avez obtenu trois étoiles dans dix missions."
+    },
+    "perfect_20": {
+      "name": "Parcours sans faute",
+      "beforeEarnedDescription": "Obtenez trois étoiles dans toutes les missions.",
+      "afterEarnedDescription": "Vous avez obtenu trois étoiles dans toutes les missions."
+    },
+    "first_kill": {
+      "name": "Première victoire aérienne",
+      "beforeEarnedDescription": "Abattez un autre pilote lors d’une partie en réseau local.",
+      "afterEarnedDescription": "Vous avez abattu un autre pilote lors d’une partie en réseau local."
+    },
+    "match_ace": {
+      "name": "As en un jour",
+      "beforeEarnedDescription": "Abattez cinq pilotes lors d’une même partie en réseau local.",
+      "afterEarnedDescription": "Vous avez abattu cinq pilotes lors d’une même partie en réseau local."
+    },
+    "match_flawless": {
+      "name": "En tête du classement",
+      "beforeEarnedDescription": "Remportez une partie en réseau local avec cinq victoires aériennes.",
+      "afterEarnedDescription": "Vous avez remporté une partie en réseau local avec cinq victoires aériennes."
+    }
+  },
+  "it": {
+    "first_sortie": {
+      "name": "Prima sortita",
+      "beforeEarnedDescription": "Completa una missione della campagna.",
+      "afterEarnedDescription": "Hai completato la tua prima missione della campagna."
+    },
+    "chapter_1": {
+      "name": "Strani ordini",
+      "beforeEarnedDescription": "Completa le prime cinque missioni della campagna.",
+      "afterEarnedDescription": "Hai completato le prime cinque missioni della campagna."
+    },
+    "chapter_2": {
+      "name": "Le persone che salviamo",
+      "beforeEarnedDescription": "Completa dieci missioni della campagna.",
+      "afterEarnedDescription": "Hai completato dieci missioni della campagna."
+    },
+    "chapter_3": {
+      "name": "La macchina di Corvid",
+      "beforeEarnedDescription": "Completa quindici missioni della campagna.",
+      "afterEarnedDescription": "Hai completato quindici missioni della campagna."
+    },
+    "campaign": {
+      "name": "Il motore silenzioso",
+      "beforeEarnedDescription": "Completa la campagna.",
+      "afterEarnedDescription": "Hai completato la campagna."
+    },
+    "perfect_1": {
+      "name": "Da manuale",
+      "beforeEarnedDescription": "Ottieni tre stelle in una missione.",
+      "afterEarnedDescription": "Hai ottenuto tre stelle in una missione."
+    },
+    "perfect_5": {
+      "name": "Capo squadriglia",
+      "beforeEarnedDescription": "Ottieni tre stelle in cinque missioni.",
+      "afterEarnedDescription": "Hai ottenuto tre stelle in cinque missioni."
+    },
+    "perfect_10": {
+      "name": "Orgoglio dello squadrone",
+      "beforeEarnedDescription": "Ottieni tre stelle in dieci missioni.",
+      "afterEarnedDescription": "Hai ottenuto tre stelle in dieci missioni."
+    },
+    "perfect_20": {
+      "name": "Un curriculum impeccabile",
+      "beforeEarnedDescription": "Ottieni tre stelle in tutte le missioni.",
+      "afterEarnedDescription": "Hai ottenuto tre stelle in tutte le missioni."
+    },
+    "first_kill": {
+      "name": "Primo abbattimento",
+      "beforeEarnedDescription": "Abbatti un altro pilota in una partita LAN.",
+      "afterEarnedDescription": "Hai abbattuto un altro pilota in una partita LAN."
+    },
+    "match_ace": {
+      "name": "Asso in un giorno",
+      "beforeEarnedDescription": "Abbatti cinque piloti in una sola partita LAN.",
+      "afterEarnedDescription": "Hai abbattuto cinque piloti in una sola partita LAN."
+    },
+    "match_flawless": {
+      "name": "In vetta alla classifica",
+      "beforeEarnedDescription": "Vinci una partita LAN con cinque abbattimenti.",
+      "afterEarnedDescription": "Hai vinto una partita LAN con cinque abbattimenti."
+    }
+  },
+  "pt-BR": {
+    "first_sortie": {
+      "name": "Primeira incursão",
+      "beforeEarnedDescription": "Conclua uma missão da campanha.",
+      "afterEarnedDescription": "Você concluiu sua primeira missão da campanha."
+    },
+    "chapter_1": {
+      "name": "Ordens estranhas",
+      "beforeEarnedDescription": "Conclua as cinco primeiras missões da campanha.",
+      "afterEarnedDescription": "Você concluiu as cinco primeiras missões da campanha."
+    },
+    "chapter_2": {
+      "name": "Quem nós salvamos",
+      "beforeEarnedDescription": "Conclua dez missões da campanha.",
+      "afterEarnedDescription": "Você concluiu dez missões da campanha."
+    },
+    "chapter_3": {
+      "name": "A máquina em Corvid",
+      "beforeEarnedDescription": "Conclua quinze missões da campanha.",
+      "afterEarnedDescription": "Você concluiu quinze missões da campanha."
+    },
+    "campaign": {
+      "name": "O motor silencioso",
+      "beforeEarnedDescription": "Conclua a campanha.",
+      "afterEarnedDescription": "Você concluiu a campanha."
+    },
+    "perfect_1": {
+      "name": "Como manda o manual",
+      "beforeEarnedDescription": "Obtenha três estrelas em uma missão.",
+      "afterEarnedDescription": "Você obteve três estrelas em uma missão."
+    },
+    "perfect_5": {
+      "name": "Líder de esquadrilha",
+      "beforeEarnedDescription": "Obtenha três estrelas em cinco missões.",
+      "afterEarnedDescription": "Você obteve três estrelas em cinco missões."
+    },
+    "perfect_10": {
+      "name": "Orgulho do esquadrão",
+      "beforeEarnedDescription": "Obtenha três estrelas em dez missões.",
+      "afterEarnedDescription": "Você obteve três estrelas em dez missões."
+    },
+    "perfect_20": {
+      "name": "Histórico impecável",
+      "beforeEarnedDescription": "Obtenha três estrelas em todas as missões.",
+      "afterEarnedDescription": "Você obteve três estrelas em todas as missões."
+    },
+    "first_kill": {
+      "name": "Primeiro abate",
+      "beforeEarnedDescription": "Abata outro piloto em uma partida LAN.",
+      "afterEarnedDescription": "Você abateu outro piloto em uma partida LAN."
+    },
+    "match_ace": {
+      "name": "Ás em um dia",
+      "beforeEarnedDescription": "Abata cinco pilotos em uma única partida LAN.",
+      "afterEarnedDescription": "Você abateu cinco pilotos em uma única partida LAN."
+    },
+    "match_flawless": {
+      "name": "No topo do placar",
+      "beforeEarnedDescription": "Vença uma partida LAN com cinco abates.",
+      "afterEarnedDescription": "Você venceu uma partida LAN com cinco abates."
+    }
+  },
+  "pt-PT": {
+    "first_sortie": {
+      "name": "Primeira sortida",
+      "beforeEarnedDescription": "Conclui uma missão da campanha.",
+      "afterEarnedDescription": "Concluíste a tua primeira missão da campanha."
+    },
+    "chapter_1": {
+      "name": "Ordens estranhas",
+      "beforeEarnedDescription": "Conclui as primeiras cinco missões da campanha.",
+      "afterEarnedDescription": "Concluíste as primeiras cinco missões da campanha."
+    },
+    "chapter_2": {
+      "name": "As pessoas que salvamos",
+      "beforeEarnedDescription": "Conclui dez missões da campanha.",
+      "afterEarnedDescription": "Concluíste dez missões da campanha."
+    },
+    "chapter_3": {
+      "name": "A máquina em Corvid",
+      "beforeEarnedDescription": "Conclui quinze missões da campanha.",
+      "afterEarnedDescription": "Concluíste quinze missões da campanha."
+    },
+    "campaign": {
+      "name": "O motor silencioso",
+      "beforeEarnedDescription": "Conclui a campanha.",
+      "afterEarnedDescription": "Concluíste a campanha."
+    },
+    "perfect_1": {
+      "name": "Como manda o manual",
+      "beforeEarnedDescription": "Obtém três estrelas numa missão.",
+      "afterEarnedDescription": "Obtiveste três estrelas numa missão."
+    },
+    "perfect_5": {
+      "name": "Líder de esquadrilha",
+      "beforeEarnedDescription": "Obtém três estrelas em cinco missões.",
+      "afterEarnedDescription": "Obtiveste três estrelas em cinco missões."
+    },
+    "perfect_10": {
+      "name": "Orgulho da esquadra",
+      "beforeEarnedDescription": "Obtém três estrelas em dez missões.",
+      "afterEarnedDescription": "Obtiveste três estrelas em dez missões."
+    },
+    "perfect_20": {
+      "name": "Registo impecável",
+      "beforeEarnedDescription": "Obtém três estrelas em todas as missões.",
+      "afterEarnedDescription": "Obtiveste três estrelas em todas as missões."
+    },
+    "first_kill": {
+      "name": "Primeiro abate",
+      "beforeEarnedDescription": "Abate outro piloto numa partida em rede local.",
+      "afterEarnedDescription": "Abateste outro piloto numa partida em rede local."
+    },
+    "match_ace": {
+      "name": "Ás num só dia",
+      "beforeEarnedDescription": "Abate cinco pilotos numa só partida em rede local.",
+      "afterEarnedDescription": "Abateste cinco pilotos numa só partida em rede local."
+    },
+    "match_flawless": {
+      "name": "No topo da classificação",
+      "beforeEarnedDescription": "Vence uma partida em rede local com cinco abates.",
+      "afterEarnedDescription": "Venceste uma partida em rede local com cinco abates."
+    }
+  },
+  "ja": {
+    "first_sortie": {
+      "name": "初出撃",
+      "beforeEarnedDescription": "キャンペーンのミッションを1つクリアする。",
+      "afterEarnedDescription": "キャンペーンのミッションを初めてクリアした。"
+    },
+    "chapter_1": {
+      "name": "奇妙な命令",
+      "beforeEarnedDescription": "キャンペーンの最初の5ミッションをクリアする。",
+      "afterEarnedDescription": "キャンペーンの最初の5ミッションをクリアした。"
+    },
+    "chapter_2": {
+      "name": "救うべき人々",
+      "beforeEarnedDescription": "キャンペーンのミッションを10個クリアする。",
+      "afterEarnedDescription": "キャンペーンのミッションを10個クリアした。"
+    },
+    "chapter_3": {
+      "name": "コーヴィッドの機械",
+      "beforeEarnedDescription": "キャンペーンのミッションを15個クリアする。",
+      "afterEarnedDescription": "キャンペーンのミッションを15個クリアした。"
+    },
+    "campaign": {
+      "name": "静かなるエンジン",
+      "beforeEarnedDescription": "キャンペーンをクリアする。",
+      "afterEarnedDescription": "キャンペーンをクリアした。"
+    },
+    "perfect_1": {
+      "name": "お手本どおり",
+      "beforeEarnedDescription": "1つのミッションで星を3つ獲得する。",
+      "afterEarnedDescription": "1つのミッションで星を3つ獲得した。"
+    },
+    "perfect_5": {
+      "name": "小隊長",
+      "beforeEarnedDescription": "5つのミッションでそれぞれ星を3つ獲得する。",
+      "afterEarnedDescription": "5つのミッションでそれぞれ星を3つ獲得した。"
+    },
+    "perfect_10": {
+      "name": "飛行隊の模範",
+      "beforeEarnedDescription": "10個のミッションでそれぞれ星を3つ獲得する。",
+      "afterEarnedDescription": "10個のミッションでそれぞれ星を3つ獲得した。"
+    },
+    "perfect_20": {
+      "name": "完璧な戦績",
+      "beforeEarnedDescription": "すべてのミッションで星を3つ獲得する。",
+      "afterEarnedDescription": "すべてのミッションで星を3つ獲得した。"
+    },
+    "first_kill": {
+      "name": "初撃墜",
+      "beforeEarnedDescription": "LAN対戦で他のパイロットを1人撃墜する。",
+      "afterEarnedDescription": "LAN対戦で他のパイロットを1人撃墜した。"
+    },
+    "match_ace": {
+      "name": "一日でエース",
+      "beforeEarnedDescription": "1回のLAN対戦でパイロットを5人撃墜する。",
+      "afterEarnedDescription": "1回のLAN対戦でパイロットを5人撃墜した。"
+    },
+    "match_flawless": {
+      "name": "首位獲得",
+      "beforeEarnedDescription": "LAN対戦で5機撃墜して勝利する。",
+      "afterEarnedDescription": "LAN対戦で5機撃墜して勝利した。"
+    }
+  },
+  "ko": {
+    "first_sortie": {
+      "name": "첫 출격",
+      "beforeEarnedDescription": "캠페인 임무 하나를 완료하세요.",
+      "afterEarnedDescription": "첫 캠페인 임무를 완료했습니다."
+    },
+    "chapter_1": {
+      "name": "수상한 명령",
+      "beforeEarnedDescription": "캠페인의 첫 다섯 임무를 완료하세요.",
+      "afterEarnedDescription": "캠페인의 첫 다섯 임무를 완료했습니다."
+    },
+    "chapter_2": {
+      "name": "우리가 구한 사람들",
+      "beforeEarnedDescription": "캠페인 임무 열 개를 완료하세요.",
+      "afterEarnedDescription": "캠페인 임무 열 개를 완료했습니다."
+    },
+    "chapter_3": {
+      "name": "코르비드의 기계",
+      "beforeEarnedDescription": "캠페인 임무 열다섯 개를 완료하세요.",
+      "afterEarnedDescription": "캠페인 임무 열다섯 개를 완료했습니다."
+    },
+    "campaign": {
+      "name": "고요한 엔진",
+      "beforeEarnedDescription": "캠페인을 완료하세요.",
+      "afterEarnedDescription": "캠페인을 완료했습니다."
+    },
+    "perfect_1": {
+      "name": "교본대로",
+      "beforeEarnedDescription": "임무 하나에서 별 세 개를 획득하세요.",
+      "afterEarnedDescription": "임무 하나에서 별 세 개를 획득했습니다."
+    },
+    "perfect_5": {
+      "name": "편대장",
+      "beforeEarnedDescription": "임무 다섯 개에서 각각 별 세 개를 획득하세요.",
+      "afterEarnedDescription": "임무 다섯 개에서 각각 별 세 개를 획득했습니다."
+    },
+    "perfect_10": {
+      "name": "비행대의 모범",
+      "beforeEarnedDescription": "임무 열 개에서 각각 별 세 개를 획득하세요.",
+      "afterEarnedDescription": "임무 열 개에서 각각 별 세 개를 획득했습니다."
+    },
+    "perfect_20": {
+      "name": "완벽한 전적",
+      "beforeEarnedDescription": "모든 임무에서 별 세 개를 획득하세요.",
+      "afterEarnedDescription": "모든 임무에서 별 세 개를 획득했습니다."
+    },
+    "first_kill": {
+      "name": "첫 격추",
+      "beforeEarnedDescription": "LAN 경기에서 다른 조종사를 격추하세요.",
+      "afterEarnedDescription": "LAN 경기에서 다른 조종사를 격추했습니다."
+    },
+    "match_ace": {
+      "name": "하루 만에 에이스",
+      "beforeEarnedDescription": "한 번의 LAN 경기에서 조종사 다섯 명을 격추하세요.",
+      "afterEarnedDescription": "한 번의 LAN 경기에서 조종사 다섯 명을 격추했습니다."
+    },
+    "match_flawless": {
+      "name": "순위표의 정상",
+      "beforeEarnedDescription": "LAN 경기에서 다섯 기를 격추하고 승리하세요.",
+      "afterEarnedDescription": "LAN 경기에서 다섯 기를 격추하고 승리했습니다."
+    }
+  },
+  "zh-Hans": {
+    "first_sortie": {
+      "name": "首次出击",
+      "beforeEarnedDescription": "完成一项战役任务。",
+      "afterEarnedDescription": "已完成首项战役任务。"
+    },
+    "chapter_1": {
+      "name": "古怪的命令",
+      "beforeEarnedDescription": "完成战役的前五项任务。",
+      "afterEarnedDescription": "已完成战役的前五项任务。"
+    },
+    "chapter_2": {
+      "name": "我们所救之人",
+      "beforeEarnedDescription": "完成十项战役任务。",
+      "afterEarnedDescription": "已完成十项战役任务。"
+    },
+    "chapter_3": {
+      "name": "科维德的机器",
+      "beforeEarnedDescription": "完成十五项战役任务。",
+      "afterEarnedDescription": "已完成十五项战役任务。"
+    },
+    "campaign": {
+      "name": "寂静引擎",
+      "beforeEarnedDescription": "完成战役。",
+      "afterEarnedDescription": "已完成战役。"
+    },
+    "perfect_1": {
+      "name": "教科书式表现",
+      "beforeEarnedDescription": "在一项任务中获得三星。",
+      "afterEarnedDescription": "已在一项任务中获得三星。"
+    },
+    "perfect_5": {
+      "name": "编队领队",
+      "beforeEarnedDescription": "在五项任务中各获得三星。",
+      "afterEarnedDescription": "已在五项任务中各获得三星。"
+    },
+    "perfect_10": {
+      "name": "中队楷模",
+      "beforeEarnedDescription": "在十项任务中各获得三星。",
+      "afterEarnedDescription": "已在十项任务中各获得三星。"
+    },
+    "perfect_20": {
+      "name": "完美战绩",
+      "beforeEarnedDescription": "在所有任务中获得三星。",
+      "afterEarnedDescription": "已在所有任务中获得三星。"
+    },
+    "first_kill": {
+      "name": "首次击落",
+      "beforeEarnedDescription": "在一场局域网对战中击落另一名飞行员。",
+      "afterEarnedDescription": "已在一场局域网对战中击落另一名飞行员。"
+    },
+    "match_ace": {
+      "name": "一日成王牌",
+      "beforeEarnedDescription": "在同一场局域网对战中击落五名飞行员。",
+      "afterEarnedDescription": "已在同一场局域网对战中击落五名飞行员。"
+    },
+    "match_flawless": {
+      "name": "榜首",
+      "beforeEarnedDescription": "以五次击落赢得一场局域网对战。",
+      "afterEarnedDescription": "已以五次击落赢得一场局域网对战。"
+    }
+  },
+  "zh-Hant": {
+    "first_sortie": {
+      "name": "首次出擊",
+      "beforeEarnedDescription": "完成一項戰役任務。",
+      "afterEarnedDescription": "已完成首項戰役任務。"
+    },
+    "chapter_1": {
+      "name": "古怪的命令",
+      "beforeEarnedDescription": "完成戰役的前五項任務。",
+      "afterEarnedDescription": "已完成戰役的前五項任務。"
+    },
+    "chapter_2": {
+      "name": "我們所救之人",
+      "beforeEarnedDescription": "完成十項戰役任務。",
+      "afterEarnedDescription": "已完成十項戰役任務。"
+    },
+    "chapter_3": {
+      "name": "科維德的機器",
+      "beforeEarnedDescription": "完成十五項戰役任務。",
+      "afterEarnedDescription": "已完成十五項戰役任務。"
+    },
+    "campaign": {
+      "name": "寂靜引擎",
+      "beforeEarnedDescription": "完成戰役。",
+      "afterEarnedDescription": "已完成戰役。"
+    },
+    "perfect_1": {
+      "name": "教科書級表現",
+      "beforeEarnedDescription": "在一項任務中取得三星。",
+      "afterEarnedDescription": "已在一項任務中取得三星。"
+    },
+    "perfect_5": {
+      "name": "編隊領隊",
+      "beforeEarnedDescription": "在五項任務中各取得三星。",
+      "afterEarnedDescription": "已在五項任務中各取得三星。"
+    },
+    "perfect_10": {
+      "name": "中隊楷模",
+      "beforeEarnedDescription": "在十項任務中各取得三星。",
+      "afterEarnedDescription": "已在十項任務中各取得三星。"
+    },
+    "perfect_20": {
+      "name": "完美戰績",
+      "beforeEarnedDescription": "在所有任務中取得三星。",
+      "afterEarnedDescription": "已在所有任務中取得三星。"
+    },
+    "first_kill": {
+      "name": "首次擊落",
+      "beforeEarnedDescription": "在一場區域網路對戰中擊落另一名飛行員。",
+      "afterEarnedDescription": "已在一場區域網路對戰中擊落另一名飛行員。"
+    },
+    "match_ace": {
+      "name": "一日成王牌",
+      "beforeEarnedDescription": "在同一場區域網路對戰中擊落五名飛行員。",
+      "afterEarnedDescription": "已在同一場區域網路對戰中擊落五名飛行員。"
+    },
+    "match_flawless": {
+      "name": "榜首",
+      "beforeEarnedDescription": "以五次擊落贏得一場區域網路對戰。",
+      "afterEarnedDescription": "已以五次擊落贏得一場區域網路對戰。"
+    }
+  },
+  "ar-SA": {
+    "first_sortie": {
+      "name": "الطلعة الأولى",
+      "beforeEarnedDescription": "أكمل مهمة واحدة من الحملة.",
+      "afterEarnedDescription": "أكملت أول مهمة لك في الحملة."
+    },
+    "chapter_1": {
+      "name": "أوامر غريبة",
+      "beforeEarnedDescription": "أكمل المهام الخمس الأولى من الحملة.",
+      "afterEarnedDescription": "أكملت المهام الخمس الأولى من الحملة."
+    },
+    "chapter_2": {
+      "name": "من ننقذهم",
+      "beforeEarnedDescription": "أكمل عشر مهام من الحملة.",
+      "afterEarnedDescription": "أكملت عشر مهام من الحملة."
+    },
+    "chapter_3": {
+      "name": "الآلة في كورفيد",
+      "beforeEarnedDescription": "أكمل خمس عشرة مهمة من الحملة.",
+      "afterEarnedDescription": "أكملت خمس عشرة مهمة من الحملة."
+    },
+    "campaign": {
+      "name": "المحرّك الصامت",
+      "beforeEarnedDescription": "أكمل الحملة.",
+      "afterEarnedDescription": "أكملت الحملة."
+    },
+    "perfect_1": {
+      "name": "وفق الدليل",
+      "beforeEarnedDescription": "احصل على ثلاث نجوم في مهمة واحدة.",
+      "afterEarnedDescription": "حصلت على ثلاث نجوم في مهمة واحدة."
+    },
+    "perfect_5": {
+      "name": "قائد التشكيل",
+      "beforeEarnedDescription": "احصل على ثلاث نجوم في كل مهمة من خمس مهام.",
+      "afterEarnedDescription": "حصلت على ثلاث نجوم في كل مهمة من خمس مهام."
+    },
+    "perfect_10": {
+      "name": "قدوة السرب",
+      "beforeEarnedDescription": "احصل على ثلاث نجوم في كل مهمة من عشر مهام.",
+      "afterEarnedDescription": "حصلت على ثلاث نجوم في كل مهمة من عشر مهام."
+    },
+    "perfect_20": {
+      "name": "سجل بلا أخطاء",
+      "beforeEarnedDescription": "احصل على ثلاث نجوم في جميع المهام.",
+      "afterEarnedDescription": "حصلت على ثلاث نجوم في جميع المهام."
+    },
+    "first_kill": {
+      "name": "الإسقاط الأول",
+      "beforeEarnedDescription": "أسقط طائرة طيار آخر في مباراة عبر الشبكة المحلية.",
+      "afterEarnedDescription": "أسقطت طائرة طيار آخر في مباراة عبر الشبكة المحلية."
+    },
+    "match_ace": {
+      "name": "طيّار بارع في يوم واحد",
+      "beforeEarnedDescription": "أسقط طائرات خمسة طيارين في مباراة واحدة عبر الشبكة المحلية.",
+      "afterEarnedDescription": "أسقطت طائرات خمسة طيارين في مباراة واحدة عبر الشبكة المحلية."
+    },
+    "match_flawless": {
+      "name": "صدارة الترتيب",
+      "beforeEarnedDescription": "فُز بمباراة عبر الشبكة المحلية مع خمس عمليات إسقاط.",
+      "afterEarnedDescription": "فزت بمباراة عبر الشبكة المحلية مع خمس عمليات إسقاط."
+    }
+  },
+  "bn-BD": {
+    "first_sortie": {
+      "name": "প্রথম উড়ান",
+      "beforeEarnedDescription": "অভিযানের একটি মিশন শেষ করুন।",
+      "afterEarnedDescription": "অভিযানে আপনার প্রথম মিশন শেষ করেছেন।"
+    },
+    "chapter_1": {
+      "name": "অদ্ভুত আদেশ",
+      "beforeEarnedDescription": "অভিযানের প্রথম পাঁচটি মিশন শেষ করুন।",
+      "afterEarnedDescription": "অভিযানের প্রথম পাঁচটি মিশন শেষ করেছেন।"
+    },
+    "chapter_2": {
+      "name": "যাদের আমরা বাঁচাই",
+      "beforeEarnedDescription": "অভিযানের দশটি মিশন শেষ করুন।",
+      "afterEarnedDescription": "অভিযানের দশটি মিশন শেষ করেছেন।"
+    },
+    "chapter_3": {
+      "name": "করভিডের যন্ত্র",
+      "beforeEarnedDescription": "অভিযানের পনেরোটি মিশন শেষ করুন।",
+      "afterEarnedDescription": "অভিযানের পনেরোটি মিশন শেষ করেছেন।"
+    },
+    "campaign": {
+      "name": "নিঃশব্দ ইঞ্জিন",
+      "beforeEarnedDescription": "অভিযান শেষ করুন।",
+      "afterEarnedDescription": "অভিযান শেষ করেছেন।"
+    },
+    "perfect_1": {
+      "name": "নিয়ম মেনে",
+      "beforeEarnedDescription": "একটি মিশনে তিনটি তারকা অর্জন করুন।",
+      "afterEarnedDescription": "একটি মিশনে তিনটি তারকা অর্জন করেছেন।"
+    },
+    "perfect_5": {
+      "name": "ফ্লাইট লিডার",
+      "beforeEarnedDescription": "পাঁচটি মিশনের প্রতিটিতে তিনটি তারকা অর্জন করুন।",
+      "afterEarnedDescription": "পাঁচটি মিশনের প্রতিটিতে তিনটি তারকা অর্জন করেছেন।"
+    },
+    "perfect_10": {
+      "name": "স্কোয়াড্রনের আদর্শ",
+      "beforeEarnedDescription": "দশটি মিশনের প্রতিটিতে তিনটি তারকা অর্জন করুন।",
+      "afterEarnedDescription": "দশটি মিশনের প্রতিটিতে তিনটি তারকা অর্জন করেছেন।"
+    },
+    "perfect_20": {
+      "name": "নিখুঁত রেকর্ড",
+      "beforeEarnedDescription": "প্রতিটি মিশনে তিনটি তারকা অর্জন করুন।",
+      "afterEarnedDescription": "প্রতিটি মিশনে তিনটি তারকা অর্জন করেছেন।"
+    },
+    "first_kill": {
+      "name": "প্রথম ভূপাতন",
+      "beforeEarnedDescription": "একটি LAN ম্যাচে অন্য এক পাইলটের যান ভূপাতিত করুন।",
+      "afterEarnedDescription": "একটি LAN ম্যাচে অন্য এক পাইলটের যান ভূপাতিত করেছেন।"
+    },
+    "match_ace": {
+      "name": "এক দিনেই টেক্কা",
+      "beforeEarnedDescription": "একটি LAN ম্যাচেই পাঁচজন পাইলটের যান ভূপাতিত করুন।",
+      "afterEarnedDescription": "একটি LAN ম্যাচেই পাঁচজন পাইলটের যান ভূপাতিত করেছেন।"
+    },
+    "match_flawless": {
+      "name": "তালিকার শীর্ষে",
+      "beforeEarnedDescription": "পাঁচটি যান ভূপাতিত করে একটি LAN ম্যাচ জিতুন।",
+      "afterEarnedDescription": "পাঁচটি যান ভূপাতিত করে একটি LAN ম্যাচ জিতেছেন।"
+    }
+  },
+  "hi": {
+    "first_sortie": {
+      "name": "पहली उड़ान",
+      "beforeEarnedDescription": "अभियान का एक मिशन पूरा करें।",
+      "afterEarnedDescription": "आपने अभियान का अपना पहला मिशन पूरा किया।"
+    },
+    "chapter_1": {
+      "name": "अजीब आदेश",
+      "beforeEarnedDescription": "अभियान के पहले पाँच मिशन पूरे करें।",
+      "afterEarnedDescription": "आपने अभियान के पहले पाँच मिशन पूरे किए।"
+    },
+    "chapter_2": {
+      "name": "जिन्हें हम बचाते हैं",
+      "beforeEarnedDescription": "अभियान के दस मिशन पूरे करें।",
+      "afterEarnedDescription": "आपने अभियान के दस मिशन पूरे किए।"
+    },
+    "chapter_3": {
+      "name": "कॉर्विड की मशीन",
+      "beforeEarnedDescription": "अभियान के पंद्रह मिशन पूरे करें।",
+      "afterEarnedDescription": "आपने अभियान के पंद्रह मिशन पूरे किए।"
+    },
+    "campaign": {
+      "name": "ख़ामोश इंजन",
+      "beforeEarnedDescription": "अभियान पूरा करें।",
+      "afterEarnedDescription": "आपने अभियान पूरा किया।"
+    },
+    "perfect_1": {
+      "name": "नियमों के मुताबिक़",
+      "beforeEarnedDescription": "किसी एक मिशन में तीन सितारे हासिल करें।",
+      "afterEarnedDescription": "आपने एक मिशन में तीन सितारे हासिल किए।"
+    },
+    "perfect_5": {
+      "name": "उड़ान दल का नेतृत्व",
+      "beforeEarnedDescription": "पाँच मिशनों में से हर एक में तीन सितारे हासिल करें।",
+      "afterEarnedDescription": "आपने पाँच मिशनों में से हर एक में तीन सितारे हासिल किए।"
+    },
+    "perfect_10": {
+      "name": "स्क्वाड्रन की मिसाल",
+      "beforeEarnedDescription": "दस मिशनों में से हर एक में तीन सितारे हासिल करें।",
+      "afterEarnedDescription": "आपने दस मिशनों में से हर एक में तीन सितारे हासिल किए।"
+    },
+    "perfect_20": {
+      "name": "बेदाग़ रिकॉर्ड",
+      "beforeEarnedDescription": "हर मिशन में तीन सितारे हासिल करें।",
+      "afterEarnedDescription": "आपने हर मिशन में तीन सितारे हासिल किए।"
+    },
+    "first_kill": {
+      "name": "पहला निशाना",
+      "beforeEarnedDescription": "LAN मैच में किसी दूसरे पायलट का यान मार गिराएँ।",
+      "afterEarnedDescription": "आपने LAN मैच में एक दूसरे पायलट का यान मार गिराया।"
+    },
+    "match_ace": {
+      "name": "एक दिन में महारथी",
+      "beforeEarnedDescription": "एक ही LAN मैच में पाँच पायलटों के यान मार गिराएँ।",
+      "afterEarnedDescription": "आपने एक ही LAN मैच में पाँच पायलटों के यान मार गिराए।"
+    },
+    "match_flawless": {
+      "name": "तालिका में सबसे ऊपर",
+      "beforeEarnedDescription": "पाँच यान मार गिराकर एक LAN मैच जीतें।",
+      "afterEarnedDescription": "आपने पाँच यान मार गिराकर एक LAN मैच जीता।"
+    }
+  },
+  "id": {
+    "first_sortie": {
+      "name": "Sorti Pertama",
+      "beforeEarnedDescription": "Selesaikan satu misi kampanye.",
+      "afterEarnedDescription": "Kamu menyelesaikan misi kampanye pertamamu."
+    },
+    "chapter_1": {
+      "name": "Perintah Aneh",
+      "beforeEarnedDescription": "Selesaikan lima misi pertama dalam kampanye.",
+      "afterEarnedDescription": "Kamu menyelesaikan lima misi pertama dalam kampanye."
+    },
+    "chapter_2": {
+      "name": "Mereka yang Kita Selamatkan",
+      "beforeEarnedDescription": "Selesaikan sepuluh misi kampanye.",
+      "afterEarnedDescription": "Kamu menyelesaikan sepuluh misi kampanye."
+    },
+    "chapter_3": {
+      "name": "Mesin di Corvid",
+      "beforeEarnedDescription": "Selesaikan lima belas misi kampanye.",
+      "afterEarnedDescription": "Kamu menyelesaikan lima belas misi kampanye."
+    },
+    "campaign": {
+      "name": "Mesin Senyap",
+      "beforeEarnedDescription": "Selesaikan kampanye.",
+      "afterEarnedDescription": "Kamu menyelesaikan kampanye."
+    },
+    "perfect_1": {
+      "name": "Sesuai Pedoman",
+      "beforeEarnedDescription": "Raih tiga bintang dalam satu misi.",
+      "afterEarnedDescription": "Kamu meraih tiga bintang dalam satu misi."
+    },
+    "perfect_5": {
+      "name": "Pemimpin Formasi",
+      "beforeEarnedDescription": "Raih tiga bintang di masing-masing dari lima misi.",
+      "afterEarnedDescription": "Kamu meraih tiga bintang di masing-masing dari lima misi."
+    },
+    "perfect_10": {
+      "name": "Teladan Skuadron",
+      "beforeEarnedDescription": "Raih tiga bintang di masing-masing dari sepuluh misi.",
+      "afterEarnedDescription": "Kamu meraih tiga bintang di masing-masing dari sepuluh misi."
+    },
+    "perfect_20": {
+      "name": "Rekor Sempurna",
+      "beforeEarnedDescription": "Raih tiga bintang di setiap misi.",
+      "afterEarnedDescription": "Kamu meraih tiga bintang di setiap misi."
+    },
+    "first_kill": {
+      "name": "Tembakan Jatuh Pertama",
+      "beforeEarnedDescription": "Jatuhkan pesawat pilot lain dalam pertandingan LAN.",
+      "afterEarnedDescription": "Kamu menjatuhkan pesawat pilot lain dalam pertandingan LAN."
+    },
+    "match_ace": {
+      "name": "Jagoan dalam Sehari",
+      "beforeEarnedDescription": "Jatuhkan pesawat lima pilot dalam satu pertandingan LAN.",
+      "afterEarnedDescription": "Kamu menjatuhkan pesawat lima pilot dalam satu pertandingan LAN."
+    },
+    "match_flawless": {
+      "name": "Puncak Papan Skor",
+      "beforeEarnedDescription": "Menangkan pertandingan LAN dengan lima pesawat lawan dijatuhkan.",
+      "afterEarnedDescription": "Kamu memenangkan pertandingan LAN dengan menjatuhkan lima pesawat lawan."
+    }
+  },
+  "pl": {
+    "first_sortie": {
+      "name": "Pierwszy lot bojowy",
+      "beforeEarnedDescription": "Ukończ jedną misję kampanii.",
+      "afterEarnedDescription": "Twoja pierwsza misja kampanii jest ukończona."
+    },
+    "chapter_1": {
+      "name": "Dziwne rozkazy",
+      "beforeEarnedDescription": "Ukończ pięć pierwszych misji kampanii.",
+      "afterEarnedDescription": "Pięć pierwszych misji kampanii jest ukończonych."
+    },
+    "chapter_2": {
+      "name": "Ci, których ratujemy",
+      "beforeEarnedDescription": "Ukończ dziesięć misji kampanii.",
+      "afterEarnedDescription": "Dziesięć misji kampanii jest ukończonych."
+    },
+    "chapter_3": {
+      "name": "Maszyna na Corvidzie",
+      "beforeEarnedDescription": "Ukończ piętnaście misji kampanii.",
+      "afterEarnedDescription": "Piętnaście misji kampanii jest ukończonych."
+    },
+    "campaign": {
+      "name": "Cichy silnik",
+      "beforeEarnedDescription": "Ukończ kampanię.",
+      "afterEarnedDescription": "Kampania ukończona."
+    },
+    "perfect_1": {
+      "name": "Zgodnie z instrukcją",
+      "beforeEarnedDescription": "Zdobądź trzy gwiazdki w jednej misji.",
+      "afterEarnedDescription": "Trzy gwiazdki zdobyte w jednej misji."
+    },
+    "perfect_5": {
+      "name": "Dowódca klucza",
+      "beforeEarnedDescription": "Zdobądź po trzy gwiazdki w pięciu misjach.",
+      "afterEarnedDescription": "Po trzy gwiazdki zdobyte w pięciu misjach."
+    },
+    "perfect_10": {
+      "name": "Wzór dla eskadry",
+      "beforeEarnedDescription": "Zdobądź po trzy gwiazdki w dziesięciu misjach.",
+      "afterEarnedDescription": "Po trzy gwiazdki zdobyte w dziesięciu misjach."
+    },
+    "perfect_20": {
+      "name": "Bez skazy",
+      "beforeEarnedDescription": "Zdobądź po trzy gwiazdki we wszystkich misjach.",
+      "afterEarnedDescription": "Po trzy gwiazdki zdobyte we wszystkich misjach."
+    },
+    "first_kill": {
+      "name": "Pierwsze zestrzelenie",
+      "beforeEarnedDescription": "Zestrzel innego pilota w meczu w sieci lokalnej.",
+      "afterEarnedDescription": "Inny pilot został zestrzelony w meczu w sieci lokalnej."
+    },
+    "match_ace": {
+      "name": "As w jeden dzień",
+      "beforeEarnedDescription": "Zestrzel pięciu pilotów w jednym meczu w sieci lokalnej.",
+      "afterEarnedDescription": "Pięciu pilotów zostało zestrzelonych w jednym meczu w sieci lokalnej."
+    },
+    "match_flawless": {
+      "name": "Na szczycie tabeli",
+      "beforeEarnedDescription": "Wygraj mecz w sieci lokalnej z pięcioma zestrzeleniami.",
+      "afterEarnedDescription": "Mecz w sieci lokalnej wygrany z pięcioma zestrzeleniami."
+    }
+  },
+  "ru": {
+    "first_sortie": {
+      "name": "Первый вылет",
+      "beforeEarnedDescription": "Завершите одну миссию кампании.",
+      "afterEarnedDescription": "Ваша первая миссия кампании завершена."
+    },
+    "chapter_1": {
+      "name": "Странные приказы",
+      "beforeEarnedDescription": "Завершите первые пять миссий кампании.",
+      "afterEarnedDescription": "Первые пять миссий кампании завершены."
+    },
+    "chapter_2": {
+      "name": "Те, кого мы спасаем",
+      "beforeEarnedDescription": "Завершите десять миссий кампании.",
+      "afterEarnedDescription": "Десять миссий кампании завершены."
+    },
+    "chapter_3": {
+      "name": "Машина на Корвиде",
+      "beforeEarnedDescription": "Завершите пятнадцать миссий кампании.",
+      "afterEarnedDescription": "Пятнадцать миссий кампании завершены."
+    },
+    "campaign": {
+      "name": "Тихий двигатель",
+      "beforeEarnedDescription": "Завершите кампанию.",
+      "afterEarnedDescription": "Кампания завершена."
+    },
+    "perfect_1": {
+      "name": "По уставу",
+      "beforeEarnedDescription": "Получите три звезды за одну миссию.",
+      "afterEarnedDescription": "Получено три звезды за одну миссию."
+    },
+    "perfect_5": {
+      "name": "Командир звена",
+      "beforeEarnedDescription": "Получите по три звезды за пять миссий.",
+      "afterEarnedDescription": "Получено по три звезды за пять миссий."
+    },
+    "perfect_10": {
+      "name": "Пример для эскадрильи",
+      "beforeEarnedDescription": "Получите по три звезды за десять миссий.",
+      "afterEarnedDescription": "Получено по три звезды за десять миссий."
+    },
+    "perfect_20": {
+      "name": "Безупречный результат",
+      "beforeEarnedDescription": "Получите по три звезды за каждую миссию.",
+      "afterEarnedDescription": "Получено по три звезды за каждую миссию."
+    },
+    "first_kill": {
+      "name": "Первая победа в воздухе",
+      "beforeEarnedDescription": "Сбейте другого пилота в матче по локальной сети.",
+      "afterEarnedDescription": "Другой пилот сбит в матче по локальной сети."
+    },
+    "match_ace": {
+      "name": "Ас за один день",
+      "beforeEarnedDescription": "Сбейте пять пилотов в одном матче по локальной сети.",
+      "afterEarnedDescription": "Пять пилотов сбиты в одном матче по локальной сети."
+    },
+    "match_flawless": {
+      "name": "На вершине таблицы",
+      "beforeEarnedDescription": "Выиграйте матч по локальной сети с пятью сбитыми противниками.",
+      "afterEarnedDescription": "Матч по локальной сети выигран с пятью сбитыми противниками."
+    }
+  },
+  "th": {
+    "first_sortie": {
+      "name": "ออกบินครั้งแรก",
+      "beforeEarnedDescription": "ทำภารกิจแคมเปญให้สำเร็จหนึ่งภารกิจ",
+      "afterEarnedDescription": "คุณทำภารกิจแคมเปญแรกสำเร็จแล้ว"
+    },
+    "chapter_1": {
+      "name": "คำสั่งประหลาด",
+      "beforeEarnedDescription": "ทำห้าภารกิจแรกของแคมเปญให้สำเร็จ",
+      "afterEarnedDescription": "คุณทำห้าภารกิจแรกของแคมเปญสำเร็จแล้ว"
+    },
+    "chapter_2": {
+      "name": "ผู้คนที่เราช่วยไว้",
+      "beforeEarnedDescription": "ทำภารกิจแคมเปญให้สำเร็จสิบภารกิจ",
+      "afterEarnedDescription": "คุณทำภารกิจแคมเปญสำเร็จสิบภารกิจแล้ว"
+    },
+    "chapter_3": {
+      "name": "เครื่องจักรแห่งคอร์วิด",
+      "beforeEarnedDescription": "ทำภารกิจแคมเปญให้สำเร็จสิบห้าภารกิจ",
+      "afterEarnedDescription": "คุณทำภารกิจแคมเปญสำเร็จสิบห้าภารกิจแล้ว"
+    },
+    "campaign": {
+      "name": "เครื่องยนต์ไร้เสียง",
+      "beforeEarnedDescription": "เล่นแคมเปญให้จบ",
+      "afterEarnedDescription": "คุณเล่นแคมเปญจบแล้ว"
+    },
+    "perfect_1": {
+      "name": "ตามตำรา",
+      "beforeEarnedDescription": "รับสามดาวในหนึ่งภารกิจ",
+      "afterEarnedDescription": "คุณได้รับสามดาวในหนึ่งภารกิจแล้ว"
+    },
+    "perfect_5": {
+      "name": "ผู้นำหมู่บิน",
+      "beforeEarnedDescription": "รับสามดาวในแต่ละภารกิจให้ครบห้าภารกิจ",
+      "afterEarnedDescription": "คุณได้รับสามดาวในแต่ละภารกิจครบห้าภารกิจแล้ว"
+    },
+    "perfect_10": {
+      "name": "แบบอย่างของฝูงบิน",
+      "beforeEarnedDescription": "รับสามดาวในแต่ละภารกิจให้ครบสิบภารกิจ",
+      "afterEarnedDescription": "คุณได้รับสามดาวในแต่ละภารกิจครบสิบภารกิจแล้ว"
+    },
+    "perfect_20": {
+      "name": "สถิติไร้ที่ติ",
+      "beforeEarnedDescription": "รับสามดาวในทุกภารกิจ",
+      "afterEarnedDescription": "คุณได้รับสามดาวในทุกภารกิจแล้ว"
+    },
+    "first_kill": {
+      "name": "ยิงตกครั้งแรก",
+      "beforeEarnedDescription": "ยิงยานของนักบินคนอื่นให้ตกในแมตช์ LAN",
+      "afterEarnedDescription": "คุณยิงยานของนักบินคนอื่นตกในแมตช์ LAN แล้ว"
+    },
+    "match_ace": {
+      "name": "ยอดนักบินในวันเดียว",
+      "beforeEarnedDescription": "ยิงยานของนักบินห้าคนให้ตกในแมตช์ LAN เดียว",
+      "afterEarnedDescription": "คุณยิงยานของนักบินห้าคนตกในแมตช์ LAN เดียวแล้ว"
+    },
+    "match_flawless": {
+      "name": "ขึ้นอันดับหนึ่ง",
+      "beforeEarnedDescription": "ชนะแมตช์ LAN โดยยิงยานตกห้าลำ",
+      "afterEarnedDescription": "คุณชนะแมตช์ LAN โดยยิงยานตกห้าลำแล้ว"
+    }
+  },
+  "tr": {
+    "first_sortie": {
+      "name": "İlk sorti",
+      "beforeEarnedDescription": "Bir sefer görevini tamamla.",
+      "afterEarnedDescription": "İlk sefer görevini tamamladın."
+    },
+    "chapter_1": {
+      "name": "Tuhaf emirler",
+      "beforeEarnedDescription": "Seferin ilk beş görevini tamamla.",
+      "afterEarnedDescription": "Seferin ilk beş görevini tamamladın."
+    },
+    "chapter_2": {
+      "name": "Kurtardığımız insanlar",
+      "beforeEarnedDescription": "On sefer görevini tamamla.",
+      "afterEarnedDescription": "On sefer görevini tamamladın."
+    },
+    "chapter_3": {
+      "name": "Corvid’deki makine",
+      "beforeEarnedDescription": "On beş sefer görevini tamamla.",
+      "afterEarnedDescription": "On beş sefer görevini tamamladın."
+    },
+    "campaign": {
+      "name": "Sessiz motor",
+      "beforeEarnedDescription": "Seferi tamamla.",
+      "afterEarnedDescription": "Seferi tamamladın."
+    },
+    "perfect_1": {
+      "name": "Kitabına uygun",
+      "beforeEarnedDescription": "Bir görevde üç yıldız kazan.",
+      "afterEarnedDescription": "Bir görevde üç yıldız kazandın."
+    },
+    "perfect_5": {
+      "name": "Uçuş lideri",
+      "beforeEarnedDescription": "Beş görevin her birinde üç yıldız kazan.",
+      "afterEarnedDescription": "Beş görevin her birinde üç yıldız kazandın."
+    },
+    "perfect_10": {
+      "name": "Filonun örnek pilotu",
+      "beforeEarnedDescription": "On görevin her birinde üç yıldız kazan.",
+      "afterEarnedDescription": "On görevin her birinde üç yıldız kazandın."
+    },
+    "perfect_20": {
+      "name": "Kusursuz sicil",
+      "beforeEarnedDescription": "Her görevde üç yıldız kazan.",
+      "afterEarnedDescription": "Her görevde üç yıldız kazandın."
+    },
+    "first_kill": {
+      "name": "İlk düşürüş",
+      "beforeEarnedDescription": "Bir LAN maçında başka bir pilotun aracını düşür.",
+      "afterEarnedDescription": "Bir LAN maçında başka bir pilotun aracını düşürdün."
+    },
+    "match_ace": {
+      "name": "Bir günde as pilot",
+      "beforeEarnedDescription": "Tek bir LAN maçında beş pilotun aracını düşür.",
+      "afterEarnedDescription": "Tek bir LAN maçında beş pilotun aracını düşürdün."
+    },
+    "match_flawless": {
+      "name": "Sıralamanın zirvesi",
+      "beforeEarnedDescription": "Beş rakip aracı düşürerek bir LAN maçı kazan.",
+      "afterEarnedDescription": "Beş rakip aracı düşürerek bir LAN maçı kazandın."
+    }
+  },
+  "uk": {
+    "first_sortie": {
+      "name": "Перший виліт",
+      "beforeEarnedDescription": "Завершіть одну місію кампанії.",
+      "afterEarnedDescription": "Вашу першу місію кампанії завершено."
+    },
+    "chapter_1": {
+      "name": "Дивні накази",
+      "beforeEarnedDescription": "Завершіть перші п’ять місій кампанії.",
+      "afterEarnedDescription": "Перші п’ять місій кампанії завершено."
+    },
+    "chapter_2": {
+      "name": "Ті, кого ми рятуємо",
+      "beforeEarnedDescription": "Завершіть десять місій кампанії.",
+      "afterEarnedDescription": "Десять місій кампанії завершено."
+    },
+    "chapter_3": {
+      "name": "Машина на Корвіді",
+      "beforeEarnedDescription": "Завершіть п’ятнадцять місій кампанії.",
+      "afterEarnedDescription": "П’ятнадцять місій кампанії завершено."
+    },
+    "campaign": {
+      "name": "Тихий двигун",
+      "beforeEarnedDescription": "Завершіть кампанію.",
+      "afterEarnedDescription": "Кампанію завершено."
+    },
+    "perfect_1": {
+      "name": "За статутом",
+      "beforeEarnedDescription": "Здобудьте три зірки за одну місію.",
+      "afterEarnedDescription": "Здобуто три зірки за одну місію."
+    },
+    "perfect_5": {
+      "name": "Командир ланки",
+      "beforeEarnedDescription": "Здобудьте по три зірки за п’ять місій.",
+      "afterEarnedDescription": "Здобуто по три зірки за п’ять місій."
+    },
+    "perfect_10": {
+      "name": "Взірець для ескадрильї",
+      "beforeEarnedDescription": "Здобудьте по три зірки за десять місій.",
+      "afterEarnedDescription": "Здобуто по три зірки за десять місій."
+    },
+    "perfect_20": {
+      "name": "Бездоганний результат",
+      "beforeEarnedDescription": "Здобудьте по три зірки за кожну місію.",
+      "afterEarnedDescription": "Здобуто по три зірки за кожну місію."
+    },
+    "first_kill": {
+      "name": "Перша перемога в повітрі",
+      "beforeEarnedDescription": "Збийте іншого пілота в матчі в локальній мережі.",
+      "afterEarnedDescription": "Іншого пілота збито в матчі в локальній мережі."
+    },
+    "match_ace": {
+      "name": "Ас за один день",
+      "beforeEarnedDescription": "Збийте п’ятьох пілотів в одному матчі в локальній мережі.",
+      "afterEarnedDescription": "П’ятьох пілотів збито в одному матчі в локальній мережі."
+    },
+    "match_flawless": {
+      "name": "На чолі таблиці",
+      "beforeEarnedDescription": "Виграйте матч у локальній мережі, збивши п’ятьох суперників.",
+      "afterEarnedDescription": "Матч у локальній мережі виграно з п’ятьма збитими суперниками."
+    }
+  },
+  "vi": {
+    "first_sortie": {
+      "name": "Lần xuất kích đầu tiên",
+      "beforeEarnedDescription": "Hoàn thành một nhiệm vụ chiến dịch.",
+      "afterEarnedDescription": "Bạn đã hoàn thành nhiệm vụ chiến dịch đầu tiên."
+    },
+    "chapter_1": {
+      "name": "Mệnh lệnh kỳ lạ",
+      "beforeEarnedDescription": "Hoàn thành năm nhiệm vụ đầu tiên của chiến dịch.",
+      "afterEarnedDescription": "Bạn đã hoàn thành năm nhiệm vụ đầu tiên của chiến dịch."
+    },
+    "chapter_2": {
+      "name": "Những người ta cứu",
+      "beforeEarnedDescription": "Hoàn thành mười nhiệm vụ chiến dịch.",
+      "afterEarnedDescription": "Bạn đã hoàn thành mười nhiệm vụ chiến dịch."
+    },
+    "chapter_3": {
+      "name": "Cỗ máy ở Corvid",
+      "beforeEarnedDescription": "Hoàn thành mười lăm nhiệm vụ chiến dịch.",
+      "afterEarnedDescription": "Bạn đã hoàn thành mười lăm nhiệm vụ chiến dịch."
+    },
+    "campaign": {
+      "name": "Động cơ tĩnh lặng",
+      "beforeEarnedDescription": "Hoàn thành chiến dịch.",
+      "afterEarnedDescription": "Bạn đã hoàn thành chiến dịch."
+    },
+    "perfect_1": {
+      "name": "Đúng như sách dạy",
+      "beforeEarnedDescription": "Đạt ba sao trong một nhiệm vụ.",
+      "afterEarnedDescription": "Bạn đã đạt ba sao trong một nhiệm vụ."
+    },
+    "perfect_5": {
+      "name": "Dẫn đầu biên đội",
+      "beforeEarnedDescription": "Đạt ba sao ở mỗi nhiệm vụ trong số năm nhiệm vụ.",
+      "afterEarnedDescription": "Bạn đã đạt ba sao ở mỗi nhiệm vụ trong số năm nhiệm vụ."
+    },
+    "perfect_10": {
+      "name": "Tấm gương của phi đội",
+      "beforeEarnedDescription": "Đạt ba sao ở mỗi nhiệm vụ trong số mười nhiệm vụ.",
+      "afterEarnedDescription": "Bạn đã đạt ba sao ở mỗi nhiệm vụ trong số mười nhiệm vụ."
+    },
+    "perfect_20": {
+      "name": "Thành tích hoàn hảo",
+      "beforeEarnedDescription": "Đạt ba sao trong mọi nhiệm vụ.",
+      "afterEarnedDescription": "Bạn đã đạt ba sao trong mọi nhiệm vụ."
+    },
+    "first_kill": {
+      "name": "Phát hạ gục đầu tiên",
+      "beforeEarnedDescription": "Bắn hạ tàu của một phi công khác trong trận LAN.",
+      "afterEarnedDescription": "Bạn đã bắn hạ tàu của một phi công khác trong trận LAN."
+    },
+    "match_ace": {
+      "name": "Át chủ bài trong một ngày",
+      "beforeEarnedDescription": "Bắn hạ tàu của năm phi công trong cùng một trận LAN.",
+      "afterEarnedDescription": "Bạn đã bắn hạ tàu của năm phi công trong cùng một trận LAN."
+    },
+    "match_flawless": {
+      "name": "Đứng đầu bảng",
+      "beforeEarnedDescription": "Thắng một trận LAN với năm lượt bắn hạ đối thủ.",
+      "afterEarnedDescription": "Bạn đã thắng một trận LAN với năm lượt bắn hạ đối thủ."
+    }
+  }
+}
