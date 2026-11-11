@@ -135,7 +135,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
     _Atomic bool _loadDone;
     double _loadStartedAt;
     BOOL _booted, _revealing, _precaching;
-    NSString *_loadDisconnectReason;
+    struct { NSString *reason; BOOL lan; } _loadDisconnect;
 
     // The UDP socket accepts peers only during an explicit hosted session.
     UDPTransport *_serverUDP, *_clientUDP;
@@ -179,7 +179,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         __weak Host *weakSelf = self;
         _client.missionEndHandler = ^(BOOL success, NSArray<NSString *> *results) { [weakSelf missionEnded:success results:results]; };
         _client.gamestateHandler = ^{ [weakSelf gamestateArrived]; };
-        _client.disconnectHandler = ^(NSString *reason) { [weakSelf disconnected:reason]; };
+        _client.disconnectHandler = ^(NSString *reason, BOOL remote) { [weakSelf disconnected:reason remote:remote]; };
         // The local server: this player reaches it over loopback, with the
         // same packets a remote player would send.
         _server = [[Server alloc] initWithName:L10nFormat(@"net.server_name", PilotName())];
@@ -660,18 +660,21 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 }
 
 - (void)updateLoading:(InputAction)actions {
-    if (_loadDisconnectReason && atomic_load(&_loadDone)) {
+    if (_loadDisconnect.reason && atomic_load(&_loadDone)) {
         // Registration owns the renderer on the load queue. Let it finish
         // before clearing its assets or returning to a rendered menu.
-        NSString *reason = _loadDisconnectReason;
-        _loadDisconnectReason = nil;
+        NSString *reason = _loadDisconnect.reason;
+        BOOL lan = _loadDisconnect.lan;
+        _loadDisconnect = (typeof(_loadDisconnect)){0};
         _precaching = NO;
         atomic_store(&_loadDone, false);
         _state = HostStateMenus;
         _revealing = NO;
         [_clientView clearMission];
-        [_frontEnd showBrowser];
-        [_frontEnd setBrowserStatus:reason];
+        if (lan) {
+            [_frontEnd showBrowser];
+            [_frontEnd setBrowserStatus:reason];
+        } else [_frontEnd levelLeft:_missionIndex];
         return;
     }
     [_loading setProgress:atomic_load(&_loadProgress) status:LoadStatus((LoadStage)atomic_load(&_loadStage))];
@@ -780,24 +783,29 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     [self reveal:0.6];
 }
 
-- (void)disconnected:(NSString *)reason {
+- (void)disconnected:(NSString *)reason remote:(BOOL)remote {
+    BOOL lan = remote || _server.publicHosting;
     _client.inputSuspended = NO;
     _loading.readyToStart = NO;
     if (_precaching && _state == HostStateLoading) {
-        _loadDisconnectReason = L10nExpand(reason);
+        _loadDisconnect = (typeof(_loadDisconnect)){.reason = L10nExpand(reason), .lan = lan};
         [self closeLANGame];
         [self connectLocal];
         return;
     }
     _precaching = NO;
-    if ([self inLevel] || (_state == HostStateLoading && _booted)) {
+    BOOL interruptedMission = [self inLevel] || (_state == HostStateLoading && _booted);
+    if (interruptedMission) {
         _state = HostStateMenus;
         _revealing = NO;
         [_clientView clearMission];
+        if (!remote) [self closeLANGame];
     }
     [self connectLocal];   // back to our own server
-    [_frontEnd showBrowser];
-    [_frontEnd setBrowserStatus:L10nFormat(@"browser.connection_failed", L10nExpand(reason))];
+    if (lan) {
+        [_frontEnd showBrowser];
+        [_frontEnd setBrowserStatus:L10nFormat(@"browser.connection_failed", L10nExpand(reason))];
+    } else if (interruptedMission) [_frontEnd levelLeft:_missionIndex];
 }
 
 - (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
