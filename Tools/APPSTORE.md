@@ -30,10 +30,12 @@ each mission.
 
 Achievements are listed in `Games/KestrelFrontier/Campaign/campaign.json`
 ("achievements") and reported from the progress record, so progress made
-offline or on another device is awarded at the next sign-in. Create each one in
-App Store Connect with the same ID (prefix `com.corepunch.spacefight.`), a
-1024×1024 image, a title and its two descriptions, and include them with the
-app version in App Review. A live achievement cannot be deleted and its points
+offline or on another device is awarded at the next sign-in. Each one exists in
+App Store Connect under the same ID (prefix `com.corepunch.spacefight.`) with
+an English title and descriptions, created with `asc game-center achievements
+create` and `… localizations create`. Each still needs a 1024×1024 image
+(`asc game-center achievements images upload`) before they go to App Review
+with an app version. A live achievement cannot be deleted and its points
 cannot change, so the set leaves 480 of the 1000 points free.
 
 | ID | Earned by | Points | Hidden |
