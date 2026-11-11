@@ -1392,6 +1392,23 @@ static void CheckProgressSaves(void) {
     CHECK(invalidRatings && !invalidRatings.missionStars.count && !invalidRatings.arenaScores.count);
 
     // Seed the old defaults in a volatile domain so the migration does not
+    // Achievements follow from the record alone: missions finished, missions at three stars and the best match.
+    CHECK(CampaignAchievements().count == 12);
+    NSMutableSet<NSString *> *achievementIDs = [NSMutableSet set];
+    for (AchievementProgress *none in ProgressAchievements([ProgressSave empty])) {
+        CHECK(none.percent == 0 && [none.identifier hasPrefix:@"com.corepunch.spacefight."]);
+        [achievementIDs addObject:none.identifier];
+    }
+    CHECK(achievementIDs.count == 12);
+    NSMutableDictionary<NSString *, NSNumber *> *earned = [NSMutableDictionary dictionary];
+    ProgressSave *pilot = [ProgressSave fromData:ProgressFixture(1, YES, 3, 0,
+        @{CampaignLevelName(0): @3, CampaignLevelName(1): @1, @"retired-level": @3}, @{@"field": @250, @"rocks": @100})];
+    for (AchievementProgress *progress in ProgressAchievements(pilot)) earned[progress.identifier] = @(progress.percent);
+    CHECK(earned[@"com.corepunch.spacefight.first_sortie"].doubleValue == 100 && earned[@"com.corepunch.spacefight.chapter_1"].doubleValue == 40);
+    CHECK(earned[@"com.corepunch.spacefight.campaign"].doubleValue == 10 && earned[@"com.corepunch.spacefight.perfect_1"].doubleValue == 100);
+    CHECK(earned[@"com.corepunch.spacefight.perfect_5"].doubleValue == 20 && earned[@"com.corepunch.spacefight.first_kill"].doubleValue == 100);
+    CHECK(earned[@"com.corepunch.spacefight.match_ace"].doubleValue == 100 && earned[@"com.corepunch.spacefight.match_flawless"].doubleValue < 100);
+
     // change anyone's campaign save when the headless checks run locally.
     NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
     NSDictionary *previous = [defaults volatileDomainForName:NSArgumentDomain];

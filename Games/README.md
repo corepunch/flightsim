@@ -18,7 +18,8 @@ Games/<name>/
   Levels/        <name>.json: what the game module builds (entities, waves, navs,
                  objectives, events, loadout, pickups). "name" matches the file name.
   Campaign/      campaign.json: name, story, storyDefaults, and the missions in order,
-                 each { "level": "<name>", "briefing": …, "debrief": … }
+                 each { "level": "<name>", "briefing": …, "debrief": … }; optional
+                 "achievements", each { "id", "earn": missions|perfect|matchPoints, "count" }
   Story/         characters.json (cast, player character), rooms.json (briefing rooms)
   Briefing/      portraits, Expressions/, Schematics/, room art
   Menu/          background.jpg (main menu), loading.png (loading card)

@@ -24,7 +24,7 @@
 
 // MARK: - Game Center
 
-// Bridges the game's local score and the platform leaderboard on the main thread.
+// Bridges the game's local score and achievements to Game Center on the main thread.
 @interface GameCenter : NSObject
 - (instancetype)initWithView:(SCNView *)view;
 - (void)start;

@@ -178,6 +178,25 @@ NSUInteger CampaignIndexOfTag(uint64_t tag);                // NSNotFound for 0 
 NSUInteger CampaignIndexOfLevel(NSString *level);
 StoryDefaults *CampaignStoryDefaults(void);
 
+// The campaign's Game Center achievements, from campaign.json:
+//   "achievements": [ { "id": "<Game Center id>", "earn": "<rule>", "count": <n> } ]
+// The rules are "missions" (campaign missions finished), "perfect" (missions
+// at three stars) and "matchPoints" (the best points from one LAN match).
+// Entries without an id, a known rule or a count are left out with a log line.
+typedef NS_ENUM(NSInteger, AchievementRule) { AchievementMissions, AchievementPerfect, AchievementMatchPoints };
+@interface CampaignAchievement : NSObject
+@property (nonatomic, readonly, copy) NSString *identifier;
+@property (nonatomic, readonly) AchievementRule rule;
+@property (nonatomic, readonly) NSUInteger count;
+@end
+NSArray<CampaignAchievement *> *CampaignAchievements(void);
+// How far a progress record has come towards each of them.
+@interface AchievementProgress : NSObject
+@property (nonatomic, readonly, copy) NSString *identifier;
+@property (nonatomic, readonly) double percent;             // 0...100
+@end
+NSArray<AchievementProgress *> *ProgressAchievements(ProgressSave *save);
+
 #pragma mark - Cast and rooms
 
 @interface StoryCharacter : NSObject

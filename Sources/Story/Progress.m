@@ -230,6 +230,34 @@ NSUInteger ProgressRecordMatch(NSString *arena, LANMatchResult result) {
     return increase;
 }
 
+@implementation AchievementProgress
+- (instancetype)initWithIdentifier:(NSString *)identifier percent:(double)percent {
+    if ((self = [super init])) {
+        _identifier = [identifier copy];
+        _percent = percent;
+    }
+    return self;
+}
+@end
+
+NSArray<AchievementProgress *> *ProgressAchievements(ProgressSave *save) {
+    NSUInteger finished = 0, perfect = 0, matchPoints = 0;
+    for (CampaignMission *mission in CampaignMissions()) {
+        NSUInteger stars = save.missionStars[mission.levelName].unsignedIntegerValue;
+        finished += stars > 0;
+        perfect += stars >= StarsPerMission;
+    }
+    for (NSNumber *points in save.arenaScores.allValues) matchPoints = MAX(matchPoints, points.unsignedIntegerValue);
+    const NSUInteger reached[] = { [AchievementMissions] = finished, [AchievementPerfect] = perfect,
+                                   [AchievementMatchPoints] = matchPoints };
+    NSMutableArray<AchievementProgress *> *list = [NSMutableArray array];
+    for (CampaignAchievement *achievement in CampaignAchievements()) {
+        double percent = MIN(100.0, reached[achievement.rule] * 100.0 / achievement.count);
+        [list addObject:[[AchievementProgress alloc] initWithIdentifier:achievement.identifier percent:percent]];
+    }
+    return list;
+}
+
 uint64_t CampaignLevelTag(NSString *level) {
     if (!level.length) return 0;
     // FNV-1a over the name's UTF-8 bytes; the value has to be the same on every device and build.

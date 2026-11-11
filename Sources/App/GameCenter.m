@@ -42,6 +42,11 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
     CloudSaves *_cloudSaves;
     NSString *_submittedPlayer;
     NSUInteger _submitted;
+    // What Game Center holds for the signed-in player's achievements, by
+    // identifier; nil until it has been read.
+    NSString *_achievementsPlayer;
+    NSMutableDictionary<NSString *, NSNumber *> *_reportedPercent;
+    BOOL _readingAchievements, _reportingAchievements;
     NSString *_friendsPlayer;
     NSDate *_friendsRead;
     BOOL _started, _authResolved, _openRequested, _submitting, _authRetryScheduled, _readingFriends;
@@ -94,6 +99,7 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
         if (_authResolved && !GKLocalPlayer.localPlayer.authenticated) [self retryAuthenticationAfterError:error];
     }
     [self submitIfNeeded];
+    [self reportAchievementsIfNeeded];
     [self readFriendsIfDue];
     [_cloudSaves requestSync];
     [self openIfRequested];
@@ -104,6 +110,7 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
         if (![self available]) return;
         [self startAuthentication];
         [self submitIfNeeded];
+        [self reportAchievementsIfNeeded];
         [self readFriendsIfDue];
         [self->_cloudSaves requestSync];
     });
@@ -113,8 +120,53 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
     dispatch_async(dispatch_get_main_queue(), ^{
         if (![self available]) return;
         [self submitIfNeeded];
+        [self reportAchievementsIfNeeded];
         [self->_cloudSaves requestSync];
     });
+}
+
+// Achievements follow from the progress record, so they are reported like the
+// score: whenever the record is ahead of what Game Center holds. That also
+// awards them for progress made offline or on another device.
+- (void)reportAchievementsIfNeeded {
+    GKLocalPlayer *player = GKLocalPlayer.localPlayer;
+    if (!player.authenticated || _readingAchievements || _reportingAchievements) return;
+    NSString *playerID = player.gamePlayerID;
+    if (![_achievementsPlayer isEqualToString:playerID]) {
+        _readingAchievements = YES;
+        [GKAchievement loadAchievementsWithCompletionHandler:^(NSArray<GKAchievement *> *achievements, NSError *error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                self->_readingAchievements = NO;
+                if (error) { NSLog(@"Game Center achievements: %@", error.localizedDescription); return; }
+                self->_reportedPercent = [NSMutableDictionary dictionary];
+                for (GKAchievement *achievement in achievements)
+                    self->_reportedPercent[achievement.identifier] = @(achievement.percentComplete);
+                self->_achievementsPlayer = playerID;
+                [self reportAchievementsIfNeeded];
+            });
+        }];
+        return;
+    }
+    NSMutableArray<GKAchievement *> *reports = [NSMutableArray array];
+    for (AchievementProgress *progress in ProgressAchievements(ProgressSnapshot())) {
+        if (progress.percent <= _reportedPercent[progress.identifier].doubleValue) continue;
+        GKAchievement *report = [[GKAchievement alloc] initWithIdentifier:progress.identifier];
+        report.percentComplete = progress.percent;
+        report.showsCompletionBanner = YES;
+        [reports addObject:report];
+    }
+    if (!reports.count) return;
+    _reportingAchievements = YES;
+    [GKAchievement reportAchievements:reports withCompletionHandler:^(NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self->_reportingAchievements = NO;
+            if (error) { NSLog(@"Game Center achievement report: %@", error.localizedDescription); return; }
+            if (![playerID isEqualToString:self->_achievementsPlayer]) return;
+            for (GKAchievement *report in reports) self->_reportedPercent[report.identifier] = @(report.percentComplete);
+            // A result may have arrived during the upload.
+            [self reportAchievementsIfNeeded];
+        });
+    }];
 }
 
 - (void)submitIfNeeded {

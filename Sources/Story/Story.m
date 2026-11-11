@@ -238,6 +238,37 @@ NSArray<CampaignMission *> *CampaignMissions(void) {
     return missions;
 }
 
+@implementation CampaignAchievement
+- (instancetype)initWithIdentifier:(NSString *)identifier rule:(AchievementRule)rule count:(NSUInteger)count {
+    if ((self = [super init])) {
+        _identifier = [identifier copy];
+        _rule = rule;
+        _count = count;
+    }
+    return self;
+}
+@end
+
+NSArray<CampaignAchievement *> *CampaignAchievements(void) {
+    static NSArray *achievements;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSDictionary<NSString *, NSNumber *> *rules = @{@"missions": @(AchievementMissions), @"perfect": @(AchievementPerfect),
+                                                        @"matchPoints": @(AchievementMatchPoints)};
+        NSMutableArray *list = [NSMutableArray array];
+        for (id entry in JSONArray(CampaignFile(), @"achievements")) {
+            NSString *identifier = JSONString(entry, @"id");
+            NSNumber *rule = rules[JSONString(entry, @"earn") ?: @""];
+            int count = JSONInt(entry, @"count", 0);
+            if (identifier.length && rule && count > 0)
+                [list addObject:[[CampaignAchievement alloc] initWithIdentifier:identifier rule:rule.integerValue count:count]];
+            else NSLog(@"campaign.json: achievement %@ needs an id, a known \"earn\" rule and a count", identifier ?: @"(unnamed)");
+        }
+        achievements = list;
+    });
+    return achievements;
+}
+
 CampaignMission *CampaignMissionAt(NSUInteger index) {
     NSArray *all = CampaignMissions();
     return index < all.count ? all[index] : nil;

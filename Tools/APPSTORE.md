@@ -24,6 +24,33 @@ submission and the leaderboard on each platform.
 [Apple's Game Center version setup](https://developer.apple.com/help/app-store-connect/configure-game-center/manage-an-app-version-for-game-center)
 and [review instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-game-center-components/).
 
+The Pilot Score entry's context carries the campaign mission the pilot has
+reached; mission select reads the friends-only entries to name the friends on
+each mission.
+
+Achievements are listed in `Games/KestrelFrontier/Campaign/campaign.json`
+("achievements") and reported from the progress record, so progress made
+offline or on another device is awarded at the next sign-in. Create each one in
+App Store Connect with the same ID (prefix `com.corepunch.spacefight.`), a
+1024×1024 image, a title and its two descriptions, and include them with the
+app version in App Review. A live achievement cannot be deleted and its points
+cannot change, so the set leaves 480 of the 1000 points free.
+
+| ID | Earned by | Points | Hidden |
+|---|---|---|---|
+| `first_sortie` | Finishing a campaign mission | 10 | |
+| `chapter_1` | Finishing missions 1–5 (Strange Orders) | 30 | |
+| `chapter_2` | Finishing missions 6–10 (The People We Save) | 40 | yes |
+| `chapter_3` | Finishing missions 11–15 (The Machine at Corvid) | 50 | yes |
+| `campaign` | Finishing all 20 missions (The Quiet Engine) | 100 | |
+| `perfect_1` | Three stars on a mission | 10 | |
+| `perfect_5` | Three stars on 5 missions | 30 | |
+| `perfect_10` | Three stars on 10 missions | 50 | |
+| `perfect_20` | Three stars on every mission | 100 | |
+| `first_kill` | A kill in a LAN match | 10 | |
+| `match_ace` | Five kills in one LAN match | 40 | |
+| `match_flawless` | Five kills and the win in one LAN match | 50 | |
+
 Both targets use the private iCloud Documents container
 `iCloud.com.corepunch.spacefight` for GameKit saves. Keep that container
 assigned to the universal App ID and refresh provisioning profiles for builds

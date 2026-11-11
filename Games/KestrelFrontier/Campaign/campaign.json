@@ -2300,5 +2300,19 @@
         ]
       }
     }
+  ],
+  "achievements": [
+    { "id": "com.corepunch.spacefight.first_sortie", "earn": "missions", "count": 1 },
+    { "id": "com.corepunch.spacefight.chapter_1", "earn": "missions", "count": 5 },
+    { "id": "com.corepunch.spacefight.chapter_2", "earn": "missions", "count": 10 },
+    { "id": "com.corepunch.spacefight.chapter_3", "earn": "missions", "count": 15 },
+    { "id": "com.corepunch.spacefight.campaign", "earn": "missions", "count": 20 },
+    { "id": "com.corepunch.spacefight.perfect_1", "earn": "perfect", "count": 1 },
+    { "id": "com.corepunch.spacefight.perfect_5", "earn": "perfect", "count": 5 },
+    { "id": "com.corepunch.spacefight.perfect_10", "earn": "perfect", "count": 10 },
+    { "id": "com.corepunch.spacefight.perfect_20", "earn": "perfect", "count": 20 },
+    { "id": "com.corepunch.spacefight.first_kill", "earn": "matchPoints", "count": 50 },
+    { "id": "com.corepunch.spacefight.match_ace", "earn": "matchPoints", "count": 250 },
+    { "id": "com.corepunch.spacefight.match_flawless", "earn": "matchPoints", "count": 300 }
   ]
 }
