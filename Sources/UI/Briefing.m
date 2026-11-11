@@ -873,7 +873,7 @@ static const CGFloat PhoneSpeakerFont = 16;
 // previous page and the action in the top-right corner, with the mission's
 // name between them.
 - (TitleBar *)storyBar:(NSString *)action rects:(NavigationButtons *)rects {
-    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets);
+    ScreenRegions regions = ScreenRegionsMakePlated(self.size, self.contentInsets, YES);
     BOOL compact = regions.compact;
     UIBarAction *back = [self barAction:L10n(@"story.missions") icon:UICommandMissions input:InputActionBack];
     UIBarAction *confirm = action ? [self barAction:[self commandActionLabel:action] icon:_mode==ModeBriefing ? ([self hasNextBriefingPage] ? UICommandSkip : UICommandLaunch) : (_success ? UICommandNext : UICommandReplay) input:InputActionConfirm] : nil;

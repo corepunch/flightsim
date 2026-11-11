@@ -944,6 +944,9 @@ typedef struct {
 } ScreenRegions;
 
 ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe);
+// For a bar that draws its own plate (-[TitleBar addPlateForSceneSize:]): the
+// header hugs the top so the plate is no taller than its controls need.
+ScreenRegions ScreenRegionsMakePlated(CGSize size, ScreenInsets safe, BOOL plated);
 
 // MARK: - TitleBar
 
