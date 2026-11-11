@@ -469,6 +469,13 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     [_entities removeAllObjects];
     [_world removeFromParentNode];
     _world = nil;
+    if (_backdrop) {
+        _backdrop = nil;
+        _scene.fogStartDistance = 0;
+        _scene.fogEndDistance = 0;
+        [self applySky:_sky dust:nil];
+        [self applyPost:NO];
+    }
     for (int i = 0; i < REF_MAX_BOLTS; i++) _boltNodes[i].hidden = YES;
     _playerNode.hidden = YES;
     _cockpit.node.hidden = YES;

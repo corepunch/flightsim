@@ -94,7 +94,7 @@ static void SV_Event(const GameEvent *e) {
 }
 
 static void SV_Command(int client, int type, const char *a, const char *b, const char *c) {
-    if (type == SVC_LEVEL_END) sv->_missionEnded = YES;
+    if (type == SVC_LEVEL_END || type == SVC_MATCH_END) sv->_missionEnded = YES;
     MsgWriter *w = [MsgWriter new];
     [w u8:svc_command];
     [w u8:(uint8_t)type];
@@ -285,6 +285,9 @@ static NSData *ConfigStringMessage(int index, NSString *value) {
             return;
         }
         NSString *name = args.count > 2 ? [[args subarrayWithRange:NSMakeRange(2, args.count - 2)] componentsJoinedByString:@" "] : @"pilot";
+        name = [name stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+        if (name.length > 48) name = [name substringToIndex:[name rangeOfComposedCharacterSequenceAtIndex:48].location];
+        if (!name.length) name = @"pilot";
         // A client reconnecting from the same address takes its old slot.
         int index = -1;
         for (NSUInteger i = 0; i < _slots.count; i++)

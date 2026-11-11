@@ -1,5 +1,6 @@
 #import "UI.h"
 #import "Audio.h"
+#import "Story.h"
 
 // The setup form owns scrolling and keeps its selected row visible. Its
 // controls are the same production controls used by flight settings.
@@ -102,6 +103,72 @@
 }
 @end
 
+// The result uses the server's ordering and local row index, including when
+// two pilots choose the same name.
+@interface LANScoreboard : TextViewport
+- (instancetype)initWithRegion:(CGRect)region result:(LANMatchResult)result points:(NSUInteger)points compact:(BOOL)compact;
+@end
+
+static SKLabelNode *ScoreCell(NSString *text, CGRect cell, CGFloat size, UIRGB color, BOOL left, BOOL bold) {
+    SKLabelNode *label = UIInterfaceLabel(size, UIColorWithOpacity(color, 1),
+        left ? SKLabelHorizontalAlignmentModeLeft : SKLabelHorizontalAlignmentModeCenter, SKLabelVerticalAlignmentModeCenter);
+    label.text = text;
+    if (bold) label.fontName = UIInterfaceBoldFont;
+    label.position = left ? CGPointMake(CGRectGetMinX(cell), CGRectGetMidY(cell)) : RectCenter(cell);
+    UIFitControlLabel(label, CGRectGetWidth(cell));
+    UICenterLabelVertically(label, CGRectGetMidY(cell));
+    return label;
+}
+
+@implementation LANScoreboard
+- (instancetype)initWithRegion:(CGRect)region result:(LANMatchResult)result points:(NSUInteger)points compact:(BOOL)compact {
+    CGFloat width = MAX(1, MIN(720, CGRectGetWidth(region) - 20));
+    CGFloat rowHeight = compact ? 36 : 48, gap = 4;
+    UIResultScore *pilotScore = [[UIResultScore alloc] initWithTotal:ProgressPilotScore() earned:points
+                                                           fontSize:compact ? 15 : 18 width:width];
+    CGFloat heroHeight = compact ? 33 : 48, headerHeight = 26;
+    CGFloat scoreHeight = MAX(26, pilotScore.contentSize.height + 8);
+    CGFloat tableTop = -(heroHeight + scoreHeight + 10);
+    NSUInteger rank = LANMatchRank(result, result.localIndex);
+    NSString *outcome = L10n(@"browser.results");
+    if (result.pilots.count > 1) {
+        if (rank == 1) outcome = L10n(LANMatchHasWinner(result) ? @"match.win" : @"match.draw");
+        else outcome = L10nFormat(@"match.place", (unsigned long)rank);
+    }
+    SKNode *table = [SKNode node];
+    [table addChild:ScoreCell(outcome, CGRectMake(0, -heroHeight, width, heroHeight), compact ? 24 : 36, UIInk, NO, YES)];
+    pilotScore.position = CGPointMake(width / 2, -heroHeight - scoreHeight / 2);
+    [table addChild:pilotScore];
+    CGFloat statWidth = MIN(110, width * 0.20), rankWidth = MIN(52, width * 0.13);
+    for (NSUInteger i = 0; i <= result.pilots.count; i++) {
+        BOOL header = i == 0, local = !header && i - 1 == result.localIndex;
+        CGFloat height = header ? headerHeight : rowHeight;
+        CGFloat y = tableTop - headerHeight - i * (rowHeight + gap);
+        CGRect row = CGRectMake(0, y, width, height);
+        UIRGB ink = local ? UIAmber : UIInk;
+        if (!header) [table addChild:UIReadoutPanel(row, UIColorWithOpacity(ink, local ? 0.9 : 0.27),
+                                                  UIColorWithOpacity(local ? UIAmber : UIPanel, local ? 0.12 : 0.8))];
+        LANPilotScore score = header ? (LANPilotScore){0} : result.scores[i - 1];
+        NSArray<NSString *> *labels = header ? @[@"#", L10n(@"browser.pilots"), L10n(@"match.kills"), L10n(@"match.deaths")] :
+            @[@(LANMatchRank(result, i - 1)).stringValue, result.pilots[i - 1], @(score.kills).stringValue, @(score.deaths).stringValue];
+        CGRect cells[] = {
+            CGRectMake(0, y, rankWidth, height),
+            CGRectMake(rankWidth, y, MAX(1, width - rankWidth - 2 * statWidth - 6), height),
+            CGRectMake(width - 2 * statWidth, y, statWidth, height),
+            CGRectMake(width - statWidth, y, statWidth, height),
+        };
+        for (NSUInteger column = 0; column < labels.count; column++)
+            [table addChild:ScoreCell(labels[column], CGRectInset(cells[column], 4, 0),
+                                      header ? 12 : compact ? 14 : 17, ink, column == 1, header || local)];
+    }
+    CGFloat height = -tableTop + headerHeight + result.pilots.count * (rowHeight + gap);
+    table.position = UIScrollContentPosition(region, CGSizeMake(width, height), 0);
+    SKNode *content = [SKNode node];
+    [content addChild:table];
+    return [super initWithRect:region content:content];
+}
+@end
+
 @interface LANGame () <UIMotionScene>
 @end
 @implementation LANGame {
@@ -117,6 +184,11 @@
     BOOL _settingsRequested;
     LANSetupPanel *_setup;
     NSInteger _settingIndex;
+    LANMatchResult _result;
+    NSString *_resultArena;
+    NSUInteger _points;
+    LANScoreboard *_scoreboard;
+    CGFloat _scoreboardOffset;
 }
 - (instancetype)initWithSize:(CGSize)size {
     if ((self=[super initWithSize:size])) {
@@ -143,26 +215,37 @@
     _settings=server.settings; _stage=LANGameLobby; _hosting=NO; _lines=[pilots copy];
     if (!same) [self rebuild];
 }
-- (void)showResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting {
-    _stage=LANGameResults; _hosting=hosting; _lines=[results copy]; _clicked=NO; [self rebuild];
+- (void)showResults:(LANMatchResult)result arena:(NSString *)arena points:(NSUInteger)points hosting:(BOOL)hosting {
+    _stage = LANGameResults;
+    _hosting = hosting;
+    _result = result;
+    _resultArena = [arena copy];
+    _points = points;
+    _scoreboardOffset = 0;
+    _clicked = NO;
+    [self rebuild];
+}
+- (void)refreshProgress {
+    if (_stage == LANGameResults) [self rebuild];
 }
 - (void)rebuild {
-    [_root removeAllChildren]; [_hover reset]; _setup=nil; _statusLabel=nil;
+    [_root removeAllChildren]; [_hover reset]; _setup=nil; _scoreboard=nil; _statusLabel=nil;
     _laidOut=self.size; _usedInsets=self.contentInsets;
     [_root addChild:[self motionBackdropWithSize:self.size]];
     BOOL compact=ScreenRegionsMake(self.size,self.contentInsets).compact;
     ScreenRegions regions=ScreenRegionsMake(self.size,self.contentInsets);
-    _confirmEnabled=_stage==LANGameSetup || (_stage==LANGameLobby && _hosting && _lines.count>=2) || (_stage==LANGameResults && _hosting);
-    NSString *action=L10n(_stage==LANGameSetup ? (_editingLobby ? @"browser.save" : @"browser.create") : _stage==LANGameLobby ? @"browser.start" : @"browser.again");
+    _confirmEnabled=_stage==LANGameSetup || (_stage==LANGameLobby && _hosting && _lines.count>=2) || _stage==LANGameResults;
+    NSString *action=L10n(_stage==LANGameSetup ? (_editingLobby ? @"browser.save" : @"browser.create") : _stage==LANGameLobby ? @"browser.start" : @"browser.lobby");
     __weak LANGame *owner=self;
     UIBarAction *back=[UIBarAction title:L10n(@"browser.back") icon:UICommandBack accent:UIInk handler:^{ LANGame *s=owner; if(s) s->_barInput|=InputActionBack; }];
-    UIBarAction *confirm=[UIBarAction title:action icon:_stage==LANGameSetup ? (_editingLobby ? UICommandSave : UICommandCreate) : _stage==LANGameLobby ? UICommandStart : UICommandReplay accent:UIAmber handler:^{ LANGame *s=owner; if(s) s->_barInput|=InputActionConfirm; }];
+    UIBarAction *confirm=[UIBarAction title:action icon:_stage==LANGameSetup ? (_editingLobby ? UICommandSave : UICommandCreate) : _stage==LANGameLobby ? UICommandStart : UICommandNext accent:UIAmber handler:^{ LANGame *s=owner; if(s) s->_barInput|=InputActionConfirm; }];
     confirm.enabled=_confirmEnabled;
     UIBarAction *settings=[UIBarAction title:L10n(@"browser.settings") icon:UICommandSettings accent:UIInk handler:^{ LANGame *s=owner; if(s) s->_settingsRequested=YES; }];
-    NSArray *actions=_hosting ? (_stage==LANGameLobby ? @[confirm,settings] : @[confirm]) : @[];
+    NSArray *actions=_hosting && _stage==LANGameLobby ? @[confirm,settings] : _hosting || _stage==LANGameResults ? @[confirm] : @[];
+    const LevelDef *arena = _resultArena.length && _stage == LANGameResults ? LevelNamed(_resultArena) : NULL;
     _bar=[[TitleBar alloc] initWithHeader:regions.header compact:compact back:back
         title:L10n(_stage==LANGameSetup ? @"browser.setup" : _stage==LANGameLobby ? @"browser.lobby" : @"browser.results")
-        kicker:L10n(@"browser.kicker") actions:actions];
+        kicker:arena ? arena->title : L10n(@"browser.kicker") actions:actions];
     _backRect=[_bar rectForAction:back]; _confirmRect=[_bar rectForAction:confirm];
     [_root addChild:_bar]; [_bar registerHover:_hover]; _bodyRect=regions.body;
     CGFloat width=MIN(900,CGRectGetWidth(_bodyRect));
@@ -170,6 +253,11 @@
     if (_stage==LANGameSetup) {
         _setup=[[LANSetupPanel alloc] initWithRegion:content settings:_settings change:^(LANMatchSettings changed) { LANGame *screen=owner; if (screen) screen->_settings=changed; }];
         [_root addChild:_setup]; _pilotRects=@[];
+    } else if (_stage == LANGameResults) {
+        _scoreboard = [[LANScoreboard alloc] initWithRegion:content result:_result points:_points compact:compact];
+        [_root addChild:_scoreboard];
+        [self scrollScoreboard:0];
+        _pilotRects = @[];
     } else {
         CGFloat headingHeight=compact ? 46 : 70;
         CGRect heading=RectFromEdges(CGRectGetMinX(content),CGRectGetMaxY(content)-headingHeight,CGRectGetMaxX(content),CGRectGetMaxY(content));
@@ -205,6 +293,7 @@
     }
 }
 - (SKNode *)motionBackdropWithSize:(CGSize)size {
+    if (_stage == LANGameResults) return UIResultsBackdrop(size);
     SKSpriteNode *shade=[SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBackground,0.96) size:size]; shade.anchorPoint=CGPointZero; return shade;
 }
 - (void)motionEnter { [_root removeAllActions]; _root.position=CGPointZero; _root.alpha=1; _clicked=NO; [self rebuild]; UIMotionSlideIn(_root,CGVectorMake(0,-12),0,0.25); }
@@ -214,7 +303,15 @@
 - (void)pointerCancel { [_bar endPress]; }
 - (void)pointerHover:(CGPoint)point { [_hover queuePointAtFraction:point]; }
 - (void)pointerClick:(CGPoint)point { _click=point; _clicked=YES; }
-- (void)pointerScroll:(CGFloat)delta at:(CGPoint)point { if(CGRectContainsPoint(_bodyRect,PointMultiply(point,self.size))) [_setup scroll:delta]; }
+- (void)scrollScoreboard:(CGFloat)delta {
+    _scoreboardOffset = MIN(_scoreboard.limit, MAX(0, _scoreboardOffset + delta));
+    [_scoreboard showOffset:_scoreboardOffset];
+}
+- (void)pointerScroll:(CGFloat)delta at:(CGPoint)point {
+    if (!CGRectContainsPoint(_bodyRect,PointMultiply(point,self.size))) return;
+    [_setup scroll:delta];
+    [self scrollScoreboard:delta];
+}
 - (LANGameCommand)handle:(InputAction)actions {
     if(!CGSizeEqualToSize(_laidOut,self.size)||memcmp(&_usedInsets,&_contentInsets,sizeof _usedInsets)) [self rebuild];
     [_hover updateInScene:self]; _settingsRequested=NO;
@@ -226,6 +323,10 @@
     }
     if(_settingsRequested) return LANGameCommandSettings;
     if(actions&InputActionBack) { [[GameAudio shared] play:@"ui-back"]; return LANGameCommandBack; }
+    if (_stage == LANGameResults) {
+        if (actions & InputActionUp) [self scrollScoreboard:-44];
+        if (actions & InputActionDown) [self scrollScoreboard:44];
+    }
     if(_stage==LANGameSetup) {
         if(actions&(InputActionDown|InputActionUp)) {
             NSInteger count=(NSInteger)_setup.form.rowRects.count;

@@ -22,6 +22,21 @@
 #endif
 @end
 
+// MARK: - Game Center
+
+// Bridges the game's local score and the platform leaderboard on the main thread.
+@interface GameCenter : NSObject
+- (instancetype)initWithView:(SCNView *)view;
+- (void)start;
+- (void)showLeaderboard;
+@end
+
+// Synchronizes progress with the signed-in player's iCloud Documents storage.
+// The GameKit session and callbacks are owned by the main thread.
+@interface CloudSaves : NSObject
+- (void)requestSync;
+@end
+
 // MARK: - Host
 
 // The application loop: boots the renderer, runs the menus and loading

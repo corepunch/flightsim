@@ -4,6 +4,8 @@
 #import <simd/simd.h>
 #import "Shared.h"
 
+@class ObjectiveReadout;
+
 // MARK: - Story
 
 // The story front end's data: who is in the cast, which rooms scenes are
@@ -136,6 +138,37 @@ CampaignMission *CampaignMissionAt(NSUInteger index);       // nil past the end
 // The level a campaign mission flies, and back. NSNotFound for a level the
 // campaign does not use.
 NSString *CampaignLevelName(NSUInteger index);
+
+// MARK: - Progress
+
+// The same versioned progress record is used on disk and by GameKit. Mission
+// and arena records use level names so devices can run different content versions.
+@interface ProgressSave : NSObject
+@property (nonatomic, readonly) BOOL started;
+@property (nonatomic, readonly) NSUInteger unlocked, completed;
+@property (nonatomic, readonly, copy) NSDictionary<NSString *, NSNumber *> *missionStars, *arenaScores;
++ (instancetype)empty;
++ (instancetype)fromData:(NSData *)data;
+- (NSData *)encodedData;
+- (ProgressSave *)merging:(ProgressSave *)other;
+@end
+
+// Local writes and cloud merges are serialized. Observers can use the revision
+// to refresh views on their owning thread.
+extern NSNotificationName const ProgressDidChange;
+NSUInteger ProgressRevision(void);
+ProgressSave *ProgressSnapshot(void);
+ProgressSave *ProgressMerge(ProgressSave *cloud);
+
+NSUInteger ProgressUnlockedCount(void);
+BOOL ProgressHasStarted(void);
+BOOL ProgressCampaignCompleted(void);
+void ProgressMarkStarted(void);
+NSUInteger ProgressBestStars(NSUInteger missionIndex);
+NSUInteger ProgressResultStars(NSArray<ObjectiveReadout *> *results);
+NSUInteger ProgressRecordResult(NSUInteger missionIndex, NSUInteger stars);
+NSUInteger ProgressRecordMatch(NSString *arena, LANMatchResult result);
+NSUInteger ProgressPilotScore(void);
 NSUInteger CampaignIndexOfLevel(NSString *level);
 StoryDefaults *CampaignStoryDefaults(void);
 

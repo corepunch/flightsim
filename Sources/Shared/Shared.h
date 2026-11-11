@@ -70,7 +70,8 @@ id FSJSON(NSURL *url);
 // Version 6 distinguishes campaign results from competitive LAN matches.
 // Older front ends would record a dogfight as a campaign mission completion.
 // Version 7 adds pickups (EntityPickup), which older clients cannot draw.
-#define PROTOCOL_VERSION 8
+// Version 9 carries the final LAN scoreboard and identifies the receiving pilot.
+#define PROTOCOL_VERSION 9
 
 #define TICK_RATE 30
 #define TICK_DT (1.0f / TICK_RATE)
@@ -276,6 +277,7 @@ typedef enum {
     SVC_STATUS,         // a = status line under the boresight ("" clears)
     SVC_LEVEL_END,      // a = "1" success / "0", b = result lines joined by \n
     SVC_GAME,           // a, b, c = whatever the game's presentation hook understands
+    SVC_MATCH_END,      // a = encoded LANMatchResult for this pilot
 } ServerCommandType;
 
 // MARK: - Assets
@@ -688,6 +690,20 @@ LANMatchSettings LANMatchSettingsNormalize(LANMatchSettings settings);
 NSString *LANMatchSettingsEncode(LANMatchSettings settings);
 BOOL LANMatchSettingsDecode(NSString *text, LANMatchSettings *settings);
 
+// Final standings in server order. Equal kills and deaths share a rank.
+typedef struct { int kills, deaths; } LANPilotScore;
+typedef struct {
+    NSArray<NSString *> *pilots;
+    LANPilotScore scores[MAX_CLIENTS];
+    NSUInteger localIndex;
+} LANMatchResult;
+NSString *LANMatchResultEncode(LANMatchResult result);
+BOOL LANMatchResultDecode(NSString *text, LANMatchResult *result);
+NSUInteger LANMatchRank(LANMatchResult result, NSUInteger index);
+BOOL LANMatchHasWinner(LANMatchResult result);
+enum { LANMatchMaxPilotPoints = 300 };
+NSUInteger LANMatchPilotPoints(LANMatchResult result);
+
 typedef struct {
     NSArray<NSString *> *pilots;
     LANMatchSettings settings;
@@ -764,7 +780,7 @@ enum {
 // (GameExport). Only plain C crosses it, so the game can live in its own
 // dylib and be rebuilt or swapped without touching the engine.
 
-#define GAME_API_VERSION 5
+#define GAME_API_VERSION 6
 
 typedef struct {
     float radius;

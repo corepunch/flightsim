@@ -201,3 +201,18 @@ BOOL L10nIsRightToLeft(void);
 
 // For checks: every catalog, locale -> { name, direction, strings }.
 NSDictionary<NSString *, NSDictionary *> *L10nCatalogs(void);
+
+// MARK: - Objectives
+
+// Localized objective data for the flight checklist and mission debrief.
+typedef NS_ENUM(NSInteger, ObjectiveStatus) { ObjectiveOpen, ObjectiveComplete, ObjectiveFailed };
+
+@interface ObjectiveReadout : NSObject
+- (instancetype)initWithText:(NSString *)text status:(ObjectiveStatus)status;
+@property (nonatomic, readonly, copy) NSString *text;
+@property (nonatomic, readonly) ObjectiveStatus status;
+@end
+
+// Decode the two server messages into the same presentation data.
+NSArray<ObjectiveReadout *> *FlightObjectiveReadouts(NSString *lines, NSString *states);
+NSArray<ObjectiveReadout *> *MissionResultReadouts(NSArray<NSString *> *lines);

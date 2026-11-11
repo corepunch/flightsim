@@ -38,12 +38,13 @@ typedef NSEdgeInsets BriefingInsets;
 @property (nonatomic, readonly) NSUInteger selectedIndex;
 
 - (void)showListSelecting:(NSUInteger)index;
+- (void)refreshProgress;
 // Releases the art and laid-out nodes while the screen is away; the next show rebuilds them.
 - (void)unload;
 - (void)showBriefing:(NSUInteger)index;
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)page;   // opens on a later page
-// results: one line per objective, prefixed "+" done, "x" failed, "-" not done.
-- (void)showDebrief:(NSUInteger)index success:(BOOL)success results:(NSArray<NSString *> *)results;
+- (void)showDebrief:(NSUInteger)index success:(BOOL)success results:(NSArray<ObjectiveReadout *> *)results
+              stars:(NSUInteger)stars points:(NSUInteger)points campaignFinale:(BOOL)finale;
 // Pointer input arrives through <ScreenInput>: hover, click, and scroll
 // (positive delta reveals text farther down; the point is the wheel or drag origin).
 - (BriefingCommand)handle:(InputAction)actions;
@@ -84,6 +85,8 @@ typedef NSEdgeInsets BriefingInsets;
 - (BOOL)createLANGame;
 - (void)startLANMatch;
 - (void)closeLANGame;
+- (void)startGameCenter;
+- (void)showLeaderboards;
 @property (nonatomic, readonly) NSArray<NSString *> *hostedPilots;
 @property (nonatomic, readonly) BOOL hostingFailed;
 @property (nonatomic, readonly) BOOL waitingForLANMatch;
@@ -123,7 +126,7 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)showMissionsSelecting:(NSUInteger)index;
 - (void)showBriefing:(NSUInteger)index page:(NSUInteger)page;
 - (void)showBrowser;
-- (void)showLANResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting;
+- (void)showLANResults:(LANMatchResult)result arena:(NSString *)arena hosting:(BOOL)hosting;
 - (void)showLANHost;
 // Set up after boot, without presenting: the main menu, with the mission
 // list ready behind it.
@@ -228,10 +231,51 @@ CGPoint UIScrollContentPosition(CGRect region, CGSize contentSize, CGFloat offse
 - (void)addArrangedNode:(SKNode *)node;
 - (void)addArrangedNode:(SKNode *)node layoutBounds:(CGRect)bounds;
 - (void)setLayoutBounds:(CGRect)bounds forArrangedNode:(SKNode *)node;
+// Sets the local line to centre on while reserving the node's full layout bounds.
+- (void)setVerticalCenter:(CGFloat)center forArrangedNode:(SKNode *)node;
 // Refresh after text, font, size or wrapping changes. The stack's origin is its
 // vertical centre; horizontal alignment chooses its leading, centre or trailing edge.
 - (void)layout;
 @end
+
+// Arranges visible children from the top left and reports their combined size.
+@interface UIVerticalStack : SKNode
+@property (nonatomic) CGFloat spacing;
+@property (nonatomic, copy) NSArray<SKNode *> *arrangedNodes;
+@property (nonatomic, readonly) CGSize contentSize;
+- (void)layout;
+@end
+
+// A data source supplies items. The template configures or creates a row for each item.
+typedef SKNode * (^UIRowTemplate)(id item, SKNode *reusableRow, CGFloat width);
+@interface UIDataList : UIVerticalStack
+- (instancetype)initWithRowTemplate:(UIRowTemplate)rowTemplate;
+@property (nonatomic, copy) NSArray *items;
+@property (nonatomic) CGFloat maximumWidth;
+@end
+
+// A reusable checkbox and wrapping text row.
+@interface UIStatusRow : UIHorizontalStack
+- (instancetype)initWithFont:(NSString *)font size:(CGFloat)size;
+- (void)showText:(NSString *)text status:(ObjectiveStatus)status color:(SKColor *)color;
+- (void)layoutWithWidth:(CGFloat)width;
+@end
+
+// The HUD and debrief place this widget at their available top-left corner.
+// It lays out the heading and every objective, including wrapped labels.
+@interface UIObjectiveList : UIVerticalStack
+- (instancetype)initWithTitle:(NSString *)title fontSize:(CGFloat)size;
+@property (nonatomic, copy) NSArray<ObjectiveReadout *> *items;
+@property (nonatomic) CGFloat maximumWidth;
+@end
+
+// Shows the career total and marks points earned from the current result.
+@interface UIResultScore : UIHorizontalStack
+- (instancetype)initWithTotal:(NSUInteger)total earned:(NSUInteger)points fontSize:(CGFloat)size width:(CGFloat)width;
+@end
+
+// A translucent shade over the live menu sky.
+SKNode *UIResultsBackdrop(CGSize size);
 
 // Framed entries shared by game browsers, rosters and match results. Geometry
 // and typography belong to the row; the caller supplies content and selection.
@@ -242,6 +286,15 @@ CGPoint UIScrollContentPosition(CGRect region, CGSize contentSize, CGFloat offse
 @property (nonatomic, readonly) SKShapeNode *plate;
 @property (nonatomic, readonly) SKLabelNode *titleLabel, *detailLabel;
 - (void)registerHover:(UIHover *)hover;
+@end
+
+// Clips a report and shows a scrollbar when its content extends below the region.
+@interface TextViewport : SKNode
+- (instancetype)initWithRect:(CGRect)rect content:(SKNode *)content;
+@property (nonatomic, readonly) CGRect rect;
+@property (nonatomic, readonly) CGFloat limit;   // how far the content can scroll; 0 if it fits
+@property (nonatomic, readonly) SKNode *content;
+- (void)showOffset:(CGFloat)offset;
 @end
 
 // A centered, wrapping status message constrained to a screen's content area.
@@ -255,6 +308,7 @@ CGPoint UIScrollContentPosition(CGRect region, CGSize contentSize, CGFloat offse
 @interface ControlsPanel : SKNode <ScreenInput>
 @property (nonatomic, strong) Input *input;
 @property (nonatomic) BOOL touchNavigationEnabled;
+@property (nonatomic) BOOL showsSoundSetting;
 - (void)layoutIn:(CGRect)bounds sceneSize:(CGSize)size;
 - (BOOL)handle:(InputAction)actions; // YES when Back is chosen
 @property (nonatomic, readonly) CGRect backRect, scrollRect;
@@ -277,6 +331,7 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
     MainMenuCommandCampaign,
     MainMenuCommandMissions,
     MainMenuCommandMultiplayer,
+    MainMenuCommandLeaderboards,
     MainMenuCommandQuit,
 };
 
@@ -291,6 +346,7 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
 @property (nonatomic, readonly) ControlsPanel *controlsPanel;
 
 - (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed;
+- (void)refreshMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed;
 // Releases the painting and nodes while the menu is away; the next show rebuilds them.
 - (void)unload;
 - (MainMenuCommand)handle:(InputAction)actions;
@@ -324,19 +380,6 @@ typedef NS_ENUM(NSInteger, PauseCommand) {
 - (void)showRemote:(BOOL)remote cockpit:(BOOL)cockpit;
 - (PauseCommand)handle:(InputAction)actions;
 @end
-
-// MARK: - Progress
-
-// Campaign progress on this machine (NSUserDefaults): how many missions are
-// open. A client-side record; the server never sees it.
-NSUInteger ProgressUnlockedCount(void);     // at least 1
-BOOL ProgressHasStarted(void);
-BOOL ProgressCampaignCompleted(void);
-void ProgressMarkStarted(void);
-void ProgressMarkCompleted(NSUInteger missionIndex);
-
-NSUInteger ProgressBestStars(NSUInteger missionIndex); // 0 unplayed, 1..3 best objective rating
-void ProgressRecordResult(NSUInteger missionIndex, NSArray<NSString *> *results);
 
 // MARK: - ScreenHost
 
@@ -406,7 +449,8 @@ typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandC
 - (void)showSetup;
 - (void)showPilots:(NSArray<NSString *> *)pilots;
 - (void)showGuestLobby:(LANServer *)server;
-- (void)showResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting;
+- (void)showResults:(LANMatchResult)result arena:(NSString *)arena points:(NSUInteger)points hosting:(BOOL)hosting;
+- (void)refreshProgress;
 - (LANGameCommand)handle:(InputAction)actions;
 @end
 

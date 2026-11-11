@@ -7,6 +7,8 @@
 #import <Metal/Metal.h>
 #include "Shared.h"
 
+@class ObjectiveReadout;
+
 // MARK: - CockpitFrame
 
 // What the client tells the cockpit and the HUD instruments each frame. No
@@ -127,8 +129,7 @@ typedef NSEdgeInsets HUDInsets;
 - (void)setInputText:(NSString *)text;
 - (void)toggleHelp;
 - (void)setHelpVisible:(BOOL)visible;
-// Objective lines; state per line: 0 active, 1 complete, 2 failed, 3 optional.
-- (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states;
+- (void)setObjectives:(NSArray<ObjectiveReadout *> *)objectives;
 - (void)showMessage:(NSString *)text from:(NSString *)from;
 - (void)showBanner:(NSString *)text color:(SKColor *)color;
 - (void)clearMessages;

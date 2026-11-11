@@ -17,6 +17,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     FrontScreen _screen, _browserReturn;
     LANServer *_joinedGame;
     double _lastJoinedQuery;
+    NSUInteger _progressRevision;
 }
 
 - (instancetype)initWithSize:(CGSize)size services:(id<UIServices>)services {
@@ -61,10 +62,12 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     NSUInteger index = [self campaignEntry];
     [_mainMenu showMission:index title:CampaignMissionAt(index).title
                    started:ProgressHasStarted() || index > 0 completed:ProgressCampaignCompleted()];
+    [_services startGameCenter];
 }
 
 - (void)prepareAfterBoot {
     _screen = FrontScreenMainMenu;
+    _progressRevision = ProgressRevision();
     [self prepareMainMenu];
     [_briefing showListSelecting:ProgressUnlockedCount() - 1];
 }
@@ -101,10 +104,9 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     [self present:FrontScreenBrowser];
 }
 
-- (void)showLANResults:(NSArray<NSString *> *)results hosting:(BOOL)hosting {
-    NSMutableArray *shown = [NSMutableArray array];
-    for (NSString *line in results) [shown addObject:L10nExpand(line)];
-    [_lanGame showResults:shown hosting:hosting];
+- (void)showLANResults:(LANMatchResult)result arena:(NSString *)arena hosting:(BOOL)hosting {
+    NSUInteger points = ProgressRecordMatch(arena, result);
+    [_lanGame showResults:result arena:arena points:points hosting:hosting];
     [self present:FrontScreenLAN];
 }
 - (void)showLANHost { [_lanGame showPilots:_services.hostedPilots]; [self present:FrontScreenLAN]; }
@@ -132,11 +134,11 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 }
 
 - (void)levelEnded:(NSUInteger)index success:(BOOL)success results:(NSArray<NSString *> *)results remote:(BOOL)remote {
-    NSMutableArray *shown = [NSMutableArray array];
-    for (NSString *line in results) [shown addObject:L10nExpand(line)];
-    results = shown;
-    if (success && !remote) { ProgressRecordResult(index, results); ProgressMarkCompleted(index); }
-    [_briefing showDebrief:index success:success results:results];
+    NSArray<ObjectiveReadout *> *objectives = MissionResultReadouts(results);
+    NSUInteger stars = success ? ProgressResultStars(objectives) : 0, points = 0;
+    BOOL finale = success && !remote && index < CampaignMissions().count && index + 1 == CampaignMissions().count;
+    if (success && !remote) points = ProgressRecordResult(index, stars);
+    [_briefing showDebrief:index success:success results:objectives stars:stars points:points campaignFinale:finale];
     [self present:FrontScreenCampaign];
 }
 
@@ -145,6 +147,16 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 #pragma mark - Frame
 
 - (void)frame:(InputAction)actions {
+    NSUInteger revision = ProgressRevision();
+    if (_progressRevision != revision) {
+        _progressRevision = revision;
+        if (_screen == FrontScreenMainMenu) {
+            NSUInteger index = [self campaignEntry];
+            [_mainMenu refreshMission:index title:CampaignMissionAt(index).title
+                              started:ProgressHasStarted() || index > 0 completed:ProgressCampaignCompleted()];
+        } else if (_screen == FrontScreenCampaign) [_briefing refreshProgress];
+        else if (_screen == FrontScreenLAN) [_lanGame refreshProgress];
+    }
     switch (_screen) {
         case FrontScreenMainMenu: [self mainMenuFrame:actions]; break;
         case FrontScreenCampaign: [self campaignFrame:actions]; break;
@@ -163,6 +175,9 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
             break;
         case MainMenuCommandMultiplayer:
             [self showBrowser];
+            break;
+        case MainMenuCommandLeaderboards:
+            [_services showLeaderboards];
             break;
         case MainMenuCommandQuit:
 #if TARGET_OS_OSX
@@ -251,7 +266,8 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
                 if ([_services createLANGame]) [_lanGame showPilots:_services.hostedPilots];
                 else { [self showBrowser]; [self setBrowserStatus:L10n(@"browser.host_failed")]; }
             } else if (_lanGame.stage == LANGameResults) {
-                [_lanGame showPilots:_services.hostedPilots];
+                if (_lanGame.hosting) [_lanGame showPilots:_services.hostedPilots];
+                else [self showBrowser];
             } else [_services startLANMatch];
             break;
         case LANGameCommandSettings: [_lanGame showSetup]; break;

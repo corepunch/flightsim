@@ -115,6 +115,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 
 @implementation Host {
     __weak SCNView *_view;
+    GameCenter *_gameCenter;
     Input *_input;
     Server *_server;
     Client *_client;
@@ -159,6 +160,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
 - (instancetype)initWithView:(SCNView *)view input:(Input *)input {
     if ((self = [super init])) {
         _view = view;
+        _gameCenter = [[GameCenter alloc] initWithView:view];
         [GameAudio shared];
         _input = input;
         _hostTimings = [FrameTimings new];
@@ -178,6 +180,7 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         _client = [[Client alloc] initWithView:_clientView];
         __weak Host *weakSelf = self;
         _client.missionEndHandler = ^(BOOL success, NSArray<NSString *> *results) { [weakSelf missionEnded:success results:results]; };
+        _client.matchEndHandler = ^(LANMatchResult result) { [weakSelf matchEnded:result]; };
         _client.gamestateHandler = ^{ [weakSelf gamestateArrived]; };
         _client.disconnectHandler = ^(NSString *reason, BOOL remote) { [weakSelf disconnected:reason remote:remote]; };
         // The local server: this player reaches it over loopback, with the
@@ -499,6 +502,9 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 
 #pragma mark - UIServices
 
+- (void)startGameCenter { [_gameCenter start]; }
+- (void)showLeaderboards { [_gameCenter showLeaderboard]; }
+
 // Leave our own server idle and connect to someone else's. The gamestate it
 // sends (now, or when it starts a mission) takes us through loading.
 - (void)joinServer:(NetAddress *)address {
@@ -808,15 +814,27 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     } else if (interruptedMission) [_frontEnd levelLeft:_missionIndex];
 }
 
-- (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
-    if (_state != HostStateFlying && _state != HostStatePaused) return;
+- (BOOL)endFlight:(BOOL)success {
+    if (_state != HostStateFlying && _state != HostStatePaused) return NO;
     _client.inputSuspended = NO;
     [[GameAudio shared] play:success ? @"ui-success" : @"ui-alert"];
     _state = HostStateMenus;
     if (!self.remote) [_server stop];   // a remote host decides what comes next
     [_client leaveGame];
-    if (self.deathmatch) [_frontEnd showLANResults:results hosting:_server.publicHosting];
-    else [_frontEnd levelEnded:_missionIndex success:success results:results remote:self.remote];
+    [_clientView clearMission];
+    [self drawMenuBackdrop];
+    return YES;
+}
+
+- (void)missionEnded:(BOOL)success results:(NSArray<NSString *> *)results {
+    if (!self.deathmatch && [self endFlight:success])
+        [_frontEnd levelEnded:_missionIndex success:success results:results remote:self.remote];
+}
+
+- (void)matchEnded:(LANMatchResult)result {
+    if (!self.deathmatch) return;
+    NSString *arena = _client.levelName;
+    if ([self endFlight:YES]) [_frontEnd showLANResults:result arena:arena hosting:_server.publicHosting];
 }
 
 - (void)pauseFlight {

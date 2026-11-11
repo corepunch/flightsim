@@ -1148,6 +1148,95 @@ static void CheckLANSettings(void) {
     CHECK(settings.fragLimit==100 && settings.maxPilots==2 && isfinite(settings.matchSeconds) && isfinite(settings.respawnSeconds));
 }
 
+static void CheckLANMatchResults(void) {
+    LANMatchResult result = {
+        .pilots = @[@"Юки", @"Юки", @"Mira"],
+        .scores = {{8, 2}, {8, 4}, {3, 1}},
+        .localIndex = 1,
+    };
+    LANMatchResult decoded = {0};
+    CHECK(LANMatchResultDecode(LANMatchResultEncode(result), &decoded));
+    CHECK([decoded.pilots isEqual:result.pilots] && decoded.localIndex == 1);
+    CHECK(decoded.scores[1].kills == 8 && decoded.scores[1].deaths == 4);
+    CHECK(LANMatchRank(decoded, 1) == 2 && LANMatchHasWinner(decoded));
+    CHECK(LANMatchPilotPoints(decoded) == 250);
+    decoded.localIndex = 0;
+    CHECK(LANMatchPilotPoints(decoded) == LANMatchMaxPilotPoints);
+    decoded.scores[1] = decoded.scores[0];
+    CHECK(LANMatchRank(decoded, 1) == 1 && LANMatchRank(decoded, 2) == 3);
+    CHECK(!LANMatchHasWinner(decoded) && LANMatchPilotPoints(decoded) == 250);
+    decoded.pilots = @[@"Solo"];
+    CHECK(LANMatchPilotPoints(decoded) == 0);
+    result.localIndex = result.pilots.count;
+    CHECK(!LANMatchResultDecode(LANMatchResultEncode(result), &decoded));
+    result.localIndex = 0;
+    result.scores[2].kills = 9;
+    CHECK(!LANMatchResultDecode(LANMatchResultEncode(result), &decoded));
+}
+
+static NSData *ProgressFixture(NSUInteger version, BOOL started, NSUInteger unlocked, NSUInteger completed,
+                               NSDictionary *missions, NSDictionary *arenas) {
+    return [NSPropertyListSerialization dataWithPropertyList:@{
+        @"version": @(version), @"started": @(started), @"unlocked": @(unlocked), @"completed": @(completed),
+        @"missionStars": missions, @"arenaScores": arenas
+    } format:NSPropertyListBinaryFormat_v1_0 options:0 error:nil];
+}
+
+static void CheckProgressSaves(void) {
+    NSArray<ObjectiveReadout *> *flight = FlightObjectiveReadouts(@"{#debrief.objectives}\nEscort\nOptional\nMissing state", @"123");
+    CHECK(flight.count == 4);
+    CHECK(flight[0].status == ObjectiveComplete && [flight[0].text isEqualToString:L10n(@"debrief.objectives")]);
+    CHECK(flight[1].status == ObjectiveFailed && flight[2].status == ObjectiveOpen && flight[3].status == ObjectiveOpen);
+    NSArray<ObjectiveReadout *> *debrief = MissionResultReadouts(@[@"+ {#debrief.objectives}", @"x Escort", @"- Optional"]);
+    CHECK(debrief.count == 3);
+    for (NSUInteger i = 0; i < debrief.count; i++)
+        CHECK(debrief[i].status == flight[i].status && [debrief[i].text isEqualToString:flight[i].text]);
+    CHECK(ProgressResultStars(debrief) == 1);
+    CHECK(ProgressResultStars(MissionResultReadouts(@[@"+ One", @"+ Two", @"+ Three", @"- Four"])) == 2);
+    CHECK(ProgressResultStars(MissionResultReadouts(@[@"+ One"])) == 3);
+
+    ProgressSave *phone = [ProgressSave fromData:ProgressFixture(1, YES, 4, 0,
+        @{@"first-watch": @3, @"convoy": @1}, @{@"outpost": @150})];
+    ProgressSave *mac = [ProgressSave fromData:ProgressFixture(1, NO, 3, 2,
+        @{@"first-watch": @2, @"convoy": @3, @"next-chapter": @2},
+        @{@"outpost": @100, @"asteroids": @300})];
+    ProgressSave *merged = [phone merging:mac];
+    CHECK(merged.started && merged.unlocked == 4 && merged.completed == 2);
+    CHECK(([merged.missionStars isEqual:@{@"first-watch": @3, @"convoy": @3, @"next-chapter": @2}]));
+    CHECK(([merged.arenaScores isEqual:@{@"outpost": @150, @"asteroids": @300}]));
+    CHECK([merged isEqual:[mac merging:phone]]);
+    CHECK([merged isEqual:[merged merging:phone]] && [merged isEqual:[merged merging:mac]]);
+    CHECK([merged isEqual:[ProgressSave fromData:merged.encodedData]]);
+    CHECK([merged isEqual:[[ProgressSave empty] merging:merged]]);
+    CHECK(![ProgressSave fromData:ProgressFixture(2, YES, 4, 0, @{}, @{})]);
+    CHECK(![ProgressSave fromData:[@"invalid" dataUsingEncoding:NSUTF8StringEncoding]]);
+    ProgressSave *invalidRatings = [ProgressSave fromData:ProgressFixture(1, NO, 1, 0,
+        @{@"mission": @4, @"fractional": @2.5}, @{@"arena": @301, @"negative": @(-10)})];
+    CHECK(invalidRatings && !invalidRatings.missionStars.count && !invalidRatings.arenaScores.count);
+
+    // Seed the old defaults in a volatile domain so the migration does not
+    // change anyone's campaign save when the headless checks run locally.
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSDictionary *previous = [defaults volatileDomainForName:NSArgumentDomain];
+    NSMutableDictionary *legacy = [previous mutableCopy] ?: [NSMutableDictionary dictionary];
+    [legacy addEntriesFromDictionary:@{
+        @"SFPilotProgress": [NSData data],
+        @"SFCampaignStarted": @YES,
+        @"SFMissionsUnlocked": @3,
+        @"SFCampaignCompletedCount": @0,
+        @"SFLegacyStarsCount": @2,
+        @"SFMissionStars": @{@"0": @3},
+        @"SFArenaScores": @{@"field": @200},
+    }];
+    [defaults setVolatileDomain:legacy forName:NSArgumentDomain];
+    ProgressSave *migrated = ProgressSnapshot();
+    [defaults setVolatileDomain:previous forName:NSArgumentDomain];
+    CHECK(migrated.started && migrated.unlocked == 3 && !migrated.completed);
+    CHECK(migrated.missionStars[CampaignLevelName(0)].unsignedIntegerValue == 3);
+    CHECK(migrated.missionStars[CampaignLevelName(1)].unsignedIntegerValue == 1);
+    CHECK(migrated.arenaScores[@"field"].unsignedIntegerValue == 200);
+}
+
 int main(void) {
     @autoreleasepool {
         CheckShipMove();
@@ -1157,6 +1246,8 @@ int main(void) {
         CheckPlayerState();
         CheckEventsAndCommands();
         CheckLANSettings();
+        CheckLANMatchResults();
+        CheckProgressSaves();
         CheckConsole();
         CheckCampaign();
         CheckDefinitions();

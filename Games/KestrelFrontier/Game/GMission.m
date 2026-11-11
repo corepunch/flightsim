@@ -492,11 +492,18 @@ static simd_float3 FormationSlot(LevelFormation f, int i) {
             if (![shown isEqualToString:c.sentStatus]) { c.sentStatus = shown; GCommand(c, SVC_STATUS, shown, nil, nil); }
         }
         if (leader && (leader.kills >= _level->rules.fragLimit || _missionTime >= _level->rules.matchSeconds)) {
-            NSMutableArray *results = [NSMutableArray array];
-            for (GClient *c in pilots) [results addObject:MissionText(@"combat.lan_result", @[c.name,
-                @(c.kills).stringValue, @(c.deaths).stringValue])];
+            LANMatchResult result = {0};
+            NSMutableArray<NSString *> *names = [NSMutableArray arrayWithCapacity:pilots.count];
+            for (GClient *pilot in pilots) {
+                result.scores[names.count] = (LANPilotScore){pilot.kills, pilot.deaths};
+                [names addObject:pilot.name];
+            }
+            result.pilots = names;
             _over = YES;
-            GCommand(nil, SVC_LEVEL_END, @"1", [results componentsJoinedByString:@"\n"], nil);
+            for (NSUInteger i = 0; i < pilots.count; i++) {
+                result.localIndex = i;
+                GCommand(pilots[i], SVC_MATCH_END, LANMatchResultEncode(result), nil, nil);
+            }
         }
         return;
     }

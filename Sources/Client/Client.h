@@ -83,6 +83,7 @@ typedef NS_ENUM(NSInteger, ClientState) {
 // All called on the thread that calls -readPackets.
 @property (nonatomic, copy) void (^gamestateHandler)(void);       // precache, then -begin
 @property (nonatomic, copy) void (^missionEndHandler)(BOOL success, NSArray<NSString *> *results);
+@property (nonatomic, copy) void (^matchEndHandler)(LANMatchResult result);
 @property (nonatomic, copy) void (^disconnectHandler)(NSString *reason, BOOL remote);
 
 - (void)connectTo:(NetAddress *)address transport:(id<NetTransport>)transport name:(NSString *)name;
