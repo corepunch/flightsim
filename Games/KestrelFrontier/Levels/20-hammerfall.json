@@ -1,7 +1,7 @@
 {
   "name": "20-hammerfall",
   "seed": 20,
-  "title": "Hammerfall",
+  "title": "{#level.title.20_hammerfall}",
   "loadout": { "torpedoes": 10 },
   "player": { "pos": [0, 100, 0], "facing": [0, 0, -1] },
   "entities": [

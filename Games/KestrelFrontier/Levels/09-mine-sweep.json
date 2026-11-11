@@ -1,7 +1,7 @@
 {
   "name": "09-mine-sweep",
   "seed": 9,
-  "title": "Mine Sweep",
+  "title": "{#level.title.09_mine_sweep}",
   "loadout": { "torpedoes": 2 },
   "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
   "entities": [

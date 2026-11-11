@@ -1,7 +1,7 @@
 {
   "name": "16-broken-chains",
   "seed": 16,
-  "title": "Broken Chains",
+  "title": "{#level.title.16_broken_chains}",
   "loadout": { "torpedoes": 0 },
   "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
   "entities": [

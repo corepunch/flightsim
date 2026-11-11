@@ -20,7 +20,7 @@
     {
       "level": "01-first-watch",
       "briefing": {
-        "location": "Kestrel System - Bastion picket line",
+        "location": "{#campaign.01_first_watch.location}",
         "stardate": "2716.104",
         "dialogue": {
           "room": "Bastion",
@@ -28,120 +28,120 @@
           "focus": "nav2",
           "lines": [
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Three buoys, one clean orbit. Your first patrol should be the most boring hour of your life."
+              "text": "{#campaign.01_first_watch.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "Traffic control found fresh scan marks on an outer buoy. Probably a scout checking the shipping lane. Follow the patrol route and report what you see."
+              "text": "{#campaign.01_first_watch.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Okafor",
-              "text": "Any idea where they last showed up? I'd like to know when to stop admiring the view."
+              "text": "{#campaign.01_first_watch.briefing.dialogue.3}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "Near NAV 2. Nothing larger on the scopes. Keep Two in sight and finish the route before you come home."
+              "text": "{#campaign.01_first_watch.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 2",
+              "speaker": "{#campaign.speaker.lancer_2}",
               "portrait": "Lancer2",
               "expression": "amused",
-              "text": "I'll fly your wing. You take us through the buoys, Lancer. I'll watch for company."
+              "text": "{#campaign.01_first_watch.briefing.dialogue.5}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Lancer2",
               "expression": "amused",
               "listenerExpression": "amused",
-              "text": "Good. Coffee's on me when we get back."
+              "text": "{#campaign.01_first_watch.briefing.dialogue.6}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "One more thing, Lancer. A quiet return counts as a good patrol. You have nothing to prove to the people watching from this room."
+              "text": "{#campaign.01_first_watch.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "Welcome aboard the Bastion, Lancer. You are not a cadet any more, so I will skip the speech.",
-          "Two days ago the Skarn Dominion crossed the Velan line. Since then our long-range scopes keep picking up small contacts at the edge of the system - scouts, counting our ships.",
-          "You will fly the outer patrol: three navigation buoys, in order. If you meet those scouts, nobody goes home to report on us. Then come back to the Bastion."
+          "{#campaign.01_first_watch.briefing.text.1}",
+          "{#campaign.01_first_watch.briefing.text.2}",
+          "{#campaign.01_first_watch.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "You launch from the *CNS Bastion*, our fleet carrier and your home for this campaign.",
+            "caption": "{#campaign.01_first_watch.tactical.1.caption}",
             "show": ["bastion", "start"],
             "focus": "bastion",
             "camera": { "center": [0, 1050], "span": 2200 },
-            "labels": [ { "text": "Hangar approach", "at": [-420, 1250] } ],
+            "labels": [ { "text": "{#campaign.01_first_watch.tactical.1.label.1}", "at": [-420, 1250] } ],
             "seconds": 4
           },
           {
-            "caption": "Fly the patrol route: *NAV 1*, *NAV 2* and *NAV 3*, in that order.",
+            "caption": "{#campaign.01_first_watch.tactical.2.caption}",
             "show": ["nav1", "nav2", "nav3"],
             "route": ["start", "nav1", "nav2", "nav3"],
             "seconds": 4
           },
           {
-            "caption": "Scouts were last seen near NAV 2. Expect three *Skarn Wasp* interceptors.",
+            "caption": "{#campaign.01_first_watch.tactical.3.caption}",
             "show": ["nav2", "scouts"],
             "focus": "nav2",
             "camera": { "center": [2050, -2900], "span": 2400 },
-            "labels": [ { "text": "Last contact", "at": [1650, -2300] } ],
+            "labels": [ { "text": "{#campaign.01_first_watch.tactical.3.label.1}", "at": [1650, -2300] } ],
             "seconds": 4
           },
           {
-            "caption": "When the route is clear, return to the Bastion's *approach point*.",
+            "caption": "{#campaign.01_first_watch.tactical.4.caption}",
             "show": ["home", "bastion"],
             "route": ["nav3", "home"]
           }
         ],
         "intel": [
-          "Hostile: 3x Skarn Wasp interceptor (light, fast, weak shields)",
-          "Friendly: CNS Bastion, fleet carrier",
-          "Wingman: Lancer 2",
-          "Craft: Executioner heavy fighter, twin lasers"
+          "{#campaign.01_first_watch.briefing.intel.1}",
+          "{#campaign.01_first_watch.briefing.intel.2}",
+          "{#campaign.01_first_watch.briefing.intel.3}",
+          "{#campaign.01_first_watch.briefing.intel.4}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "Three scouts down and the picket line holds. The Skarn now know we are watching.",
-        "lose": "We lost you on the patrol. Without that report, the Skarn will know exactly where the Bastion is.",
+        "win": "{#campaign.01_first_watch.debrief.win}",
+        "lose": "{#campaign.01_first_watch.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "The scout recorder contained our convoy's departure schedule. That's not something the Skarn could have guessed."
+            "text": "{#campaign.01_first_watch.debrief.dialogue.1}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Okafor",
-            "text": "Then warn the convoy before we chase the leak. Is Captain Sen still on Bastion's frequency?"
+            "text": "{#campaign.01_first_watch.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "The schedule is genuine. It does not tell us who passed it on. A stolen copy and a deliberate leak look the same from here."
+            "text": "{#campaign.01_first_watch.debrief.dialogue.3}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "Sen launches before the next watch. We can argue about the recorder when her convoy is safe."
+            "text": "{#campaign.01_first_watch.debrief.dialogue.4}"
           },
           {
-            "speaker": "Lancer 2",
+            "speaker": "{#campaign.speaker.lancer_2}",
             "portrait": "Lancer2",
-            "text": "Coffee can wait, Lead. I have enough fuel to go out again."
+            "text": "{#campaign.01_first_watch.debrief.dialogue.5}"
           }
         ]
       }
@@ -149,7 +149,7 @@
     {
       "level": "02-cargo-run",
       "briefing": {
-        "location": "Kestrel System - Halden shipping lane",
+        "location": "{#campaign.02_cargo_run.location}",
         "stardate": "2716.107",
         "dialogue": {
           "room": "Bastion",
@@ -157,109 +157,109 @@
           "focus": "mira",
           "lines": [
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
               "expression": "worried",
-              "text": "Sen, freighter Mira. We haul medical filters and ration packs. Someone just tried to cancel our escort using the convoy's private call sign.",
-              "channel": "FREIGHTER MIRA / UPLINK"
+              "text": "{#campaign.02_cargo_run.briefing.dialogue.1}",
+              "channel": "{#campaign.channel.freighter_mira_uplink}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "MiraCaptain",
               "listenerExpression": "worried",
-              "text": "Can Tobin match your speed, Captain? Two ships are easier to cover if I can see them both."
+              "text": "{#campaign.02_cargo_run.briefing.dialogue.2}"
             },
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "She's heavier than we are. I'll ease off and let her set the pace.",
-              "channel": "FREIGHTER MIRA / UPLINK"
+              "text": "{#campaign.02_cargo_run.briefing.dialogue.3}",
+              "channel": "{#campaign.channel.freighter_mira_uplink}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Escort both ships first. We can investigate the leak once they're alive to answer questions."
+              "text": "{#campaign.02_cargo_run.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Varn",
-              "text": "Understood. I'll keep Two with the freighters if the interceptors try to draw us off."
+              "text": "{#campaign.02_cargo_run.briefing.dialogue.5}"
             },
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "Lancer, my crew can hear you. Give us the turn before you make it. Most of them have never flown under fire."
+              "text": "{#campaign.02_cargo_run.briefing.dialogue.6}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "MiraCaptain",
-              "text": "Then I'll keep the calls short. Nobody has to guess which way we're going."
+              "text": "{#campaign.02_cargo_run.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "Mira and Tobin are carrying ration packs and medical filters from Halden. Escort them to the gate at the end of the lane.",
-          "The lane is long and open, and the Skarn know the schedule. Fly escort with Lancer 2. Both freighters must reach the gate.",
-          "Keep the bombers away from the cargo. Interceptors are a nuisance; Talons are the real threat."
+          "{#campaign.02_cargo_run.briefing.text.1}",
+          "{#campaign.02_cargo_run.briefing.text.2}",
+          "{#campaign.02_cargo_run.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "The freighters *Mira* and *Tobin* start here, heading for the gate.",
+            "caption": "{#campaign.02_cargo_run.tactical.1.caption}",
             "show": ["mira", "tobin"],
             "focus": "mira",
             "camera": { "center": [0, 150], "span": 1100 },
             "seconds": 4
           },
           {
-            "caption": "The *Halden jump gate*, four kilometres down the lane. Once they reach it, they are safe.",
+            "caption": "{#campaign.02_cargo_run.tactical.2.caption}",
             "show": ["gate"],
             "route": ["mira", "gate"],
-            "labels": [ { "text": "Safe beyond here", "at": [180, -3800] } ],
+            "labels": [ { "text": "{#campaign.02_cargo_run.tactical.2.label.1}", "at": [180, -3800] } ],
             "seconds": 5
           },
           {
-            "caption": "Expect *interceptors* from the flank first, then *Talon bombers* going for the freighters.",
+            "caption": "{#campaign.02_cargo_run.tactical.3.caption}",
             "show": ["wasps1", "talons"],
             "focus": "talons"
           }
         ],
         "intel": [
-          "Escort: 2x freighter (slow, unarmed)",
-          "Hostile: Skarn Wasp interceptors, Skarn Talon bombers",
-          "Wingman: Lancer 2"
+          "{#campaign.02_cargo_run.briefing.intel.1}",
+          "{#campaign.02_cargo_run.briefing.intel.2}",
+          "{#campaign.02_cargo_run.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "Both freighters made the jump. The fleet will eat this week.",
-        "lose": "We lost cargo the fleet cannot replace.",
+        "win": "{#campaign.02_cargo_run.debrief.win}",
+        "lose": "{#campaign.02_cargo_run.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Captain Elara Sen",
+            "speaker": "{#campaign.speaker.captain_elara_sen}",
             "portrait": "MiraCaptain",
             "expression": "relieved",
-            "text": "You saved my crew. At K-7 I heard a distress call nobody on the bridge wants to discuss. I'm coming to your briefing."
+            "text": "{#campaign.02_cargo_run.debrief.dialogue.1}"
           },
           {
-            "speaker": "Captain Elara Sen",
+            "speaker": "{#campaign.speaker.captain_elara_sen}",
             "portrait": "MiraCaptain",
-            "text": "Tobin made it too. Her captain asked me to say thank you. He is still trying to stop his hands shaking."
+            "text": "{#campaign.02_cargo_run.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "MiraCaptain",
-            "text": "Tell him mine did that after landing. We can compare notes when you dock."
+            "text": "{#campaign.02_cargo_run.debrief.dialogue.3}"
           },
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "Keep your original navigation log, Captain. We need the time of that call, not a cleaned-up report."
+            "text": "{#campaign.02_cargo_run.debrief.dialogue.4}"
           }
         ]
       }
@@ -267,7 +267,7 @@
     {
       "level": "03-relay-silence",
       "briefing": {
-        "location": "Kestrel System - Outer comm relay K-7",
+        "location": "{#campaign.03_relay_silence.location}",
         "stardate": "2716.111",
         "dialogue": {
           "room": "Bastion",
@@ -275,91 +275,91 @@
           "focus": "relay",
           "lines": [
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "K-7 sent a distress call before the convoy attack. The voice said they were ordered to shut down their own transmitter."
+              "text": "{#campaign.03_relay_silence.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "That order carried a valid Concord command seal. Someone inside our network silenced the relay."
+              "text": "{#campaign.03_relay_silence.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Varn",
-              "text": "How long does the relay need us? I don't want to chase the last bomber and leave them exposed."
+              "text": "{#campaign.03_relay_silence.briefing.dialogue.3}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Two and a half minutes. Kestrel takes the watch once the backlog is through. Then we find whose seal that was."
+              "text": "{#campaign.03_relay_silence.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Varn",
-              "text": "I'll stay on the relay. If anyone calls off the relief, I want to hear it from you."
+              "text": "{#campaign.03_relay_silence.briefing.dialogue.5}"
             },
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "I recognised the relay operator. She used to talk our junior navigator through his first approaches. She would not shut that transmitter down willingly."
+              "text": "{#campaign.03_relay_silence.briefing.dialogue.6}"
             },
             {
-              "speaker": "Lancer 2",
+              "speaker": "{#campaign.speaker.lancer_2}",
               "portrait": "Lancer2",
-              "text": "We'll keep the bombers off her, Captain. Lead, call the ones I miss."
+              "text": "{#campaign.03_relay_silence.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "speaker": "{#campaign.speaker.lt_commander_daro_okafor_intelligence}",
         "officer": "Okafor",
         "text": [
-          "Relay K-7 is how this system talks to the rest of the Concord. If it goes dark, the Bastion is alone out here.",
-          "We have intercepted Skarn traffic: they plan to hit K-7 with bombers in waves, trying to wear down whatever defends it.",
-          "Hold for two and a half minutes. By then the relay will have sent its backlog and the frigate Kestrel can take over the watch."
+          "{#campaign.03_relay_silence.briefing.text.1}",
+          "{#campaign.03_relay_silence.briefing.text.2}",
+          "{#campaign.03_relay_silence.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "Comm relay K-7. Its core is fragile - keep the bombers off it.",
+            "caption": "{#campaign.03_relay_silence.tactical.1.caption}",
             "show": ["relay"],
             "focus": "relay"
           },
           {
-            "caption": "Bomber waves will come from different directions. Watch the scanner.",
+            "caption": "{#campaign.03_relay_silence.tactical.2.caption}",
             "show": ["b1", "b2", "b3"],
             "focus": "relay"
           },
-          { "caption": "Survive 150 seconds with the relay intact.", "show": ["relay", "start"] }
+          { "caption": "{#campaign.03_relay_silence.tactical.3.caption}", "show": ["relay", "start"] }
         ],
-        "intel": ["Defend: Relay K-7 (one turret, fragile core)", "Hostile: 4 waves of Talon bombers with Wasp cover"]
+        "intel": ["{#campaign.03_relay_silence.briefing.intel.1}", "{#campaign.03_relay_silence.briefing.intel.2}"]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "K-7 finished its transmission. Fleet Command knows what is happening at Kestrel.",
-        "lose": "K-7 is gone. We are deaf and mute until it can be rebuilt.",
+        "win": "{#campaign.03_relay_silence.debrief.win}",
+        "lose": "{#campaign.03_relay_silence.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "We recovered a Concord command seal in the relay logs. I'll trace its owner."
+            "text": "{#campaign.03_relay_silence.debrief.dialogue.1}"
           },
           {
-            "speaker": "Captain Elara Sen",
+            "speaker": "{#campaign.speaker.captain_elara_sen}",
             "portrait": "MiraCaptain",
-            "text": "The operator is alive. She says her orders arrived before anyone knew the Skarn were coming."
+            "text": "{#campaign.03_relay_silence.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "That gives us a sequence: silence the relay, cancel the escort, attack the convoy. Three separate failures are beginning to look like a plan."
+            "text": "{#campaign.03_relay_silence.debrief.dialogue.3}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Okafor",
-            "text": "Keep her name out of the open report. Whoever sent the order can still read our traffic."
+            "text": "{#campaign.03_relay_silence.debrief.dialogue.4}"
           }
         ]
       }
@@ -367,7 +367,7 @@
     {
       "level": "04-corvette-hunt",
       "briefing": {
-        "location": "Kestrel System - Dust belt",
+        "location": "{#campaign.04_corvette_hunt.location}",
         "stardate": "2716.114",
         "dialogue": {
           "room": "Bastion",
@@ -375,95 +375,95 @@
           "focus": "corvette",
           "lines": [
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "The Vesk has been destroying survey drones, not ships. Every lost drone was mapping the Corvid jump corridor."
+              "text": "{#campaign.04_corvette_hunt.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Okafor",
-              "text": "Can you plot the gaps in the surveys? I'll start where the Vesk left off."
+              "text": "{#campaign.04_corvette_hunt.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "I've marked her patrol loop on the board. It crosses the last stretch the drones surveyed."
+              "text": "{#campaign.04_corvette_hunt.briefing.dialogue.3}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Find that corvette before it wipes the next survey. I'll have salvage crews listen for its recorder."
+              "text": "{#campaign.04_corvette_hunt.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "The seal is valid, but it could have been copied. The missing surveys are something we can act on without accusing half the fleet."
+              "text": "{#campaign.04_corvette_hunt.briefing.dialogue.5}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Okafor",
-              "text": "So I stop the Vesk, and your salvage crews get the next piece. No promises about what it will say."
+              "text": "{#campaign.04_corvette_hunt.briefing.dialogue.6}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "The scouts were spotting for something bigger. A Skarn corvette has been raiding our survey drones in the dust belt.",
-          "Corvettes are small for warships, but that one has turrets and a fighter screen. You are carrying torpedoes for this - use them on the hull, not on fighters.",
-          "Find the corvette and destroy it. Salvage will handle the recorder."
+          "{#campaign.04_corvette_hunt.briefing.text.1}",
+          "{#campaign.04_corvette_hunt.briefing.text.2}",
+          "{#campaign.04_corvette_hunt.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "The *Corvette Vesk* patrols a loop through the belt.",
+            "caption": "{#campaign.04_corvette_hunt.tactical.1.caption}",
             "show": ["corvette"],
             "route": ["corvette", "p2"],
             "focus": "corvette",
             "camera": { "center": [0, -3600], "span": 2800 },
-            "labels": [ { "text": "Dust belt", "at": [-1100, -3300] } ],
+            "labels": [ { "text": "{#campaign.04_corvette_hunt.tactical.1.label.1}", "at": [-1100, -3300] } ],
             "seconds": 4
           },
           {
-            "caption": "Four *Wasps* fly escort. Thin them out or they will chase you off your attack run.",
+            "caption": "{#campaign.04_corvette_hunt.tactical.2.caption}",
             "show": ["escorts"],
             "focus": "corvette",
             "camera": { "center": "corvette", "span": 1400 },
-            "labels": [ { "text": "Escort screen", "at": [-250, -2750] } ],
+            "labels": [ { "text": "{#campaign.04_corvette_hunt.tactical.2.label.1}", "at": [-250, -2750] } ],
             "seconds": 5
           },
           {
-            "caption": "*Torpedoes*: target the corvette (T) and fire (G) from inside *1.5 km*.",
+            "caption": "{#campaign.04_corvette_hunt.tactical.3.caption}",
             "show": ["corvette", "start"]
           }
         ],
         "intel": [
-          "Target: Skarn corvette (2 turrets)",
-          "Hostile: 4x Wasp escort",
-          "Torpedoes home on the selected target"
+          "{#campaign.04_corvette_hunt.briefing.intel.1}",
+          "{#campaign.04_corvette_hunt.briefing.intel.2}",
+          "{#campaign.04_corvette_hunt.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The corvette Vesk is debris. Survey drones are flying again.",
-        "lose": "The corvette got away, and it will be back.",
+        "win": "{#campaign.04_corvette_hunt.debrief.win}",
+        "lose": "{#campaign.04_corvette_hunt.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "The corvette's chart marks Tarn as a resupply point. It's in our territory."
+            "text": "{#campaign.04_corvette_hunt.debrief.dialogue.1}"
           },
           {
-            "speaker": "Chief Engineer Mae Orin",
+            "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
             "portrait": "Orin",
-            "text": "Salvage recovered a service recorder. The Tarn entry includes a crate number and a payment authorisation. I can read those without trusting the command seal."
+            "text": "{#campaign.04_corvette_hunt.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Orin",
-            "text": "Send the crate number to Sen. She knows that trade lane better than our charts do."
+            "text": "{#campaign.04_corvette_hunt.debrief.dialogue.3}"
           }
         ]
       }
@@ -471,7 +471,7 @@
     {
       "level": "05-customs",
       "briefing": {
-        "location": "Kestrel System - Tarn cargo yard",
+        "location": "{#campaign.05_customs.location}",
         "stardate": "2716.118",
         "dialogue": {
           "room": "Bastion",
@@ -479,96 +479,96 @@
           "focus": "containers",
           "lines": [
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "The Vesk's recorder lists a pickup at Tarn. The weapons on that manifest were paid for with Concord military credits."
+              "text": "{#campaign.05_customs.briefing.dialogue.1}"
             },
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "I saw those container codes on my own manifests. Somebody is using legitimate freighters to move contraband."
+              "text": "{#campaign.05_customs.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Varn",
-              "text": "If the first tag comes back dirty, do I take the shot or finish the sweep?"
+              "text": "{#campaign.05_customs.briefing.dialogue.3}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Finish the sweep. Keep your guns cold until you've read all six tags. There are civilian shipments out there."
+              "text": "{#campaign.05_customs.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "MiraCaptain",
-              "text": "Captain, stay on this frequency. If I find one of your codes, I'd like you to see the scan."
+              "text": "{#campaign.05_customs.briefing.dialogue.5}"
             },
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "My signature is on one of those old receipts. I signed for filters. If they changed the cargo after loading, I want to know where."
+              "text": "{#campaign.05_customs.briefing.dialogue.6}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "MiraCaptain",
-              "text": "We'll read the tags before we burn anything. Your crew deserves a record that survives this."
+              "text": "{#campaign.05_customs.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "speaker": "{#campaign.speaker.lt_commander_daro_okafor_intelligence}",
         "officer": "Okafor",
         "text": [
-          "Someone is supplying the Skarn from inside our own space. We traced it to the cargo yard at Tarn: containers left in orbit for pickup.",
-          "Fly within sixty metres of each container for two seconds to read its manifest. Keep your guns cold until all six scans are in.",
-          "Destroy the contraband. The corsairs who left it may come back to collect. If they do, they are fair game."
+          "{#campaign.05_customs.briefing.text.1}",
+          "{#campaign.05_customs.briefing.text.2}",
+          "{#campaign.05_customs.briefing.text.3}"
         ],
         "steps": [
-          { "caption": "Six cargo containers drift at the yard.", "show": ["containers"], "focus": "c1" },
+          { "caption": "{#campaign.05_customs.tactical.1.caption}", "show": ["containers"], "focus": "c1" },
           {
-            "caption": "Scan each one by flying within 60 m of it.",
+            "caption": "{#campaign.05_customs.tactical.2.caption}",
             "show": ["c1", "c2", "c3", "c4", "c5", "c6"],
             "route": ["start", "c1", "c2", "c3", "c4", "c5", "c6"]
           },
           {
-            "caption": "Expect a corsair cutter and its fighters once the scan is done.",
+            "caption": "{#campaign.05_customs.tactical.3.caption}",
             "show": ["cutter"],
             "focus": "cutter"
           }
         ],
         "intel": [
-          "Scan: 6 cargo containers",
-          "Hostile (probable): corsair cutter, Wasp fighters",
-          "Neutral: do not destroy clean cargo"
+          "{#campaign.05_customs.briefing.intel.1}",
+          "{#campaign.05_customs.briefing.intel.2}",
+          "{#campaign.05_customs.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "We cut a supply line, and the corsairs now know we are onto them.",
-        "lose": "We lost the chance to identify the shipment at Tarn.",
+        "win": "{#campaign.05_customs.debrief.win}",
+        "lose": "{#campaign.05_customs.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Captain Elara Sen",
+            "speaker": "{#campaign.speaker.captain_elara_sen}",
             "portrait": "MiraCaptain",
-            "text": "Look at the departure stamp. Ondine hauled this same lot out of Tarn last week. She'll have the original paperwork."
+            "text": "{#campaign.05_customs.debrief.dialogue.1}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "MiraCaptain",
-            "text": "Put me through to Ondine. Whoever changed those manifests will know what we just found."
+            "text": "{#campaign.05_customs.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "The tags say weapons. The payment trail says decommissioned equipment. We have evidence of false paperwork, not yet evidence of what was inside."
+            "text": "{#campaign.05_customs.debrief.dialogue.3}"
           },
           {
-            "speaker": "Captain Elara Sen",
+            "speaker": "{#campaign.speaker.captain_elara_sen}",
             "portrait": "MiraCaptain",
-            "text": "Ondine kept duplicate loading sheets. Ask for Juno Vale in engineering. She never lets a clerk throw an original away."
+            "text": "{#campaign.05_customs.debrief.dialogue.4}"
           }
         ]
       }
@@ -576,7 +576,7 @@
     {
       "level": "06-fuel-stop",
       "briefing": {
-        "location": "Kestrel System - Brenn fuel depot",
+        "location": "{#campaign.06_fuel_stop.location}",
         "stardate": "2716.121",
         "dialogue": {
           "room": "Bastion",
@@ -584,92 +584,92 @@
           "focus": "corla",
           "lines": [
             {
-              "speaker": "Chief Engineer Mae Orin",
+              "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
               "portrait": "Orin",
-              "text": "I've fuelled ships on this line for twenty years. Someone filed a divert order for Corla while she was already on the hose. I told the crew to ignore it."
+              "text": "{#campaign.06_fuel_stop.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Orin",
-              "text": "Can Corla pull off the hose if the depot takes a hit?"
+              "text": "{#campaign.06_fuel_stop.briefing.dialogue.2}"
             },
             {
-              "speaker": "Chief Engineer Mae Orin",
+              "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
               "portrait": "Orin",
-              "text": "She's stuck there until she's full. Give me two and a half minutes and I'll get her clear."
+              "text": "{#campaign.06_fuel_stop.briefing.dialogue.3}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Hold the depot. We need the tanker more than another victory tally."
+              "text": "{#campaign.06_fuel_stop.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 5",
+              "speaker": "{#campaign.speaker.lancer_5}",
               "portrait": "Lancer5",
-              "text": "I'll stay with Corla while she's on the hose. If the Skarn split up, I'll call which ones are coming for the tanker."
+              "text": "{#campaign.06_fuel_stop.briefing.dialogue.5}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Lancer5",
-              "text": "Call the first ship that turns toward Corla. I'll intercept so you can stay with the tanker."
+              "text": "{#campaign.06_fuel_stop.briefing.dialogue.6}"
             },
             {
-              "speaker": "Chief Engineer Mae Orin",
+              "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
               "portrait": "Orin",
-              "text": "I asked Corla to listen for Ondine while we fuelled. Her captain has been calling between pressure checks. Still nothing."
+              "text": "{#campaign.06_fuel_stop.briefing.dialogue.7}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Orin",
-              "text": "Finish the fuel transfer. If Ondine answers, I want enough in the tanks to reach her."
+              "text": "{#campaign.06_fuel_stop.briefing.dialogue.8}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "The tanker Corla is filling up at Brenn depot. It needs two and a half minutes on the hose, and it cannot move while it is docked.",
-          "The depot is a big, slow, explosive target. The Skarn will want both.",
-          "Keep them alive. If the depot goes up while the Corla is docked, we lose both."
+          "{#campaign.06_fuel_stop.briefing.text.1}",
+          "{#campaign.06_fuel_stop.briefing.text.2}",
+          "{#campaign.06_fuel_stop.briefing.text.3}"
         ],
         "steps": [
-          { "caption": "Brenn depot, a cluster of fuel spheres.", "show": ["depot"], "focus": "depot" },
-          { "caption": "Tanker Corla, docked at the depot's spine.", "show": ["corla"], "focus": "corla" },
+          { "caption": "{#campaign.06_fuel_stop.tactical.1.caption}", "show": ["depot"], "focus": "depot" },
+          { "caption": "{#campaign.06_fuel_stop.tactical.2.caption}", "show": ["corla"], "focus": "corla" },
           {
-            "caption": "Raiders come in from several sides. Hold for 150 seconds.",
+            "caption": "{#campaign.06_fuel_stop.tactical.3.caption}",
             "show": ["r1", "r2", "r3"],
             "focus": "depot"
           }
         ],
         "intel": [
-          "Defend: tanker Corla, Brenn fuel depot (2 turrets)",
-          "Hostile: mixed Wasp and Talon raids",
-          "Wingman: Lancer 5"
+          "{#campaign.06_fuel_stop.briefing.intel.1}",
+          "{#campaign.06_fuel_stop.briefing.intel.2}",
+          "{#campaign.06_fuel_stop.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The Corla is fuelled and on its way to the fleet.",
-        "lose": "Brenn depot burned. The fleet will be rationing fuel.",
+        "win": "{#campaign.06_fuel_stop.debrief.win}",
+        "lose": "{#campaign.06_fuel_stop.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Chief Engineer Mae Orin",
+            "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
             "portrait": "Orin",
-            "text": "Corla is off the hose. Her captain picked up the Ondine's distress burst on the way out. I'm sending you the bearing."
+            "text": "{#campaign.06_fuel_stop.debrief.dialogue.1}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "Mercy is diverting to the wreck. Lancer, refuel and launch again. This time we are looking for people."
+            "text": "{#campaign.06_fuel_stop.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Varn",
-            "text": "Tell Mercy we are coming. Leave the investigation off the rescue channel."
+            "text": "{#campaign.06_fuel_stop.debrief.dialogue.3}"
           }
         ]
       }
@@ -677,7 +677,7 @@
     {
       "level": "07-lifeline",
       "briefing": {
-        "location": "Kestrel System - Wreck of the transport Ondine",
+        "location": "{#campaign.07_lifeline.location}",
         "stardate": "2716.125",
         "dialogue": {
           "room": "Bastion",
@@ -685,109 +685,109 @@
           "focus": "pods",
           "lines": [
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
               "expression": "concerned",
-              "text": "The Ondine is gone. Mercy is tracking five beacons, and one pod is already reporting a pressure leak."
+              "text": "{#campaign.07_lifeline.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Imani",
-              "text": "Can I take the pods at speed, Doctor, or do I have to stop alongside each one?"
+              "text": "{#campaign.07_lifeline.briefing.dialogue.2}"
             },
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
-              "text": "You can stay moving. Pass within thirty metres and your tractor will pick them up."
+              "text": "{#campaign.07_lifeline.briefing.dialogue.3}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "Ondine carried the original Tarn manifest. The survivors can tell us what they loaded. Get them aboard Mercy first."
+              "text": "{#campaign.07_lifeline.briefing.dialogue.4}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Bring every pod home. Every one."
+              "text": "{#campaign.07_lifeline.briefing.dialogue.5}"
             },
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
-              "text": "Call each pickup. The people in those pods cannot see your tractor. Let them hear a human voice before the hull moves."
+              "text": "{#campaign.07_lifeline.briefing.dialogue.6}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Imani",
-              "text": "I'll tell them who has them, Doctor. Stay on the channel with me."
+              "text": "{#campaign.07_lifeline.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "The transport Ondine was ambushed an hour ago. Five escape pods cleared the wreck, and their beacons are calling for help - which tells the Skarn exactly where they are.",
-          "The hospital ship Mercy is on station. Fly to each pod and pick it up with your tractor - just get within thirty metres.",
-          "Skarn fighters are hunting the pods. Get there first."
+          "{#campaign.07_lifeline.briefing.text.1}",
+          "{#campaign.07_lifeline.briefing.text.2}",
+          "{#campaign.07_lifeline.briefing.text.3}"
         ],
         "steps": [
-          { "caption": "Hospital ship Mercy, waiting for the survivors.", "show": ["mercy"], "focus": "mercy" },
+          { "caption": "{#campaign.07_lifeline.tactical.1.caption}", "show": ["mercy"], "focus": "mercy" },
           {
-            "caption": "Five escape pods are scattered around the wreck site.",
+            "caption": "{#campaign.07_lifeline.tactical.2.caption}",
             "show": ["pods"],
             "focus": "pod3"
           },
           {
-            "caption": "Fly within 30 m of a pod to pick it up.",
+            "caption": "{#campaign.07_lifeline.tactical.3.caption}",
             "show": ["pod1", "pod2", "pod3", "pod4", "pod5"],
             "route": ["start", "pod1", "pod2", "pod3", "pod4", "pod5"]
           },
           {
-            "caption": "Later, bombers will go for the Mercy itself. Do not let her be hit.",
+            "caption": "{#campaign.07_lifeline.tactical.4.caption}",
             "show": ["bombers", "mercy"],
             "focus": "mercy"
           }
         ],
         "intel": [
-          "Rescue: 5 escape pods",
-          "Defend: hospital ship Mercy (unarmed)",
-          "Hostile: Wasp hunters, then Talon bombers"
+          "{#campaign.07_lifeline.briefing.intel.1}",
+          "{#campaign.07_lifeline.briefing.intel.2}",
+          "{#campaign.07_lifeline.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "All five escape pods are aboard the Mercy. Their survivors are safe.",
-        "lose": "We did not get everyone out.",
+        "win": "{#campaign.07_lifeline.debrief.win}",
+        "lose": "{#campaign.07_lifeline.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Juno Vale",
+            "speaker": "{#campaign.speaker.juno_vale}",
             "portrait": "Juno",
             "expression": "shaken",
-            "text": "When my pod went dark I started counting breaths. I was at sixty when you found me. I'm Juno. I kept a copy of the cargo log."
+            "text": "{#campaign.07_lifeline.debrief.dialogue.1}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Juno",
             "listenerExpression": "shaken",
-            "text": "I'm glad you kept counting, Juno. Give the log to Imani when you've had a chance to breathe."
+            "text": "{#campaign.07_lifeline.debrief.dialogue.2}"
           },
           {
-            "speaker": "Dr. Sera Imani",
+            "speaker": "{#campaign.speaker.dr_sera_imani}",
             "portrait": "Imani",
-            "text": "All five pods are aboard Mercy. Juno, you can hand over the log tomorrow. Tonight you are a patient."
+            "text": "{#campaign.07_lifeline.debrief.dialogue.3}"
           },
           {
-            "speaker": "Juno Vale",
+            "speaker": "{#campaign.speaker.juno_vale}",
             "portrait": "Juno",
-            "text": "There were other crew on the dock when we left Tarn. Their names are on the back of the sheet. Please keep that side too."
+            "text": "{#campaign.07_lifeline.debrief.dialogue.4}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Juno",
-            "text": "Both sides. We won't reduce your crew to a cargo number."
+            "text": "{#campaign.07_lifeline.debrief.dialogue.5}"
           }
         ]
       }
@@ -795,7 +795,7 @@
     {
       "level": "08-into-the-rocks",
       "briefing": {
-        "location": "Kestrel System - Corvid asteroid field",
+        "location": "{#campaign.08_into_the_rocks.location}",
         "stardate": "2716.130",
         "dialogue": {
           "room": "Bastion",
@@ -803,99 +803,99 @@
           "focus": "halcyon",
           "lines": [
             {
-              "speaker": "Juno Vale",
+              "speaker": "{#campaign.speaker.juno_vale}",
               "portrait": "Juno",
-              "text": "I was on the Ondine. Our cargo wasn't weapons. It was gate calibration equipment, marked for destruction. Somebody wanted it hidden."
+              "text": "{#campaign.08_into_the_rocks.briefing.dialogue.1}"
             },
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
-              "text": "Those calibrators can turn a jump gate into a resonant transmitter. The Corvid field is the ideal place to test one."
+              "text": "{#campaign.08_into_the_rocks.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Imani",
-              "text": "Once Halcyon reaches the survey point, how long is she sitting still?"
+              "text": "{#campaign.08_into_the_rocks.briefing.dialogue.3}"
             },
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
-              "text": "Forty seconds. The dish has to hold steady the whole time."
+              "text": "{#campaign.08_into_the_rocks.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Imani",
-              "text": "Tell the survey crew to keep their eyes on the instruments. I'll watch the rocks."
+              "text": "{#campaign.08_into_the_rocks.briefing.dialogue.5}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Escort the Halcyon. Let's see what the field is concealing."
+              "text": "{#campaign.08_into_the_rocks.briefing.dialogue.6}"
             },
             {
-              "speaker": "Juno Vale",
+              "speaker": "{#campaign.speaker.juno_vale}",
               "portrait": "Juno",
-              "text": "The log says I checked the seals. I did. I just never asked why scrap needed an armed escort."
+              "text": "{#campaign.08_into_the_rocks.briefing.dialogue.7}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Juno",
-              "text": "You kept the record that brought us here. Let us do the next part."
+              "text": "{#campaign.08_into_the_rocks.briefing.dialogue.8}"
             }
           ]
         },
-        "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "speaker": "{#campaign.speaker.lt_commander_daro_okafor_intelligence}",
         "officer": "Okafor",
         "text": [
-          "Skarn traffic keeps vanishing into the Corvid field. There is something in there, and the survey ship Halcyon is going to find out what.",
-          "The Halcyon is slow and blind among the rocks. Fly escort to the survey point, then cover her while she takes readings for forty seconds.",
-          "Corsairs like to hide in fields like this. Watch the rocks."
+          "{#campaign.08_into_the_rocks.briefing.text.1}",
+          "{#campaign.08_into_the_rocks.briefing.text.2}",
+          "{#campaign.08_into_the_rocks.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "Survey ship Halcyon, with its big sensor dish.",
+            "caption": "{#campaign.08_into_the_rocks.tactical.1.caption}",
             "show": ["halcyon"],
             "focus": "halcyon"
           },
           {
-            "caption": "Her path runs through the Corvid field to the survey point.",
+            "caption": "{#campaign.08_into_the_rocks.tactical.2.caption}",
             "show": ["survey"],
             "route": ["halcyon", "survey"]
           },
           {
-            "caption": "Corsair ambushers are likely waiting in the rocks near the middle.",
+            "caption": "{#campaign.08_into_the_rocks.tactical.3.caption}",
             "show": ["ambush1"],
             "focus": "survey"
           }
         ],
         "intel": [
-          "Escort: survey ship Halcyon",
-          "Hazard: dense asteroid field - collisions hurt",
-          "Hostile: corsair Wasp fighters"
+          "{#campaign.08_into_the_rocks.briefing.intel.1}",
+          "{#campaign.08_into_the_rocks.briefing.intel.2}",
+          "{#campaign.08_into_the_rocks.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The Halcyon's scan found a Skarn shipyard hidden behind the field. That changes everything.",
-        "lose": "The Halcyon is lost, and with her whatever is hiding in Corvid.",
+        "win": "{#campaign.08_into_the_rocks.debrief.win}",
+        "lose": "{#campaign.08_into_the_rocks.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Dr. Sera Imani",
+            "speaker": "{#campaign.speaker.dr_sera_imani}",
             "portrait": "Imani",
-            "text": "The survey found a shipyard. Its power emissions match the calibrators on Juno's manifest. We'll need a close pass to see what they're building."
+            "text": "{#campaign.08_into_the_rocks.debrief.dialogue.1}"
           },
           {
-            "speaker": "Juno Vale",
+            "speaker": "{#campaign.speaker.juno_vale}",
             "portrait": "Juno",
-            "text": "I can match the serials in the survey to my loading sheet. The equipment reached Corvid; it was never destroyed."
+            "text": "{#campaign.08_into_the_rocks.debrief.dialogue.2}"
           },
           {
-            "speaker": "Dr. Sera Imani",
+            "speaker": "{#campaign.speaker.dr_sera_imani}",
             "portrait": "Imani",
-            "text": "That establishes where it went. It does not yet tell us how the shipyard intends to use it. We need closer images."
+            "text": "{#campaign.08_into_the_rocks.debrief.dialogue.3}"
           }
         ]
       }
@@ -903,7 +903,7 @@
     {
       "level": "09-mine-sweep",
       "briefing": {
-        "location": "Kestrel System - Bastion's jump corridor",
+        "location": "{#campaign.09_mine_sweep.location}",
         "stardate": "2716.133",
         "dialogue": {
           "room": "Bastion",
@@ -911,77 +911,77 @@
           "focus": "mines",
           "lines": [
             {
-              "speaker": "Chief Engineer Mae Orin",
+              "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
               "portrait": "Orin",
-              "text": "The mine pattern matches an old Concord exclusion diagram. The Skarn shouldn't have access to our own deployment grid."
+              "text": "{#campaign.09_mine_sweep.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Orin",
-              "text": "Orin, give me the edge of the old grid. I'll start outside it and work inward."
+              "text": "{#campaign.09_mine_sweep.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "Someone has been feeding them our routes. Clear the corridor so Bastion can move before the next betrayal."
+              "text": "{#campaign.09_mine_sweep.briefing.dialogue.3}"
             },
             {
-              "speaker": "Lancer 2",
+              "speaker": "{#campaign.speaker.lancer_2}",
               "portrait": "Lancer2",
-              "text": "Those mines sit on the turn we practised yesterday. Someone has been studying our homework."
+              "text": "{#campaign.09_mine_sweep.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Lancer2",
-              "text": "Then stay outside the old lane, Two. We make a new one today."
+              "text": "{#campaign.09_mine_sweep.briefing.dialogue.5}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "Whoever leaked the convoy schedule knows where the Bastion sits, so she moves tonight. Each of three offices will receive a different proposed anchorage. Our real berth stays off those messages. A patrol will watch each decoy approach.",
-          "First the corridor: a Skarn minelayer has been sowing our way out.",
-          "Mines are proximity-fused. Shoot them from a distance and never fly through the field.",
-          "The minelayer is still working at the far end. Kill it before it lays any more, then clear every mine."
+          "{#campaign.09_mine_sweep.briefing.text.1}",
+          "{#campaign.09_mine_sweep.briefing.text.2}",
+          "{#campaign.09_mine_sweep.briefing.text.3}",
+          "{#campaign.09_mine_sweep.briefing.text.4}"
         ],
         "steps": [
-          { "caption": "The jump corridor, full of mines.", "show": ["mines"], "focus": "mines" },
-          { "caption": "The minelayer is at the far end, still laying.", "show": ["layer"], "focus": "layer" },
+          { "caption": "{#campaign.09_mine_sweep.tactical.1.caption}", "show": ["mines"], "focus": "mines" },
+          { "caption": "{#campaign.09_mine_sweep.tactical.2.caption}", "show": ["layer"], "focus": "layer" },
           {
-            "caption": "Mines explode when anything comes within 60 m. Shoot them from range.",
+            "caption": "{#campaign.09_mine_sweep.tactical.3.caption}",
             "show": ["mines", "start"]
           }
         ],
-        "intel": ["Target: Skarn minelayer (1 turret)", "Hazard: 16 proximity mines", "Hostile: 2x Wasp escort"]
+        "intel": ["{#campaign.09_mine_sweep.briefing.intel.1}", "{#campaign.09_mine_sweep.briefing.intel.2}", "{#campaign.09_mine_sweep.briefing.intel.3}"]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The corridor is clear and the Bastion moved to the new anchorage.",
-        "lose": "The corridor is still mined. The Bastion is trapped.",
+        "win": "{#campaign.09_mine_sweep.debrief.win}",
+        "lose": "{#campaign.09_mine_sweep.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "Every mine location matched a leaked Concord chart. I have narrowed the leak to the Directorate."
+            "text": "{#campaign.09_mine_sweep.debrief.dialogue.1}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "Then we give each office a different proposed anchorage: Directorate, Fleet Command and Tannhal Control. Bastion stays clear of all three until we see which reaches the Skarn."
+            "text": "{#campaign.09_mine_sweep.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Varn",
-            "text": "Keep the real anchorage off that test. I don't want the deck crews paying for our proof."
+            "text": "{#campaign.09_mine_sweep.debrief.dialogue.3}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "Agreed. Only this room gets the final move. If the Skarn come looking, they find your patrol before they find our hangars."
+            "text": "{#campaign.09_mine_sweep.debrief.dialogue.4}"
           }
         ]
       }
@@ -989,7 +989,7 @@
     {
       "level": "10-frigate-down",
       "briefing": {
-        "location": "Kestrel System - Varga's Reach",
+        "location": "{#campaign.10_frigate_down.location}",
         "stardate": "2716.136",
         "dialogue": {
           "room": "Bastion",
@@ -997,99 +997,99 @@
           "focus": "kestrel",
           "lines": [
             {
-              "speaker": "Captain Rhea Sol",
+              "speaker": "{#campaign.speaker.captain_rhea_sol}",
               "portrait": "Rhea",
               "expression": "strained",
-              "text": "Bastion, this is Sol. We followed an evacuation order that led straight into two corvettes. The order was signed by someone in the Directorate. I kept it.",
-              "channel": "CNS KESTREL / UPLINK"
+              "text": "{#campaign.10_frigate_down.briefing.dialogue.1}",
+              "channel": "{#campaign.channel.cns_kestrel_uplink}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Rhea",
               "listenerExpression": "strained",
-              "text": "Captain, can you turn Kestrel away from either of those corvettes?"
+              "text": "{#campaign.10_frigate_down.briefing.dialogue.2}"
             },
             {
-              "speaker": "Captain Rhea Sol",
+              "speaker": "{#campaign.speaker.captain_rhea_sol}",
               "portrait": "Rhea",
               "expression": "strained",
-              "text": "We're drifting. I still have guns, but I can't change which way they face.",
-              "channel": "CNS KESTREL / UPLINK"
+              "text": "{#campaign.10_frigate_down.briefing.dialogue.3}",
+              "channel": "{#campaign.channel.cns_kestrel_uplink}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Save the frigate. Her crew can tell us who issued the order."
+              "text": "{#campaign.10_frigate_down.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 3",
+              "speaker": "{#campaign.speaker.lancer_3}",
               "portrait": "Lancer3",
-              "text": "I'll help clear the fighters so you can get a clean torpedo run at those corvettes."
+              "text": "{#campaign.10_frigate_down.briefing.dialogue.5}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Lancer3",
-              "text": "Take any fighter that gets on my tail, Three. I'll make the turn back for the corvettes."
+              "text": "{#campaign.10_frigate_down.briefing.dialogue.6}"
             },
             {
-              "speaker": "Captain Rhea Sol",
+              "speaker": "{#campaign.speaker.captain_rhea_sol}",
               "portrait": "Rhea",
-              "text": "The order told us to leave the civilian transports behind. My navigator kept asking who would cover them. That is why we kept the original."
+              "text": "{#campaign.10_frigate_down.briefing.dialogue.7}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Rhea",
-              "text": "Keep your navigator with you. I want to hear that question asked in a room Hale can't leave."
+              "text": "{#campaign.10_frigate_down.briefing.dialogue.8}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "The frigate Kestrel is in trouble. A Directorate order sent her to clear an evacuation lane at Varga's Reach, and two Skarn corvettes were waiting at the far end. Her engines are gone.",
-          "The corvettes are working her over and she will not last long. Get there, get them off her, and keep the fighters away.",
-          "Lancer 2 and 3 are with you. Captain Sol still has the order that sent her there. Bring her home and we'll have it."
+          "{#campaign.10_frigate_down.briefing.text.1}",
+          "{#campaign.10_frigate_down.briefing.text.2}",
+          "{#campaign.10_frigate_down.briefing.text.3}"
         ],
         "steps": [
-          { "caption": "CNS Kestrel, already damaged and drifting.", "show": ["kestrel"], "focus": "kestrel" },
+          { "caption": "{#campaign.10_frigate_down.tactical.1.caption}", "show": ["kestrel"], "focus": "kestrel" },
           {
-            "caption": "Two Skarn corvettes are attacking her from the flanks.",
+            "caption": "{#campaign.10_frigate_down.tactical.2.caption}",
             "show": ["cv1", "cv2"],
             "focus": "kestrel"
           },
           {
-            "caption": "Destroy both corvettes, and keep the Kestrel alive.",
+            "caption": "{#campaign.10_frigate_down.tactical.3.caption}",
             "show": ["cv1", "cv2", "kestrel", "start"]
           }
         ],
         "intel": [
-          "Defend: CNS Kestrel, frigate (damaged, 4 turrets)",
-          "Targets: 2x Skarn corvette",
-          "Wingmen: Lancer 2, Lancer 3"
+          "{#campaign.10_frigate_down.briefing.intel.1}",
+          "{#campaign.10_frigate_down.briefing.intel.2}",
+          "{#campaign.10_frigate_down.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The Kestrel limped home. She will fly again.",
-        "lose": "The Kestrel is lost with most of her crew.",
+        "win": "{#campaign.10_frigate_down.debrief.win}",
+        "lose": "{#campaign.10_frigate_down.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Captain Rhea Sol",
+            "speaker": "{#campaign.speaker.captain_rhea_sol}",
             "portrait": "Rhea",
-            "text": "The order would have sent every Tannhal transport through that ambush. Here, take my copy. Its seal matches the one from K-7."
+            "text": "{#campaign.10_frigate_down.debrief.dialogue.1}"
           },
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "Sol has the signed order; Sen has the relay times. They agree. The same office cleared the corridor and sent ships into it."
+            "text": "{#campaign.10_frigate_down.debrief.dialogue.2}"
           },
           {
-            "speaker": "Captain Rhea Sol",
+            "speaker": "{#campaign.speaker.captain_rhea_sol}",
             "portrait": "Rhea",
-            "text": "Kestrel will need repairs. Once we have thrust again, Commander, call us. We owe your pilots more than a statement."
+            "text": "{#campaign.10_frigate_down.debrief.dialogue.3}"
           }
         ]
       }
@@ -1097,7 +1097,7 @@
     {
       "level": "11-ring-defense",
       "briefing": {
-        "location": "Kestrel Prime - Tannhal orbital ring",
+        "location": "{#campaign.11_ring_defense.location}",
         "stardate": "2716.140",
         "dialogue": {
           "room": "Bastion",
@@ -1105,91 +1105,91 @@
           "focus": "ring",
           "lines": [
             {
-              "speaker": "Juno Vale",
+              "speaker": "{#campaign.speaker.juno_vale}",
               "portrait": "Juno",
-              "text": "Tannhal was the delivery address on our cargo log. I checked the dock plans. There's a gate receiver under Berth Four marked as scrap, but it still has power."
+              "text": "{#campaign.11_ring_defense.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Juno",
-              "text": "Get the dockhands away from Berth Four. I'll keep the next wave outside the ring."
+              "text": "{#campaign.11_ring_defense.briefing.dialogue.2}"
             },
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
-              "text": "If a transmitter at Corvid can shake that receiver from here, it can do the same to Halden Gate. There are ships in that lane every minute."
+              "text": "{#campaign.11_ring_defense.briefing.dialogue.3}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Forty thousand people live there. Hold the ring. We will find the machine later."
+              "text": "{#campaign.11_ring_defense.briefing.dialogue.4}"
             },
             {
-              "speaker": "Juno Vale",
+              "speaker": "{#campaign.speaker.juno_vale}",
               "portrait": "Juno",
-              "text": "Imani cleared me for light duty. Berth Four is where I used to wait for Ondine. I know which stairwell gets the dockhands out."
+              "text": "{#campaign.11_ring_defense.briefing.dialogue.5}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Juno",
-              "text": "Take that stairwell yourself when they're clear. I didn't bring you back for one more shift under fire."
+              "text": "{#campaign.11_ring_defense.briefing.dialogue.6}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "Tannhal station is the biggest thing we own in this system: forty thousand people living on a ring.",
-          "A Skarn strike group is coming, in three waves: fighters to clear the way, then bombers, then a corvette with heavy bombers.",
-          "Lancer 2 and 3 are with you. Do not let them hit the ring."
+          "{#campaign.11_ring_defense.briefing.text.1}",
+          "{#campaign.11_ring_defense.briefing.text.2}",
+          "{#campaign.11_ring_defense.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "Tannhal station: a rotating ring with a central hub. Its own turrets will help.",
+            "caption": "{#campaign.11_ring_defense.tactical.1.caption}",
             "show": ["ring"],
             "focus": "ring"
           },
-          { "caption": "Wave one: interceptors to clear the way.", "show": ["w1"], "focus": "ring" },
-          { "caption": "Wave two: Talon bombers going for the station.", "show": ["w2"], "focus": "ring" },
+          { "caption": "{#campaign.11_ring_defense.tactical.2.caption}", "show": ["w1"], "focus": "ring" },
+          { "caption": "{#campaign.11_ring_defense.tactical.3.caption}", "show": ["w2"], "focus": "ring" },
           {
-            "caption": "Wave three: a corvette with more bombers. Kill it before it gets close.",
+            "caption": "{#campaign.11_ring_defense.tactical.4.caption}",
             "show": ["cv", "w3"],
             "focus": "cv"
           }
         ],
         "intel": [
-          "Defend: Tannhal orbital ring (6 turrets)",
-          "Hostile: 3 waves - Wasps, Talons, corvette + Talons",
-          "Wingmen: Lancer 2, Lancer 3"
+          "{#campaign.11_ring_defense.briefing.intel.1}",
+          "{#campaign.11_ring_defense.briefing.intel.2}",
+          "{#campaign.11_ring_defense.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "Tannhal holds. Forty thousand people are sleeping tonight because you held the line.",
-        "lose": "Tannhal was hit hard. The casualty count is still rising.",
+        "win": "{#campaign.11_ring_defense.debrief.win}",
+        "lose": "{#campaign.11_ring_defense.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Juno Vale",
+            "speaker": "{#campaign.speaker.juno_vale}",
             "portrait": "Juno",
-            "text": "The ring was built with a hidden receiver. Tannhal may have been the first target all along."
+            "text": "{#campaign.11_ring_defense.debrief.dialogue.1}"
           },
           {
-            "speaker": "Juno Vale",
+            "speaker": "{#campaign.speaker.juno_vale}",
             "portrait": "Juno",
-            "text": "The dockhands are clear. Orin has isolated the receiver; it cannot take power from the ring now."
+            "text": "{#campaign.11_ring_defense.debrief.dialogue.2}"
           },
           {
-            "speaker": "Dr. Sera Imani",
+            "speaker": "{#campaign.speaker.dr_sera_imani}",
             "portrait": "Imani",
-            "text": "The survey and this receiver fit the same design. Halden is still connected. We have to learn how the transmitter is armed."
+            "text": "{#campaign.11_ring_defense.debrief.dialogue.3}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Juno",
-            "text": "Juno, tell the dockhands they bought us that chance. We saw their work from out there."
+            "text": "{#campaign.11_ring_defense.debrief.dialogue.4}"
           }
         ]
       }
@@ -1197,7 +1197,7 @@
     {
       "level": "12-teeth-of-the-line",
       "briefing": {
-        "location": "Corvid Field - Skarn outer defences",
+        "location": "{#campaign.12_teeth_of_the_line.location}",
         "stardate": "2716.144",
         "dialogue": {
           "room": "Bastion",
@@ -1205,106 +1205,106 @@
           "focus": "platforms",
           "lines": [
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "We've traced the false orders to the Directorate Continuity Office. Its director, Soren Hale, claims this is a classified counter-Skarn operation."
+              "text": "{#campaign.12_teeth_of_the_line.briefing.dialogue.1}"
             },
             {
               "portrait": "Hale",
-              "speaker": "Director Soren Hale",
-              "text": "I authorised a listening post. The Skarn took it from us. Return to Bastion and hand over whatever Captain Sol gave you.",
-              "channel": "DIRECTORATE • SECURE LINK"
+              "speaker": "{#campaign.speaker.director_soren_hale}",
+              "text": "{#campaign.12_teeth_of_the_line.briefing.dialogue.2}",
+              "channel": "{#campaign.channel.directorate_secure_link}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Hale",
-              "text": "Captain Sol handed that order to me in person. It stays with me until I can put it in Commander Varn's hands."
+              "text": "{#campaign.12_teeth_of_the_line.briefing.dialogue.3}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Lancer, you're cleared to strike the platforms. Once those guns are down, we'll send you through for a close pass."
+              "text": "{#campaign.12_teeth_of_the_line.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "We kept copies of Sol's order on Mercy and Kestrel. Handing over one copy cannot make the others disappear."
+              "text": "{#campaign.12_teeth_of_the_line.briefing.dialogue.5}"
             },
             {
-              "speaker": "Director Soren Hale",
+              "speaker": "{#campaign.speaker.director_soren_hale}",
               "portrait": "Hale",
-              "channel": "DIRECTORATE • SECURE LINK",
-              "text": "You are a pilot, Lancer. You do not have the whole picture. There are people alive because I kept this operation quiet."
+              "channel": "{#campaign.channel.directorate_secure_link}",
+              "text": "{#campaign.12_teeth_of_the_line.briefing.dialogue.6}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Hale",
-              "text": "Then give us their names. The people we pulled out of Ondine had names too."
+              "text": "{#campaign.12_teeth_of_the_line.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "speaker": "{#campaign.speaker.lt_commander_daro_okafor_intelligence}",
         "officer": "Okafor",
         "text": [
-          "Before we can do anything about the shipyard, we have to get past its defences: three turret platforms covering the approach.",
-          "Each platform is armed all round. Their weak point is the reactor core in the central sphere - shoot the core and the platform dies.",
-          "A Skarn carrier, Dagger, lies behind them and launches Wasps; each flight we kill is replaced, twice. Use your torpedoes on the cores, and sink the carrier if you can reach it."
+          "{#campaign.12_teeth_of_the_line.briefing.text.1}",
+          "{#campaign.12_teeth_of_the_line.briefing.text.2}",
+          "{#campaign.12_teeth_of_the_line.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "Three Skarn defence platforms guard the approach to Corvid.",
+            "caption": "{#campaign.12_teeth_of_the_line.tactical.1.caption}",
             "show": ["plat1", "plat2", "plat3"],
             "focus": "plat2"
           },
           {
-            "caption": "Each one has six turrets and a reactor core in the middle.",
+            "caption": "{#campaign.12_teeth_of_the_line.tactical.2.caption}",
             "show": ["plat1"],
             "focus": "plat1",
             "schematic": "Core"
           },
           {
-            "caption": "*Carrier Dagger* sits behind the platforms and launches *Wasps* in flights of four.",
+            "caption": "{#campaign.12_teeth_of_the_line.tactical.3.caption}",
             "show": ["carrier"],
             "focus": "carrier",
             "camera": { "center": "carrier", "span": 2400 },
-            "labels": [ { "text": "Wasp launches", "at": [300, -4800] } ],
+            "labels": [ { "text": "{#campaign.12_teeth_of_the_line.tactical.3.label.1}", "at": [300, -4800] } ],
             "seconds": 5
           },
           {
-            "caption": "Each wiped-out flight is replaced twice over. Sinking the carrier ends the launches, but it is *optional*.",
+            "caption": "{#campaign.12_teeth_of_the_line.tactical.4.caption}",
             "show": ["carrier", "plat2"],
             "focus": "plat2",
             "seconds": 5
           }
         ],
         "intel": [
-          "Targets: 3x defence platform (5 turrets each, core)",
-          "Optional: Skarn Carrier Dagger (launches Wasp flights)",
-          "Hostile: Wasp flights, replaced twice when wiped out",
-          "Tip: torpedoes on the cores"
+          "{#campaign.12_teeth_of_the_line.briefing.intel.1}",
+          "{#campaign.12_teeth_of_the_line.briefing.intel.2}",
+          "{#campaign.12_teeth_of_the_line.briefing.intel.3}",
+          "{#campaign.12_teeth_of_the_line.briefing.intel.4}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The outer defences are down. The shipyard is exposed.",
-        "lose": "The platforms still hold the approach.",
+        "win": "{#campaign.12_teeth_of_the_line.debrief.win}",
+        "lose": "{#campaign.12_teeth_of_the_line.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "One platform was still transmitting when it broke up. The maintenance channel was shared by Hale's office and Admiral Korr's fleet."
+            "text": "{#campaign.12_teeth_of_the_line.debrief.dialogue.1}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "Fleet Command has the recording. Hale no longer gets to decide who hears this."
+            "text": "{#campaign.12_teeth_of_the_line.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "He called it a listening post. That maintenance link proves cooperation, but not the weapon. Bring back an image nobody can explain away."
+            "text": "{#campaign.12_teeth_of_the_line.debrief.dialogue.3}"
           }
         ]
       }
@@ -1312,7 +1312,7 @@
     {
       "level": "13-shipyard-recon",
       "briefing": {
-        "location": "Corvid Field - Skarn shipyard",
+        "location": "{#campaign.13_shipyard_recon.location}",
         "stardate": "2716.147",
         "dialogue": {
           "room": "Bastion",
@@ -1320,99 +1320,99 @@
           "focus": "yard",
           "lines": [
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
-              "text": "The emissions match an old gate experiment. Your pass should get us a look at the equipment under the hull. If you see a second ring around the chamber, bring me a clean image."
+              "text": "{#campaign.13_shipyard_recon.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Imani",
-              "text": "Do I have to slow down for a clean image? I don't fancy lining up a shot under those turrets."
+              "text": "{#campaign.13_shipyard_recon.briefing.dialogue.2}"
             },
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
-              "text": "Keep your speed up. The camera records automatically as you fly through the sensor points."
+              "text": "{#campaign.13_shipyard_recon.briefing.dialogue.3}"
             },
             {
-              "speaker": "Juno Vale",
+              "speaker": "{#campaign.speaker.juno_vale}",
               "portrait": "Juno",
-              "text": "I loaded one of those rings aboard Ondine. It took six of us just to get it off the lift. Find out where it ended up."
+              "text": "{#campaign.13_shipyard_recon.briefing.dialogue.4}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Three sensor points, then break away. Your camera will do the work. We need you back to tell us what you saw."
+              "text": "{#campaign.13_shipyard_recon.briefing.dialogue.5}"
             },
             {
-              "speaker": "Juno Vale",
+              "speaker": "{#campaign.speaker.juno_vale}",
               "portrait": "Juno",
-              "text": "The ring has six lifting brackets. One broke during loading. If you see an empty bracket, that is our shipment."
+              "text": "{#campaign.13_shipyard_recon.briefing.dialogue.6}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Juno",
-              "text": "I'll bring the whole pass home, not just the part that makes our case."
+              "text": "{#campaign.13_shipyard_recon.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "speaker": "{#campaign.speaker.lt_commander_daro_okafor_intelligence}",
         "officer": "Okafor",
         "text": [
-          "Now we look inside. The Halcyon's scan shows a shipyard frame with something big under construction.",
-          "Fly past three sensor points close to the yard. Your cockpit records automatically. Then get out to the exit point.",
-          "Do not try to destroy the yard. You are there to look, not to fight. Get the data home."
+          "{#campaign.13_shipyard_recon.briefing.text.1}",
+          "{#campaign.13_shipyard_recon.briefing.text.2}",
+          "{#campaign.13_shipyard_recon.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "The Skarn shipyard: a lattice frame around a nearly completed hull.",
+            "caption": "{#campaign.13_shipyard_recon.tactical.1.caption}",
             "show": ["yard"],
             "focus": "yard"
           },
           {
-            "caption": "Fly past sensor points A, B and C, close to the frame.",
+            "caption": "{#campaign.13_shipyard_recon.tactical.2.caption}",
             "show": ["scanA", "scanB", "scanC"],
             "route": ["start", "scanA", "scanB", "scanC"]
           },
           {
-            "caption": "Then leave through the exit point. Fighters will scramble once you are spotted.",
+            "caption": "{#campaign.13_shipyard_recon.tactical.3.caption}",
             "show": ["exit"],
             "route": ["scanC", "exit"]
           }
         ],
         "intel": [
-          "Recon: 3 sensor points at the yard",
-          "Hostile: yard turrets, scrambled Wasps and Talons",
-          "Do not stay - speed is your armour"
+          "{#campaign.13_shipyard_recon.briefing.intel.1}",
+          "{#campaign.13_shipyard_recon.briefing.intel.2}",
+          "{#campaign.13_shipyard_recon.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The recordings show a Skarn dreadnought nearly finished. Fleet Command has ordered the evacuation of the Kestrel colonies.",
-        "lose": "The recordings were lost with your fighter.",
+        "win": "{#campaign.13_shipyard_recon.debrief.win}",
+        "lose": "{#campaign.13_shipyard_recon.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Dr. Sera Imani",
+            "speaker": "{#campaign.speaker.dr_sera_imani}",
             "portrait": "Imani",
-            "text": "There it is. The second ring makes the gate itself part of the weapon. The markings on the hull read Hammer of Skarn. Send the image to Fleet Command."
+            "text": "{#campaign.13_shipyard_recon.debrief.dialogue.1}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Imani",
-            "text": "I'll send the raw pass too. If Fleet Command asks what that ring can do, they should hear it from you."
+            "text": "{#campaign.13_shipyard_recon.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lt. Cmdr Daro Okafor",
+            "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
             "portrait": "Okafor",
-            "text": "The damaged bracket matches Juno's log. Sol's order, the relay seal and the Corvid hardware are now one chain of evidence."
+            "text": "{#campaign.13_shipyard_recon.debrief.dialogue.3}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "Fleet Command has ordered an evacuation. We will send the evidence with the transports as well as over the network."
+            "text": "{#campaign.13_shipyard_recon.debrief.dialogue.4}"
           }
         ]
       }
@@ -1420,7 +1420,7 @@
     {
       "level": "14-exodus",
       "briefing": {
-        "location": "Kestrel Prime - Colony evacuation lane",
+        "location": "{#campaign.14_exodus.location}",
         "stardate": "2716.151",
         "dialogue": {
           "room": "Bastion",
@@ -1428,106 +1428,106 @@
           "focus": "aurora",
           "lines": [
             {
-              "speaker": "Captain Lusk",
+              "speaker": "{#campaign.speaker.captain_lusk}",
               "portrait": "Lusk",
               "expression": "worried",
-              "text": "Six thousand civilians are aboard the Aurora Star. They keep asking whether home will still be there when we return."
+              "text": "{#campaign.14_exodus.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Lusk",
               "listenerExpression": "worried",
-              "text": "Keep your passengers strapped in, Captain. If you have to turn, tell me first so I can cover the side you expose."
+              "text": "{#campaign.14_exodus.briefing.dialogue.2}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "They get an answer after they're safe. Escort them through the gate."
+              "text": "{#campaign.14_exodus.briefing.dialogue.3}"
             },
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "Mira is carrying refugees on the other side. I'll be waiting for them."
+              "text": "{#campaign.14_exodus.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 6",
+              "speaker": "{#campaign.speaker.lancer_6}",
               "portrait": "Lancer6",
-              "text": "I'll stay close to the Aurora Star. If the bombers get past you, I'll be there."
+              "text": "{#campaign.14_exodus.briefing.dialogue.5}"
             },
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "I have spare blankets, six medics and no spare berths. We will make the berths. Just get the liner across."
+              "text": "{#campaign.14_exodus.briefing.dialogue.6}"
             },
             {
-              "speaker": "Captain Lusk",
+              "speaker": "{#campaign.speaker.captain_lusk}",
               "portrait": "Lusk",
-              "text": "Lancer, I cannot promise my passengers their homes. I can promise them you answered when we called."
+              "text": "{#campaign.14_exodus.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "Fleet Command does not think we can stop the dreadnought here. The colonies are being evacuated.",
-          "The liner Aurora Star is carrying six thousand civilians to the Halden gate. She is big, slow and has no guns.",
-          "Every Skarn fighter in the system will be after her. Lancer 6 is with you, and if the liner is hit I will launch our ready flight to cover her. Get her to the gate."
+          "{#campaign.14_exodus.briefing.text.1}",
+          "{#campaign.14_exodus.briefing.text.2}",
+          "{#campaign.14_exodus.briefing.text.3}"
         ],
         "steps": [
-          { "caption": "Liner Aurora Star, full of evacuees.", "show": ["aurora"], "focus": "aurora" },
+          { "caption": "{#campaign.14_exodus.tactical.1.caption}", "show": ["aurora"], "focus": "aurora" },
           {
-            "caption": "Her route to the Halden gate, five kilometres away.",
+            "caption": "{#campaign.14_exodus.tactical.2.caption}",
             "show": ["gate"],
             "route": ["aurora", "gate"]
           },
           {
-            "caption": "Attacks from every side. *Bombers* have priority, and the last wave is flown by veterans.",
+            "caption": "{#campaign.14_exodus.tactical.3.caption}",
             "show": ["t1", "t2", "t3"],
             "focus": "aurora",
             "seconds": 5
           },
           {
-            "caption": "If the liner is hit, Bastion launches a *ready flight* of two Executioners to cover her.",
+            "caption": "{#campaign.14_exodus.tactical.4.caption}",
             "show": ["relief", "aurora"],
             "focus": "relief",
-            "labels": [ { "text": "Ready flight", "at": [150, 700] } ],
+            "labels": [ { "text": "{#campaign.14_exodus.tactical.4.label.1}", "at": [150, 700] } ],
             "seconds": 5
           }
         ],
         "intel": [
-          "Escort: liner Aurora Star (unarmed, 6000 aboard)",
-          "Hostile: repeated Wasp and Talon attacks",
-          "Reserve: ready flight launches if Aurora Star is hit",
-          "Wingman: Lancer 6"
+          "{#campaign.14_exodus.briefing.intel.1}",
+          "{#campaign.14_exodus.briefing.intel.2}",
+          "{#campaign.14_exodus.briefing.intel.3}",
+          "{#campaign.14_exodus.briefing.intel.4}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "Six thousand people are safe beyond the Halden gate.",
-        "lose": "The Aurora Star never reached the gate.",
+        "win": "{#campaign.14_exodus.debrief.win}",
+        "lose": "{#campaign.14_exodus.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Captain Lusk",
+            "speaker": "{#campaign.speaker.captain_lusk}",
             "portrait": "Lusk",
             "expression": "relieved",
-            "text": "Every passenger is across. When this is over, there will still be a colony to come home to because of you."
+            "text": "{#campaign.14_exodus.debrief.dialogue.1}"
           },
           {
-            "speaker": "Captain Elara Sen",
+            "speaker": "{#campaign.speaker.captain_elara_sen}",
             "portrait": "MiraCaptain",
-            "text": "The first families are aboard Mira. They brought seed trays and a door key from a house they may never see again."
+            "text": "{#campaign.14_exodus.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "MiraCaptain",
-            "text": "Keep the key safe, Captain. We'll do what we can about the house."
+            "text": "{#campaign.14_exodus.debrief.dialogue.3}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "The evidence copies are across too. Whatever happens to Bastion, this cannot be buried with us."
+            "text": "{#campaign.14_exodus.debrief.dialogue.4}"
           }
         ]
       }
@@ -1535,7 +1535,7 @@
     {
       "level": "15-destroyer-ambush",
       "briefing": {
-        "location": "Kestrel System - Bastion's new anchorage",
+        "location": "{#campaign.15_destroyer_ambush.location}",
         "stardate": "2716.155",
         "dialogue": {
           "room": "Bastion",
@@ -1543,113 +1543,113 @@
           "focus": "bastion",
           "lines": [
             {
-              "speaker": "Chief Engineer Mae Orin",
+              "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
               "portrait": "Orin",
-              "text": "Gorran is approaching the anchorage we sent only to the Directorate. Bastion is intercepting her short of the real berth. Director Hale, the other two offices received different coordinates."
+              "text": "{#campaign.15_destroyer_ambush.briefing.dialogue.1}"
             },
             {
               "portrait": "Hale",
-              "speaker": "Director Soren Hale",
+              "speaker": "{#campaign.speaker.director_soren_hale}",
               "expression": "defensive",
-              "text": "I traded a gate experiment for a ceasefire. Korr was supposed to demonstrate it at an empty gate. I gave her Corvid. I never gave her Halden.",
-              "channel": "DIRECTORATE • SECURE LINK"
+              "text": "{#campaign.15_destroyer_ambush.briefing.dialogue.2}",
+              "channel": "{#campaign.channel.directorate_secure_link}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
               "expression": "angry",
-              "text": "You gave her a fleet and a working weapon. Clear this channel. Lancer, stop that destroyer. I want her whole: her log will tell us what else Korr was given."
+              "text": "{#campaign.15_destroyer_ambush.briefing.dialogue.3}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Varn",
               "listenerExpression": "angry",
-              "text": "I'll take her engines and leave the hull to your marines. Hold the lighters until she's dead in space."
+              "text": "{#campaign.15_destroyer_ambush.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "We need Gorran's original orders. A confession tells us what Hale claims he intended. Her log tells us what Korr actually received."
+              "text": "{#campaign.15_destroyer_ambush.briefing.dialogue.5}"
             },
             {
-              "speaker": "Lancer 2",
+              "speaker": "{#campaign.speaker.lancer_2}",
               "portrait": "Lancer2",
-              "text": "I'll keep the fighters off the lighters. Lead, leave the marines a ship they can walk into."
+              "text": "{#campaign.15_destroyer_ambush.briefing.dialogue.6}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "Expect company. Gorran is approaching the decoy coordinates sent only to the Directorate. Bastion has moved to intercept her before she can search for our real anchorage.",
-          "A destroyer can trade broadsides with the Bastion, and its bombers will try to finish us. Knock out the three engine pods at the stern so she cannot close.",
-          "Once she is dead in space, two marine lighters launch from the Bastion to board her. Keep the turrets and fighters off them for the ten seconds they need alongside. Do not destroy the hull: her log is worth more to us than the kill."
+          "{#campaign.15_destroyer_ambush.briefing.text.1}",
+          "{#campaign.15_destroyer_ambush.briefing.text.2}",
+          "{#campaign.15_destroyer_ambush.briefing.text.3}"
         ],
         "steps": [
-          { "caption": "The Bastion, holding position.", "show": ["bastion"], "focus": "bastion" },
+          { "caption": "{#campaign.15_destroyer_ambush.tactical.1.caption}", "show": ["bastion"], "focus": "bastion" },
           {
-            "caption": "The destroyer jumps in here and closes on the Bastion.",
+            "caption": "{#campaign.15_destroyer_ambush.tactical.2.caption}",
             "show": ["destroyer"],
             "route": ["destroyer", "bastion"],
             "focus": "destroyer"
           },
           {
-            "caption": "Its three engine pods are at the stern. Destroy them to stop it.",
+            "caption": "{#campaign.15_destroyer_ambush.tactical.3.caption}",
             "show": ["destroyer"],
             "focus": "destroyer",
             "schematic": "Engine"
           },
           {
-            "caption": "Gorran's hull is blue; gun mounts are red. Silence guns threatening the marine lighters. Preserve the hull and its log for boarding.",
+            "caption": "{#campaign.15_destroyer_ambush.tactical.4.caption}",
             "focus": "destroyer",
             "schematic": "Turret"
           },
           {
-            "caption": "Then *marine lighters* launch from the Bastion and board her. Cover them, and leave the hull intact.",
+            "caption": "{#campaign.15_destroyer_ambush.tactical.5.caption}",
             "show": ["marines", "destroyer", "bastion"],
             "route": ["bastion", "destroyer"]
           },
           {
-            "caption": "Talon bombers will launch at the Bastion. Do not ignore them.",
+            "caption": "{#campaign.15_destroyer_ambush.tactical.6.caption}",
             "show": ["talons", "bastion"],
             "focus": "bastion"
           }
         ],
         "intel": [
-          "Target: Skarn destroyer (6 turrets, 3 engine pods)",
-          "Capture: Gorran, by marine boarding once her engines are dead",
-          "Do not destroy: Gorran's hull",
-          "Defend: CNS Bastion, marine lighters",
-          "Hostile: Talon bombers, Wasps",
-          "Wingmen: Lancer 2, Lancer 3"
+          "{#campaign.15_destroyer_ambush.briefing.intel.1}",
+          "{#campaign.15_destroyer_ambush.briefing.intel.2}",
+          "{#campaign.15_destroyer_ambush.briefing.intel.3}",
+          "{#campaign.15_destroyer_ambush.briefing.intel.4}",
+          "{#campaign.15_destroyer_ambush.briefing.intel.5}",
+          "{#campaign.15_destroyer_ambush.briefing.intel.6}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The destroyer Gorran flies Concord colours now. The Bastion took hits, but she is still the Bastion.",
-        "lose": "We lost the destroyer and everything in her log.",
+        "win": "{#campaign.15_destroyer_ambush.debrief.win}",
+        "lose": "{#campaign.15_destroyer_ambush.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Chief Engineer Mae Orin",
+            "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
             "portrait": "Orin",
-            "text": "Gorran won't move again, but her guns work and her log is ours. She was due to escort a prisoner barge for Korr. The barge manifest lists people missing from Ondine."
+            "text": "{#campaign.15_destroyer_ambush.debrief.dialogue.1}"
           },
           {
-            "speaker": "Juno Vale",
+            "speaker": "{#campaign.speaker.juno_vale}",
             "portrait": "Juno",
-            "text": "Those are our dock crew. I wrote their names on the back of the Ondine sheet. They were transferred to the Thal."
+            "text": "{#campaign.15_destroyer_ambush.debrief.dialogue.2}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "Send the prisoner route to Kestrel. Sol promised she would come when we called."
+            "text": "{#campaign.15_destroyer_ambush.debrief.dialogue.3}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Varn",
-            "text": "Tell her this is the call. And tell Juno we kept the other side of the sheet."
+            "text": "{#campaign.15_destroyer_ambush.debrief.dialogue.4}"
           }
         ]
       }
@@ -1657,7 +1657,7 @@
     {
       "level": "16-broken-chains",
       "briefing": {
-        "location": "Kestrel System - Skarn transfer point",
+        "location": "{#campaign.16_broken_chains.location}",
         "stardate": "2716.160",
         "dialogue": {
           "room": "Bastion",
@@ -1665,106 +1665,106 @@
           "focus": "barge",
           "lines": [
             {
-              "speaker": "Kesh Ardan",
+              "speaker": "{#campaign.speaker.kesh_ardan}",
               "portrait": "Kesh",
               "expression": "wary",
-              "text": "I'm Kesh Ardan. I serviced the Hammer's firing circuit. They locked me up with your missing crews when I refused to arm it. I can prove where Korr means to fire.",
-              "channel": "THAL • SERVICE TRANSMITTER"
+              "text": "{#campaign.16_broken_chains.briefing.dialogue.1}",
+              "channel": "{#campaign.channel.thal_service_transmitter}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Kesh",
               "listenerExpression": "wary",
-              "text": "Kesh, keep everyone away from the gun decks. I'll make my passes on the turrets."
+              "text": "{#campaign.16_broken_chains.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "Ardan spliced into a service transmitter. That's our window. Free the barge before they trace the call."
+              "text": "{#campaign.16_broken_chains.briefing.dialogue.3}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Varn",
-              "text": "Once the last gun goes quiet, who gets those people out?"
+              "text": "{#campaign.16_broken_chains.briefing.dialogue.4}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Kestrel will tow the barge. Take the turrets only, then cover it until she arrives."
+              "text": "{#campaign.16_broken_chains.briefing.dialogue.5}"
             },
             {
-              "speaker": "Juno Vale",
+              "speaker": "{#campaign.speaker.juno_vale}",
               "portrait": "Juno",
-              "text": "Kesh read the crew list over the service channel. He knows the people on my sheet. Please, Lancer, bring them back as people, not another recorder."
+              "text": "{#campaign.16_broken_chains.briefing.dialogue.6}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Juno",
-              "text": "You can meet them in the hangar. I will leave the barge in one piece."
+              "text": "{#campaign.16_broken_chains.briefing.dialogue.7}"
             }
           ]
         },
-        "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "speaker": "{#campaign.speaker.lt_commander_daro_okafor_intelligence}",
         "officer": "Okafor",
         "text": [
-          "We know where the prisoners from the Ondine and the Tarn yard are: on a Skarn prison barge waiting for transfer.",
-          "The barge has six turrets. Take out every turret - but do not destroy the barge itself, there are four hundred of our people inside.",
-          "When it is defenceless, the guards will surrender and the barge will be ours. Then the Skarn will come to destroy it rather than lose it. Hold until the Kestrel arrives to tow it."
+          "{#campaign.16_broken_chains.briefing.text.1}",
+          "{#campaign.16_broken_chains.briefing.text.2}",
+          "{#campaign.16_broken_chains.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "The prison barge: six turrets, four hundred prisoners. Do NOT destroy the hull.",
+            "caption": "{#campaign.16_broken_chains.tactical.1.caption}",
             "show": ["barge"],
             "focus": "barge"
           },
-          { "caption": "Destroy all six turrets.", "show": ["barge"], "focus": "barge", "schematic": "Turret" },
+          { "caption": "{#campaign.16_broken_chains.tactical.2.caption}", "show": ["barge"], "focus": "barge", "schematic": "Turret" },
           {
-            "caption": "Then defend the barge until CNS Kestrel arrives to tow it.",
+            "caption": "{#campaign.16_broken_chains.tactical.3.caption}",
             "show": ["kestrel", "barge"],
             "route": ["kestrel", "barge"]
           }
         ],
         "intel": [
-          "Disable: prison barge turrets (6)",
-          "Do not destroy: prison barge hull",
-          "Hostile: Wasp guards, then a Talon strike",
-          "Support: CNS Kestrel (arrives later)"
+          "{#campaign.16_broken_chains.briefing.intel.1}",
+          "{#campaign.16_broken_chains.briefing.intel.2}",
+          "{#campaign.16_broken_chains.briefing.intel.3}",
+          "{#campaign.16_broken_chains.briefing.intel.4}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "Four hundred of our people are free. Many of them are already asking to fly.",
-        "lose": "The barge was lost with everyone aboard.",
+        "win": "{#campaign.16_broken_chains.debrief.win}",
+        "lose": "{#campaign.16_broken_chains.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Kesh Ardan",
+            "speaker": "{#campaign.speaker.kesh_ardan}",
             "portrait": "Kesh",
-            "text": "Korr is aiming through Halden at the settlements beyond it. The Hammer takes its firing signal from a stealth courier. I know how to find the courier's wake."
+            "text": "{#campaign.16_broken_chains.debrief.dialogue.1}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Kesh",
-            "text": "Get some rest while you can, Kesh. When you're ready, show me what to look for in that wake."
+            "text": "{#campaign.16_broken_chains.debrief.dialogue.2}"
           },
           {
-            "speaker": "Captain Rhea Sol",
+            "speaker": "{#campaign.speaker.captain_rhea_sol}",
             "portrait": "Rhea",
-            "text": "Tow secured. Mercy has the injured; Kestrel has the rest. Juno is reading the names as they come aboard."
+            "text": "{#campaign.16_broken_chains.debrief.dialogue.3}"
           },
           {
-            "speaker": "Kesh Ardan",
+            "speaker": "{#campaign.speaker.kesh_ardan}",
             "portrait": "Kesh",
-            "text": "I built a machine that could reach beyond a gate. Hale called it a guarantee of peace. Korr asked where to put the trigger."
+            "text": "{#campaign.16_broken_chains.debrief.dialogue.4}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Kesh",
-            "text": "You can help us stop it now. Start with the trigger."
+            "text": "{#campaign.16_broken_chains.debrief.dialogue.5}"
           }
         ]
       }
@@ -1772,7 +1772,7 @@
     {
       "level": "17-ghost",
       "briefing": {
-        "location": "Kestrel System - Veil nebula fringe",
+        "location": "{#campaign.17_ghost.location}",
         "stardate": "2716.164",
         "dialogue": {
           "room": "Bastion",
@@ -1780,106 +1780,106 @@
           "focus": "b2",
           "lines": [
             {
-              "speaker": "Kesh Ardan",
+              "speaker": "{#campaign.speaker.kesh_ardan}",
               "portrait": "Kesh",
-              "text": "Hale gave Fleet Command the courier route after his arrest. It follows your buoys. Destroy it and the Hammer loses its remote firing signal. Korr will have to close on Halden and fire from the bridge."
+              "text": "{#campaign.17_ghost.briefing.dialogue.1}"
             },
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
-              "text": "Tune to the wake Kesh described. If you bring back a trace of the carrier signal, I can tell you when the Hammer starts to charge."
+              "text": "{#campaign.17_ghost.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Imani",
-              "text": "Give me the wake on my scope, Doctor. I'd rather fly one more buoy than shoot at a guess."
+              "text": "{#campaign.17_ghost.briefing.dialogue.3}"
             },
             {
-              "speaker": "Kesh Ardan",
+              "speaker": "{#campaign.speaker.kesh_ardan}",
               "portrait": "Kesh",
-              "text": "The wake shows where it has been, not where it is. Follow the buoys, then get close enough for your own scanner. Do not trust a distant contact."
+              "text": "{#campaign.17_ghost.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Kesh",
-              "text": "And if the Strix come after me?"
+              "text": "{#campaign.17_ghost.briefing.dialogue.5}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Stay on the courier. Eight minutes is all we have before this route is lost. The aces want you looking at them instead."
+              "text": "{#campaign.17_ghost.briefing.dialogue.6}"
             }
           ]
         },
-        "speaker": "Lt. Commander Daro Okafor, Intelligence",
+        "speaker": "{#campaign.speaker.lt_commander_daro_okafor_intelligence}",
         "officer": "Okafor",
         "text": [
-          "Fleet Command arrested Director Hale at Tannhal this morning, and he is talking. Korr triggers the Hammer through a relay aboard a stealth courier, and Hale's office cleared that courier's route past our buoys.",
-          "It does not show on scanners beyond seven hundred metres. Our sensor buoys have caught it passing, so it is somewhere in this volume.",
-          "Find it and kill it. It is fragile once you have found it, but its escorts are not, and in eight minutes it jumps out to join the Hammer."
+          "{#campaign.17_ghost.briefing.text.1}",
+          "{#campaign.17_ghost.briefing.text.2}",
+          "{#campaign.17_ghost.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "Sensor buoys mark where the courier was last seen.",
+            "caption": "{#campaign.17_ghost.tactical.1.caption}",
             "show": ["b1", "b2", "b3"],
             "focus": "b2"
           },
           {
-            "caption": "It follows a loop through this area. It only appears on scanners within 700 m.",
+            "caption": "{#campaign.17_ghost.tactical.2.caption}",
             "show": ["ghost"],
             "focus": "ghost"
           },
           {
-            "caption": "Four *veteran* Wasps guard it. Kill the courier first if you can.",
+            "caption": "{#campaign.17_ghost.tactical.3.caption}",
             "show": ["guards"],
             "focus": "ghost",
             "seconds": 4
           },
           {
-            "caption": "Hurt the escorts and an *ace pair*, Strix, comes in from the nebula.",
+            "caption": "{#campaign.17_ghost.tactical.4.caption}",
             "show": ["aces", "guards"],
             "focus": "aces",
             "camera": { "center": [0, -4000], "span": 3600 },
-            "labels": [ { "text": "Strix arrives", "at": [0, -4800] } ],
+            "labels": [ { "text": "{#campaign.17_ghost.tactical.4.label.1}", "at": [0, -4800] } ],
             "seconds": 5
           },
           {
-            "caption": "You have *eight minutes*. After that the courier jumps out to the Hammer and the mission fails.",
+            "caption": "{#campaign.17_ghost.tactical.5.caption}",
             "show": ["ghost"],
             "focus": "ghost",
             "seconds": 4
           }
         ],
         "intel": [
-          "Target: Skarn stealth courier, a prototype (radar range 700 m)",
-          "Hostile: 4x veteran Wasp",
-          "Hostile: Strix, 2x ace Wasp (called in when the escorts are attacked)",
-          "Time limit: 8 minutes",
-          "Visit the buoys to narrow the search"
+          "{#campaign.17_ghost.briefing.intel.1}",
+          "{#campaign.17_ghost.briefing.intel.2}",
+          "{#campaign.17_ghost.briefing.intel.3}",
+          "{#campaign.17_ghost.briefing.intel.4}",
+          "{#campaign.17_ghost.briefing.intel.5}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The courier is destroyed. Korr will have to bring the Hammer to Halden and fire from her own bridge.",
-        "lose": "The courier reached the Hammer. Korr can fire from wherever she likes.",
+        "win": "{#campaign.17_ghost.debrief.win}",
+        "lose": "{#campaign.17_ghost.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Dr. Sera Imani",
+            "speaker": "{#campaign.speaker.dr_sera_imani}",
             "portrait": "Imani",
-            "text": "I have the carrier trace. Korr has switched to local firing. The corsairs have been called to bring her a set of spare coils."
+            "text": "{#campaign.17_ghost.debrief.dialogue.1}"
           },
           {
-            "speaker": "Kesh Ardan",
+            "speaker": "{#campaign.speaker.kesh_ardan}",
             "portrait": "Kesh",
-            "text": "The remote circuit is silent. You did exactly what I asked. I wish that meant it was over."
+            "text": "{#campaign.17_ghost.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Kesh",
-            "text": "It means you told us the truth. Stay with Imani. We still need both of you."
+            "text": "{#campaign.17_ghost.debrief.dialogue.3}"
           }
         ]
       }
@@ -1887,7 +1887,7 @@
     {
       "level": "18-corsair-nest",
       "briefing": {
-        "location": "Corvid Field - Asteroid Hollow",
+        "location": "{#campaign.18_corsair_nest.location}",
         "stardate": "2716.169",
         "dialogue": {
           "room": "Bastion",
@@ -1895,96 +1895,96 @@
           "focus": "nest",
           "lines": [
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "I know where the corsairs keep those coils. My crew used to haul machine parts to Asteroid Hollow. Their stores are directly under the reactor dome."
+              "text": "{#campaign.18_corsair_nest.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "MiraCaptain",
-              "text": "Sen, I need the path your freighter took in. If the dome is under rock, that's where I'll look for a shot."
+              "text": "{#campaign.18_corsair_nest.briefing.dialogue.2}"
             },
             {
-              "speaker": "Lt. Cmdr Daro Okafor",
+              "speaker": "{#campaign.speaker.lt_cmdr_daro_okafor}",
               "portrait": "Okafor",
-              "text": "Cut off the coils and the Hammer gets one shot. We intend to make sure it misses."
+              "text": "{#campaign.18_corsair_nest.briefing.dialogue.3}"
             },
             {
-              "speaker": "Captain Elara Sen",
+              "speaker": "{#campaign.speaker.captain_elara_sen}",
               "portrait": "MiraCaptain",
-              "text": "I used to sign a delivery receipt and go home. This time I am telling you where to aim. I know what that means for the people in those stores."
+              "text": "{#campaign.18_corsair_nest.briefing.dialogue.4}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "The target is the armed base and its stockpile. No pursuit beyond the operation area."
+              "text": "{#campaign.18_corsair_nest.briefing.dialogue.5}"
             },
             {
-              "speaker": "Lancer 2",
+              "speaker": "{#campaign.speaker.lancer_2}",
               "portrait": "Lancer2",
-              "text": "One more depot, Lead. After this, I am collecting that coffee before anyone finds another emergency."
+              "text": "{#campaign.18_corsair_nest.briefing.dialogue.6}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "The corsairs who supplied the Skarn live in a hollowed-out asteroid deep in Corvid. With the shipyard nearby, it is their depot and their repair yard.",
-          "The base is protected by two shield generators on its surface. Bring them down, and then the reactor on top of the dome is exposed.",
-          "Cutters patrol the nest. Torpedoes are loaded."
+          "{#campaign.18_corsair_nest.briefing.text.1}",
+          "{#campaign.18_corsair_nest.briefing.text.2}",
+          "{#campaign.18_corsair_nest.briefing.text.3}"
         ],
         "steps": [
-          { "caption": "Asteroid Hollow, the corsair base.", "show": ["nest"], "focus": "nest" },
+          { "caption": "{#campaign.18_corsair_nest.tactical.1.caption}", "show": ["nest"], "focus": "nest" },
           {
-            "caption": "Two shield generators on the surface protect it. Destroy them first.",
+            "caption": "{#campaign.18_corsair_nest.tactical.2.caption}",
             "show": ["nest"],
             "focus": "nest",
             "schematic": "Shield"
           },
           {
-            "caption": "Then the reactor on top of the dome. It kills the whole base.",
+            "caption": "{#campaign.18_corsair_nest.tactical.3.caption}",
             "show": ["nest"],
             "focus": "nest",
             "schematic": "Core"
           },
           {
-            "caption": "Corsair cutters and fighters defend it.",
+            "caption": "{#campaign.18_corsair_nest.tactical.4.caption}",
             "show": ["cut1", "cut2", "raiders"],
             "focus": "nest"
           }
         ],
         "intel": [
-          "Target: corsair base (2 shield generators, reactor, 6 turrets)",
-          "Hostile: 2 corsair cutters, Wasps",
-          "Wingmen: Lancer 2, Lancer 3"
+          "{#campaign.18_corsair_nest.briefing.intel.1}",
+          "{#campaign.18_corsair_nest.briefing.intel.2}",
+          "{#campaign.18_corsair_nest.briefing.intel.3}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "Asteroid Hollow is rubble. The shipyard has lost its suppliers.",
-        "lose": "The corsairs are still in business.",
+        "win": "{#campaign.18_corsair_nest.debrief.win}",
+        "lose": "{#campaign.18_corsair_nest.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Captain Elara Sen",
+            "speaker": "{#campaign.speaker.captain_elara_sen}",
             "portrait": "MiraCaptain",
-            "text": "No cargo left Asteroid Hollow. Whatever Korr has aboard the Hammer is all she gets."
+            "text": "{#campaign.18_corsair_nest.debrief.dialogue.1}"
           },
           {
-            "speaker": "Chief Engineer Mae Orin",
+            "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
             "portrait": "Orin",
-            "text": "The replacement coils are gone. Korr can spend the charge she has, but she cannot reset the weapon here."
+            "text": "{#campaign.18_corsair_nest.debrief.dialogue.2}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Orin",
-            "text": "What about Bastion? Can you give us one more launch?"
+            "text": "{#campaign.18_corsair_nest.debrief.dialogue.3}"
           },
           {
-            "speaker": "Chief Engineer Mae Orin",
+            "speaker": "{#campaign.speaker.chief_engineer_mae_orin}",
             "portrait": "Orin",
-            "text": "One launch, one recovery. I am keeping the deck lit for you."
+            "text": "{#campaign.18_corsair_nest.debrief.dialogue.4}"
           }
         ]
       }
@@ -1992,7 +1992,7 @@
     {
       "level": "19-iron-wall",
       "briefing": {
-        "location": "Kestrel System - Bastion's anchorage",
+        "location": "{#campaign.19_iron_wall.location}",
         "stardate": "2716.173",
         "dialogue": {
           "room": "Bastion",
@@ -2000,144 +2000,144 @@
           "focus": "cruiser",
           "lines": [
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Fleet Command has Hale in custody. They want a copy of Sol's orders and Sen's manifest. They'll get both when we have a clear channel."
+              "text": "{#campaign.19_iron_wall.briefing.dialogue.1}"
             },
             {
               "portrait": "Korr",
-              "speaker": "Admiral Korr",
+              "speaker": "{#campaign.speaker.admiral_korr}",
               "expression": "resentful",
-              "text": "I buried two crews at Velan while your Directorate argued about whose map it was. By morning, Concord will have to negotiate for every gate it draws a line through.",
-              "channel": "SKARN • OPEN CHANNEL"
+              "text": "{#campaign.19_iron_wall.briefing.dialogue.2}",
+              "channel": "{#campaign.channel.skarn_open_channel}"
             },
             {
-              "speaker": "Captain Rhea Sol",
+              "speaker": "{#campaign.speaker.captain_rhea_sol}",
               "portrait": "Rhea",
-              "text": "The Kestrel is with you, Commander. We held together because Lancer kept saving people."
+              "text": "{#campaign.19_iron_wall.briefing.dialogue.3}"
             },
             {
-              "speaker": "Lancer 2",
+              "speaker": "{#campaign.speaker.lancer_2}",
               "portrait": "Lancer2",
               "expression": "amused",
               "listenerExpression": "amused",
-              "text": "You still owe me a coffee from that first patrol, Lead. I'll collect when we land."
+              "text": "{#campaign.19_iron_wall.briefing.dialogue.4}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Lancer2",
               "expression": "amused",
               "listenerExpression": "amused",
-              "text": "I'll pour it myself this time, Two. Stay close until we've taken those shields down."
+              "text": "{#campaign.19_iron_wall.briefing.dialogue.5}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "Break the Iron Vow. Keep our ships alive for one final assault."
+              "text": "{#campaign.19_iron_wall.briefing.dialogue.6}"
             },
             {
-              "speaker": "Captain Rhea Sol",
+              "speaker": "{#campaign.speaker.captain_rhea_sol}",
               "portrait": "Rhea",
-              "text": "Gorran has no thrust, so we have placed her where the approach narrows. Her guns will cover Bastion while Kestrel holds the other side."
+              "text": "{#campaign.19_iron_wall.briefing.dialogue.7}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Varn",
-              "text": "Commander, put the rescue crews on standby before we launch. Both sides of the line."
+              "text": "{#campaign.19_iron_wall.briefing.dialogue.8}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "The Skarn are tired of us. A heavy cruiser is coming straight for the Bastion, with escorts.",
-          "It is shielded by two generators on the dorsal hull. While they are up, our guns cannot hurt it. Take the generators down, then the cruiser.",
-          "The Kestrel will support you, and Gorran is anchored on our starboard flank. She has no engines, but Orin has her guns working. Fight near her when the bombers come. Everyone else who can fly is in the air."
+          "{#campaign.19_iron_wall.briefing.text.1}",
+          "{#campaign.19_iron_wall.briefing.text.2}",
+          "{#campaign.19_iron_wall.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "The Bastion and the frigate Kestrel hold the anchorage.",
+            "caption": "{#campaign.19_iron_wall.tactical.1.caption}",
             "show": ["bastion", "kestrel"],
             "focus": "bastion"
           },
           {
-            "caption": "A Skarn heavy cruiser is advancing on us.",
+            "caption": "{#campaign.19_iron_wall.tactical.2.caption}",
             "show": ["cruiser"],
             "route": ["cruiser", "bastion"],
             "focus": "cruiser"
           },
           {
-            "caption": "Two shield generators on its back. Destroy them, then the cruiser.",
+            "caption": "{#campaign.19_iron_wall.tactical.3.caption}",
             "show": ["cruiser"],
             "focus": "cruiser",
             "schematic": "Shield"
           },
           {
-            "caption": "*Gorran*, captured at the anchorage, cannot move, but her six turrets are ours.",
+            "caption": "{#campaign.19_iron_wall.tactical.4.caption}",
             "show": ["gorran", "bastion"],
             "focus": "gorran"
           },
           {
-            "caption": "Bombers will try to slip past while you are busy. More launch when the shields fall.",
+            "caption": "{#campaign.19_iron_wall.tactical.5.caption}",
             "show": ["talons", "talons2"],
             "focus": "bastion"
           },
           {
-            "caption": "Hit the cruiser and the *Strix* aces from the Veil will come for Lancer flight.",
+            "caption": "{#campaign.19_iron_wall.tactical.6.caption}",
             "show": ["strix", "cruiser"],
             "focus": "cruiser"
           }
         ],
         "intel": [
-          "Target: Skarn heavy cruiser (8 turrets, 2 shield generators)",
-          "Defend: CNS Bastion",
-          "Support: CNS Kestrel, captured destroyer Gorran (immobile), Lancer 2, Lancer 3",
-          "Hostile: Strix, 2x ace Wasp (when the cruiser is attacked)"
+          "{#campaign.19_iron_wall.briefing.intel.1}",
+          "{#campaign.19_iron_wall.briefing.intel.2}",
+          "{#campaign.19_iron_wall.briefing.intel.3}",
+          "{#campaign.19_iron_wall.briefing.intel.4}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The Iron Vow broke on the Bastion's defences. One ship is left: the dreadnought.",
-        "lose": "The cruiser reached the Bastion.",
+        "win": "{#campaign.19_iron_wall.debrief.win}",
+        "lose": "{#campaign.19_iron_wall.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
             "expression": "sympathetic",
             "listenerExpression": "grieving",
-            "text": "Search and rescue found Two's fighter. He never got out. I'm sorry, Lancer."
+            "text": "{#campaign.19_iron_wall.debrief.dialogue.1}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Varn",
             "expression": "grieving",
             "listenerExpression": "sympathetic",
-            "text": "His mug's still next to mine. I told him I'd bring the coffee this time."
+            "text": "{#campaign.19_iron_wall.debrief.dialogue.2}"
           },
           {
-            "speaker": "Captain Rhea Sol",
+            "speaker": "{#campaign.speaker.captain_rhea_sol}",
             "portrait": "Rhea",
             "listenerExpression": "grieving",
-            "text": "The Iron Vow is broken. The fleet is standing by for your attack on the Hammer."
+            "text": "{#campaign.19_iron_wall.debrief.dialogue.3}"
           },
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
-            "text": "You do not have to answer me yet. Orin has the next fighter ready; take the time you need to reach it."
+            "text": "{#campaign.19_iron_wall.debrief.dialogue.4}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Varn",
-            "text": "Leave his mug where it is. I need something to come back to."
+            "text": "{#campaign.19_iron_wall.debrief.dialogue.5}"
           },
           {
-            "speaker": "Captain Rhea Sol",
+            "speaker": "{#campaign.speaker.captain_rhea_sol}",
             "portrait": "Rhea",
-            "text": "Three is assembling the relief flight. You will not make the last approach alone."
+            "text": "{#campaign.19_iron_wall.debrief.dialogue.6}"
           }
         ]
       }
@@ -2145,7 +2145,7 @@
     {
       "level": "20-hammerfall",
       "briefing": {
-        "location": "Corvid Field - Shipyard approach",
+        "location": "{#campaign.20_hammerfall.location}",
         "stardate": "2716.180",
         "dialogue": {
           "room": "Bastion",
@@ -2153,149 +2153,149 @@
           "focus": "dread",
           "lines": [
             {
-              "speaker": "Dr. Sera Imani",
+              "speaker": "{#campaign.speaker.dr_sera_imani}",
               "portrait": "Imani",
               "expression": "concerned",
-              "text": "The Hammer is charging. Its shields cover the reactor trench. Take down the generators, kill its thrust and go straight for the core."
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.1}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Kesh",
-              "text": "Kesh, will killing the engines buy us time, or can Korr fire from a dead stop?"
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.2}"
             },
             {
-              "speaker": "Kesh Ardan",
+              "speaker": "{#campaign.speaker.kesh_ardan}",
               "portrait": "Kesh",
-              "text": "She can fire from a dead stop. I designed that circuit. Hit the core in the trench and the charge dies. I'll be on this channel."
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.3}"
             },
             {
               "portrait": "Korr",
-              "speaker": "Admiral Korr",
-              "text": "Open channel to Bastion. Every ship that turns away now gets passage. The gate stays with me.",
-              "channel": "SKARN • OPEN CHANNEL"
+              "speaker": "{#campaign.speaker.admiral_korr}",
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.4}",
+              "channel": "{#campaign.channel.skarn_open_channel}"
             },
             {
-              "speaker": "Commander Ilse Varn",
+              "speaker": "{#campaign.speaker.commander_ilse_varn}",
               "portrait": "Varn",
-              "text": "This began with three navigation buoys. It ends with every crew we've brought home fighting together. Lancer, bring down the Hammer."
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.5}"
             },
             {
-              "speaker": "Lancer 4",
+              "speaker": "{#campaign.speaker.lancer_4}",
               "portrait": "Lancer4",
-              "text": "Three and Six are with me. We'll clear the approach. Bring the rest of us home, Lead."
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.6}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Lancer4",
-              "text": "Four, keep Three and Six clear once I reach the trench. If I get one clean pass, that's enough."
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.7}"
             },
             {
-              "speaker": "Juno Vale",
+              "speaker": "{#campaign.speaker.juno_vale}",
               "portrait": "Juno",
-              "text": "Berth Four is clear, Lancer. The people you brought back are helping Orin unload the wounded. There is room for you when you land."
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.8}"
             },
             {
-              "speaker": "Lancer 1",
+              "speaker": "{#campaign.speaker.lancer_1}",
               "portrait": "Lancer1",
               "listener": "Juno",
-              "text": "Keep that room. All of you. That is what this pass is for."
+              "text": "{#campaign.20_hammerfall.briefing.dialogue.9}"
             }
           ]
         },
-        "speaker": "Commander Ilse Varn, CO, CNS Bastion",
+        "speaker": "{#campaign.speaker.commander_ilse_varn_co_cns_bastion}",
         "officer": "Varn",
         "text": [
-          "The dreadnought is advancing on Bastion. Our line stands between Korr and Halden Gate. Hold the carrier and destroy the Hammer.",
-          "It is nine hundred metres of armour. Four shield generators protect it. Then its four engines: dead in space, it can never reach a firing line through Halden. Then the reactor in the dorsal trench, which kills the charge.",
-          "This is everything we have. Lancer, bring it down."
+          "{#campaign.20_hammerfall.briefing.text.1}",
+          "{#campaign.20_hammerfall.briefing.text.2}",
+          "{#campaign.20_hammerfall.briefing.text.3}"
         ],
         "steps": [
           {
-            "caption": "The Skarn dreadnought, nine hundred metres long, advancing on the Bastion.",
+            "caption": "{#campaign.20_hammerfall.tactical.1.caption}",
             "show": ["dread"],
             "route": ["dread", "bastion"],
             "focus": "dread"
           },
           {
-            "caption": "Step one: four shield generators on the dorsal superstructure.",
+            "caption": "{#campaign.20_hammerfall.tactical.2.caption}",
             "show": ["dread"],
             "focus": "dread",
             "schematic": "Shield"
           },
           {
-            "caption": "Step two: its four engines at the stern.",
+            "caption": "{#campaign.20_hammerfall.tactical.3.caption}",
             "show": ["dread"],
             "focus": "dread",
             "schematic": "Engine"
           },
           {
-            "caption": "Step three: the reactor in the dorsal trench forward of the tower.",
+            "caption": "{#campaign.20_hammerfall.tactical.4.caption}",
             "show": ["dread"],
             "focus": "dread",
             "schematic": "Core"
           },
           {
-            "caption": "Two corvettes and its fighters screen it. The Bastion and Kestrel will hold back the bombers.",
+            "caption": "{#campaign.20_hammerfall.tactical.5.caption}",
             "show": ["cv1", "cv2", "bastion", "kestrel"],
             "focus": "bastion"
           }
         ],
         "intel": [
-          "Target: Skarn dreadnought (22 turrets, 4 shield gens, 4 engines, reactor)",
-          "Hostile: 2 corvettes, many Wasps and Talons",
-          "Hostile: Strix, 4x ace Wasp guarding the Hammer (when it is attacked)",
-          "Support: CNS Bastion, CNS Kestrel, Lancers 3, 4 and 6"
+          "{#campaign.20_hammerfall.briefing.intel.1}",
+          "{#campaign.20_hammerfall.briefing.intel.2}",
+          "{#campaign.20_hammerfall.briefing.intel.3}",
+          "{#campaign.20_hammerfall.briefing.intel.4}"
         ]
       },
       "debrief": {
         "room": "Hangar",
-        "win": "The Hammer of Skarn broke up before it could fire. Halden Gate is still open.",
-        "lose": "The assault failed. The Hammer still stands between the fleet and Halden Gate.",
+        "win": "{#campaign.20_hammerfall.debrief.win}",
+        "lose": "{#campaign.20_hammerfall.debrief.lose}",
         "dialogue": [
           {
-            "speaker": "Commander Ilse Varn",
+            "speaker": "{#campaign.speaker.commander_ilse_varn}",
             "portrait": "Varn",
             "expression": "relieved",
-            "text": "Halden reports a stable gate. The first ship home is Mercy. They want to know whether they can bring our people through."
+            "text": "{#campaign.20_hammerfall.debrief.dialogue.1}"
           },
           {
             "portrait": "Juno",
-            "speaker": "Juno Vale",
+            "speaker": "{#campaign.speaker.juno_vale}",
             "expression": "wistful",
-            "text": "Tell them Berth Four is open. We cut the receiver out of the deck. We're putting a plaque where it used to be. I left room for Two's rook beside his name."
+            "text": "{#campaign.20_hammerfall.debrief.dialogue.2}"
           },
           {
-            "speaker": "Captain Elara Sen",
+            "speaker": "{#campaign.speaker.captain_elara_sen}",
             "portrait": "MiraCaptain",
             "listenerExpression": "wistful",
             "expression": "relieved",
-            "text": "Mira to Lancer. I'm bringing the first families home. Cargo manifest says blankets, coffee and a seat for you, if you ever want it."
+            "text": "{#campaign.20_hammerfall.debrief.dialogue.3}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "MiraCaptain",
             "expression": "wistful",
             "listenerExpression": "relieved",
-            "text": "Save me that seat, Captain. I'll bring Two's mug."
+            "text": "{#campaign.20_hammerfall.debrief.dialogue.4}"
           },
           {
-            "speaker": "Kesh Ardan",
+            "speaker": "{#campaign.speaker.kesh_ardan}",
             "portrait": "Kesh",
-            "text": "The charge is gone. I have checked it three times. There is no second signal waiting behind it."
+            "text": "{#campaign.20_hammerfall.debrief.dialogue.5}"
           },
           {
-            "speaker": "Dr. Sera Imani",
+            "speaker": "{#campaign.speaker.dr_sera_imani}",
             "portrait": "Imani",
-            "text": "Mercy has your landing clearance, Lancer. This time nobody needs you to turn straight around."
+            "text": "{#campaign.20_hammerfall.debrief.dialogue.6}"
           },
           {
-            "speaker": "Lancer 1",
+            "speaker": "{#campaign.speaker.lancer_1}",
             "portrait": "Lancer1",
             "listener": "Imani",
-            "text": "Then I'm coming home. Leave the channel open a little longer."
+            "text": "{#campaign.20_hammerfall.debrief.dialogue.7}"
           }
         ]
       }

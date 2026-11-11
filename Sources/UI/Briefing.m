@@ -622,7 +622,7 @@ static SKShapeNode *ClosedShape(const CGPoint *points, size_t count) {
         [node addChild:dot];
         SKLabelNode *text = Text(11, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
         text.fontName = UIInterfaceBoldFont;
-        text.text = L10nExpand(label.text).uppercaseString;
+        text.text = label.text.uppercaseString;
         text.position = CGPointMake(8, 5);
         [node addChild:text];
         [_noteLayer addChild:node];

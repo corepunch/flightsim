@@ -1,7 +1,7 @@
 {
   "name": "08-into-the-rocks",
   "seed": 8,
-  "title": "Into the Rocks",
+  "title": "{#level.title.08_into_the_rocks}",
   "loadout": { "torpedoes": 0 },
   "player": { "pos": [0, 60, 300], "facing": [0, 0, -1] },
   "entities": [

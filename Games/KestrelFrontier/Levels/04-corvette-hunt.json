@@ -1,7 +1,7 @@
 {
   "name": "04-corvette-hunt",
   "seed": 4,
-  "title": "Corvette Hunt",
+  "title": "{#level.title.04_corvette_hunt}",
   "loadout": { "torpedoes": 4 },
   "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
   "entities": [

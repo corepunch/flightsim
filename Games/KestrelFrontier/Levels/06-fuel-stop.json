@@ -1,7 +1,7 @@
 {
   "name": "06-fuel-stop",
   "seed": 6,
-  "title": "Fuel Stop",
+  "title": "{#level.title.06_fuel_stop}",
   "loadout": { "torpedoes": 0 },
   "player": { "pos": [0, 80, -200], "facing": [0, 0, -1] },
   "entities": [

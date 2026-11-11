@@ -1,7 +1,7 @@
 {
   "name": "13-shipyard-recon",
   "seed": 13,
-  "title": "Shipyard Recon",
+  "title": "{#level.title.13_shipyard_recon}",
   "loadout": { "torpedoes": 2 },
   "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
   "entities": [

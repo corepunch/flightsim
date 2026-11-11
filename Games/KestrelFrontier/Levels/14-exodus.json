@@ -1,7 +1,7 @@
 {
   "name": "14-exodus",
   "seed": 14,
-  "title": "Exodus",
+  "title": "{#level.title.14_exodus}",
   "loadout": { "torpedoes": 0 },
   "player": { "pos": [0, 60, 300], "facing": [0, 0, -1] },
   "entities": [

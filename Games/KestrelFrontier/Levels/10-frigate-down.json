@@ -1,7 +1,7 @@
 {
   "name": "10-frigate-down",
   "seed": 10,
-  "title": "Frigate Down",
+  "title": "{#level.title.10_frigate_down}",
   "loadout": { "torpedoes": 4 },
   "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
   "entities": [

@@ -1,7 +1,7 @@
 {
   "name": "19-iron-wall",
   "seed": 19,
-  "title": "Iron Wall",
+  "title": "{#level.title.19_iron_wall}",
   "loadout": { "torpedoes": 8 },
   "player": { "pos": [0, 0, 200], "facing": [0, 0, -1] },
   "entities": [

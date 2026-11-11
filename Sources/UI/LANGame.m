@@ -161,7 +161,7 @@
     const LevelDef *arena = _resultArena.length && _stage == LANGameResults ? LevelNamed(_resultArena) : NULL;
     _bar=[[TitleBar alloc] initWithHeader:regions.header compact:compact back:back
         title:L10n(_stage==LANGameSetup ? @"browser.setup" : _stage==LANGameLobby ? @"browser.lobby" : @"browser.results")
-        kicker:arena ? arena->title : L10n(@"browser.kicker") actions:actions];
+        kicker:arena ? L10nExpand(arena->title) : L10n(@"browser.kicker") actions:actions];
     _backRect=[_bar rectForAction:back]; _confirmRect=[_bar rectForAction:confirm];
     [_root addChild:_bar]; [_bar registerHover:_hover]; _bodyRect=regions.body;
     CGFloat width=MIN(900,CGRectGetWidth(_bodyRect));

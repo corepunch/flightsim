@@ -1,7 +1,7 @@
 {
   "name": "12-teeth-of-the-line",
   "seed": 12,
-  "title": "Teeth of the Line",
+  "title": "{#level.title.12_teeth_of_the_line}",
   "loadout": { "torpedoes": 6 },
   "player": { "pos": [0, 0, 0], "facing": [0, 0, -1] },
   "entities": [

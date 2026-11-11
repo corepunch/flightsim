@@ -45,7 +45,7 @@ Iron Wall's `casualty` records a scripted loss. The radio call goes out once, wh
 
 The ten cyan hull/red subsystem views in the tactical pages come from the shipped OBJ meshes. Regenerate those PNGs with `python3 Games/KestrelFrontier/Art/build_schematics.py` and Pillow after changing the source mesh or schematic cue. Building the app uses the checked-in PNGs.
 
-The campaign contains 221 conversation beats across twenty briefings and twenty successful epilogues. Failure results do not play the successful epilogue or introduce its witnesses. Story dialogue remains English, as in the existing campaign; translated flight radio and interface catalogs are unchanged.
+The campaign contains 221 conversation beats across twenty briefings and twenty successful epilogues. Failure results do not play the successful epilogue or introduce its witnesses. The dialogue, briefings, and debriefs are localized in all 21 game locales.
 
 ## Evidence and character continuity
 

@@ -1,7 +1,7 @@
 {
   "name": "18-corsair-nest",
   "seed": 18,
-  "title": "Corsair Nest",
+  "title": "{#level.title.18_corsair_nest}",
   "loadout": { "torpedoes": 6 },
   "player": { "pos": [0, 200, 0], "facing": [0, 0, -1] },
   "entities": [

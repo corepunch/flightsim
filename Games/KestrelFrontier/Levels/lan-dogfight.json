@@ -1,6 +1,6 @@
 {
   "name": "lan-dogfight",
-  "title": "Multiplayer",
+  "title": "{#level.title.lan_dogfight}",
   "seed": 42,
   "player": {
     "pos": [

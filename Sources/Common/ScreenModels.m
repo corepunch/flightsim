@@ -147,7 +147,7 @@ BrowserSelection BrowserSelectionMove(BrowserSelection selection, NSUInteger cou
 }
 
 ListEntry *ServerEntry(NSString *name, int players, int maxPlayers, NSString *mission, NSString *rules) {
-    NSString *where = mission ?: L10n(@"browser.in_menus");
+    NSString *where = mission ? L10nExpand(mission) : L10n(@"browser.in_menus");
     return [ListEntry entry:L10nFormat(@"browser.row", @"", name ?: @"", players, maxPlayers)
                      detail:rules ? L10nFormat(@"browser.row_detail", where, rules) : where];
 }
@@ -162,7 +162,7 @@ ListModel *ServerListModel(NSArray<ListEntry *> *servers, BrowserSelection selec
 
 static NSString *ArenaTitle(LANMatchSettings settings) {
     const LevelDef *arena = LevelNamed(settings.arena);
-    return arena ? arena->title : L10n(@"browser.dogfight");
+    return arena ? L10nExpand(arena->title) : L10n(@"browser.dogfight");
 }
 
 static NSString *ShipTitle(LANMatchSettings settings) {

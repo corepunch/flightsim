@@ -1,7 +1,7 @@
 {
   "name": "03-relay-silence",
   "seed": 3,
-  "title": "Relay Silence",
+  "title": "{#level.title.03_relay_silence}",
   "loadout": { "torpedoes": 0 },
   "player": { "pos": [0, 50, -300], "facing": [0, 0, -1] },
   "entities": [

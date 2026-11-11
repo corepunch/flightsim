@@ -1,7 +1,7 @@
 {
   "name": "02-cargo-run",
   "seed": 2,
-  "title": "Cargo Run",
+  "title": "{#level.title.02_cargo_run}",
   "loadout": { "torpedoes": 2 },
   "player": { "pos": [0, 40, 400], "facing": [0, 0, -1] },
   "entities": [

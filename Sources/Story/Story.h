@@ -26,6 +26,8 @@
 //
 // Room coordinates are source-image pixels with y down. Foundation only, so
 // the unit checks build it headless. Thread-safe; the files load once.
+// Briefing and debrief text may be literal or use catalog tokens. The story
+// models expand those tokens when they read the campaign.
 // Classes are fine here: only the engine links this folder.
 
 #pragma mark - Lines and steps
@@ -76,7 +78,7 @@
 @property (nonatomic, readonly) NSString *schematic;                     // a subsystem kind, or nil for the map
 @property (nonatomic, readonly) NSArray<NSString *> *show, *route;
 @property (nonatomic, readonly) BriefingCamera *camera;                  // nil: the default fit
-@property (nonatomic, readonly) NSArray<BriefingLabel *> *labels;        // text is plain or L10nExpand markup
+@property (nonatomic, readonly) NSArray<BriefingLabel *> *labels;
 // Autoplay: seconds to hold after the caption has been typed before the
 // briefing moves on by itself. Without it the step waits for the player.
 @property (nonatomic, readonly) BOOL timed;

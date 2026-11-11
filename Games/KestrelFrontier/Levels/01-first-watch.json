@@ -1,7 +1,7 @@
 {
   "name": "01-first-watch",
   "seed": 1,
-  "title": "First Watch",
+  "title": "{#level.title.01_first_watch}",
   "loadout": { "torpedoes": 2 },
   "player": { "pos": [0, 0, 600], "facing": [0, 0, -1] },
   "entities": [

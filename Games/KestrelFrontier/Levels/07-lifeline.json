@@ -1,7 +1,7 @@
 {
   "name": "07-lifeline",
   "seed": 7,
-  "title": "Lifeline",
+  "title": "{#level.title.07_lifeline}",
   "loadout": { "torpedoes": 0 },
   "player": { "pos": [0, 0, -200], "facing": [0, 0, -1] },
   "entities": [

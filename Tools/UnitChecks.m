@@ -1004,7 +1004,8 @@ static void CheckStory(void) {
     for (NSUInteger i = 0; i < CampaignMissions().count; i++) {
         NSString *level = CampaignLevelName(i);
         CHECK([LevelNamed(level)->name isEqualToString:level] && CampaignIndexOfLevel(level) == i);
-        CHECK([CampaignMissionAt(i).title isEqualToString:LevelNamed(level)->title] && CampaignMissionAt(i).level == LevelNamed(level));
+        CHECK([CampaignMissionAt(i).title isEqualToString:L10nExpand(LevelNamed(level)->title)] &&
+              CampaignMissionAt(i).level == LevelNamed(level));
     }
     CHECK(CampaignIndexOfLevel(@"no-such-level") == NSNotFound && !LevelNamed(@"no-such-level"));
 
@@ -1024,6 +1025,12 @@ static void CheckStory(void) {
         CHECK([pages.lastObject.portrait isEqualToString:StoryCharacterNamed(officer).portrait]);
         for (BriefingPage *page in pages) CHECK(page.text.length && page.channel.length && page.portrait);
     }
+    // The campaign's first briefing and debrief are rendered in the active locale.
+    CampaignMission *first = CampaignMissionAt(0);
+    BriefingPage *firstPage = StoryBriefingPages(first).firstObject;
+    CHECK([firstPage.text isEqualToString:L10n(@"campaign.01_first_watch.briefing.dialogue.1")]);
+    CHECK([first.briefing.steps.firstObject.caption isEqualToString:L10n(@"campaign.01_first_watch.tactical.1.caption")]);
+    CHECK([first.debrief.lose isEqualToString:L10n(@"campaign.01_first_watch.debrief.lose")]);
     // A step's camera and labels: ids or [x, z] points; malformed labels are dropped.
     BriefingStep *step = [BriefingStep stepWithJSON:@{
         @"caption": @"c", @"camera": @{ @"center": @"corvette", @"span": @2500 },

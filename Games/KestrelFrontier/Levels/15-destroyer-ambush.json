@@ -1,7 +1,7 @@
 {
   "name": "15-destroyer-ambush",
   "seed": 15,
-  "title": "Destroyer Ambush",
+  "title": "{#level.title.15_destroyer_ambush}",
   "loadout": { "torpedoes": 6 },
   "player": { "pos": [0, 0, 200], "facing": [0, 0, -1] },
   "entities": [

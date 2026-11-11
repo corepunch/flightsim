@@ -34,10 +34,10 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
 
 + (instancetype)lineWithJSON:(NSDictionary *)json {
     StoryLine *line = [self new];
-    line->_speaker = JSONString(json, @"speaker") ?: @"";
+    line->_speaker = L10nExpand(JSONString(json, @"speaker")) ?: @"";
     line->_portrait = JSONString(json, @"portrait");
-    line->_text = JSONString(json, @"text") ?: @"";
-    line->_channel = JSONString(json, @"channel");
+    line->_text = L10nExpand(JSONString(json, @"text")) ?: @"";
+    line->_channel = L10nExpand(JSONString(json, @"channel"));
     line->_listener = JSONString(json, @"listener");
     line->_expression = JSONString(json, @"expression");
     line->_listenerExpression = JSONString(json, @"listenerExpression");
@@ -100,7 +100,7 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
 
 + (instancetype)labelWithJSON:(NSDictionary *)json {
     BriefingLabel *label = [self new];
-    label->_text = JSONString(json, @"text");
+    label->_text = L10nExpand(JSONString(json, @"text"));
     label->_at = [BriefingPlace placeWithJSON:json[@"at"]];
     return label->_text.length && label->_at ? label : nil;
 }
@@ -111,7 +111,7 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
 
 + (instancetype)stepWithJSON:(NSDictionary *)json {
     BriefingStep *step = [self new];
-    step->_caption = JSONString(json, @"caption") ?: @"";
+    step->_caption = L10nExpand(JSONString(json, @"caption")) ?: @"";
     step->_focus = JSONString(json, @"focus");
     step->_schematic = JSONString(json, @"schematic");
     step->_show = JSONStrings(json, @"show");
@@ -150,16 +150,22 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
 }
 @end
 
+static NSArray<NSString *> *BriefingText(NSDictionary *json, NSString *key) {
+    NSMutableArray<NSString *> *lines = [NSMutableArray array];
+    for (NSString *line in JSONStrings(json, key)) [lines addObject:L10nExpand(line)];
+    return lines;
+}
+
 @implementation MissionBriefing
 + (instancetype)briefingWithJSON:(NSDictionary *)json {
     MissionBriefing *briefing = [self new];
-    briefing->_location = JSONString(json, @"location");
+    briefing->_location = L10nExpand(JSONString(json, @"location"));
     briefing->_stardate = JSONString(json, @"stardate");
-    briefing->_speaker = JSONString(json, @"speaker");
+    briefing->_speaker = L10nExpand(JSONString(json, @"speaker"));
     briefing->_officer = JSONString(json, @"officer");
     briefing->_pageKinds = JSONArray(json, @"pages") ? JSONStrings(json, @"pages") : nil;
-    briefing->_text = JSONStrings(json, @"text");
-    briefing->_intel = JSONStrings(json, @"intel");
+    briefing->_text = BriefingText(json, @"text");
+    briefing->_intel = BriefingText(json, @"intel");
     briefing->_steps = ObjectsOf(json, @"steps", ^id(NSDictionary *step) { return [BriefingStep stepWithJSON:step]; });
     briefing->_dialogue = [BriefingScene sceneWithJSON:JSONObject(json, @"dialogue")];
     return briefing;
@@ -169,8 +175,8 @@ static NSArray *ObjectsOf(id json, NSString *key, id (^read)(NSDictionary *item)
 @implementation MissionDebrief
 + (instancetype)debriefWithJSON:(NSDictionary *)json {
     MissionDebrief *debrief = [self new];
-    debrief->_win = JSONString(json, @"win") ?: @"";
-    debrief->_lose = JSONString(json, @"lose") ?: @"";
+    debrief->_win = L10nExpand(JSONString(json, @"win")) ?: @"";
+    debrief->_lose = L10nExpand(JSONString(json, @"lose")) ?: @"";
     debrief->_room = JSONString(json, @"room");
     debrief->_dialogue = ObjectsOf(json, @"dialogue", ^id(NSDictionary *line) { return [StoryLine lineWithJSON:line]; });
     return debrief;
