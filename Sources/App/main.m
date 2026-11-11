@@ -122,7 +122,7 @@ static int RunDedicated(int mission) {
 @end
 
 // Runs the production views on sample data in a resizable SpriteKit window,
-// without a game session: KestrelFrontier --preview-ui [debrief|failed|end|match|pause|online|menu|browser|lobby|setup]
+// without a game session: KestrelFrontier --preview-ui [debrief|failed|end|match|pause|online|menu|browser|lobby|setup|missions|briefing]
 @interface UIPreviewScene : SKScene
 @property (nonatomic, copy) NSString *sample;
 @end
@@ -208,6 +208,13 @@ static ReportModel *PreviewReport(NSString *sample) {
         }
         [browser showServers:servers];
         scene = browser;
+    } else if ([@[@"missions", @"briefing"] containsObject:_sample ?: @""]) {
+        // The campaign screens read the selected game's missions and the saved progress.
+        Briefing *campaign = [[Briefing alloc] initWithSize:rect.size];
+        campaign.backgroundColor = UIColorWithOpacity(UIBackground, 1);
+        if ([_sample isEqualToString:@"briefing"]) [campaign showBriefing:0 page:1];
+        else [campaign showListSelecting:0];
+        scene = campaign;
     } else if ([@[@"lobby", @"setup"] containsObject:_sample ?: @""]) {
         LANGame *game = [[LANGame alloc] initWithSize:rect.size];
         if ([_sample isEqualToString:@"lobby"]) [game showPilots:@[@"Wren (host)"]];

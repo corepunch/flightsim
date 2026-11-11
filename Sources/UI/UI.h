@@ -316,6 +316,22 @@ typedef NS_ENUM(NSInteger, UIListStyle) { UIListScrolling, UIListFitted };
 - (void)registerHover:(UIHover *)hover;
 @end
 
+// Draws a MissionListModel (Common.h) as a grid of tiles hanging from the top
+// left of `region`, in content coordinates for a TextViewport.
+@interface UIMissionGrid : SKNode
+- (instancetype)initWithList:(MissionListModel *)list region:(CGRect)region compact:(BOOL)compact;
+@property (nonatomic, readonly) TileGrid grid;
+@property (nonatomic, readonly) NSArray<NSValue *> *tileRects;      // boxed, one per mission
+@end
+
+// Draws a MonitorModel's header lines across [left, right] under `top`; the
+// page's content goes below `contentTop`.
+@interface UIMonitorHeader : SKNode
+- (instancetype)initWithMonitor:(MonitorModel *)monitor left:(CGFloat)left right:(CGFloat)right top:(CGFloat)top;
+@property (nonatomic, readonly) SKLabelNode *titleLabel, *locationLabel, *channelLabel, *counterLabel;
+@property (nonatomic, readonly) CGFloat contentTop;
+@end
+
 // Clips a report and shows a scrollbar when its content extends below the region.
 @interface TextViewport : SKNode
 - (instancetype)initWithRect:(CGRect)rect content:(SKNode *)content;

@@ -307,6 +307,56 @@ ListModel *ServerListModel(NSArray<ListEntry *> *servers, BrowserSelection selec
 // line until the host can start.
 ListModel *LobbyModel(NSArray<NSString *> *pilots, BOOL hosting, LANMatchSettings settings);
 
+// The campaign's mission select: a tile per mission. A locked mission hides
+// its title, and `action` (the title bar's confirm) is nil while one is highlighted.
+@interface MissionTile : NSObject
+@property (nonatomic, readonly, copy) NSString *number, *title, *status;
+@property (nonatomic, readonly) NSUInteger stars;
+@property (nonatomic, readonly) BOOL open;
+@end
+@interface MissionListModel : NSObject
+@property (nonatomic, readonly, copy) NSArray<MissionTile *> *tiles;
+@property (nonatomic, readonly) NSUInteger selected;
+@property (nonatomic, readonly, copy) NSString *action;
+@end
+// `stars` holds each mission's best rating; the first `unlocked` missions are open.
+MissionListModel *MissionListModelMake(NSArray<NSString *> *titles, NSArray<NSNumber *> *stars,
+                                       NSUInteger unlocked, NSUInteger selected);
+
+// Tiles of one height in as many equal columns as a width holds, filled row by row.
+typedef struct {
+    NSUInteger columns;
+    CGSize tile;
+    CGFloat gap;
+} TileGrid;
+TileGrid TileGridFit(CGFloat width, CGFloat tileHeight);
+// `corner` is the grid's top left.
+CGRect TileGridCell(TileGrid grid, CGPoint corner, NSUInteger index);
+// The highlight after a step: sideways wraps through the whole list; up stays
+// in the first row and down past the end lands on the last tile.
+NSUInteger TileGridMove(TileGrid grid, NSUInteger count, NSUInteger index, NSInteger columns, NSInteger rows);
+// How much further to scroll so `item` (in content coordinates, drawn `offset`
+// higher) lies inside `viewport`; 0 when it already does.
+CGFloat ScrollDeltaRevealing(CGRect item, CGRect viewport, CGFloat offset);
+
+// The briefing monitor's page: the header lines and what the screen shows
+// under them. With no schematic and no readout the monitor shows the tactical map.
+typedef struct {
+    NSUInteger mission, page, pageCount;        // from 0
+    BOOL titled;                                // the monitor names the mission itself
+    NSString *missionTitle, *location, *stardate, *channel;
+    NSArray<NSString *> *readout;
+    NSString *schematicAsset, *subsystem;       // the focused target's asset and the part to show
+} MonitorFacts;
+@interface MonitorModel : NSObject
+@property (nonatomic, readonly, copy) NSString *title;          // nil when the room titles the mission
+@property (nonatomic, readonly, copy) NSString *location, *channel, *counter;
+@property (nonatomic, readonly, copy) NSString *schematic;      // art name, or nil
+@property (nonatomic, readonly, copy) NSString *legend;         // under the schematic
+@property (nonatomic, readonly, copy) NSString *readout;        // the list as one text, or nil
+@end
+MonitorModel *BriefingMonitorModel(MonitorFacts facts);
+
 // One row of a settings form: what it sets, its current value, and whether it can change.
 @interface SettingRow : NSObject
 @property (nonatomic, readonly, copy) NSString *title, *value;

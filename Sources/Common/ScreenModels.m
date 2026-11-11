@@ -181,6 +181,98 @@ ListModel *LobbyModel(NSArray<NSString *> *pilots, BOOL hosting, LANMatchSetting
                                       message:waiting ? L10n(hosting ? @"browser.waiting" : @"browser.guest_waiting") : nil];
 }
 
+// MARK: - Campaign
+
+// The functions below fill these in; everyone else reads them.
+@interface MissionTile ()
+@property (nonatomic, readwrite, copy) NSString *number, *title, *status;
+@property (nonatomic, readwrite) NSUInteger stars;
+@property (nonatomic, readwrite) BOOL open;
+@end
+@interface MissionListModel ()
+@property (nonatomic, readwrite, copy) NSArray<MissionTile *> *tiles;
+@property (nonatomic, readwrite) NSUInteger selected;
+@property (nonatomic, readwrite, copy) NSString *action;
+@end
+@interface MonitorModel ()
+@property (nonatomic, readwrite, copy) NSString *title, *location, *channel, *counter, *schematic, *legend, *readout;
+@end
+
+@implementation MissionTile
+@end
+@implementation MissionListModel
+@end
+
+MissionListModel *MissionListModelMake(NSArray<NSString *> *titles, NSArray<NSNumber *> *stars,
+                                       NSUInteger unlocked, NSUInteger selected) {
+    NSMutableArray<MissionTile *> *tiles = [NSMutableArray arrayWithCapacity:titles.count];
+    for (NSUInteger i = 0; i < titles.count; i++) {
+        MissionTile *tile = [MissionTile new];
+        tile.open = i < unlocked;
+        tile.stars = i < stars.count ? MIN(stars[i].unsignedIntegerValue, (NSUInteger)3) : 0;
+        tile.number = [NSString stringWithFormat:@"%02lu", (unsigned long)i + 1];
+        tile.title = tile.open ? titles[i].uppercaseString : L10n(@"missions.classified");
+        tile.status = L10n(!tile.open ? @"missions.locked" : tile.stars ? @"missions.completed" : @"missions.ready");
+        [tiles addObject:tile];
+    }
+    MissionListModel *list = [MissionListModel new];
+    list.tiles = tiles;
+    list.selected = titles.count ? MIN(selected, titles.count - 1) : 0;
+    list.action = list.selected < MIN(unlocked, titles.count) ? L10n(@"missions.briefing") : nil;
+    return list;
+}
+
+TileGrid TileGridFit(CGFloat width, CGFloat tileHeight) {
+    const CGFloat gap = 12, narrowest = 160;
+    NSUInteger columns = MAX(1, MIN(6, (NSInteger)((width + gap) / narrowest)));
+    return (TileGrid){ columns, { MAX(1, (width - gap * (columns - 1)) / columns), tileHeight }, gap };
+}
+
+CGRect TileGridCell(TileGrid grid, CGPoint corner, NSUInteger index) {
+    if (!grid.columns) return CGRectZero;
+    CGPoint cell = CGPointMake(index % grid.columns, index / grid.columns);
+    CGSize step = CGSizeMake(grid.tile.width + grid.gap, -(grid.tile.height + grid.gap));
+    CGPoint top = PointAdd(corner, PointMultiply(cell, step));
+    return (CGRect){ PointAdd(top, CGPointMake(0, -grid.tile.height)), grid.tile };
+}
+
+NSUInteger TileGridMove(TileGrid grid, NSUInteger count, NSUInteger index, NSInteger columns, NSInteger rows) {
+    if (!count) return 0;
+    NSInteger n = (NSInteger)count, i = MIN((NSInteger)index, n - 1);
+    i = ((i + columns) % n + n) % n;
+    NSInteger moved = i + rows * (NSInteger)grid.columns;
+    // Up from the first row stays; down past the end lands on the last tile.
+    return (NSUInteger)(moved < 0 ? i : MIN(moved, n - 1));
+}
+
+CGFloat ScrollDeltaRevealing(CGRect item, CGRect viewport, CGFloat offset) {
+    if (CGRectGetMinY(item) + offset < CGRectGetMinY(viewport)) return CGRectGetMinY(viewport) - CGRectGetMinY(item) - offset;
+    if (CGRectGetMaxY(item) + offset > CGRectGetMaxY(viewport)) return CGRectGetMaxY(viewport) - CGRectGetMaxY(item) - offset;
+    return 0;
+}
+
+@implementation MonitorModel
+@end
+
+MonitorModel *BriefingMonitorModel(MonitorFacts facts) {
+    MonitorModel *monitor = [MonitorModel new];
+    if (facts.titled)
+        monitor.title = L10nFormat(@"briefing.title", (unsigned long)facts.mission + 1, facts.missionTitle.uppercaseString);
+    monitor.location = L10nFormat(@"briefing.location", facts.location, facts.stardate);
+    monitor.channel = [facts.channel copy] ?: @"";
+    monitor.counter = [NSString stringWithFormat:@"%02lu / %02lu", (unsigned long)facts.page + 1, (unsigned long)facts.pageCount];
+    if (facts.schematicAsset.length && facts.subsystem.length) {
+        monitor.schematic = [NSString stringWithFormat:@"Schematics/%@-%@", facts.schematicAsset, facts.subsystem];
+        // A subsystem the catalog does not name shows as the level wrote it.
+        NSString *key = [@"briefing.subsystem." stringByAppendingString:facts.subsystem.lowercaseString];
+        NSString *name = L10n(key);
+        monitor.legend = L10nFormat(@"briefing.target", [name isEqualToString:key] ? facts.subsystem.uppercaseString : name);
+    }
+    if (facts.readout.count)
+        monitor.readout = [@"›  " stringByAppendingString:[facts.readout componentsJoinedByString:@"\n›  "]];
+    return monitor;
+}
+
 // MARK: - Match setup
 
 @implementation SettingRow

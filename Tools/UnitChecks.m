@@ -1276,6 +1276,49 @@ static void CheckScreenModels(void) {
     LANMatchSettings arena = LANMatchSettingsStep(match, 0, 1);
     CHECK(!arena.arena.length || LevelNamed(arena.arena)->rules.deathmatch);
 
+    // Mission select: locked missions keep their titles to themselves and cannot be briefed.
+    MissionListModel *missions = MissionListModelMake(@[@"First Watch", @"Convoy", @"Quiet Engine"], @[@3, @0], 2, 1);
+    CHECK(missions.tiles.count == 3 && missions.selected == 1 && [missions.action isEqualToString:L10n(@"missions.briefing")]);
+    CHECK([missions.tiles[0].number isEqualToString:@"01"] && [missions.tiles[0].title isEqualToString:@"FIRST WATCH"]);
+    CHECK(missions.tiles[0].stars == 3 && [missions.tiles[0].status isEqualToString:L10n(@"missions.completed")]);
+    CHECK(missions.tiles[1].open && [missions.tiles[1].status isEqualToString:L10n(@"missions.ready")]);
+    CHECK(!missions.tiles[2].open && [missions.tiles[2].title isEqualToString:L10n(@"missions.classified")]);
+    CHECK([missions.tiles[2].status isEqualToString:L10n(@"missions.locked")] && missions.tiles[2].stars == 0);
+    CHECK(!MissionListModelMake(@[@"A", @"B"], @[], 1, 1).action && MissionListModelMake(@[@"A", @"B"], @[], 1, 9).selected == 1);
+    CHECK(!MissionListModelMake(@[], @[], 3, 0).action);
+
+    TileGrid tiles = TileGridFit(500, 172);
+    CHECK(tiles.columns == 3 && tiles.tile.width == (500 - 24) / 3.0 && tiles.tile.height == 172);
+    CHECK(TileGridFit(100, 144).columns == 1 && TileGridFit(100, 144).tile.width == 100 && TileGridFit(4000, 144).columns == 6);
+    CGRect second = TileGridCell(tiles, CGPointMake(10, 900), 4);
+    CHECK(second.origin.x == 10 + tiles.tile.width + 12 && second.origin.y == 900 - 172 - 12 - 172 && second.size.height == 172);
+    CHECK(TileGridMove(tiles, 8, 0, -1, 0) == 7 && TileGridMove(tiles, 8, 7, 1, 0) == 0 && TileGridMove(tiles, 8, 3, 1, 0) == 4);
+    CHECK(TileGridMove(tiles, 8, 1, 0, -1) == 1 && TileGridMove(tiles, 8, 4, 0, -1) == 1);
+    CHECK(TileGridMove(tiles, 8, 1, 0, 1) == 4 && TileGridMove(tiles, 8, 5, 0, 1) == 7 && TileGridMove(tiles, 0, 3, 0, 1) == 0);
+    CGRect port = CGRectMake(0, 100, 300, 400);
+    CHECK(ScrollDeltaRevealing(CGRectMake(0, 200, 100, 100), port, 0) == 0);
+    CHECK(ScrollDeltaRevealing(CGRectMake(0, 20, 100, 100), port, 0) == 80);
+    CHECK(ScrollDeltaRevealing(CGRectMake(0, 20, 100, 100), port, 80) == 0);
+    CHECK(ScrollDeltaRevealing(CGRectMake(0, 450, 100, 100), port, 60) == -110);
+
+    // The briefing monitor: a schematic outranks a readout, and neither means the map.
+    MonitorFacts page = { .mission = 2, .page = 0, .pageCount = 7, .titled = YES, .missionTitle = @"Convoy",
+                          .location = @"Halden Gate", .stardate = @"41.2", .channel = @"OBJECTIVES" };
+    MonitorModel *mapPage = BriefingMonitorModel(page);
+    CHECK([mapPage.title isEqualToString:L10nFormat(@"briefing.title", 3ul, @"CONVOY")]);
+    CHECK([mapPage.location isEqualToString:L10nFormat(@"briefing.location", @"Halden Gate", @"41.2")]);
+    CHECK([mapPage.counter isEqualToString:@"01 / 07"] && [mapPage.channel isEqualToString:@"OBJECTIVES"]);
+    CHECK(!mapPage.schematic && !mapPage.readout && !mapPage.legend);
+    page.titled = NO; page.readout = @[@"Escort", @"Return"]; page.page = 6;
+    MonitorModel *listPage = BriefingMonitorModel(page);
+    CHECK(!listPage.title && [listPage.readout isEqualToString:@"›  Escort\n›  Return"] && [listPage.counter isEqualToString:@"07 / 07"]);
+    page.schematicAsset = @"corvette"; page.subsystem = @"Unlisted";
+    MonitorModel *partPage = BriefingMonitorModel(page);
+    CHECK([partPage.schematic isEqualToString:@"Schematics/corvette-Unlisted"]);
+    CHECK([partPage.legend isEqualToString:L10nFormat(@"briefing.target", @"UNLISTED")]);
+    page.subsystem = nil;
+    CHECK(!BriefingMonitorModel(page).schematic);
+
     // A debrief shows what the result earned; a failure shows no rating or score.
     NSArray<ObjectiveReadout *> *results = MissionResultReadouts(@[@"+ Escort", @"x Optional"]);
     ReportModel *won = DebriefReport((DebriefFacts){ .success = YES, .stars = 2, .total = 340, .earned = 40,

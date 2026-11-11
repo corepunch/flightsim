@@ -17,10 +17,6 @@ static SKLabelNode *Para(CGFloat size, SKColor *c, CGFloat width) {
     return l;
 }
 
-static NSString *StarRating(NSUInteger stars) {
-    return @[@"☆ ☆ ☆", @"★ ☆ ☆", @"★ ★ ☆", @"★ ★ ★"][MIN(stars, 3)];
-}
-
 static BOOL InsetsEqual(BriefingInsets a, BriefingInsets b) {
 #if TARGET_OS_IOS
     return UIEdgeInsetsEqualToEdgeInsets(a, b);
@@ -180,8 +176,9 @@ typedef struct {
 // The mission list's tiles, for clicks and keyboard navigation.
 typedef struct {
     CGRect rows;
-    NSUInteger columns;
+    TileGrid grid;
     NSArray<NSValue *> *tiles;
+    MissionListModel *list;
 } MissionGrid;
 
 // MARK: - Text viewport
@@ -846,7 +843,7 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 - (SKNode *)scrollContent { return _viewport.content; }
 - (NSArray<NSValue *> *)missionTiles { return _grid.tiles; }
 - (CGRect)missionRows { return _grid.rows; }
-- (NSUInteger)missionColumns { return _grid.columns; }
+- (NSUInteger)missionColumns { return _grid.grid.columns; }
 
 - (BOOL)hasNextBriefingPage { return _page + 1 < _pages.count; }
 
@@ -1047,70 +1044,30 @@ static const CGFloat PhoneSpeakerFont = 16;
     return YES;
 }
 
+- (MissionListModel *)missionList {
+    NSMutableArray<NSString *> *titles = [NSMutableArray array];
+    NSMutableArray<NSNumber *> *stars = [NSMutableArray array];
+    for (CampaignMission *mission in CampaignMissions()) {
+        [stars addObject:@(ProgressBestStars(titles.count))];
+        [titles addObject:mission.title ?: @""];
+    }
+    return MissionListModelMake(titles, stars, ProgressUnlockedCount(), _index);
+}
+
 - (void)buildList {
-    CGSize s = self.size;
-    BOOL compact = s.height < 550;
     // The grid fills the body; on a phone it runs to the screen's bottom edge.
     CGRect body = [self listRegions].bodyToEdge;
-    CGFloat left = CGRectGetMinX(body), right = CGRectGetMaxX(body);
-
-    NSArray<CampaignMission *> *missions = CampaignMissions();
-    NSUInteger unlocked = ProgressUnlockedCount();
-    CGFloat gap = 12, width = MAX(1, right - left - ScrollGutter);
-    _grid.columns = MAX(1, MIN(6, (NSUInteger)((width + gap) / 160)));
-    CGFloat tileW = (width - gap * (_grid.columns - 1)) / _grid.columns;
-    CGFloat tileH = compact ? 144 : 172;
+    _grid.list = [self missionList];
+    UIMissionGrid *tiles = [[UIMissionGrid alloc] initWithList:_grid.list
+        region:RectInsetEdges(body, 0, 0, ScrollGutter, 0) compact:self.size.height < 550];
     _grid.rows = body;
-    SKNode *content = [SKNode node];
-    NSMutableArray *tiles = [NSMutableArray array];
-    for (NSUInteger i = 0; i < missions.count; i++) {
-        BOOL open = i < unlocked, selected = i == _index;
-        NSUInteger stars = ProgressBestStars(i);
-        CGFloat x = left + (i % _grid.columns) * (tileW + gap);
-        CGFloat y = CGRectGetMaxY(_grid.rows) - (i / _grid.columns + 1) * (tileH + gap) + gap;
-        CGRect rect = CGRectMake(x, y, tileW, tileH);
-        [tiles addObject:BoxRect(rect)];
-        SKColor *ink = UIColorWithOpacity(selected ? UIAmber : UIInk, open ? 1 : 0.35);
-        SKShapeNode *tile = UIReadoutPanel(rect, ink, UIColorWithOpacity(selected ? UIInk : UIPanel, selected ? 0.14 : 0.88));
-        tile.name = [NSString stringWithFormat:@"mission-%lu", (unsigned long)i + 1];
-        [content addChild:tile];
-        // Top to bottom: number, title, then the stars and the status line
-        // from the bottom up. Each label sits under the measured frame of the
-        // one above, so no two can touch whatever the font metrics are.
-        const CGFloat inset = 16, spacing = 4;
-        SKLabelNode *number = Text(compact ? 42 : 52, ink, SKLabelHorizontalAlignmentModeLeft);
-        number.fontName = UIInterfaceBoldFont;
-        number.text = [NSString stringWithFormat:@"%02lu", (unsigned long)i + 1];
-        number.position = CGPointMake(x + inset, y + tileH - 12);
-        [content addChild:number];
-        SKLabelNode *status = Text(10, ink, SKLabelHorizontalAlignmentModeLeft);
-        status.text = L10n(!open ? @"missions.locked" : stars ? @"missions.completed" : @"missions.ready");
-        status.position = CGPointMake(x + inset, y + 10 + status.frame.size.height);
-        [content addChild:status];
-        SKLabelNode *rating = Text(18, UIColorWithOpacity(stars ? UIAmber : UIInk, stars ? 1 : 0.25), SKLabelHorizontalAlignmentModeLeft);
-        rating.text = StarRating(stars);
-        rating.position = CGPointMake(x + inset, CGRectGetMaxY(status.frame) + spacing + rating.frame.size.height);
-        [content addChild:rating];
-        SKLabelNode *name = Para(12, ink, tileW - 2 * inset);
-        name.fontName = UIInterfaceBoldFont;
-        name.text = open ? missions[i].title.uppercaseString : L10n(@"missions.classified");
-        name.numberOfLines = 2;
-        CGFloat nameTop = CGRectGetMinY(number.frame) - spacing;
-        if (nameTop - name.frame.size.height < CGRectGetMaxY(rating.frame) + spacing) name.numberOfLines = 1;   // compact tiles
-        name.position = CGPointMake(x + inset, nameTop);
-        [content addChild:name];
-    }
-    _grid.tiles = tiles;
-    [_root addChild:[self textViewport:_grid.rows content:content]];
+    _grid.grid = tiles.grid;
+    _grid.tiles = tiles.tileRects;
+    [_root addChild:[self textViewport:body content:tiles]];
     // Keyboard/controller navigation always brings its selected tile into view.
-    if (_transition != UITransitionNone && _index < tiles.count) {
-        CGRect selected = UnboxRect(tiles[_index]);
-        if (CGRectGetMinY(selected) + _scrollOffset < CGRectGetMinY(_grid.rows))
-            [self scrollBy:CGRectGetMinY(_grid.rows) - CGRectGetMinY(selected) - _scrollOffset];
-        if (CGRectGetMaxY(selected) + _scrollOffset > CGRectGetMaxY(_grid.rows))
-            [self scrollBy:CGRectGetMaxY(_grid.rows) - CGRectGetMaxY(selected) - _scrollOffset];
-    }
-    [self navigationAction:_index < unlocked ? L10n(@"missions.briefing") : nil];
+    if (_transition != UITransitionNone && _index < _grid.tiles.count)
+        [self scrollBy:ScrollDeltaRevealing(UnboxRect(_grid.tiles[_index]), body, _scrollOffset)];
+    [self navigationAction:_grid.list.action];
 }
 
 - (void)revealPreviewTitle:(SKLabelNode *)title location:(SKLabelNode *)location text:(SKLabelNode *)text
@@ -1612,41 +1569,25 @@ static const CGFloat PhoneSpeakerFont = 16;
     }
 
     MissionBriefing *brief = mission.briefing;
+    const LevelEntity *target = LevelEntityNamed(mission.level, page.step.focus);
+    MonitorModel *monitor = BriefingMonitorModel((MonitorFacts){
+        .mission = _index, .page = _page, .pageCount = _pages.count, .titled = titled,
+        .missionTitle = mission.title, .location = brief.location, .stardate = brief.stardate, .channel = page.channel,
+        .readout = page.readout, .schematicAsset = target ? target->asset : nil, .subsystem = page.step.schematic,
+    });
     CGFloat pad = MIN(22, screen.size.width * 0.04);
     CGFloat left = CGRectGetMinX(screen) + pad, right = CGRectGetMaxX(screen) - pad;
-    CGFloat top = CGRectGetMaxY(screen) - 5;
-    CGFloat width = MAX(1, right - left);
-    CGFloat titleSize = MIN(21, MAX(12, width / 29));
-    SKLabelNode *title = nil;
-    if (titled) {
-        title = Para(titleSize, UIColorWithOpacity(UIInk, 1), width);
-        title.fontName = UIInterfaceBoldFont;
-        title.text = L10nFormat(@"briefing.title", (unsigned long)_index + 1, mission.title.uppercaseString);
-        title.position = CGPointMake(left, top);
-        [display addChild:title];
-    }
+    UIMonitorHeader *header = [[UIMonitorHeader alloc] initWithMonitor:monitor left:left right:right
+                                                                  top:CGRectGetMaxY(screen) - 5];
+    [display addChild:header];
+    SKLabelNode *title = header.titleLabel, *location = header.locationLabel;
+    SKLabelNode *channel = header.channelLabel, *counter = header.counterLabel;
 
-    SKLabelNode *location = Para(MIN(13, MAX(9, width / 45)), UIColorWithOpacity(UIInk, 0.75), width);
-    location.text = L10nFormat(@"briefing.location", brief.location, brief.stardate);
-    location.position = CGPointMake(left, title ? CGRectGetMinY(title.frame) - 4 : top);
-    [display addChild:location];
-
-    CGFloat channelY = CGRectGetMinY(location.frame) - 10;
-    SKLabelNode *channel = Text(12, UIColorWithOpacity(UIAmber, 1), SKLabelHorizontalAlignmentModeLeft);
-    channel.fontName = UIInterfaceBoldFont;
-    channel.text = page.channel;
-    channel.position = CGPointMake(left, channelY);
-    [display addChild:channel];
-    SKLabelNode *counter = Text(12, UIColorWithOpacity(UIInk, 0.7), SKLabelHorizontalAlignmentModeRight);
-    counter.text = [NSString stringWithFormat:@"%02lu / %02lu", (unsigned long)_page + 1, (unsigned long)_pages.count];
-    counter.position = CGPointMake(right, channelY);
-    [display addChild:counter];
-
-    CGFloat contentTop = CGRectGetMinY(channel.frame) - 8;
+    CGFloat contentTop = header.contentTop;
     CGFloat bottom = CGRectGetMinY(screen) + 4;
     CGRect contentRect = CGRectMake(CGRectGetMinX(screen), bottom, screen.size.width, MAX(1, contentTop - bottom));
     NSString *kind = nil;
-    SKNode *content = [self buildMonitorContent:mission page:page left:left right:right top:contentTop
+    SKNode *content = [self buildMonitorContent:monitor mission:mission left:left right:right top:contentTop
                                          bottom:bottom kind:&kind];
     [display addChild:content];
     BOOL map = [kind hasPrefix:@"map"];
@@ -1677,14 +1618,11 @@ static const CGFloat PhoneSpeakerFont = 16;
 
 // The tactical map, a ship schematic or a readout list. kind names what was
 // drawn so the next page can tell whether the content changed.
-- (SKNode *)buildMonitorContent:(CampaignMission *)mission page:(BriefingPage *)page left:(CGFloat)left
+- (SKNode *)buildMonitorContent:(MonitorModel *)monitor mission:(CampaignMission *)mission left:(CGFloat)left
                           right:(CGFloat)right top:(CGFloat)contentTop bottom:(CGFloat)bottom
                            kind:(NSString **)kind {
     CGFloat width = MAX(1, right - left);
-    const LevelEntity *target = LevelEntityNamed(mission.level, page.step.focus);
-    NSString *subsystemKind = page.step.schematic;
-    NSString *key = target && subsystemKind ? [NSString stringWithFormat:@"Schematics/%@-%@", target->asset, subsystemKind] : nil;
-    SKSpriteNode *schematic = key && contentTop > bottom + 20 ? [self artNamed:key] : nil;
+    SKSpriteNode *schematic = monitor.schematic && contentTop > bottom + 20 ? [self artNamed:monitor.schematic] : nil;
     if (schematic) {
         SKNode *group = [SKNode node];
         CGFloat height = contentTop - bottom - 14;
@@ -1692,26 +1630,22 @@ static const CGFloat PhoneSpeakerFont = 16;
         schematic.position = CGPointMake((left + right) / 2, bottom + 14 + height / 2);
         [group addChild:schematic];
         SKLabelNode *legend = Text(10, UIColorWithOpacity(UIRed, 1), SKLabelHorizontalAlignmentModeLeft);
-        NSString *subsystemKey = [@"briefing.subsystem." stringByAppendingString:subsystemKind.lowercaseString];
-        NSString *subsystem = L10n(subsystemKey);
-        legend.text = L10nFormat(@"briefing.target", [subsystem isEqualToString:subsystemKey] ? subsystemKind.uppercaseString : subsystem);
+        legend.text = monitor.legend;
         legend.position = CGPointMake(left, bottom + 12);
         [group addChild:legend];
-        *kind = key;
+        *kind = monitor.schematic;
         return group;
     }
-    NSArray<NSString *> *readout = page.readout;
-    if (readout.count) {
-        NSString *lines = [@"›  " stringByAppendingString:[readout componentsJoinedByString:@"\n›  "]];
+    if (monitor.readout) {
         CGFloat fontSize = MIN(20, MAX(12, width / 32));
         SKLabelNode *list = Para(fontSize, UIColorWithOpacity(UIInk, 0.96), MAX(1, width - ScrollGutter));
         list.fontName = UIBodyMediumFont;
-        list.text = lines;
+        list.text = monitor.readout;
         CGFloat top = contentTop - 4;
         list.position = CGPointMake(left, top);
         SKNode *content = [SKNode node];
         [content addChild:list];
-        *kind = [@"readout:" stringByAppendingString:lines];
+        *kind = [@"readout:" stringByAppendingString:monitor.readout];
         return [self textViewport:CGRectMake(left, bottom, width, MAX(0, top - bottom)) content:content];
     }
 
@@ -1867,17 +1801,17 @@ static const CGFloat PhoneSpeakerFont = 16;
     NSUInteger count = CampaignMissions().count;
     if (a & InputActionBack) [[GameAudio shared] play:@"ui-back"];
     else if (a & InputActionConfirm) {
-        BOOL locked = _mode == ModeList && _index >= ProgressUnlockedCount();
+        BOOL locked = _mode == ModeList && !_grid.list.action;
         [[GameAudio shared] play:locked ? @"ui-alert" : @"ui-confirm"];
     } else if (_mode == ModeList && (a & (InputActionUp | InputActionDown))) [[GameAudio shared] play:@"ui-hover"];
     switch (_mode) {
         case ModeList:
             if (a & InputActionBack) return BriefingCommandMainMenu;
-            if (a & InputActionLeft) [self showListSelecting:_index > 0 ? _index - 1 : count - 1];
-            if (a & InputActionRight) [self showListSelecting:(_index + 1) % count];
-            if (a & InputActionUp) [self showListSelecting:_index >= _grid.columns ? _index - _grid.columns : _index];
-            if (a & InputActionDown) [self showListSelecting:MIN(count - 1, _index + _grid.columns)];
-            if ((a & InputActionConfirm) && _index < ProgressUnlockedCount()) [self showBriefing:_index];
+            if (a & (InputActionLeft | InputActionRight))
+                [self showListSelecting:TileGridMove(_grid.grid, count, _index, a & InputActionLeft ? -1 : 1, 0)];
+            if (a & (InputActionUp | InputActionDown))
+                [self showListSelecting:TileGridMove(_grid.grid, count, _index, 0, a & InputActionUp ? -1 : 1)];
+            if ((a & InputActionConfirm) && _grid.list.action) [self showBriefing:_index];
             break;
         case ModeBriefing:
             if (a & InputActionBack) { [self showListSelecting:_index]; break; }
