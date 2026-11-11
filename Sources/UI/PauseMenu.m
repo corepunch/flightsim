@@ -13,7 +13,8 @@ static PauseCommand CommandFor(NSString *itemId) {
 
 @implementation PauseMenu {
     BOOL _remote, _cockpit;
-    NSInteger _selected;
+    NSUInteger _selected;
+    MenuModel *_menu;
     UILayoutResult *_layout;
     BOOL _hasClick;
     CGPoint _click;
@@ -37,8 +38,9 @@ static PauseCommand CommandFor(NSString *itemId) {
     [self rebuild];
 }
 
-- (NSArray<NSString *> *)items { return _layout.lists[@"items"] ?: @[]; }
 - (UILayoutResult *)layout { return _layout; }
+
+static NSString *ButtonKey(MenuChoice *choice) { return [@"items." stringByAppendingString:choice.identifier]; }
 
 - (void)rebuild {
     [self removeAllChildren];
@@ -82,17 +84,11 @@ static PauseCommand CommandFor(NSString *itemId) {
         guideRegion = RectFromEdges(CGRectGetMinX(bounds) + 24, CGRectGetMinY(bounds) + 18, CGRectGetMaxX(bounds) - 24, split - 18);
         menuBounds = RectFromEdges(CGRectGetMinX(bounds), split, CGRectGetMaxX(bounds), CGRectGetMaxY(bounds));
     }
-    NSArray *previous = [self items];
-    NSString *selected = _selected < (NSInteger)previous.count ? [@"items." stringByAppendingString:previous[_selected]] : nil;
-    UILayout *layout = [UILayout named:@"pause"];
-    _layout = [layout buildIn:menuBounds sceneSize:self.size flags:flags
-                    variables:@{ @"sound": [[GameAudio shared] mixTitle] } selected:selected];
-    if (!selected && self.items.count) {
-        // First build: highlight the first button.
-        _layout = [layout buildIn:menuBounds sceneSize:self.size flags:flags
-                        variables:@{ @"sound": [[GameAudio shared] mixTitle] }
-                         selected:[@"items." stringByAppendingString:self.items[0]]];
-    }
+    _menu = PauseMenuModel(_remote, _cockpit, [[GameAudio shared] mixTitle]);
+    _selected = MIN(_selected, _menu.choices.count ? _menu.choices.count - 1 : 0);
+    _layout = [[UILayout named:@"pause"] buildIn:menuBounds sceneSize:self.size flags:flags
+        values:@{ @"title": _menu.title, @"hint": _menu.hint, @"choices": _menu.choices }
+        selected:_menu.choices.count ? ButtonKey(_menu.choices[_selected]) : nil];
     if (_layout.node) [self addChild:_layout.node];
     if (!CGRectIsEmpty(guideRegion)) {
         UIControlGuide *guide = [[UIControlGuide alloc] initWithGuide:_guideSnapshot width:CGRectGetWidth(guideRegion) compact:NO];
@@ -103,11 +99,6 @@ static PauseCommand CommandFor(NSString *itemId) {
             [self addChild:guide];
         }
     }
-}
-
-- (BOOL)disabled:(NSInteger)i {
-    NSArray *items = [self items];
-    return i < 0 || i >= (NSInteger)items.count || [_layout.disabled containsObject:[@"items." stringByAppendingString:items[i]]];
 }
 
 - (void)pointerClick:(CGPoint)at {
@@ -138,27 +129,27 @@ static PauseCommand CommandFor(NSString *itemId) {
         }
         return PauseCommandNone;
     }
-    NSInteger count = (NSInteger)self.items.count;
     if (actions & InputActionBack) return PauseCommandResume;
-    if (count && (actions & InputActionUp)) { _selected = (_selected + count - 1) % count; [self rebuild]; }
-    if (count && (actions & InputActionDown)) { _selected = (_selected + 1) % count; [self rebuild]; }
+    NSInteger step = (actions & InputActionDown ? 1 : 0) - (actions & InputActionUp ? 1 : 0);
+    if (step && _menu.choices.count) { _selected = [_menu indexByMoving:step from:_selected]; [self rebuild]; }
     if (_hasClick) {
         _hasClick = NO;
-        for (NSInteger i = 0; i < count; i++)
-            if (CGRectContainsPoint([_layout frame:[@"items." stringByAppendingString:self.items[i]]], _click)) {
+        for (NSUInteger i = 0; i < _menu.choices.count; i++)
+            if (CGRectContainsPoint([_layout frame:ButtonKey(_menu.choices[i])], _click)) {
                 _selected = i;
                 actions |= InputActionConfirm;
             }
     }
-    if (!(actions & InputActionConfirm) || _selected >= count || [self disabled:_selected]) return PauseCommandNone;
-    if ([self.items[_selected] isEqualToString:@"controls"]) {
+    MenuChoice *choice = actions & InputActionConfirm ? [_menu choiceToActivateAt:_selected] : nil;
+    if (!choice) return PauseCommandNone;
+    if ([choice.identifier isEqualToString:@"controls"]) {
         _controlsPanel = [ControlsPanel new];
         _controlsPanel.input = self.input;
         [[GameAudio shared] play:@"ui-confirm"];
         [self rebuild];
         return PauseCommandNone;
     }
-    PauseCommand command = CommandFor(self.items[_selected]);
+    PauseCommand command = CommandFor(choice.identifier);
     if (command == PauseCommandCamera) { _cockpit = !_cockpit; [self rebuild]; }
     if (command == PauseCommandSound) { [[GameAudio shared] cycleMix]; [self rebuild]; }
     [[GameAudio shared] play:@"ui-confirm"];

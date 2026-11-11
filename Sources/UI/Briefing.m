@@ -1737,38 +1737,22 @@ static const CGFloat PhoneSpeakerFont = 16;
     [self rebuild];
 }
 
-static SKLabelNode *ReportLine(SKNode *report, NSString *text, CGFloat size, UIRGB color,
-                               CGFloat width, CGFloat top, BOOL centered, BOOL bold) {
-    SKLabelNode *label = Para(size, UIColorWithOpacity(color, 1), width);
-    if (bold) label.fontName = UIInterfaceBoldFont;
-    if (centered) label.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeCenter;
-    label.text = text;
-    label.position = CGPointMake(centered ? width / 2 : 0, top);
-    [report addChild:label];
-    return label;
-}
-
-- (void)showReport:(SKNode *)report in:(CGRect)region width:(CGFloat)width {
+// A results page: the model centred in the body, scrolling when it is taller.
+- (UIReportView *)showReport:(ReportModel *)model widest:(CGFloat)widest {
+    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets);
+    CGFloat width = MAX(1, MIN(widest, CGRectGetWidth(regions.body) - 2 * ScrollGutter));
+    UIReportView *report = [[UIReportView alloc] initWithReport:model width:width compact:regions.compact];
     SKNode *content = [SKNode node];
-    report.position = UIScrollContentPosition(region, CGSizeMake(width, -CGRectGetMinY(report.calculateAccumulatedFrame)), 0);
+    report.position = UIScrollContentPosition(regions.body, report.contentSize, 0);
     [content addChild:report];
-    [_root addChild:[self textViewport:region content:content]];
+    [_root addChild:[self textViewport:regions.body content:content]];
+    return report;
 }
 
 - (void)buildCampaignEnd {
-    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets);
-    CGFloat width = MAX(1, MIN(650, CGRectGetWidth(regions.body) - 2 * ScrollGutter));
     NSUInteger count = CampaignMissions().count, stars = 0;
     for (NSUInteger i = 0; i < count; i++) stars += ProgressBestStars(i);
-    SKNode *report = [SKNode node];
-    SKLabelNode *title = ReportLine(report, L10n(@"debrief.to_be_continued"), regions.compact ? 25 : 40, UIAmber, width, 0, YES, YES);
-    SKLabelNode *note = ReportLine(report, L10n(@"debrief.more_to_come"), regions.compact ? 16 : 21, UIInk,
-                                  width, CGRectGetMinY(title.frame) - 12, YES, NO);
-    SKLabelNode *progress = ReportLine(report, L10nFormat(@"debrief.campaign_stars", (unsigned long)stars, (unsigned long)(count * 3)),
-        16, UIInk, width, CGRectGetMinY(note.frame) - 23, YES, NO);
-    ReportLine(report, L10nFormat(@"score.total", (unsigned long)ProgressPilotScore()), regions.compact ? 18 : 23,
-               UIAmber, width, CGRectGetMinY(progress.frame) - 10, YES, YES);
-    [self showReport:report in:regions.body width:width];
+    UIReportView *report = [self showReport:CampaignEndReport(stars, count * 3, ProgressPilotScore()) widest:650];
     if ([self intro]) UIMotionFlickerIn(report, 0.1);
     [self navigationAction:L10n(@"story.missions")];
 }
@@ -1786,36 +1770,17 @@ static SKLabelNode *ReportLine(SKNode *report, NSString *text, CGFloat size, UIR
         return;
     }
 
-    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets);
-    CGFloat width = MAX(1, MIN(750, CGRectGetWidth(regions.body) - 2 * ScrollGutter));
-    SKNode *report = [SKNode node];
-    SKLabelNode *title = ReportLine(report, L10n(_success ? @"debrief.complete" : @"debrief.failed"),
-        regions.compact ? 23 : 36, _success ? UIInk : UIRed, width, 0, YES, YES);
-    CGFloat y = CGRectGetMinY(title.frame) - 8;
-    if (_success) {
-        SKLabelNode *rating = ReportLine(report, StarRating(_debriefScore.stars), regions.compact ? 23 : 34, UIAmber, width, y, YES, NO);
-        UIResultScore *score = [[UIResultScore alloc] initWithTotal:ProgressPilotScore() earned:_debriefScore.points
-                                                        fontSize:regions.compact ? 15 : 18 width:width];
-        CGFloat scoreTop = CGRectGetMinY(rating.frame) - 6;
-        score.position = CGPointMake(width / 2, scoreTop - score.contentSize.height / 2);
-        [report addChild:score];
-        y = scoreTop - score.contentSize.height - 16;
-    }
-    SKLabelNode *summary = ReportLine(report, _success ? mission.debrief.win : mission.debrief.lose,
-                                     regions.compact ? 15 : 20, UIInk, width, y, NO, NO);
-    UIObjectiveList *objectives = nil;
-    if (_results.count) {
-        objectives = [[UIObjectiveList alloc] initWithTitle:L10n(@"debrief.objectives") fontSize:regions.compact ? 16 : 19];
-        objectives.maximumWidth = width;
-        objectives.items = _results;
-        objectives.position = CGPointMake(0, CGRectGetMinY(summary.frame) - 16);
-        [report addChild:objectives];
-    }
-    [self showReport:report in:regions.body width:width];
+    UIReportView *report = [self showReport:DebriefReport((DebriefFacts){
+        .success = _success, .stars = _debriefScore.stars, .total = ProgressPilotScore(), .earned = _debriefScore.points,
+        .summary = _success ? mission.debrief.win : mission.debrief.lose, .results = _results,
+    }) widest:750];
     if ([self intro]) {
+        SKLabelNode *title = (SKLabelNode *)[report nodeForKind:ReportHeadline];
+        SKLabelNode *summary = (SKLabelNode *)[report nodeForKind:ReportText];
         if (_success) UIMotionDecode(title, 0.1, 0.6);
         else UIMotionGlitchIn(title, 0.1, 0.7, UIColorWithOpacity(UIRed, 1));
-        NSTimeInterval typed = UIMotionTypeOn(summary, 0.5, 160);
+        NSTimeInterval typed = summary ? UIMotionTypeOn(summary, 0.5, 160) : 0.5;
+        SKNode *objectives = [report nodeForKind:ReportChecklist];
         if (objectives) UIMotionFlickerIn(objectives, MAX(0.7, typed - 0.2));
     }
     [self navigationAction:conversation.count ? L10n(@"debrief.continue_story") : (_success ? next : L10n(@"debrief.retry"))];

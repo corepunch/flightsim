@@ -109,62 +109,14 @@
 - (instancetype)initWithRegion:(CGRect)region result:(LANMatchResult)result points:(NSUInteger)points compact:(BOOL)compact;
 @end
 
-static SKLabelNode *ScoreCell(NSString *text, CGRect cell, CGFloat size, UIRGB color, BOOL left, BOOL bold) {
-    SKLabelNode *label = UIInterfaceLabel(size, UIColorWithOpacity(color, 1),
-        left ? SKLabelHorizontalAlignmentModeLeft : SKLabelHorizontalAlignmentModeCenter, SKLabelVerticalAlignmentModeCenter);
-    label.text = text;
-    if (bold) label.fontName = UIInterfaceBoldFont;
-    label.position = left ? CGPointMake(CGRectGetMinX(cell), CGRectGetMidY(cell)) : RectCenter(cell);
-    UIFitControlLabel(label, CGRectGetWidth(cell));
-    UICenterLabelVertically(label, CGRectGetMidY(cell));
-    return label;
-}
-
 @implementation LANScoreboard
 - (instancetype)initWithRegion:(CGRect)region result:(LANMatchResult)result points:(NSUInteger)points compact:(BOOL)compact {
     CGFloat width = MAX(1, MIN(720, CGRectGetWidth(region) - 20));
-    CGFloat rowHeight = compact ? 36 : 48, gap = 4;
-    UIResultScore *pilotScore = [[UIResultScore alloc] initWithTotal:ProgressPilotScore() earned:points
-                                                           fontSize:compact ? 15 : 18 width:width];
-    CGFloat heroHeight = compact ? 33 : 48, headerHeight = 26;
-    CGFloat scoreHeight = MAX(26, pilotScore.contentSize.height + 8);
-    CGFloat tableTop = -(heroHeight + scoreHeight + 10);
-    NSUInteger rank = LANMatchRank(result, result.localIndex);
-    NSString *outcome = L10n(@"browser.results");
-    if (result.pilots.count > 1) {
-        if (rank == 1) outcome = L10n(LANMatchHasWinner(result) ? @"match.win" : @"match.draw");
-        else outcome = L10nFormat(@"match.place", (unsigned long)rank);
-    }
-    SKNode *table = [SKNode node];
-    [table addChild:ScoreCell(outcome, CGRectMake(0, -heroHeight, width, heroHeight), compact ? 24 : 36, UIInk, NO, YES)];
-    pilotScore.position = CGPointMake(width / 2, -heroHeight - scoreHeight / 2);
-    [table addChild:pilotScore];
-    CGFloat statWidth = MIN(110, width * 0.20), rankWidth = MIN(52, width * 0.13);
-    for (NSUInteger i = 0; i <= result.pilots.count; i++) {
-        BOOL header = i == 0, local = !header && i - 1 == result.localIndex;
-        CGFloat height = header ? headerHeight : rowHeight;
-        CGFloat y = tableTop - headerHeight - i * (rowHeight + gap);
-        CGRect row = CGRectMake(0, y, width, height);
-        UIRGB ink = local ? UIAmber : UIInk;
-        if (!header) [table addChild:UIReadoutPanel(row, UIColorWithOpacity(ink, local ? 0.9 : 0.27),
-                                                  UIColorWithOpacity(local ? UIAmber : UIPanel, local ? 0.12 : 0.8))];
-        LANPilotScore score = header ? (LANPilotScore){0} : result.scores[i - 1];
-        NSArray<NSString *> *labels = header ? @[@"#", L10n(@"browser.pilots"), L10n(@"match.kills"), L10n(@"match.deaths")] :
-            @[@(LANMatchRank(result, i - 1)).stringValue, result.pilots[i - 1], @(score.kills).stringValue, @(score.deaths).stringValue];
-        CGRect cells[] = {
-            CGRectMake(0, y, rankWidth, height),
-            CGRectMake(rankWidth, y, MAX(1, width - rankWidth - 2 * statWidth - 6), height),
-            CGRectMake(width - 2 * statWidth, y, statWidth, height),
-            CGRectMake(width - statWidth, y, statWidth, height),
-        };
-        for (NSUInteger column = 0; column < labels.count; column++)
-            [table addChild:ScoreCell(labels[column], CGRectInset(cells[column], 4, 0),
-                                      header ? 12 : compact ? 14 : 17, ink, column == 1, header || local)];
-    }
-    CGFloat height = -tableTop + headerHeight + result.pilots.count * (rowHeight + gap);
-    table.position = UIScrollContentPosition(region, CGSizeMake(width, height), 0);
+    UIReportView *report = [[UIReportView alloc] initWithReport:MatchReport(result, ProgressPilotScore(), points)
+                                                          width:width compact:compact];
+    report.position = UIScrollContentPosition(region, report.contentSize, 0);
     SKNode *content = [SKNode node];
-    [content addChild:table];
+    [content addChild:report];
     return [super initWithRect:region content:content];
 }
 @end

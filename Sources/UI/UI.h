@@ -274,6 +274,17 @@ typedef SKNode * (^UIRowTemplate)(id item, SKNode *reusableRow, CGFloat width);
 - (instancetype)initWithTotal:(NSUInteger)total earned:(NSUInteger)points fontSize:(CGFloat)size width:(CGFloat)width;
 @end
 
+// Draws a ReportModel (Common.h) as a column `width` wide, hanging from its
+// origin. Debrief, campaign end and match results are this view with different
+// models; the view owns every size, gap and colour.
+@interface UIReportView : SKNode
+- (instancetype)initWithReport:(ReportModel *)report width:(CGFloat)width compact:(BOOL)compact;
+@property (nonatomic, readonly) ReportModel *report;
+@property (nonatomic, readonly) CGSize contentSize;
+// The node drawn for the first block of a kind, for a screen's entrance effects.
+- (SKNode *)nodeForKind:(ReportBlockKind)kind;
+@end
+
 // A translucent shade over the live menu sky.
 SKNode *UIResultsBackdrop(CGSize size);
 
@@ -367,11 +378,12 @@ typedef NS_ENUM(NSInteger, PauseCommand) {
     PauseCommandRestart, PauseCommandMissions
 };
 
-// The in-flight pause menu, laid out by Resources/UI/menus/pause.json. Its
-// buttons' ids map to commands: resume, camera, sound, restart, missions;
-// controls opens the engine's flight preferences within this screen.
-// other ids do nothing. Flags for "when": "online" (a remote game, where the
-// mission keeps running) and "cockpit" (the cockpit camera is on).
+// The in-flight pause menu: Resources/UI/menus/pause.json is the template and
+// PauseMenuModel (Common.h) the datasource for its title, hint and buttons, so
+// the panel is as large as the buttons it is given. Choices map to commands
+// by identifier: resume, camera, sound, restart, missions; controls opens the
+// engine's flight preferences within this screen. "when" flags: "short" (a
+// wide, low screen) and "shortGuide" (the same beside the control guide).
 @interface PauseMenu : SKScene <ScreenInput>
 @property (nonatomic, strong) Input *input;
 @property (atomic) ScreenInsets contentInsets;
@@ -479,7 +491,14 @@ typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandC
 //               centred vertically in its frame
 //   "buttons"   a vertical list of action buttons from "items" (each with
 //               "id", "text", optional "disabled" and "when"), "rowHeight",
-//               "gap", optional "columns" and "textLines"; rows shrink to fit the frame
+//               "gap", optional "columns" and "textLines"; rows shrink to fit the frame.
+//               "items": "$name" takes the buttons from the screen's datasource instead.
+//   "stack"     a panel sized by its content: children run top to bottom, "gap"
+//               apart, inside "inset", each as tall as its "size" says. A
+//               "buttons" child is as tall as its rows; when the stack would
+//               outgrow its parent the buttons take up to "maxColumns" columns
+//               of "columnWidth", then shrink towards "minRowHeight". "size"
+//               gives the one-column width. Drawn like "panel".
 //   "group"     nothing drawn; for positioning children
 // Numbers anywhere can be replaced by { "compact": n, "regular": n }.
 
@@ -509,6 +528,10 @@ typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandC
 // is "<list id>.<item id>" of the highlighted button, drawn in amber.
 - (UILayoutResult *)buildIn:(CGRect)bounds sceneSize:(CGSize)size flags:(NSSet<NSString *> *)flags
                   variables:(NSDictionary<NSString *, NSString *> *)variables selected:(NSString *)selected;
+// The same with a datasource: `values` fill "$name" texts with strings and
+// "$name" button lists with NSArray<MenuChoice *>.
+- (UILayoutResult *)buildIn:(CGRect)bounds sceneSize:(CGSize)size flags:(NSSet<NSString *> *)flags
+                     values:(NSDictionary<NSString *, id> *)values selected:(NSString *)selected;
 
 // A value from the root's "metrics" object, with "when" variants applied.
 - (CGFloat)metric:(NSString *)name flags:(NSSet<NSString *> *)flags fallback:(CGFloat)fallback;

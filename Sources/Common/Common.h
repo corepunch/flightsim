@@ -216,3 +216,100 @@ typedef NS_ENUM(NSInteger, ObjectiveStatus) { ObjectiveOpen, ObjectiveComplete, 
 // Decode the two server messages into the same presentation data.
 NSArray<ObjectiveReadout *> *FlightObjectiveReadouts(NSString *lines, NSString *states);
 NSArray<ObjectiveReadout *> *MissionResultReadouts(NSArray<NSString *> *lines);
+
+// MARK: - Screen models
+
+// What a screen shows, as plain values. A scene gathers facts, a function here
+// turns them into a model, and a view in UI/ draws the model; nothing in a
+// scene chooses texts, order or sizes. Models need no window, so the unit
+// checks cover them.
+
+// One button of a menu. The scene maps `identifier` to what choosing it does.
+@interface MenuChoice : NSObject
++ (instancetype)choice:(NSString *)identifier title:(NSString *)title;
++ (instancetype)choice:(NSString *)identifier title:(NSString *)title enabled:(BOOL)enabled;
+@property (nonatomic, readonly, copy) NSString *identifier, *title;
+@property (nonatomic, readonly) BOOL enabled;
+@end
+
+@interface MenuModel : NSObject
+- (instancetype)initWithTitle:(NSString *)title hint:(NSString *)hint choices:(NSArray<MenuChoice *> *)choices;
+@property (nonatomic, readonly, copy) NSString *title, *hint;
+@property (nonatomic, readonly, copy) NSArray<MenuChoice *> *choices;
+// NSNotFound when no choice has the identifier.
+- (NSUInteger)indexOfChoice:(NSString *)identifier;
+// The highlight after Up (-1) or Down (+1); it wraps around the ends.
+- (NSUInteger)indexByMoving:(NSInteger)step from:(NSUInteger)index;
+// The choice Confirm activates at `index`: nil when out of range or disabled.
+- (MenuChoice *)choiceToActivateAt:(NSUInteger)index;
+@end
+
+// The pause menu's content for a local or remote flight.
+MenuModel *PauseMenuModel(BOOL remote, BOOL cockpit, NSString *soundTitle);
+
+// How a number of equal buttons fills a space: one column while the rows fit,
+// more columns when they do not, and shorter rows only when the columns ran out.
+typedef struct {
+    CGFloat rowHeight, minimumRowHeight, gap;
+    CGFloat columnWidth;            // the width of one column when there are several
+    NSUInteger maximumColumns;
+} MenuGridMetrics;
+typedef struct {
+    NSUInteger columns, rows;
+    CGFloat rowHeight, columnWidth, gap;
+    CGSize size;
+} MenuGrid;
+// `width` is one column's; several columns take `columnWidth` each and never
+// more than `available.width` together.
+MenuGrid MenuGridFit(NSUInteger count, CGFloat width, CGSize available, MenuGridMetrics metrics);
+// Cells fill a column from the top before starting the next; `frame` has the grid's size.
+CGRect MenuGridCell(MenuGrid grid, CGRect frame, NSUInteger index);
+
+// A results page is a column of blocks, drawn in order by UIReportView.
+typedef NS_ENUM(NSInteger, ReportBlockKind) {
+    ReportHeadline,     // the outcome, large and centred
+    ReportRating,       // 0-3 stars
+    ReportScore,        // the career total and what this result added to it
+    ReportNote,         // a centred line
+    ReportText,         // a wrapped paragraph
+    ReportChecklist,    // a heading over objectives
+    ReportTable,        // a header over rows of cells, one row highlighted
+};
+typedef NS_ENUM(NSInteger, ReportTone) { ReportTonePlain, ReportToneEmphasis, ReportToneDanger };
+
+@interface ReportBlock : NSObject
++ (instancetype)headline:(NSString *)text tone:(ReportTone)tone;
++ (instancetype)rating:(NSUInteger)stars;
++ (instancetype)scoreTotal:(NSUInteger)total earned:(NSUInteger)earned;
++ (instancetype)note:(NSString *)text;
++ (instancetype)text:(NSString *)text;
++ (instancetype)checklist:(NSString *)title items:(NSArray<ObjectiveReadout *> *)items;
+// The second column is the wide, leading-aligned one (a name); the others are narrow figures.
++ (instancetype)table:(NSArray<NSString *> *)header rows:(NSArray<NSArray<NSString *> *> *)rows
+          highlighted:(NSUInteger)row;
+@property (nonatomic, readonly) ReportBlockKind kind;
+@property (nonatomic, readonly) ReportTone tone;
+@property (nonatomic, readonly, copy) NSString *text;                       // headline, note, text, checklist heading
+@property (nonatomic, readonly) NSUInteger stars, total, earned;
+@property (nonatomic, readonly, copy) NSArray<ObjectiveReadout *> *items;
+@property (nonatomic, readonly, copy) NSArray<NSString *> *header;
+@property (nonatomic, readonly, copy) NSArray<NSArray<NSString *> *> *rows;
+@property (nonatomic, readonly) NSUInteger highlightedRow;                  // NSNotFound for none
+@end
+
+@interface ReportModel : NSObject
+- (instancetype)initWithBlocks:(NSArray<ReportBlock *> *)blocks;
+@property (nonatomic, readonly, copy) NSArray<ReportBlock *> *blocks;
+- (ReportBlock *)firstBlockOfKind:(ReportBlockKind)kind;
+@end
+
+typedef struct {
+    BOOL success;
+    NSUInteger stars, total, earned;            // the rating, the career score and this mission's share
+    NSString *summary;
+    NSArray<ObjectiveReadout *> *results;
+} DebriefFacts;
+ReportModel *DebriefReport(DebriefFacts facts);
+ReportModel *CampaignEndReport(NSUInteger stars, NSUInteger possible, NSUInteger total);
+// The local pilot's outcome and the scoreboard in the server's order.
+ReportModel *MatchReport(LANMatchResult result, NSUInteger total, NSUInteger earned);

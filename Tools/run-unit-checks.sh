@@ -71,7 +71,7 @@ for source in $sources; do
     fi
 done
 for pid in $pids; do wait "$pid"; done
-clang $objects -framework Foundation -framework QuartzCore \
+clang $objects -framework Foundation -framework QuartzCore -framework CoreGraphics \
     -sectcreate __TEXT __info_plist "$qa/Info.plist" -o "$qa/UnitChecks"
 if ! "$qa/UnitChecks"; then
     print -u2 "Unit checks failed. Binary: $qa"

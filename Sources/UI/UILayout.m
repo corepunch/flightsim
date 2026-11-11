@@ -77,7 +77,10 @@
 
 - (NSString *)text:(id)value {
     if (![value isKindOfClass:NSString.class]) return @"";
-    if ([value hasPrefix:@"$"]) return _variables[[value substringFromIndex:1]] ?: @"";
+    if ([value hasPrefix:@"$"]) {
+        id bound = _variables[[value substringFromIndex:1]];
+        return [bound isKindOfClass:NSString.class] ? bound : @"";
+    }
     return L10n(value);
 }
 
@@ -111,6 +114,11 @@
 
 - (UILayoutResult *)buildIn:(CGRect)bounds sceneSize:(CGSize)size flags:(NSSet<NSString *> *)flags
                   variables:(NSDictionary<NSString *, NSString *> *)variables selected:(NSString *)selected {
+    return [self buildIn:bounds sceneSize:size flags:flags values:variables selected:selected];
+}
+
+- (UILayoutResult *)buildIn:(CGRect)bounds sceneSize:(CGSize)size flags:(NSSet<NSString *> *)flags
+                     values:(NSDictionary<NSString *, id> *)variables selected:(NSString *)selected {
     NSMutableSet *all = [NSMutableSet setWithSet:flags ?: [NSSet set]];
     if ([self compactForSize:size]) [all addObject:@"compact"];
     _flags = all;
@@ -157,6 +165,10 @@
     if ([n[@"hidden"] boolValue]) return;
     NSString *type = n[@"type"] ?: @"group";
     NSString *nodeId = n[@"id"];
+    if ([type isEqualToString:@"stack"]) {
+        [self buildStack:n in:parent into:into result:result];
+        return;
+    }
     CGRect frame = [type isEqualToString:@"shade"] ? CGRectMake(0, 0, _sceneSize.width, _sceneSize.height) : [self frameOf:n in:parent];
     if (nodeId) result.frameMap[nodeId] = BoxRect(frame);
 
@@ -190,27 +202,113 @@
     for (NSDictionary *child in n[@"children"]) [self build:child in:inner into:into result:result];
 }
 
+// A list's buttons: the template's own "items", or a datasource's ("items": "$name").
+- (NSArray<MenuChoice *> *)choices:(NSDictionary *)n {
+    id source = n[@"items"];
+    if ([source isKindOfClass:NSString.class] && [source hasPrefix:@"$"]) {
+        id bound = _variables[[source substringFromIndex:1]];
+        return [bound isKindOfClass:NSArray.class] ? bound : @[];
+    }
+    NSMutableArray<MenuChoice *> *choices = [NSMutableArray array];
+    if ([source isKindOfClass:NSArray.class]) for (NSDictionary *raw in source) {
+        if (![raw isKindOfClass:NSDictionary.class]) continue;
+        NSDictionary *item = [self resolve:raw];
+        NSString *itemId = item[@"id"] ?: [NSString stringWithFormat:@"%lu", (unsigned long)choices.count];
+        [choices addObject:[MenuChoice choice:itemId title:[self text:item[@"text"]] enabled:![item[@"disabled"] boolValue]]];
+    }
+    return choices;
+}
+
+- (MenuGridMetrics)gridMetrics:(NSDictionary *)n {
+    CGFloat rowHeight = [self number:n[@"rowHeight"] fallback:44];
+    return (MenuGridMetrics){
+        .rowHeight = rowHeight, .minimumRowHeight = [self number:n[@"minRowHeight"] fallback:rowHeight * 0.6],
+        .gap = [self number:n[@"gap"] fallback:6], .columnWidth = [self number:n[@"columnWidth"] fallback:0],
+        .maximumColumns = MAX(1, (NSUInteger)[self number:n[@"maxColumns"] fallback:1]),
+    };
+}
+
+// The stack measures its children, takes their combined size, then places them.
+- (void)buildStack:(NSDictionary *)n in:(CGRect)parent into:(SKNode *)into result:(UILayoutResult *)result {
+    NSArray *inset = [n[@"inset"] isKindOfClass:NSArray.class] && [n[@"inset"] count] >= 4 ? n[@"inset"] : @[@0, @0, @0, @0];
+    CGSize padding = CGSizeMake([self number:inset[0] fallback:0] + [self number:inset[2] fallback:0],
+                                [self number:inset[1] fallback:0] + [self number:inset[3] fallback:0]);
+    CGPoint margin = [self pair:n[@"margin"] fallback:CGPointZero];
+    CGSize most = CGSizeMake(MAX(0, parent.size.width - 2 * margin.x), MAX(0, parent.size.height - 2 * margin.y));
+    CGFloat gap = [self number:n[@"gap"] fallback:0];
+    CGFloat column = MAX(0, MIN([self pair:n[@"size"] fallback:CGPointMake(400, 0)].x, most.width) - padding.width);
+
+    NSMutableArray<NSDictionary *> *children = [NSMutableArray array];
+    for (NSDictionary *raw in n[@"children"]) {
+        if (![raw isKindOfClass:NSDictionary.class]) continue;
+        NSDictionary *child = [self resolve:raw];
+        if (![child[@"hidden"] boolValue]) [children addObject:child];
+    }
+    // Fixed children first: what is left of the height belongs to the buttons.
+    CGFloat fixed = padding.height + gap * (children.count ? children.count - 1 : 0);
+    NSDictionary *list = nil;
+    for (NSDictionary *child in children) {
+        if (!list && [child[@"type"] isEqualToString:@"buttons"]) list = child;
+        else fixed += MAX(0, [self pair:child[@"size"] fallback:CGPointZero].y);
+    }
+    MenuGrid grid = {0};
+    if (list) grid = MenuGridFit([self choices:list].count, column,
+        CGSizeMake(most.width - padding.width, most.height - fixed), [self gridMetrics:list]);
+    CGSize size = CGSizeMake(MAX(column, grid.size.width) + padding.width, fixed + grid.size.height);
+
+    NSMutableDictionary *placed = [n mutableCopy];
+    placed[@"size"] = @[@(MAX(1, size.width)), @(MAX(1, size.height))];
+    CGRect frame = [self frameOf:placed in:parent];
+    if (n[@"id"]) result.frameMap[n[@"id"]] = BoxRect(frame);
+    [into addChild:UIReadoutPanel(frame, [self color:n[@"stroke"] ?: @[@"ink", @0.8] opacity:1],
+                                  [self color:n[@"fill"] ?: @[@"panel", @0.98] opacity:1])];
+    CGRect inner = [self inner:frame of:n];
+    CGFloat top = CGRectGetMaxY(inner);
+    for (NSDictionary *child in children) {
+        CGFloat height = child == list ? grid.size.height : MAX(0, [self pair:child[@"size"] fallback:CGPointZero].y);
+        CGRect slot = RectFromEdges(CGRectGetMinX(inner), top - height, CGRectGetMaxX(inner), top);
+        if (child == list) [self buildButtons:child grid:grid frame:slot into:into result:result];
+        else {
+            // The slot is the child's whole frame, whatever placement it asked for.
+            NSMutableDictionary *filling = [child mutableCopy];
+            [filling removeObjectsForKeys:@[@"anchor", @"pivot", @"offset", @"margin", @"when"]];
+            filling[@"size"] = @[@0, @0];
+            [self build:filling in:slot into:into result:result];
+        }
+        top -= height + gap;
+    }
+}
+
 - (void)buildButtons:(NSDictionary *)n frame:(CGRect)frame into:(SKNode *)into result:(UILayoutResult *)result {
-    NSString *listId = n[@"id"] ?: @"buttons";
-    NSMutableArray *items = [NSMutableArray array];
-    for (NSDictionary *item in n[@"items"]) if ([item isKindOfClass:NSDictionary.class]) [items addObject:[self resolve:item]];
-    NSUInteger count = items.count;
+    // A list outside a stack fills the frame it was given, with the columns it names.
+    NSUInteger count = [self choices:n].count, columns = MAX(1, (NSUInteger)[self number:n[@"columns"] fallback:1]);
     if (!count) return;
-    NSUInteger columns = MAX(1, (NSUInteger)[self number:n[@"columns"] fallback:1]);
     NSUInteger rows = (count + columns - 1) / columns;
     CGFloat gap = [self number:n[@"gap"] fallback:6];
-    CGFloat row = MIN([self number:n[@"rowHeight"] fallback:44], (CGRectGetHeight(frame) - gap * (rows - 1)) / rows);
-    CGFloat width = (CGRectGetWidth(frame) - gap * (columns - 1)) / columns;
+    MenuGrid grid = {
+        .columns = columns, .rows = rows, .gap = gap,
+        .rowHeight = MIN([self number:n[@"rowHeight"] fallback:44], (CGRectGetHeight(frame) - gap * (rows - 1)) / rows),
+        .columnWidth = (CGRectGetWidth(frame) - gap * (columns - 1)) / columns,
+    };
+    [self buildButtons:n grid:grid frame:frame into:into result:result];
+}
+
+- (void)buildButtons:(NSDictionary *)n grid:(MenuGrid)grid frame:(CGRect)frame into:(SKNode *)into
+              result:(UILayoutResult *)result {
+    NSString *listId = n[@"id"] ?: @"buttons";
+    NSArray<MenuChoice *> *items = [self choices:n];
+    NSUInteger count = items.count;
+    if (!count) return;
+    // Centre a grid narrower than its slot.
+    frame = CGRectInset(frame, MAX(0, (CGRectGetWidth(frame) - grid.columns * grid.columnWidth - grid.gap * (grid.columns - 1)) / 2), 0);
     NSMutableArray *ids = [NSMutableArray array];
     for (NSUInteger i = 0; i < count; i++) {
-        NSDictionary *item = items[i];
-        NSString *itemId = item[@"id"] ?: [NSString stringWithFormat:@"%lu", (unsigned long)i];
+        NSString *itemId = items[i].identifier;
         NSString *key = [NSString stringWithFormat:@"%@.%@", listId, itemId];
-        CGRect rect = CGRectMake(CGRectGetMinX(frame) + (i / rows) * (width + gap),
-                                 CGRectGetMaxY(frame) - row - (i % rows) * (row + gap), width, row);
-        BOOL disabled = [item[@"disabled"] boolValue];
+        CGRect rect = MenuGridCell(grid, frame, i);
+        BOOL disabled = !items[i].enabled;
         NSUInteger lines = MAX(1, (NSUInteger)[self number:n[@"textLines"] fallback:1]);
-        SKShapeNode *button = UIActionButtonWithLines(rect, [self text:item[@"text"]],
+        SKShapeNode *button = UIActionButtonWithLines(rect, items[i].title,
             [key isEqualToString:_selected] ? UIAmber : UIInk, [self number:n[@"fontSize"] fallback:17], lines);
         button.alpha = disabled ? 0.35 : 1;
         button.name = key;

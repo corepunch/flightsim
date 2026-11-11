@@ -124,6 +124,15 @@ composition is missing instead of adding screen-specific offsets. Touch flight
 controls, pause included, are the system `GCVirtualController`, owned by
 `Input`; the HUD keeps its readouts clear of it.
 
+**Views draw models; scenes do not choose content.** What a screen shows is a
+plain value built by a function in `Sources/Common/ScreenModels.m` from facts
+(`PauseMenuModel`, `DebriefReport`, `MatchReport`), and a view renders it
+(`UIReportView`, a `UILayout` template bound to a datasource). A scene gathers
+the facts, hands the model to the view and maps the chosen identifier to a
+command. Add a block kind or a model when a screen needs something new, test
+the model in `Tools/UnitChecks.m`, and look at the view on sample data with
+`--preview-ui [debrief|failed|end|match|pause|online]`.
+
 Keep automated coverage in fast unit tests of logic and data. Do not restore
 rendered UI fixture catalogues or long-running integration suites.
 

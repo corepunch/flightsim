@@ -121,45 +121,57 @@ static int RunDedicated(int mission) {
 
 @end
 
-// Runs the production controls in a resizable SpriteKit window without a game session.
+// Runs the production views on sample data in a resizable SpriteKit window,
+// without a game session: KestrelFrontier --preview-ui [debrief|failed|end|match|pause|online]
 @interface UIPreviewScene : SKScene
+@property (nonatomic, copy) NSString *sample;
 @end
 
 @implementation UIPreviewScene {
-    UIVerticalStack *_controls;
-    UIObjectiveList *_hud, *_debrief;
+    SKNode *_controls;
+}
+
+// Sample data only: the views are the ones the screens use.
+static ReportModel *PreviewReport(NSString *sample) {
+    if ([sample isEqualToString:@"end"]) return CampaignEndReport(31, 36, 2480);
+    if ([sample isEqualToString:@"match"]) {
+        LANMatchResult result = { .pilots = @[@"Wren", @"Halcyon", @"Tobin", @"A pilot with a very long callsign"],
+                                  .scores = { {12, 3}, {9, 5}, {9, 5}, {2, 11} }, .localIndex = 1 };
+        return MatchReport(result, 1240, LANMatchPilotPoints(result));
+    }
+    BOOL success = ![sample isEqualToString:@"failed"];
+    return DebriefReport((DebriefFacts){
+        .success = success, .stars = 2, .total = 1240, .earned = 100,
+        .summary = success ? @"Both freighters reached Halden Gate. The bombers broke off before the corridor closed."
+                           : @"The convoy was lost before it reached Halden Gate.",
+        .results = MissionResultReadouts(@[
+            @"+ Keep Mira and Tobin intact",
+            @"- Escort both freighters to Halden Gate and stay within scanner range until the convoy clears the corridor.",
+            @"x Destroy the Talon bombers (optional)",
+        ]),
+    });
 }
 
 - (void)didMoveToView:(SKView *)view {
     self.backgroundColor = UIColorWithOpacity(UIBackground, 1);
-    NSArray<ObjectiveReadout *> *items = @[
-        [[ObjectiveReadout alloc] initWithText:@"Keep Mira and Tobin intact" status:ObjectiveComplete],
-        [[ObjectiveReadout alloc] initWithText:@"Escort both freighters to Halden Gate and stay within scanner range until the convoy clears the corridor." status:ObjectiveOpen],
-        [[ObjectiveReadout alloc] initWithText:@"Destroy the Talon bombers (optional)" status:ObjectiveFailed],
-    ];
-    _hud = [[UIObjectiveList alloc] initWithTitle:@"Flight HUD" fontSize:14];
-    _debrief = [[UIObjectiveList alloc] initWithTitle:@"Mission debrief" fontSize:19];
-    _hud.items = _debrief.items = items;
-    _controls = [UIVerticalStack node];
-    _controls.spacing = 24;
-    [self addChild:_controls];
     [self layoutControls];
 }
 
 - (void)didChangeSize:(CGSize)oldSize { [self layoutControls]; }
 
 - (void)layoutControls {
-    if (!_controls) return;
+    if (!self.view) return;
     const CGFloat margin = 24;
-    CGFloat width = MAX(1, self.size.width - 2 * margin);
-    _hud.maximumWidth = _debrief.maximumWidth = width;
-    UIResultScore *score = [[UIResultScore alloc] initWithTotal:100 earned:100 fontSize:18 width:width];
-    _controls.arrangedNodes = @[_hud, _debrief, score];
+    [_controls removeFromParent];
+    _controls = [[UIReportView alloc] initWithReport:PreviewReport(_sample) width:MAX(1, self.size.width - 2 * margin)
+                                             compact:self.size.width < 500];
     _controls.position = CGPointMake(margin, self.size.height - margin);
+    [self addChild:_controls];
 }
 @end
 
-@interface UIPreviewDelegate : NSObject <NSApplicationDelegate>
+@interface UIPreviewDelegate : NSObject <NSApplicationDelegate, SKSceneDelegate>
+@property (nonatomic, copy) NSString *sample;
 @end
 
 @implementation UIPreviewDelegate {
@@ -172,7 +184,18 @@ static int RunDedicated(int mission) {
     _window.title = @"Kestrel Frontier UI Preview";
     _window.contentMinSize = CGSizeMake(280, 300);
     SKView *view = [[SKView alloc] initWithFrame:rect];
-    UIPreviewScene *scene = [[UIPreviewScene alloc] initWithSize:rect.size];
+    SKScene *scene;
+    if ([@[@"pause", @"online"] containsObject:_sample ?: @""]) {
+        PauseMenu *pause = [[PauseMenu alloc] initWithSize:rect.size];
+        pause.backgroundColor = UIColorWithOpacity(UIBackground, 1);
+        [pause showRemote:[_sample isEqualToString:@"online"] cockpit:NO];
+        pause.delegate = self;
+        scene = pause;
+    } else {
+        UIPreviewScene *report = [[UIPreviewScene alloc] initWithSize:rect.size];
+        report.sample = _sample;
+        scene = report;
+    }
     scene.scaleMode = SKSceneScaleModeResizeFill;
     _window.contentView = view;
     [view presentScene:scene];
@@ -180,6 +203,8 @@ static int RunDedicated(int mission) {
     [_window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
 }
+// The pause menu lays out again when its size changes, as it does under the host.
+- (void)update:(NSTimeInterval)time forScene:(SKScene *)scene { [(PauseMenu *)scene handle:0]; }
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app { return YES; }
 @end
 
@@ -213,7 +238,12 @@ int main(int argc, const char *argv[]) {
 
         NSApplication *app = [NSApplication sharedApplication];
         app.activationPolicy = NSApplicationActivationPolicyRegular;
-        id<NSApplicationDelegate> delegate = argc >= 2 && !strcmp(argv[1], "--preview-ui") ? [UIPreviewDelegate new] : [AppDelegate new];
+        id<NSApplicationDelegate> delegate = [AppDelegate new];
+        if (argc >= 2 && !strcmp(argv[1], "--preview-ui")) {
+            UIPreviewDelegate *preview = [UIPreviewDelegate new];
+            if (argc >= 3 && argv[2][0] != '+') preview.sample = @(argv[2]);
+            delegate = preview;
+        }
         app.delegate = delegate;
         [app run];
     }

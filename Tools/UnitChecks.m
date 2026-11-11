@@ -1182,6 +1182,75 @@ static NSData *ProgressFixture(NSUInteger version, BOOL started, NSUInteger unlo
     } format:NSPropertyListBinaryFormat_v1_0 options:0 error:nil];
 }
 
+static void CheckScreenModels(void) {
+    // The pause menu is its datasource: the same template shows either flight.
+    MenuModel *local = PauseMenuModel(NO, NO, @"SOUND: FULL"), *remote = PauseMenuModel(YES, YES, @"SOUND: FULL");
+    CHECK(local.choices.count == 6 && remote.choices.count == 6);
+    CHECK([local.title isEqualToString:L10n(@"pause.title")] && [remote.title isEqualToString:L10n(@"pause.title_online")]);
+    CHECK([local.choices[1].title isEqualToString:L10n(@"pause.camera_chase")]);
+    CHECK([remote.choices[1].title isEqualToString:L10n(@"pause.camera_cockpit")]);
+    NSUInteger sound = [local indexOfChoice:@"sound"], restart = [remote indexOfChoice:@"restart"];
+    CHECK(sound == 3 && [local.choices[sound].title isEqualToString:@"SOUND: FULL"]);
+    CHECK([local indexOfChoice:@"absent"] == NSNotFound);
+    CHECK([local choiceToActivateAt:restart] && ![remote choiceToActivateAt:restart] && ![local choiceToActivateAt:6]);
+    CHECK([[remote choiceToActivateAt:5].title isEqualToString:L10n(@"pause.leave")]);
+    CHECK([local indexByMoving:-1 from:0] == 5 && [local indexByMoving:1 from:5] == 0 && [local indexByMoving:1 from:2] == 3);
+    CHECK([[[MenuModel alloc] initWithTitle:nil hint:nil choices:nil] indexByMoving:1 from:0] == 0);
+
+    // Buttons take one column while they fit, then two, and only then shrink.
+    MenuGridMetrics metrics = { .rowHeight = 56, .minimumRowHeight = 30, .gap = 6, .columnWidth = 273, .maximumColumns = 2 };
+    MenuGrid tall = MenuGridFit(6, 356, CGSizeMake(900, 500), metrics);
+    CHECK(tall.columns == 1 && tall.rows == 6 && tall.rowHeight == 56 && tall.size.width == 356 && tall.size.height == 366);
+    MenuGrid low = MenuGridFit(6, 356, CGSizeMake(900, 250), metrics);
+    CHECK(low.columns == 2 && low.rows == 3 && low.rowHeight == 56 && low.size.width == 552 && low.size.height == 180);
+    MenuGrid narrow = MenuGridFit(6, 356, CGSizeMake(300, 250), metrics);
+    CHECK(narrow.columns == 2 && narrow.columnWidth == 147 && narrow.size.width == 300);
+    MenuGrid cramped = MenuGridFit(6, 356, CGSizeMake(900, 120), metrics);
+    CHECK(cramped.columns == 2 && cramped.rowHeight == 36 && cramped.size.height == 120);
+    CHECK(MenuGridFit(6, 356, CGSizeMake(900, 10), metrics).rowHeight == 30);
+    CHECK(MenuGridFit(0, 356, CGSizeMake(900, 500), metrics).size.height == 0);
+    CHECK(MenuGridFit(1, 356, CGSizeMake(900, 10), metrics).columns == 1);
+    CGRect frame = { { 100, 200 }, low.size };
+    CHECK(CGRectEqualToRect(MenuGridCell(low, frame, 0), CGRectMake(100, 324, 273, 56)));
+    CHECK(CGRectEqualToRect(MenuGridCell(low, frame, 2), CGRectMake(100, 200, 273, 56)));
+    CHECK(CGRectEqualToRect(MenuGridCell(low, frame, 3), CGRectMake(379, 324, 273, 56)));
+
+    // A debrief shows what the result earned; a failure shows no rating or score.
+    NSArray<ObjectiveReadout *> *results = MissionResultReadouts(@[@"+ Escort", @"x Optional"]);
+    ReportModel *won = DebriefReport((DebriefFacts){ .success = YES, .stars = 2, .total = 340, .earned = 40,
+                                                     .summary = @"Home safe.", .results = results });
+    CHECK(won.blocks.count == 5 && won.blocks[0].kind == ReportHeadline && won.blocks[0].tone == ReportTonePlain);
+    CHECK([won.blocks[0].text isEqualToString:L10n(@"debrief.complete")]);
+    CHECK(won.blocks[1].kind == ReportRating && won.blocks[1].stars == 2);
+    CHECK(won.blocks[2].kind == ReportScore && won.blocks[2].total == 340 && won.blocks[2].earned == 40);
+    CHECK(won.blocks[3].kind == ReportText && [won.blocks[3].text isEqualToString:@"Home safe."]);
+    CHECK(won.blocks[4].kind == ReportChecklist && won.blocks[4].items.count == 2);
+    CHECK([won.blocks[4].text isEqualToString:L10n(@"debrief.objectives")]);
+    ReportModel *lost = DebriefReport((DebriefFacts){ .success = NO, .stars = 3, .total = 340, .summary = @"Lost." });
+    CHECK(lost.blocks.count == 2 && lost.blocks[0].tone == ReportToneDanger);
+    CHECK(![lost firstBlockOfKind:ReportRating] && ![lost firstBlockOfKind:ReportScore] && ![lost firstBlockOfKind:ReportChecklist]);
+    CHECK([ReportBlock rating:7].stars == 3);
+
+    ReportModel *end = CampaignEndReport(7, 12, 900);
+    CHECK(end.blocks.count == 4 && end.blocks[0].tone == ReportToneEmphasis);
+    CHECK([end firstBlockOfKind:ReportScore].total == 900 && [end firstBlockOfKind:ReportScore].earned == 0);
+
+    // The scoreboard keeps the server's order and marks the local pilot's row.
+    LANMatchResult match = { .pilots = @[@"Bo", @"Ada", @"Cy"], .scores = { {9, 2}, {5, 1}, {5, 1} }, .localIndex = 0 };
+    ReportModel *first = MatchReport(match, 500, 120);
+    CHECK([first.blocks[0].text isEqualToString:L10n(@"match.win")]);
+    ReportBlock *table = [first firstBlockOfKind:ReportTable];
+    CHECK(table.header.count == 4 && table.rows.count == 3 && table.highlightedRow == 0);
+    CHECK([table.rows[0] isEqualToArray:(@[@"1", @"Bo", @"9", @"2"])]);
+    CHECK([table.rows[1][0] isEqualToString:@"2"] && [table.rows[2][0] isEqualToString:@"2"]);
+    CHECK([first firstBlockOfKind:ReportScore].earned == 120);
+    match.localIndex = 2;
+    CHECK([MatchReport(match, 0, 0).blocks[0].text isEqualToString:L10nFormat(@"match.place", 2ul)]);
+    LANMatchResult solo = { .pilots = @[@"Ada"], .scores = { {3, 0} } };
+    CHECK([MatchReport(solo, 0, 0).blocks[0].text isEqualToString:L10n(@"browser.results")]);
+    CHECK([ReportBlock table:@[] rows:@[] highlighted:0].highlightedRow == NSNotFound);
+}
+
 static void CheckProgressSaves(void) {
     NSArray<ObjectiveReadout *> *flight = FlightObjectiveReadouts(@"{#debrief.objectives}\nEscort\nOptional\nMissing state", @"123");
     CHECK(flight.count == 4);
@@ -1247,6 +1316,7 @@ int main(void) {
         CheckEventsAndCommands();
         CheckLANSettings();
         CheckLANMatchResults();
+        CheckScreenModels();
         CheckProgressSaves();
         CheckConsole();
         CheckCampaign();
