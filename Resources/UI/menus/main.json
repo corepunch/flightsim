@@ -4,8 +4,8 @@
     { "id": "campaign", "text": "$campaign", "detail": "$mission" },
     { "id": "missions", "text": "menu.missions" },
     { "id": "lan", "text": "menu.lan" },
-    { "id": "controls", "text": "menu.controls" },
-    { "id": "sound", "text": "$sound" },
+    { "id": "leaderboards", "text": "menu.leaderboards", "detail": "$score" },
+    { "id": "options", "text": "menu.options" },
     { "id": "quit", "text": "menu.quit", "platforms": ["mac"] }
   ],
   "metrics": {

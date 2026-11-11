@@ -52,7 +52,7 @@ headers only).
 | `Render/` | `SceneKitRefresh`, the only Refresh backend, and what it draws with: ship and capital views, hull styles, exhaust, effects, cockpit, flight instruments, lens flare, sky, the FX recorder. |
 | `Collision/` | `ModelInfo`: capital models' parts and subsystems for server traces and renderer dressing; baked-scene loading. |
 | `Mission/` | The mission runtime (objectives, scripted events, scheduled arrivals and departures, win/lose rules) that runs a `LevelDef` against a `MissionWorld` the game supplies. Linked into game modules, not the engine binary. |
-| `Story/` | The campaign and its story data: missions with briefings and debriefs, cast, rooms, briefing pages (immutable classes). |
+| `Story/` | Campaign content and the local progress record. Progress merges unlocks and best results by level name. `App/CloudSaves.m` syncs that record through GameKit. |
 | `UI/` | SpriteKit screens: `FrontEnd` (which screen shows), main menu, mission list/briefing/debrief (`Briefing`), loading card, pause menu, server browser, `ScreenHost` (transitions), `UILayout` (menus from JSON), `ScreenRegions` (header and centered body), theme and motion. Scenes compose `TitleBar` (back, title, icon commands) and `UISettingsForm` with content and callbacks; these controls own their layout and hit geometry. Flight controls on touch screens, pause included, are the system `GCVirtualController` (see `Input/`). |
 | `Input/` | Keyboard, mouse, controllers and the iOS virtual controller into `InputAction` and a `ControlState`; pointer events for screens (`ScreenInput`). |
 | `Audio/` | `GameAudio`: music, engine sound, effects, on a private queue. |
@@ -64,6 +64,11 @@ whole game folder). `Tools/` holds build helpers, validators and the check suite
 vertically by default. It owns multiline label wrapping and accepts stable layout
 bounds for changing content such as progress bars. Callers supply content and row
 placement rather than correcting individual text baselines or icon offsets.
+
+`UIVerticalStack` lays out rows from the top left. `UIDataList` combines it with
+an array of items and a row template that configures reusable nodes. Objective
+lists use both stacks. On macOS, run the bundled executable with `--preview-ui`
+to inspect the production checklist and score controls in a resizable window.
 
 ## The game module boundary
 

@@ -15,7 +15,7 @@ ENGINE_SOURCES := $(SHARED) $(filter-out Sources/Shared/% $(MISSION_SOURCES),$(w
 ENGINE_OBJECTS := $(addprefix $(NATIVE)/engine/,$(addsuffix .o,$(ENGINE_SOURCES)))
 ENGINE_FLAGS := -ISources/Shared $(addprefix -I,$(ENGINE_DIRS))
 ENGINE_PCH := $(NATIVE)/engine.pch
-ENGINE_FRAMEWORKS := Cocoa SceneKit SpriteKit Metal CoreGraphics CoreText QuartzCore IOKit Carbon ImageIO AVFoundation CoreMedia CoreVideo
+ENGINE_FRAMEWORKS := Cocoa SceneKit SpriteKit Metal CoreGraphics CoreText QuartzCore IOKit Carbon ImageIO AVFoundation CoreMedia CoreVideo GameKit
 
 # Every folder in Games/ with a Game/ module is a game. Its module builds as
 # build/Native/<name>.dylib; everything else in the folder is its data

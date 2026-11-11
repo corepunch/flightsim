@@ -194,7 +194,8 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
     hud.scaleMode = SKSceneScaleModeAspectFit;
     hud.touchLayout = YES;
     [hud setHelpVisible:NO];
-    if (d.objective.length) [hud setObjectives:@[L10nExpand(d.objective)] states:@[@0]];
+    if (d.objective.length)
+        [hud setObjectives:@[[[ObjectiveReadout alloc] initWithText:L10nExpand(d.objective) status:ObjectiveOpen]]];
     renderer.overlaySKScene = hud;
     NSImage *last = nil;
     int frames = (int)ceil(d.time * 60);

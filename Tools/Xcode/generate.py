@@ -19,11 +19,11 @@ MAC_ONLY = {"FXRecorder.m", "ShipPreview.m", "GameView.m", "Input.m", "main.m"}
 IOS_ONLY = {"GameViewIOS.m", "InputIOS.m", "mainIOS.m"}
 IOS_FRAMEWORKS = (
     "UIKit", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "CoreText", "QuartzCore",
-    "ImageIO", "GameController", "AVFoundation",
+    "ImageIO", "GameController", "AVFoundation", "GameKit",
 )
 MAC_FRAMEWORKS = (
     "Cocoa", "SceneKit", "SpriteKit", "Metal", "CoreGraphics", "CoreText", "QuartzCore",
-    "IOKit", "Carbon", "ImageIO", "AVFoundation", "CoreMedia", "CoreVideo",
+    "IOKit", "Carbon", "ImageIO", "AVFoundation", "CoreMedia", "CoreVideo", "GameKit",
 )
 PRESERVED = ("CODE_SIGN", "DEVELOPMENT_TEAM", "PROVISIONING_PROFILE", "PRODUCT_BUNDLE_IDENTIFIER")
 
@@ -189,6 +189,7 @@ def generate(args):
                         IPHONEOS_DEPLOYMENT_TARGET="16.0", TARGETED_DEVICE_FAMILY="1,2",
                         SUPPORTS_MACCATALYST="NO", SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD="NO",
                         PRODUCT_BUNDLE_IDENTIFIER=bundle_ids["ios"],
+                        CODE_SIGN_ENTITLEMENTS="$(SRCROOT)/Resources/KestrelFrontier-iOS.entitlements",
                         INFOPLIST_FILE="$(PROJECT_FILE_PATH)/Generated/ios-Info.plist",
                         ASSETCATALOG_COMPILER_APPICON_NAME="AppIcon",
                         OTHER_LDFLAGS=["$(inherited)"] +
@@ -277,6 +278,11 @@ def generate(args):
                        mainGroup=main_group, productRefGroup=products, projectDirPath="", projectRoot="",
                        targets=[target, mac_target, game_target])
     project.objects[root]["attributes"] = existing.get(root, {}).get("attributes", {"LastUpgradeCheck": "1600"})
+    target_attributes = project.objects[root]["attributes"].setdefault("TargetAttributes", {})
+    for app_target in (target, mac_target):
+        capabilities = target_attributes.setdefault(app_target, {}).setdefault("SystemCapabilities", {})
+        capabilities["com.apple.GameCenter"] = {"enabled": 1}
+        capabilities["com.apple.iCloud"] = {"enabled": 1}
     contents = encode(dict(archiveVersion=1, classes={}, objectVersion=56, objects=project.objects, rootObject=root))
     write(path, ("// !$*UTF8*$!\n" + contents + "\n").encode())
     shared_scheme(target, f"{GAME}-iOS")

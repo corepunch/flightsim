@@ -214,6 +214,9 @@ static const double kNetInterpDelay = TICK_DT * 3;
                 NSString *a = [r string], *b = [r string], *c = [r string];
                 if (type == SVC_LEVEL_END) {
                     if (_missionEndHandler) _missionEndHandler([a isEqualToString:@"1"], b.length ? [b componentsSeparatedByString:@"\n"] : @[]);
+                } else if (type == SVC_MATCH_END) {
+                    LANMatchResult result;
+                    if (_matchEndHandler && LANMatchResultDecode(a, &result)) _matchEndHandler(result);
                 } else {
                     [_view serverCommand:type a:a b:b c:c];
                 }

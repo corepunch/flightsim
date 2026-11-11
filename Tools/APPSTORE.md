@@ -8,6 +8,32 @@ identifier, with macOS added to that app record in App Store Connect.
 The Mac target signs with `Resources/KestrelFrontier-macOS.entitlements`, enabling
 App Sandbox and the incoming/outgoing connections used by multiplayer.
 
+## Game Center
+
+Both Xcode app targets sign with the Game Center entitlement. The universal
+bundle ID has Game Center enabled in the developer account. The classic
+**Pilot Score** leaderboard in App Store Connect uses
+`com.corepunch.spacefight.pilot_score`, descending integer scores and Best Score.
+The app displays and submits the local total from the best campaign mission
+ratings and the best finished match on each LAN arena.
+
+For the first release with Game Center, enable Game Center on the new app
+version and include Pilot Score with that version in App Review. Use an
+Apple-signed development or TestFlight build to verify sign-in, score
+submission and the leaderboard on each platform.
+[Apple's Game Center version setup](https://developer.apple.com/help/app-store-connect/configure-game-center/manage-an-app-version-for-game-center)
+and [review instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-game-center-components/).
+
+Both targets use the private iCloud Documents container
+`iCloud.com.corepunch.spacefight` for GameKit saves. Keep that container
+assigned to the universal App ID and refresh provisioning profiles for builds
+that use it. A signed cross-device check needs the same iCloud account, iCloud
+Drive and Game Center sign-in on each device. Earn different results offline
+on two devices, then reconnect and check that both results appear on both.
+[Apple's GameKit saved-game setup](https://developer.apple.com/documentation/gamekit/saving-the-player-s-game-data-to-an-icloud-account)
+
+## Fastlane
+
 Fastlane and its dependencies are pinned by `Gemfile` and `Gemfile.lock`.
 `Tools/fastlane.sh` selects Homebrew's Ruby and reuses Homebrew's installed gems,
 so it does not change Apple's system Ruby or install a second copy of Fastlane.

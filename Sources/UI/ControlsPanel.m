@@ -42,7 +42,12 @@
 - (NSArray<UISettingItem *> *)settings {
     FlightControls *controls = FlightControls.shared;
     NSString *(^percent)(float) = ^NSString *(float value) { return [NSString stringWithFormat:@"%.0f%%", value * 100]; };
-    return @[
+    NSMutableArray<UISettingItem *> *items = [NSMutableArray array];
+    if (self.showsSoundSetting) {
+        GameAudio *audio = GameAudio.shared;
+        [items addObject:[UISettingItem action:audio.mixTitle value:L10n(@"controls.change") action:^{ [audio cycleMix]; }]];
+    }
+    [items addObjectsFromArray:@[
         [UISettingItem choice:L10n(@"controls.mode") value:L10n(controls.expert ? @"controls.expert" : @"controls.casual")
                        detail:L10n(controls.expert ? @"controls.expert_detail" : @"controls.casual_detail")
                        action:^{ controls.expert = !controls.expert; }],
@@ -55,7 +60,8 @@
         [UISettingItem choice:L10n(@"controls.camera") value:L10n(controls.dynamicCamera ? @"controls.on" : @"controls.off")
                        detail:nil action:^{ controls.dynamicCamera = !controls.dynamicCamera; }],
         [UISettingItem action:L10n(@"controls.reset") value:L10n(@"controls.restore") action:^{ [controls reset]; }],
-    ];
+    ]];
+    return items;
 }
 
 - (void)layoutIn:(CGRect)bounds sceneSize:(CGSize)size {
@@ -80,7 +86,8 @@
     }];
     UIBarAction *bindings=[UIBarAction title:L10n(@"controls.bindings") icon:UICommandBindings accent:UIInk handler:^{ ControlsPanel *screen=owner; if(screen) screen->_bindingsRequested=YES; }];
     _bar = [[TitleBar alloc] initWithHeader:header compact:compact back:back
-        title:L10n(_showBindings ? @"controls.bindings" : @"controls.title") kicker:L10n(@"controls.kicker") actions:_showBindings ? @[] : @[bindings]];
+        title:L10n(_showBindings ? @"controls.bindings" : self.showsSoundSetting ? @"menu.options" : @"controls.title")
+        kicker:L10n(@"controls.kicker") actions:_showBindings ? @[] : @[bindings]];
     _backRect = [_bar rectForAction:back];
     _bindingsRect=[_bar rectForAction:bindings];
     [self addChild:_bar];

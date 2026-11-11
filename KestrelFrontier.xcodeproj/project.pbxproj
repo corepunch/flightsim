@@ -101,6 +101,7 @@
 				"SUPPORTS_MACCATALYST" = "NO";
 				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
 				"PRODUCT_BUNDLE_IDENTIFIER" = "com.corepunch.spacefight";
+				"CODE_SIGN_ENTITLEMENTS" = "$(SRCROOT)/Resources/KestrelFrontier-iOS.entitlements";
 				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ios-Info.plist";
 				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 				"OTHER_LDFLAGS" = (
@@ -125,6 +126,8 @@
 					"GameController",
 					"-framework",
 					"AVFoundation",
+					"-framework",
+					"GameKit",
 				);
 				"GCC_OPTIMIZATION_LEVEL" = "0";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf";
@@ -148,6 +151,7 @@
 				"SUPPORTS_MACCATALYST" = "NO";
 				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
 				"PRODUCT_BUNDLE_IDENTIFIER" = "com.corepunch.spacefight";
+				"CODE_SIGN_ENTITLEMENTS" = "$(SRCROOT)/Resources/KestrelFrontier-iOS.entitlements";
 				"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ios-Info.plist";
 				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 				"OTHER_LDFLAGS" = (
@@ -172,6 +176,8 @@
 					"GameController",
 					"-framework",
 					"AVFoundation",
+					"-framework",
+					"GameKit",
 				);
 				"GCC_OPTIMIZATION_LEVEL" = "2";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
@@ -231,6 +237,8 @@
 					"CoreMedia",
 					"-framework",
 					"CoreVideo",
+					"-framework",
+					"GameKit",
 				);
 				"GCC_OPTIMIZATION_LEVEL" = "0";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf";
@@ -281,6 +289,8 @@
 					"CoreMedia",
 					"-framework",
 					"CoreVideo",
+					"-framework",
+					"GameKit",
 				);
 				"GCC_OPTIMIZATION_LEVEL" = "2";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
@@ -360,6 +370,46 @@
 			"sourceTree" = "<group>";
 			"lastKnownFileType" = "sourcecode.c.h";
 		};
+		"C80A75B6DE363715FC40A557" = {
+			"isa" = "PBXFileReference";
+			"path" = "CloudSaves.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"D9D31880FBBBB53BF76703CC" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "C80A75B6DE363715FC40A557";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"BEF21E1DC03380B26C894A0A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "C80A75B6DE363715FC40A557";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"EFA3095080B6A4FFFA084905" = {
+			"isa" = "PBXFileReference";
+			"path" = "GameCenter.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"FD0C04BC3B826ED5F918A5AE" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "EFA3095080B6A4FFFA084905";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"528DB4DAA71FB8969DB8A4CA" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "EFA3095080B6A4FFFA084905";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"F7002270A6A5B131B52691AD" = {
 			"isa" = "PBXFileReference";
 			"path" = "GameView.m";
@@ -437,6 +487,8 @@
 			"path" = "App";
 			"children" = (
 				"0898DF158C6D8913DF6D6BEE",
+				"C80A75B6DE363715FC40A557",
+				"EFA3095080B6A4FFFA084905",
 				"F7002270A6A5B131B52691AD",
 				"0EBE7A3E70954C83118AA5F4",
 				"0F147D9BCBB6A630F43CFF85",
@@ -657,6 +709,26 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"F7200CBDF535ACBAEC93607B" = {
+			"isa" = "PBXFileReference";
+			"path" = "ObjectiveReadout.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"56D059238DF470A6DBCB1CF8" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F7200CBDF535ACBAEC93607B";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"FA85C674C661EFFEB28BB73B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F7200CBDF535ACBAEC93607B";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"17B8F3B993FEA64B6A0BEFE6" = {
 			"isa" = "PBXGroup";
 			"path" = "Common";
@@ -666,6 +738,7 @@
 				"D427B5C9D948DD3CC465B308",
 				"E3F6E01AC37D26D908240C37",
 				"E27E5DBBD76619080648F92C",
+				"F7200CBDF535ACBAEC93607B",
 			);
 			"sourceTree" = "<group>";
 		};
@@ -1535,6 +1608,26 @@
 			);
 			"sourceTree" = "<group>";
 		};
+		"E58D687BA1B4669E199B7D8A" = {
+			"isa" = "PBXFileReference";
+			"path" = "Progress.m";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.objc";
+		};
+		"4971A097736FB60A784BDC28" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E58D687BA1B4669E199B7D8A";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
+		"F3FC0A162F96CE4B6E322F5B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E58D687BA1B4669E199B7D8A";
+			"settings" = {
+				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
+			};
+		};
 		"6D5327C66FCF09C01B5A6FD4" = {
 			"isa" = "PBXFileReference";
 			"path" = "Story.h";
@@ -1565,6 +1658,7 @@
 			"isa" = "PBXGroup";
 			"path" = "Story";
 			"children" = (
+				"E58D687BA1B4669E199B7D8A",
 				"6D5327C66FCF09C01B5A6FD4",
 				"7F8E488002483C0262CB417C",
 			);
@@ -1746,26 +1840,6 @@
 		"722722F16BF0056CA13277BC" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "C80F65D57866D0E6F5721A49";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
-			};
-		};
-		"CF25B7F70F59B95DF041035D" = {
-			"isa" = "PBXFileReference";
-			"path" = "Progress.m";
-			"sourceTree" = "<group>";
-			"lastKnownFileType" = "sourcecode.c.objc";
-		};
-		"AE2629189B4105A4EA4FD2AD" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "CF25B7F70F59B95DF041035D";
-			"settings" = {
-				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
-			};
-		};
-		"7263363E987F789873AE331C" = {
-			"isa" = "PBXBuildFile";
-			"fileRef" = "CF25B7F70F59B95DF041035D";
 			"settings" = {
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
@@ -1969,7 +2043,6 @@
 				"41FA8B43ED71B55433E09AD0",
 				"3F8072F9260C297B007FFC54",
 				"C80F65D57866D0E6F5721A49",
-				"CF25B7F70F59B95DF041035D",
 				"A59E2455112853BA51C7A665",
 				"0A28B701659A429E7F39EB73",
 				"D54896152F411DCEC67CF9EB",
@@ -2187,6 +2260,8 @@
 		"AAACEF93EB2439F2C22BAACD" = {
 			"isa" = "PBXSourcesBuildPhase";
 			"files" = (
+				"D9D31880FBBBB53BF76703CC",
+				"FD0C04BC3B826ED5F918A5AE",
 				"EB710594B764E3E6CE780997",
 				"E8E056314BCCDFD8E6C7F008",
 				"9CD8B5EE31E3D88107FAFEE7",
@@ -2198,6 +2273,7 @@
 				"6B839E6B2579ADDFAE67D51F",
 				"AB66981B4A5BEED8CA66F2B4",
 				"4009EE748AD594AC7F7D6779",
+				"56D059238DF470A6DBCB1CF8",
 				"93B9BBB10F670BF783011C21",
 				"8918A825C9252E5B2E05CF07",
 				"52008117FAF5E634CBB78072",
@@ -2233,6 +2309,7 @@
 				"A4F63592999AB8436389240D",
 				"715FB79132E1D5143D023AA3",
 				"419640121AD728914FAEB565",
+				"4971A097736FB60A784BDC28",
 				"F31AB976A1B2AB41A476E04E",
 				"940C2B92CEBF3E1A1612782D",
 				"5E086D61A14D53B542245BCA",
@@ -2243,7 +2320,6 @@
 				"EA524BB2D5F1F5B7F3F03FC5",
 				"1FD941059AE01742007269F1",
 				"07993CBF67D0D1904D66A48E",
-				"AE2629189B4105A4EA4FD2AD",
 				"331C42B1D11F882D529B8011",
 				"47DFC225FA8CFD11163788D7",
 				"BCC69BE9FEF8C1AD7EB979ED",
@@ -2266,6 +2342,8 @@
 		"7FA2F43EDCB6FA8DC4873232" = {
 			"isa" = "PBXSourcesBuildPhase";
 			"files" = (
+				"BEF21E1DC03380B26C894A0A",
+				"528DB4DAA71FB8969DB8A4CA",
 				"FB825A843384C3D11C81FC57",
 				"B60AB01FF551D6EC7638A117",
 				"A14D234FB2D68964AF8297DD",
@@ -2277,6 +2355,7 @@
 				"CEF700888D27BD6EE485C46F",
 				"D4E2E7B31CAC6CA19D4B832B",
 				"162E208C5216735E6513B19A",
+				"FA85C674C661EFFEB28BB73B",
 				"FA4434847FAD62E240C9BA02",
 				"B3D25F6BA3BB680BCAF776DD",
 				"69EA95A3F6BBDA32F022BD1A",
@@ -2310,6 +2389,7 @@
 				"1AF6241ECF326BAA931012EA",
 				"2A0F308A2F0838BFF2224C25",
 				"DDC0D67AAAA5499A4BEA641A",
+				"F3FC0A162F96CE4B6E322F5B",
 				"63F80E833DC18123E8370997",
 				"779026633E677BC0ED6D61FF",
 				"7626470627850A9F0E68043C",
@@ -2320,7 +2400,6 @@
 				"5E6BF1812FDC1433DC99542D",
 				"3A2BBB808A4F7BAF6DA123E0",
 				"722722F16BF0056CA13277BC",
-				"7263363E987F789873AE331C",
 				"14CBCB21652CDFEF35824B02",
 				"94880F2D3D5004D0565ADA80",
 				"B1B93A59243A96A2B7DA779E",
@@ -2511,6 +2590,28 @@
 			);
 			"attributes" = {
 				"LastUpgradeCheck" = "1600";
+				"TargetAttributes" = {
+					"34A04005BCAF206EEC990BD9" = {
+						"SystemCapabilities" = {
+							"com.apple.GameCenter" = {
+								"enabled" = 1;
+							};
+							"com.apple.iCloud" = {
+								"enabled" = 1;
+							};
+						};
+					};
+					"4219BEAD389C09F80A7CE748" = {
+						"SystemCapabilities" = {
+							"com.apple.GameCenter" = {
+								"enabled" = 1;
+							};
+							"com.apple.iCloud" = {
+								"enabled" = 1;
+							};
+						};
+					};
+				};
 			};
 		};
 	};

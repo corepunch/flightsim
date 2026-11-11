@@ -4,6 +4,7 @@
 #import <CoreGraphics/CoreGraphics.h>
 #import "App.h"
 #import "Story.h"
+#import "UI.h"
 #import "App.h"
 #import "Render.h"
 #import "Server.h"
@@ -120,6 +121,68 @@ static int RunDedicated(int mission) {
 
 @end
 
+// Runs the production controls in a resizable SpriteKit window without a game session.
+@interface UIPreviewScene : SKScene
+@end
+
+@implementation UIPreviewScene {
+    UIVerticalStack *_controls;
+    UIObjectiveList *_hud, *_debrief;
+}
+
+- (void)didMoveToView:(SKView *)view {
+    self.backgroundColor = UIColorWithOpacity(UIBackground, 1);
+    NSArray<ObjectiveReadout *> *items = @[
+        [[ObjectiveReadout alloc] initWithText:@"Keep Mira and Tobin intact" status:ObjectiveComplete],
+        [[ObjectiveReadout alloc] initWithText:@"Escort both freighters to Halden Gate and stay within scanner range until the convoy clears the corridor." status:ObjectiveOpen],
+        [[ObjectiveReadout alloc] initWithText:@"Destroy the Talon bombers (optional)" status:ObjectiveFailed],
+    ];
+    _hud = [[UIObjectiveList alloc] initWithTitle:@"Flight HUD" fontSize:14];
+    _debrief = [[UIObjectiveList alloc] initWithTitle:@"Mission debrief" fontSize:19];
+    _hud.items = _debrief.items = items;
+    _controls = [UIVerticalStack node];
+    _controls.spacing = 24;
+    [self addChild:_controls];
+    [self layoutControls];
+}
+
+- (void)didChangeSize:(CGSize)oldSize { [self layoutControls]; }
+
+- (void)layoutControls {
+    if (!_controls) return;
+    const CGFloat margin = 24;
+    CGFloat width = MAX(1, self.size.width - 2 * margin);
+    _hud.maximumWidth = _debrief.maximumWidth = width;
+    UIResultScore *score = [[UIResultScore alloc] initWithTotal:100 earned:100 fontSize:18 width:width];
+    _controls.arrangedNodes = @[_hud, _debrief, score];
+    _controls.position = CGPointMake(margin, self.size.height - margin);
+}
+@end
+
+@interface UIPreviewDelegate : NSObject <NSApplicationDelegate>
+@end
+
+@implementation UIPreviewDelegate {
+    NSWindow *_window;
+}
+- (void)applicationDidFinishLaunching:(NSNotification *)note {
+    CGRect rect = CGRectMake(0, 0, 560, 450);
+    _window = [[NSWindow alloc] initWithContentRect:rect styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
+                                            backing:NSBackingStoreBuffered defer:NO];
+    _window.title = @"Kestrel Frontier UI Preview";
+    _window.contentMinSize = CGSizeMake(280, 300);
+    SKView *view = [[SKView alloc] initWithFrame:rect];
+    UIPreviewScene *scene = [[UIPreviewScene alloc] initWithSize:rect.size];
+    scene.scaleMode = SKSceneScaleModeResizeFill;
+    _window.contentView = view;
+    [view presentScene:scene];
+    [_window center];
+    [_window makeKeyAndOrderFront:nil];
+    [NSApp activateIgnoringOtherApps:YES];
+}
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app { return YES; }
+@end
+
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         // Console: KestrelFrontier +set <cvar> <value> ... +map 3 / +connect host / +exec file.cfg.
@@ -150,7 +213,7 @@ int main(int argc, const char *argv[]) {
 
         NSApplication *app = [NSApplication sharedApplication];
         app.activationPolicy = NSApplicationActivationPolicyRegular;
-        AppDelegate *delegate = [AppDelegate new];
+        id<NSApplicationDelegate> delegate = argc >= 2 && !strcmp(argv[1], "--preview-ui") ? [UIPreviewDelegate new] : [AppDelegate new];
         app.delegate = delegate;
         [app run];
     }

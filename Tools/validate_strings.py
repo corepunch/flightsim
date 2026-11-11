@@ -22,7 +22,7 @@ STYLE = ROOT / "Sources/UI/UI.h"
 # that shape in the sources counts as a key, so keys picked by a ternary or
 # from an array are covered too.
 AREAS = ("app", "audio", "briefing", "browser", "cockpit", "combat", "controls", "debrief", "game", "hud",
-         "input", "loading", "menu", "mission", "missions", "net", "part", "pause", "story", "units")
+         "input", "loading", "match", "menu", "mission", "missions", "net", "part", "pause", "score", "story", "units")
 KEY = re.compile(r'@"((?:%s)(?:\.[a-z0-9_]+)+)"' % "|".join(AREAS))
 FILES = (".dylib", ".json", ".png", ".jpg", ".cfg")   # file names that look like keys
 # Keys built at run time from a prefix: the catalog must hold these.

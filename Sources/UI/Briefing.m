@@ -17,6 +17,10 @@ static SKLabelNode *Para(CGFloat size, SKColor *c, CGFloat width) {
     return l;
 }
 
+static NSString *StarRating(NSUInteger stars) {
+    return @[@"☆ ☆ ☆", @"★ ☆ ☆", @"★ ★ ☆", @"★ ★ ★"][MIN(stars, 3)];
+}
+
 static BOOL InsetsEqual(BriefingInsets a, BriefingInsets b) {
 #if TARGET_OS_IOS
     return UIEdgeInsetsEqualToEdgeInsets(a, b);
@@ -25,7 +29,7 @@ static BOOL InsetsEqual(BriefingInsets a, BriefingInsets b) {
 #endif
 }
 
-typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief };
+typedef NS_ENUM(NSInteger, Mode) { ModeList, ModeBriefing, ModeDebrief, ModeCampaignEnd };
 
 typedef struct {
     CGPoint point;
@@ -184,55 +188,6 @@ typedef struct {
 
 // Clips text to a rect and, when it overflows, shows a scroll bar. Measures
 // on creation, before reveal animations change the labels' frames.
-@interface TextViewport : SKNode
-- (instancetype)initWithRect:(CGRect)rect content:(SKNode *)content;
-@property (nonatomic, readonly) CGRect rect;
-@property (nonatomic, readonly) CGFloat limit;   // how far the content can scroll; 0 if it fits
-@property (nonatomic, readonly) SKNode *content;
-- (void)showOffset:(CGFloat)offset;
-@end
-
-@implementation TextViewport {
-    SKSpriteNode *_thumb;
-}
-
-- (instancetype)initWithRect:(CGRect)rect content:(SKNode *)content {
-    if (!(self = [super init]) || CGRectIsEmpty(rect)) return self;
-    _rect = rect;
-    SKCropNode *crop = [SKCropNode node];
-    SKSpriteNode *mask = [SKSpriteNode spriteNodeWithColor:SKColor.whiteColor size:rect.size];
-    mask.position = RectCenter(rect);
-    crop.maskNode = mask;
-    [crop addChild:content];
-    [self addChild:crop];
-    _content = content;
-
-    CGFloat overflow = CGRectGetMinY(rect) - CGRectGetMinY([content calculateAccumulatedFrame]);
-    if (overflow <= 0.5) return self;
-    _limit = overflow;
-    CGFloat height = CGRectGetHeight(rect), x = CGRectGetMaxX(rect) - 2;
-    SKSpriteNode *track = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.22)
-                                                      size:CGSizeMake(2, height)];
-    track.position = CGPointMake(x, CGRectGetMidY(rect));
-    [self addChild:track];
-    CGFloat thumbHeight = MIN(height, MAX(12, height * height / (height + overflow)));
-    _thumb = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.8) size:CGSizeMake(3, thumbHeight)];
-    _thumb.position = CGPointMake(x, 0);
-    _thumb.zPosition = 1;
-    [self addChild:_thumb];
-    return self;
-}
-
-- (void)showOffset:(CGFloat)offset {
-    if (_limit <= 0) return;
-    _content.position = CGPointMake(0, offset);
-    CGFloat thumbHeight = _thumb.size.height;
-    CGFloat y = CGRectGetMaxY(_rect) - thumbHeight / 2 - (CGRectGetHeight(_rect) - thumbHeight) * offset / _limit;
-    _thumb.position = CGPointMake(_thumb.position.x, y);
-}
-
-@end
-
 // MARK: - Tactical map
 
 // One thing on the tactical map.
@@ -815,8 +770,9 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     Mode _mode;
     NSUInteger _index;
     BOOL _success;
-    NSArray<NSString *> *_results;
+    NSArray<ObjectiveReadout *> *_results;
     NSUInteger _debriefBeat;
+    struct { NSUInteger stars, points; BOOL finale; } _debriefScore;
     CampaignMission *_mission;
     NSArray<BriefingPage *> *_pages;
     NSUInteger _page;
@@ -1017,14 +973,13 @@ static const CGFloat PhoneSpeakerFont = 16;
     _map = nil;
     _backdropRoom = nil;
     _laidOut = self.size;
-    // The backdrop is up at full opacity from the first frame: the screen
-    // that was here, or the outgoing layout, dissolves over it, so the view
-    // behind the overlay never shows through.
+    // Keep the backdrop steady while the outgoing layout dissolves.
     [_root addChild:[self motionBackdropWithSize:self.size]];
     switch (_mode) {
         case ModeList: [self buildList]; break;
         case ModeBriefing: [self buildBriefing]; break;
         case ModeDebrief: [self buildDebrief]; break;
+        case ModeCampaignEnd: [self buildCampaignEnd]; break;
     }
     for (SKSpriteNode *portrait in _portraitsToDismiss) [self dismissPortrait:portrait];
     _portraitsToDismiss = nil;
@@ -1062,6 +1017,11 @@ static const CGFloat PhoneSpeakerFont = 16;
     _mode = ModeList;
     _index = MIN(index, CampaignMissions().count - 1);
     [self rebuild];
+}
+
+- (void)refreshProgress {
+    if (_mode == ModeList || _mode == ModeCampaignEnd || (_mode == ModeDebrief && _debriefBeat == 0))
+        [self rebuild];
 }
 
 - (BriefingInsets)contentInsets { return _contentInsets; }
@@ -1128,7 +1088,7 @@ static const CGFloat PhoneSpeakerFont = 16;
         status.position = CGPointMake(x + inset, y + 10 + status.frame.size.height);
         [content addChild:status];
         SKLabelNode *rating = Text(18, UIColorWithOpacity(stars ? UIAmber : UIInk, stars ? 1 : 0.25), SKLabelHorizontalAlignmentModeLeft);
-        rating.text = [@[@"☆ ☆ ☆", @"★ ☆ ☆", @"★ ★ ☆", @"★ ★ ★"] objectAtIndex:stars];
+        rating.text = StarRating(stars);
         rating.position = CGPointMake(x + inset, CGRectGetMaxY(status.frame) + spacing + rating.frame.size.height);
         [content addChild:rating];
         SKLabelNode *name = Para(12, ink, tileW - 2 * inset);
@@ -1196,6 +1156,16 @@ static const CGFloat PhoneSpeakerFont = 16;
 }
 
 - (void)buildNavigation:(NSString *)action {
+    if (_mode == ModeCampaignEnd) {
+        ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets);
+        UIBarAction *home = [self barAction:L10n(@"missions.main_menu") icon:UICommandHome input:InputActionBack];
+        UIBarAction *missions = [self barAction:L10n(@"story.missions") icon:UICommandMissions input:InputActionConfirm];
+        [self navigationBar:[[TitleBar alloc] initWithHeader:regions.header compact:regions.compact back:home
+            title:L10n(@"debrief.campaign_complete") kicker:nil actions:@[missions]]];
+        _buttons.back = [_bar rectForAction:home];
+        _buttons.confirm = [_bar rectForAction:missions];
+        return;
+    }
     if (_mode == ModeList) {
         ScreenRegions regions = [self listRegions];
         UIBarAction *back = [self barAction:L10n(@"missions.main_menu") icon:UICommandHome input:InputActionBack];
@@ -1755,26 +1725,59 @@ static const CGFloat PhoneSpeakerFont = 16;
 
 #pragma mark - Debrief
 
-- (void)showDebrief:(NSUInteger)index success:(BOOL)success results:(NSArray<NSString *> *)results {
+- (void)showDebrief:(NSUInteger)index success:(BOOL)success results:(NSArray<ObjectiveReadout *> *)results
+              stars:(NSUInteger)stars points:(NSUInteger)points campaignFinale:(BOOL)finale {
     _mode = ModeDebrief;
     _index = index;
     _success = success;
     _results = [results copy];
+    _debriefScore = (typeof(_debriefScore)){.stars = stars, .points = points, .finale = finale};
     _debriefBeat = 0;
     _transition = UITransitionIntro;
     [self rebuild];
 }
 
+static SKLabelNode *ReportLine(SKNode *report, NSString *text, CGFloat size, UIRGB color,
+                               CGFloat width, CGFloat top, BOOL centered, BOOL bold) {
+    SKLabelNode *label = Para(size, UIColorWithOpacity(color, 1), width);
+    if (bold) label.fontName = UIInterfaceBoldFont;
+    if (centered) label.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeCenter;
+    label.text = text;
+    label.position = CGPointMake(centered ? width / 2 : 0, top);
+    [report addChild:label];
+    return label;
+}
+
+- (void)showReport:(SKNode *)report in:(CGRect)region width:(CGFloat)width {
+    SKNode *content = [SKNode node];
+    report.position = UIScrollContentPosition(region, CGSizeMake(width, -CGRectGetMinY(report.calculateAccumulatedFrame)), 0);
+    [content addChild:report];
+    [_root addChild:[self textViewport:region content:content]];
+}
+
+- (void)buildCampaignEnd {
+    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets);
+    CGFloat width = MAX(1, MIN(650, CGRectGetWidth(regions.body) - 2 * ScrollGutter));
+    NSUInteger count = CampaignMissions().count, stars = 0;
+    for (NSUInteger i = 0; i < count; i++) stars += ProgressBestStars(i);
+    SKNode *report = [SKNode node];
+    SKLabelNode *title = ReportLine(report, L10n(@"debrief.to_be_continued"), regions.compact ? 25 : 40, UIAmber, width, 0, YES, YES);
+    SKLabelNode *note = ReportLine(report, L10n(@"debrief.more_to_come"), regions.compact ? 16 : 21, UIInk,
+                                  width, CGRectGetMinY(title.frame) - 12, YES, NO);
+    SKLabelNode *progress = ReportLine(report, L10nFormat(@"debrief.campaign_stars", (unsigned long)stars, (unsigned long)(count * 3)),
+        16, UIInk, width, CGRectGetMinY(note.frame) - 23, YES, NO);
+    ReportLine(report, L10nFormat(@"score.total", (unsigned long)ProgressPilotScore()), regions.compact ? 18 : 23,
+               UIAmber, width, CGRectGetMinY(progress.frame) - 10, YES, YES);
+    [self showReport:report in:regions.body width:width];
+    if ([self intro]) UIMotionFlickerIn(report, 0.1);
+    [self navigationAction:L10n(@"story.missions")];
+}
+
 - (void)buildDebrief {
     CampaignMission *mission = CampaignMissionAt(_index);
     NSArray<StoryLine *> *conversation = _success ? mission.debrief.dialogue : nil;
-    CGSize s = self.size;
-    BriefingInsets safe = self.contentInsets;
-    CGFloat inset = MAX(MIN(50, s.width * 0.05), MAX(safe.left, safe.right) + 12);
-    CGFloat width = MAX(1, s.width - 2 * inset);
-    CGFloat fontSize = MIN(23, MAX(15, s.width / 58));
     BOOL more = _success && _index + 1 < CampaignMissions().count;
-    NSString *next = L10n(more ? @"debrief.next_mission" : @"debrief.missions");
+    NSString *next = L10n(more ? @"debrief.next_mission" : _debriefScore.finale ? @"debrief.continue" : @"debrief.missions");
 
     if (_debriefBeat > 0 && _debriefBeat <= conversation.count) {
         StoryLine *line = conversation[_debriefBeat - 1];
@@ -1783,52 +1786,37 @@ static const CGFloat PhoneSpeakerFont = 16;
         return;
     }
 
-    ScreenRegions regions = ScreenRegionsMake(s, safe);
-    CGFloat top = MIN(s.height - safe.top - MIN(95, s.height * 0.15), CGRectGetMaxY(regions.body));
-    SKLabelNode *title = Text(MIN(36, MAX(20, s.width / 30)),
-                              _success ? UIColorWithOpacity(UIInk, 1) : UIColorWithOpacity(UIRed, 1),
-                              SKLabelHorizontalAlignmentModeCenter);
-    title.fontName = UIInterfaceBoldFont;
-    title.text = L10n(_success ? @"debrief.complete" : @"debrief.failed");
-    title.position = CGPointMake(s.width / 2, top);
-    [_root addChild:title];
-    SKLabelNode *name = Para(16, UIColorWithOpacity(UIAmber, 0.9), width);
-    name.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeCenter;
-    name.text = L10nFormat(@"menu.mission_line", (unsigned long)_index + 1, mission.title.uppercaseString);
-    name.position = CGPointMake(s.width / 2, CGRectGetMinY(title.frame) - 10);
-    [_root addChild:name];
+    ScreenRegions regions = ScreenRegionsMake(self.size, self.contentInsets);
+    CGFloat width = MAX(1, MIN(750, CGRectGetWidth(regions.body) - 2 * ScrollGutter));
     SKNode *report = [SKNode node];
-    CGFloat reportTop = CGRectGetMinY(name.frame) - 24;
-    CGFloat reportBottom = CGRectGetMinY(regions.body);
-    SKLabelNode *summary = Para(fontSize, UIColorWithOpacity(UIInk, 0.9), MAX(1, width - ScrollGutter));
-    summary.text = _success ? mission.debrief.win : mission.debrief.lose;
-    summary.position = CGPointMake(inset, reportTop);
-    [report addChild:summary];
-    SKLabelNode *results = Para(16, UIColorWithOpacity(UIInk, 0.75), MAX(1, width - ScrollGutter));
-    results.text = [[L10n(@"debrief.objectives") stringByAppendingString:@"\n"] stringByAppendingString:[_results componentsJoinedByString:@"\n"] ?: @""];
-    results.position = CGPointMake(inset, CGRectGetMinY(summary.frame) - 20);
-    [report addChild:results];
-    [_root addChild:[self textViewport:CGRectMake(inset, reportBottom, width, MAX(0, reportTop - reportBottom))
-                               content:report]];
+    SKLabelNode *title = ReportLine(report, L10n(_success ? @"debrief.complete" : @"debrief.failed"),
+        regions.compact ? 23 : 36, _success ? UIInk : UIRed, width, 0, YES, YES);
+    CGFloat y = CGRectGetMinY(title.frame) - 8;
+    if (_success) {
+        SKLabelNode *rating = ReportLine(report, StarRating(_debriefScore.stars), regions.compact ? 23 : 34, UIAmber, width, y, YES, NO);
+        UIResultScore *score = [[UIResultScore alloc] initWithTotal:ProgressPilotScore() earned:_debriefScore.points
+                                                        fontSize:regions.compact ? 15 : 18 width:width];
+        CGFloat scoreTop = CGRectGetMinY(rating.frame) - 6;
+        score.position = CGPointMake(width / 2, scoreTop - score.contentSize.height / 2);
+        [report addChild:score];
+        y = scoreTop - score.contentSize.height - 16;
+    }
+    SKLabelNode *summary = ReportLine(report, _success ? mission.debrief.win : mission.debrief.lose,
+                                     regions.compact ? 15 : 20, UIInk, width, y, NO, NO);
+    UIObjectiveList *objectives = nil;
+    if (_results.count) {
+        objectives = [[UIObjectiveList alloc] initWithTitle:L10n(@"debrief.objectives") fontSize:regions.compact ? 16 : 19];
+        objectives.maximumWidth = width;
+        objectives.items = _results;
+        objectives.position = CGPointMake(0, CGRectGetMinY(summary.frame) - 16);
+        [report addChild:objectives];
+    }
+    [self showReport:report in:regions.body width:width];
     if ([self intro]) {
-        // Success decodes cleanly; failure arrives as a corrupted signal.
         if (_success) UIMotionDecode(title, 0.1, 0.6);
         else UIMotionGlitchIn(title, 0.1, 0.7, UIColorWithOpacity(UIRed, 1));
-        if (!UIMotionReduced()) {
-            SKColor *glow = _success ? UIColorWithOpacity(UIInk, 0.9) : UIColorWithOpacity(UIRed, 0.9);
-            CGFloat y = CGRectGetMinY(title.frame) - 4, reach = MIN(s.width * 0.32, 420);
-            for (int side = -1; side <= 1; side += 2) {
-                SKSpriteNode *beam = UIMotionBeam(_root, s.width / 2, s.width / 2 + side * reach, y, glow);
-                beam.xScale = 0;
-                [beam runAction:UIAfter(0.15, [SKAction sequence:@[
-                    UIEased([SKAction scaleXTo:1 duration:0.45], UICurveOutExpo),
-                    [SKAction fadeOutWithDuration:0.6], [SKAction removeFromParent],
-                ]])];
-            }
-        }
-        UIMotionDecode(name, 0.3, 0.45);
         NSTimeInterval typed = UIMotionTypeOn(summary, 0.5, 160);
-        UIMotionTypeOn(results, MAX(0.7, typed - 0.2), 200);
+        if (objectives) UIMotionFlickerIn(objectives, MAX(0.7, typed - 0.2));
     }
     [self navigationAction:conversation.count ? L10n(@"debrief.continue_story") : (_success ? next : L10n(@"debrief.retry"))];
 }
@@ -1954,9 +1942,18 @@ static const CGFloat PhoneSpeakerFont = 16;
                     [self turnBeat];
                 } else if (a & InputActionConfirm) {
                     if (_index + 1 < count) [self showBriefing:_index + 1];
+                    else if (_debriefScore.finale) {
+                        _mode = ModeCampaignEnd;
+                        _transition = UITransitionIntro;
+                        [self rebuild];
+                    }
                     else [self showListSelecting:_index];
                 }
             }
+            break;
+        case ModeCampaignEnd:
+            if (a & InputActionBack) return BriefingCommandMainMenu;
+            if (a & InputActionConfirm) [self showListSelecting:_index];
             break;
     }
     return BriefingCommandNone;
@@ -1982,6 +1979,7 @@ static const CGFloat PhoneSpeakerFont = 16;
 
 // A sprite, not the scene colour, so the screen can fade as a whole.
 - (SKNode *)motionBackdropWithSize:(CGSize)size {
+    if (_mode == ModeCampaignEnd || (_mode == ModeDebrief && _debriefBeat == 0)) return UIResultsBackdrop(size);
     SKSpriteNode *shade = [SKSpriteNode spriteNodeWithColor:[self illustrated] ? UIColorWithOpacity(UIBackground, 1)
                                                            : UIColorWithOpacity(UIBlack, 0.72) size:size];
     shade.anchorPoint = CGPointZero;

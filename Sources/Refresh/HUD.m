@@ -65,12 +65,6 @@ static CGPathRef ReticleShape(BOOL nearest, BOOL pip) {
     return shapes[(nearest ? 1 : 0) | (pip ? 2 : 0)];
 }
 
-typedef struct {
-    NSArray<NSNumber *> *states;
-    NSArray<SKLabelNode *> *labels;
-    NSArray<UIHorizontalStack *> *rows;
-} HUDObjectives;
-
 // Four corner marks of a square of side `size`, centred on the origin.
 static CGPathRef BracketPath(CGFloat size) {
     CGMutablePathRef p = CGPathCreateMutable();
@@ -177,7 +171,8 @@ static SKShapeNode *Bracket(void) {
     SKShapeNode *_aimMark;
     SKShapeNode *_selectedOutline, *_selectedLeadOutline, *_selectedLabelBacking;
     SKLabelNode *_statusLabel, *_secondaryLabel, *_bannerLabel;
-    SKNode *_objectivePanel, *_messagePanel;
+    UIObjectiveList *_objectivePanel;
+    SKNode *_messagePanel;
     SKNode *_secondaryRack;
     UIHorizontalStack *_secondaryRow;
     NSMutableArray<SKShapeNode *> *_secondarySegments;
@@ -186,7 +181,6 @@ static SKShapeNode *Bracket(void) {
     CGSize _laidOut;
     HUDInsets _laidOutInsets;
     BOOL _laidOutTouch;
-    HUDObjectives _objectives;
 }
 
 - (instancetype)initWithSize:(CGSize)size {
@@ -348,7 +342,7 @@ static SKShapeNode *Bracket(void) {
     _bannerLabel.fontName = UIMonoBoldFont;
     _bannerLabel.alpha = 0;
     [_root addChild:_bannerLabel];
-    _objectivePanel = [SKNode node];
+    _objectivePanel = [[UIObjectiveList alloc] initWithTitle:nil fontSize:14];
     [_root addChild:_objectivePanel];
     _messagePanel = [SKNode node];
     [_root addChild:_messagePanel];
@@ -450,7 +444,6 @@ static SKShapeNode *Bracket(void) {
     _inputLabel.position = CGPointMake(40, 30);
     _deadLabel.position = CGPointMake(s.width / 2, s.height / 2 + 80);
     _help.position = CGPointMake(40, s.height - 40);
-    _objectivePanel.position = CGPointMake(40, s.height - 40);
     _messagePanel.position = CGPointMake(s.width / 2, s.height - 110);
     _bannerLabel.position = CGPointMake(s.width / 2, s.height * 0.68);
     if (_touchLayout) {
@@ -467,7 +460,6 @@ static SKShapeNode *Bracket(void) {
     _hullBar.position = CGPointMake(rightStats, stats + 4);
     _shieldBar.position = CGPointMake(rightStats, stats + 20);
     _laserBar.position = CGPointMake(rightStats, stats + 36);
-    _objectivePanel.position = CGPointMake(left + 100, top);
     _inputLabel.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
     _inputLabel.position = CGPointMake(right - 100, top - 44);
     }
@@ -505,17 +497,10 @@ static SKShapeNode *Bracket(void) {
     CGFloat topMargin = phoneLayout ? MAX(insets.top, bottomMargin) : (_touchLayout ? insets.top + 30 : 36);
     // The objective rows hang from the top margin, clear of the forward
     // scope's drawn edge, whatever its scale.
-    CGFloat scopeRight = CGRectGetMaxX(_forwardScope.discFrame);
-    _objectivePanel.position = CGPointMake(scopeRight + (compact ? 20 : 28), s.height - topMargin);
+    CGFloat objectivesLeft = CGRectGetMaxX(_forwardScope.discFrame) + (compact ? 20 : 28);
     CGFloat objectivesRight = CGRectGetMinX(_rearScope.discFrame) - 12;
-    CGFloat objectivesWidth = MAX(80, objectivesRight - _objectivePanel.position.x);
-    CGFloat rowTop = 0;
-    for (UIHorizontalStack *row in _objectives.rows) {
-        row.maximumWidth = objectivesWidth;
-        [row layout];
-        row.position = CGPointMake(0, rowTop - row.contentSize.height / 2);
-        rowTop -= row.contentSize.height + 8;
-    }
+    _objectivePanel.position = CGPointMake(objectivesLeft, s.height - topMargin);
+    _objectivePanel.maximumWidth = MAX(80, objectivesRight - objectivesLeft);
     CGFloat helpWidth = MAX(1, MIN(760, s.width - insets.left - insets.right - 48));
     CGFloat helpY = 0;
     for (SKNode *node in _help.children) if ([node isKindOfClass:SKLabelNode.class]) {
@@ -568,7 +553,7 @@ static SKShapeNode *Bracket(void) {
                             : MIN(760, size.width - _contentInsets.left - _contentInsets.right - 48);
     CGRect objectives = [_objectivePanel calculateAccumulatedFrame];
     CGFloat top = size.height - _contentInsets.top - 100;
-    if (!_objectivePanel.hidden && _objectivePanel.children.count) top = MIN(top, CGRectGetMinY(objectives) - 12);
+    if (!_objectivePanel.hidden && _objectivePanel.items.count) top = MIN(top, CGRectGetMinY(objectives) - 12);
     _messagePanel.position = CGPointMake(size.width / 2, top);
     CGFloat y = 0;
     for (NSUInteger i = 0; i < _messages.count; i++) {
@@ -652,79 +637,15 @@ static SKShapeNode *Bracket(void) {
 }
 - (void)setHelpVisible:(BOOL)visible {
     _help.hidden = !visible;
-    _objectivePanel.hidden = visible || !_objectivePanel.children.count;
+    _objectivePanel.hidden = visible || !_objectivePanel.items.count;
     [self layoutMessages];
 }
 
-- (void)setObjectives:(NSArray<NSString *> *)lines states:(NSArray<NSNumber *> *)states {
-    if ([_objectives.states isEqualToArray:states] && _objectives.labels.count == lines.count) {
-        // A ticking countdown keeps its rows and checkbox paths.
-        for (NSUInteger i = 0; i < lines.count; i++) {
-            SKLabelNode *label = _objectives.labels[i];
-            if ([label.text isEqualToString:lines[i]]) continue;
-            UIHorizontalStack *row = _objectives.rows[i];
-            CGFloat height = row.contentSize.height;
-            UISetLabelText(label, lines[i]);
-            [row layout];
-            if (fabs(row.contentSize.height - height) > 0.5) _laidOut = CGSizeZero;
-        }
-        [self layoutIfNeeded];
-        return;
-    }
-    NSMutableArray<SKLabelNode *> *labels = [NSMutableArray array];
-    NSMutableArray<UIHorizontalStack *> *rows = [NSMutableArray array];
-    [_objectivePanel removeAllChildren];
-    _laidOut = CGSizeZero;
-    // The border's outside edge matches the capital D, rather than the font's
-    // point size. All states share exactly the same square control geometry.
-    PlatformFont *font = [PlatformFont fontWithName:UIMonoFont size:14];
-    CGFloat side = font.capHeight;
-    for (NSUInteger i = 0; i < lines.count; i++) {
-        int st = states[i].intValue;
-        UIHorizontalStack *row = [UIHorizontalStack node];
-        row.spacing = 8;
-        [rows addObject:row];
-        SKNode *checkbox = [SKNode node];
-        SKColor *ink = st == 2 ? EnemyColor(0.95) : HUDColor(0.95);
-        const CGFloat border = 1.0;
-        SKShapeNode *box = [SKShapeNode shapeNodeWithRect:CGRectMake(border / 2, -side / 2 + border / 2,
-                                                                   side - border, side - border)];
-        box.strokeColor = ink;
-        box.fillColor = SKColor.clearColor;
-        box.lineWidth = border;
-        [checkbox addChild:box];
-        if (st == 1 || st == 2) {
-            CGMutablePathRef path = CGPathCreateMutable();
-            if (st == 1) {
-                CGPathMoveToPoint(path, NULL, side * 0.23, side * -0.02);
-                CGPathAddLineToPoint(path, NULL, side * 0.43, side * -0.27);
-                CGPathAddLineToPoint(path, NULL, side * 0.77, side * 0.27);
-            } else {
-                CGPathMoveToPoint(path, NULL, side * 0.27, side * -0.23);
-                CGPathAddLineToPoint(path, NULL, side * 0.73, side * 0.23);
-                CGPathMoveToPoint(path, NULL, side * 0.27, side * 0.23);
-                CGPathAddLineToPoint(path, NULL, side * 0.73, side * -0.23);
-            }
-            SKShapeNode *mark = [SKShapeNode shapeNodeWithPath:path];
-            CGPathRelease(path);
-            mark.strokeColor = ink;
-            mark.lineWidth = 1.35;
-            mark.lineCap = kCGLineCapRound;
-            mark.lineJoin = kCGLineJoinRound;
-            [checkbox addChild:mark];
-        }
-        SKLabelNode *l = Label(14, SKLabelHorizontalAlignmentModeLeft);
-        l.numberOfLines = 0;
-        l.lineBreakMode = NSLineBreakByWordWrapping;
-        l.text = lines[i];
-        [labels addObject:l];
-        l.fontColor = ink;
-        [row addArrangedNode:checkbox layoutBounds:CGRectMake(0, -side / 2, side, side)];
-        [row addArrangedNode:l];
-        [_objectivePanel addChild:row];
-    }
-    _objectives = (HUDObjectives){ [states copy], [labels copy], [rows copy] };
+- (void)setObjectives:(NSArray<ObjectiveReadout *> *)objectives {
+    CGFloat previousHeight = _objectivePanel.contentSize.height;
+    _objectivePanel.items = objectives;
     [self layoutIfNeeded];
+    if (_objectivePanel.contentSize.height != previousHeight) [self layoutMessages];
 }
 
 - (void)showMessage:(NSString *)text from:(NSString *)from {
@@ -819,7 +740,7 @@ static CGAffineTransform RingTransform(HUDRing r) {
     _scoreLabel.fontSize = MIN(s.width, s.height) < 550 ? 12 : 16;
     _scoreLabel.position = PointAdd(_objectivePanel.position, CGPointMake(0, -20));
     BOOL objectivesWereHidden = _objectivePanel.hidden;
-    _objectivePanel.hidden = f.respawning || !_help.hidden || !_objectivePanel.children.count;
+    _objectivePanel.hidden = f.respawning || !_help.hidden || !_objectivePanel.items.count;
     if (objectivesWereHidden != _objectivePanel.hidden) [self layoutMessages];
     if (_touchLayout) _throttleFrame.hidden = _throttleLabel.hidden = _speedLabel.hidden = YES;
     _thrustBar.hidden = f.cockpit || !_touchLayout;

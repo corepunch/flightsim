@@ -49,3 +49,62 @@ BOOL LANLobbyDecode(NSString *text, LANLobbyInfo *lobby) {
     *lobby = (LANLobbyInfo){.pilots=players, .settings=settings};
     return YES;
 }
+
+static NSComparisonResult CompareScores(LANPilotScore a, LANPilotScore b) {
+    if (a.kills != b.kills) return a.kills > b.kills ? NSOrderedAscending : NSOrderedDescending;
+    if (a.deaths != b.deaths) return a.deaths < b.deaths ? NSOrderedAscending : NSOrderedDescending;
+    return NSOrderedSame;
+}
+
+NSString *LANMatchResultEncode(LANMatchResult result) {
+    NSMutableArray *rows = [NSMutableArray array];
+    for (NSUInteger i = 0; i < result.pilots.count && i < MAX_CLIENTS; i++) {
+        LANPilotScore score = result.scores[i];
+        [rows addObject:@{@"name": result.pilots[i], @"kills": @(score.kills), @"deaths": @(score.deaths)}];
+    }
+    return Encode(@{@"pilots": rows, @"local": @(result.localIndex)});
+}
+
+static int ScoreInteger(NSDictionary *json, NSString *key) {
+    NSNumber *number = JSONNumber(json, key);
+    double value = number ? number.doubleValue : -1;
+    return value >= 0 && value <= INT_MAX && value == trunc(value) ? (int)value : -1;
+}
+
+BOOL LANMatchResultDecode(NSString *text, LANMatchResult *out) {
+    NSDictionary *json = Decode(text);
+    NSArray *rows = JSONArray(json, @"pilots");
+    int local = ScoreInteger(json, @"local");
+    if (!rows.count || rows.count > MAX_CLIENTS || local < 0 || (NSUInteger)local >= rows.count) return NO;
+    NSMutableArray<NSString *> *names = [NSMutableArray arrayWithCapacity:rows.count];
+    LANMatchResult result = {.localIndex = (NSUInteger)local};
+    for (NSUInteger i = 0; i < rows.count; i++) {
+        if (![rows[i] isKindOfClass:NSDictionary.class]) return NO;
+        NSDictionary *row = rows[i];
+        NSString *name = JSONString(row, @"name");
+        LANPilotScore score = {ScoreInteger(row, @"kills"), ScoreInteger(row, @"deaths")};
+        if (!name.length || name.length > 48 || score.kills < 0 || score.deaths < 0 ||
+            (i && CompareScores(result.scores[i - 1], score) == NSOrderedDescending)) return NO;
+        result.scores[i] = score;
+        [names addObject:name];
+    }
+    result.pilots = [names copy];
+    *out = result;
+    return YES;
+}
+
+NSUInteger LANMatchRank(LANMatchResult result, NSUInteger index) {
+    while (index > 0 && CompareScores(result.scores[index - 1], result.scores[index]) == NSOrderedSame) index--;
+    return index + 1;
+}
+
+BOOL LANMatchHasWinner(LANMatchResult result) {
+    return result.pilots.count > 1 && CompareScores(result.scores[0], result.scores[1]) == NSOrderedAscending;
+}
+
+NSUInteger LANMatchPilotPoints(LANMatchResult result) {
+    if (result.pilots.count < 2 || result.localIndex >= result.pilots.count) return 0;
+    int kills = result.scores[result.localIndex].kills;
+    if (kills <= 0) return 0;
+    return (NSUInteger)(MIN(kills, 5) * 50) + (result.localIndex == 0 && LANMatchHasWinner(result) ? 50 : 0);
+}

@@ -191,7 +191,7 @@ static float Ease(float value, float target, float rate, float dt) {
     [_refresh endRegistration];
     [_hud clearMessages];
     [_hud setHelpVisible:NO];
-    [_hud setObjectives:@[] states:@[]];
+    [_hud setObjectives:@[]];
     _status = nil;
     _objectiveSummary = nil;
     _hadPlayer = NO;
@@ -360,7 +360,7 @@ static float Ease(float value, float target, float rate, float dt) {
 - (void)serverCommand:(int)type a:(NSString *)a b:(NSString *)b c:(NSString *)c {
     NSString *radio = a;
     // The server sends catalog tokens; show them in the player's language.
-    a = L10nExpand(a);
+    if (type != SVC_OBJECTIVES) a = L10nExpand(a);
     if (type != SVC_BANNER && type != SVC_OBJECTIVES) b = L10nExpand(b);
     c = L10nExpand(c);
     switch (type) {
@@ -373,11 +373,7 @@ static float Ease(float value, float target, float rate, float dt) {
             [_hud showBanner:a color:[b isEqualToString:@"red"] ? [SKColor colorWithRed:1 green:0.4 blue:0.3 alpha:1] : nil];
             break;
         case SVC_OBJECTIVES: {
-            NSArray *lines = a.length ? [a componentsSeparatedByString:@"\n"] : @[];
-            NSMutableArray *states = [NSMutableArray array];
-            for (NSUInteger i = 0; i < b.length; i++) [states addObject:@([b characterAtIndex:i] - '0')];
-            while (states.count < lines.count) [states addObject:@0];
-            [_hud setObjectives:lines states:states];
+            [_hud setObjectives:FlightObjectiveReadouts(a, b)];
             _objectiveSummary = c.length ? c : nil;
             break;
         }

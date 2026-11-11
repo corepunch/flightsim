@@ -1,5 +1,6 @@
 #import "UI.h"
 #import "Shared.h"
+#import "Story.h"
 #import "Audio.h"
 #import "Common.h"
 #import <ImageIO/ImageIO.h>
@@ -21,7 +22,7 @@ static SKShader *MenuArtShader(void) {
 }
 
 // Rows come from Resources/UI/menus/main.json; ids the code acts on:
-// campaign, missions, lan, controls, sound, quit.
+// campaign, missions, lan, leaderboards, options, quit.
 #define MenuItemCount 8
 
 @interface MainMenu () <UIMotionScene>
@@ -32,7 +33,7 @@ static SKShader *MenuArtShader(void) {
     // _root and _ghost undo that offset, so content is laid out in scene space.
     SKNode *_stage, *_scenery, *_root, *_ghost, *_target;
     SKTexture *_art;
-    NSString *_campaignLabel, *_missionLabel;
+    NSString *_campaignLabel, *_missionLabel, *_scoreLabel;
     CGRect _rows[MenuItemCount];
     UILayout *_layout;
     NSArray<NSDictionary *> *_items;
@@ -98,9 +99,19 @@ static SKShader *MenuArtShader(void) {
     _art = nil;
 }
 
-- (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
+- (void)updateMissionLabels:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
     _campaignLabel = L10n(completed ? @"menu.campaign_replay" : (started ? @"menu.campaign_continue" : @"menu.campaign_start"));
     _missionLabel = title.length ? L10nFormat(@"menu.mission_line", (unsigned long)index + 1, title.uppercaseString) : @"";
+    _scoreLabel = L10nFormat(@"score.total", (unsigned long)ProgressPilotScore());
+}
+
+- (void)refreshMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
+    [self updateMissionLabels:index title:title started:started completed:completed];
+    if (!_controls) [self rebuild];
+}
+
+- (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
+    [self updateMissionLabels:index title:title started:started completed:completed];
     _selected = 0;
     _controls = NO;
     _controlsPanel = nil;
@@ -129,12 +140,12 @@ static SKShader *MenuArtShader(void) {
 
 - (NSString *)itemId:(NSUInteger)i { return i < [self itemCount] ? _items[i][@"id"] : nil; }
 
-// A row's text: a catalog key, or $campaign / $mission / $sound.
+// A row's text: a catalog key, or $campaign / $mission / $score.
 - (NSString *)itemText:(id)value {
     if (![value isKindOfClass:NSString.class]) return nil;
     if ([value isEqualToString:@"$campaign"]) return _campaignLabel;
     if ([value isEqualToString:@"$mission"]) return _missionLabel.length ? _missionLabel : nil;
-    if ([value isEqualToString:@"$sound"]) return [[GameAudio shared] mixTitle];
+    if ([value isEqualToString:@"$score"]) return _scoreLabel;
     return L10n(value);
 }
 
@@ -561,20 +572,18 @@ static SKShader *MenuArtShader(void) {
     }
     if (!(actions & InputActionConfirm)) return MainMenuCommandNone;
     NSString *item = [self itemId:_selected];
-    if (![item isEqualToString:@"sound"]) [[GameAudio shared] play:@"ui-confirm"];
+    [[GameAudio shared] play:@"ui-confirm"];
     if ([item isEqualToString:@"campaign"]) return MainMenuCommandCampaign;
     if ([item isEqualToString:@"missions"]) return MainMenuCommandMissions;
     if ([item isEqualToString:@"lan"]) return MainMenuCommandMultiplayer;
+    if ([item isEqualToString:@"leaderboards"]) return MainMenuCommandLeaderboards;
     if ([item isEqualToString:@"quit"]) return MainMenuCommandQuit;
-    if ([item isEqualToString:@"controls"]) {
+    if ([item isEqualToString:@"options"]) {
         _controls = YES;
         _controlsPanel = [ControlsPanel new];
+        _controlsPanel.showsSoundSetting = YES;
         _transition = UITransitionPage;
         [self rebuild];
-    } else if ([item isEqualToString:@"sound"]) {
-        [[GameAudio shared] cycleMix];
-        [[GameAudio shared] play:@"ui-confirm"];
-        [self reselect];
     }
     return MainMenuCommandNone;
 }
