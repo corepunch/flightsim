@@ -318,6 +318,86 @@ SKNode *UIResultsBackdrop(CGSize size) {
 }
 @end
 
+@implementation UIListView {
+    NSUInteger _firstVisible;
+    NSMutableArray<UIListRow *> *_rows;
+}
+
+- (instancetype)initWithList:(ListModel *)list region:(CGRect)region style:(UIListStyle)style compact:(BOOL)compact {
+    if (!(self = [super init])) return nil;
+    _list = list;
+    _rows = [NSMutableArray array];
+    NSUInteger count = list.entries.count;
+    if (list.heading) {
+        // Two lines of heading in a fitted list, one in a scrolling list.
+        CGFloat height = style == UIListFitted ? (compact ? 46 : 70) : 52;
+        CGRect heading = RectInsetEdges(region, 0, 0, 0, CGRectGetHeight(region) - height);
+        [self addChild:[[UIEmptyState alloc] initWithRegion:heading text:list.heading compact:YES]];
+        region = RectInsetEdges(region, 0, height + (style == UIListFitted ? 8 : 12), 0, 0);
+    }
+    if (!count) {
+        if (list.message) [self showMessage:list.message in:region compact:compact];
+        _rowRects = @[];
+        return self;
+    }
+    MenuGrid grid;
+    CGFloat messageHeight = 0;
+    if (style == UIListScrolling) {
+        const CGFloat rowHeight = 58, gap = 6;
+        NSUInteger visible = MIN(count, (NSUInteger)MAX(1, floor((CGRectGetHeight(region) + gap) / (rowHeight + gap))));
+        _firstVisible = ListFirstVisible(list.selected, visible);
+        count = visible;
+        grid = (MenuGrid){ .columns = 1, .rows = visible, .rowHeight = rowHeight, .gap = gap,
+                           .columnWidth = CGRectGetWidth(region),
+                           .size = { CGRectGetWidth(region), visible * (rowHeight + gap) - gap } };
+    } else {
+        if (list.message) messageHeight = MIN(100, CGRectGetHeight(region) * 0.45);
+        CGFloat gap = compact ? 6 : 8, width = CGRectGetWidth(region);
+        grid = MenuGridFit(count, width, CGSizeMake(width, CGRectGetHeight(region) - messageHeight), (MenuGridMetrics){
+            .rowHeight = compact ? 38 : 60, .minimumRowHeight = 20, .gap = gap,
+            .columnWidth = (width - gap) / 2, .maximumColumns = width > 480 ? 2 : 1,
+        });
+    }
+    // A scrolling list hangs from the top; a fitted one sits in the middle with its message.
+    CGFloat block = grid.size.height + messageHeight;
+    CGFloat top = style == UIListScrolling ? CGRectGetMaxY(region)
+                                           : CGRectGetMidY(region) + MIN(block, CGRectGetHeight(region)) / 2;
+    _rowsRect = CGRectMake(CGRectGetMinX(region), top - grid.size.height, grid.size.width, grid.size.height);
+    NSMutableArray<NSValue *> *rects = [NSMutableArray array];
+    NSMutableArray<SKLabelNode *> *titles = [NSMutableArray array];
+    for (NSUInteger i = 0; i < count; i++) {
+        ListEntry *entry = list.entries[_firstVisible + i];
+        CGRect rect = MenuGridCell(grid, _rowsRect, i);
+        UIListRow *row = [[UIListRow alloc] initWithRect:rect title:entry.title detail:entry.detail compact:compact
+                                               selected:_firstVisible + i == list.selected];
+        [self addChild:row];
+        [_rows addObject:row];
+        [rects addObject:BoxRect(rect)];
+        [titles addObject:row.titleLabel];
+    }
+    _rowRects = rects;
+    _titleLabels = titles;
+    if (messageHeight > 0)
+        [self showMessage:list.message in:RectFromEdges(CGRectGetMinX(region), CGRectGetMinY(_rowsRect) - messageHeight,
+                                                         CGRectGetMaxX(region), CGRectGetMinY(_rowsRect)) compact:compact];
+    return self;
+}
+
+- (void)showMessage:(NSString *)message in:(CGRect)region compact:(BOOL)compact {
+    UIEmptyState *state = [[UIEmptyState alloc] initWithRegion:region text:message compact:compact];
+    _messageLabel = state.label;
+    [self addChild:state];
+}
+
+- (NSUInteger)entryAt:(CGPoint)point {
+    for (NSUInteger i = 0; i < _rowRects.count; i++)
+        if (CGRectContainsPoint(UnboxRect(_rowRects[i]), point)) return _firstVisible + i;
+    return NSNotFound;
+}
+
+- (void)registerHover:(UIHover *)hover { for (UIListRow *row in _rows) [row registerHover:hover]; }
+@end
+
 @implementation TextViewport {
     SKSpriteNode *_thumb;
 }

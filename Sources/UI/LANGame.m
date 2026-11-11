@@ -28,56 +28,20 @@
     return self;
 }
 - (void)cycle:(NSUInteger)index direction:(NSInteger)direction {
-    NSArray *arenas = [LevelNames() filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSString *name, NSDictionary *bindings) {
-        return LevelNamed(name)->rules.deathmatch;
-    }]];
-    NSArray *ships = [@[@""] arrayByAddingObjectsFromArray:ShipDefNames()];
-    NSArray *values;
-    switch (index) {
-        case 0: { NSUInteger i=[arenas indexOfObject:_settings.arena]; if (arenas.count) _settings.arena=arenas[(i==NSNotFound ? 0 : i+arenas.count+direction)%arenas.count]; break; }
-        case 1: { NSUInteger i=[ships indexOfObject:_settings.ship]; _settings.ship=ships[(i==NSNotFound ? 0 : i+ships.count+direction)%ships.count]; break; }
-        case 2: values=@[@2,@4,@6,@8]; break;
-        case 3: values=@[@5,@10,@15,@20,@30,@50]; break;
-        case 4: values=@[@180,@300,@600,@900,@1200]; break;
-        case 5: values=@[@1,@3,@5,@10]; break;
-    }
-    if (values) {
-        float old=index==2 ? _settings.maxPilots : index==3 ? _settings.fragLimit : index==4 ? _settings.matchSeconds : _settings.respawnSeconds;
-        NSUInteger i=[values indexOfObjectPassingTest:^BOOL(NSNumber *value, NSUInteger n, BOOL *stop) { return value.floatValue==old; }];
-        if (i==NSNotFound) {
-            i=direction>0 ? values.count-1 : 0;
-            for (NSUInteger n=0;n<values.count;n++) {
-                NSUInteger candidate=direction>0 ? n : values.count-1-n;
-                if ((direction>0 && [values[candidate] floatValue]>old) || (direction<0 && [values[candidate] floatValue]<old)) {
-                    i=(candidate+values.count-direction)%values.count; break;
-                }
-            }
-        }
-        float value=[values[(i+values.count+direction)%values.count] floatValue];
-        if (index==2) _settings.maxPilots=(int)value;
-        if (index==3) _settings.fragLimit=(int)value;
-        if (index==4) _settings.matchSeconds=value;
-        if (index==5) _settings.respawnSeconds=value;
-    }
+    _settings = LANMatchSettingsStep(_settings, index, direction);
     if (_change) _change(_settings);
     [self rebuild]; [self select:index];
 }
 - (void)rebuild {
     NSUInteger selected=_form ? _form.selectedIndex : 0;
     [self removeAllChildren];
-    const LevelDef *arena=LevelNamed(_settings.arena);
-    const ShipDef *ship=ShipDefNamed(_settings.ship);
-    NSArray *titles=@[L10n(@"browser.arena"),L10n(@"browser.ship"),L10n(@"browser.pilots"),L10n(@"browser.kill_limit"),L10n(@"browser.duration"),L10n(@"browser.respawn")];
-    NSArray *values=@[arena ? arena->title : L10n(@"browser.dogfight"), ship ? @(ship->displayName) : L10n(@"browser.default_ship"),
-        @(_settings.maxPilots).stringValue,@(_settings.fragLimit).stringValue,
-        L10nFormat(@"browser.minutes",(int)(_settings.matchSeconds/60)),L10nFormat(@"browser.seconds",(int)_settings.respawnSeconds)];
     NSMutableArray *items=[NSMutableArray array];
     __weak LANSetupPanel *owner=self;
-    NSUInteger arenas=0;
-    for (NSString *name in LevelNames()) if (LevelNamed(name)->rules.deathmatch) arenas++;
-    for (NSUInteger i=0;i<titles.count;i++) {
-        UISettingItem *item=[UISettingItem choice:titles[i] value:values[i] detail:nil action:^{ [owner cycle:i direction:1]; }];
-        item.enabled=i!=0 || arenas>1;
+    NSArray<SettingRow *> *rows = LANSetupRows(_settings);
+    for (NSUInteger i = 0; i < rows.count; i++) {
+        UISettingItem *item = [UISettingItem choice:rows[i].title value:rows[i].value detail:nil
+                                             action:^{ [owner cycle:i direction:1]; }];
+        item.enabled = rows[i].enabled;
         [items addObject:item];
     }
     _form=[[UISettingsForm alloc] initWithItems:items width:CGRectGetWidth(_region) compact:YES];
@@ -211,37 +175,11 @@
         [self scrollScoreboard:0];
         _pilotRects = @[];
     } else {
-        CGFloat headingHeight=compact ? 46 : 70;
-        CGRect heading=RectFromEdges(CGRectGetMinX(content),CGRectGetMaxY(content)-headingHeight,CGRectGetMaxX(content),CGRectGetMaxY(content));
-        const LevelDef *arena=LevelNamed(_settings.arena);
-        const ShipDef *ship=ShipDefNamed(_settings.ship);
-        NSString *description=L10nFormat(@"browser.row_detail", arena ? arena->title : L10n(@"browser.dogfight"),
-                                        ship ? @(ship->displayName) : L10n(@"browser.default_ship"));
-        NSString *details=[NSString stringWithFormat:@"%@\n%@",description,LANMatchSummary(_settings)];
-        UIEmptyState *summary=[[UIEmptyState alloc] initWithRegion:heading text:details compact:YES];
-        [_root addChild:summary];
-        CGRect area=RectInsetEdges(content,0,headingHeight+8,0,0);
-        BOOL waiting=_stage==LANGameLobby && (_lines.count<2 || !_hosting);
-        CGFloat statusHeight=waiting ? MIN(100,CGRectGetHeight(area)*0.45) : 0;
-        CGFloat rowHeight=compact ? 38 : 60, gap=compact ? 6 : 8;
-        NSUInteger columns=CGRectGetHeight(area)-statusHeight < _lines.count*(rowHeight+gap) && width>480 ? 2 : 1;
-        NSUInteger rows=(NSUInteger)ceil((double)MAX((NSUInteger)1,_lines.count)/columns);
-        rowHeight=MAX(20,MIN(rowHeight,(CGRectGetHeight(area)-statusHeight)/rows-gap));
-        CGFloat total=rows*(rowHeight+gap)+statusHeight;
-        CGFloat top=CGRectGetMidY(area)+MIN(total,CGRectGetHeight(area))/2;
-        CGFloat columnWidth=(width-gap*(columns-1))/columns;
-        NSMutableArray *rects=[NSMutableArray array];
-        for(NSUInteger i=0;i<_lines.count;i++) {
-            CGRect rect=CGRectMake(CGRectGetMinX(area)+(i/rows)*(columnWidth+gap),top-(i%rows+1)*(rowHeight+gap),columnWidth,rowHeight);
-            UIListRow *row=[[UIListRow alloc] initWithRect:rect title:_lines[i] detail:nil compact:compact selected:i==0];
-            [_root addChild:row]; [rects addObject:BoxRect(rect)];
-        }
-        _pilotRects=rects;
-        if(waiting) {
-            CGRect status=RectFromEdges(CGRectGetMinX(area),top-total,CGRectGetMaxX(area),top-rows*(rowHeight+gap));
-            UIEmptyState *empty=[[UIEmptyState alloc] initWithRegion:status text:L10n(_hosting ? @"browser.waiting" : @"browser.guest_waiting") compact:compact];
-            _statusLabel=empty.label; [_root addChild:empty];
-        }
+        UIListView *lobby = [[UIListView alloc] initWithList:LobbyModel(_lines, _hosting, _settings) region:content
+                                                       style:UIListFitted compact:compact];
+        [_root addChild:lobby];
+        _pilotRects = lobby.rowRects;
+        _statusLabel = lobby.messageLabel;
     }
 }
 - (SKNode *)motionBackdropWithSize:(CGSize)size {

@@ -58,10 +58,16 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     return ProgressCampaignCompleted() ? 0 : ProgressUnlockedCount() - 1;
 }
 
-- (void)prepareMainMenu {
+- (MainMenuFacts)mainMenuFacts {
     NSUInteger index = [self campaignEntry];
-    [_mainMenu showMission:index title:CampaignMissionAt(index).title
-                   started:ProgressHasStarted() || index > 0 completed:ProgressCampaignCompleted()];
+    return (MainMenuFacts){
+        .mission = index, .missionTitle = CampaignMissionAt(index).title, .score = ProgressPilotScore(),
+        .started = ProgressHasStarted() || index > 0, .completed = ProgressCampaignCompleted(),
+    };
+}
+
+- (void)prepareMainMenu {
+    [_mainMenu showFacts:[self mainMenuFacts]];
     [_services startGameCenter];
 }
 
@@ -150,11 +156,8 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     NSUInteger revision = ProgressRevision();
     if (_progressRevision != revision) {
         _progressRevision = revision;
-        if (_screen == FrontScreenMainMenu) {
-            NSUInteger index = [self campaignEntry];
-            [_mainMenu refreshMission:index title:CampaignMissionAt(index).title
-                              started:ProgressHasStarted() || index > 0 completed:ProgressCampaignCompleted()];
-        } else if (_screen == FrontScreenCampaign) [_briefing refreshProgress];
+        if (_screen == FrontScreenMainMenu) [_mainMenu refreshFacts:[self mainMenuFacts]];
+        else if (_screen == FrontScreenCampaign) [_briefing refreshProgress];
         else if (_screen == FrontScreenLAN) [_lanGame refreshProgress];
     }
     switch (_screen) {

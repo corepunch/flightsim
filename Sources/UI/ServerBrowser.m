@@ -20,9 +20,8 @@
     NSString *_signature;
     CGSize _laidOut;
     ScreenInsets _usedInsets;
-    CGRect _backRect, _joinRect, _serverRows;
-    NSUInteger _firstVisible;
-    CGFloat _rowHeight;
+    CGRect _backRect, _joinRect;
+    UIListView *_list;
     CGPoint _pendingPoint;
     BOOL _hasPendingPoint;
     BOOL _createSelected, _createRequested;
@@ -90,10 +89,6 @@
     CGSize s = self.size;
     _stage.position = CGPointMake(s.width / 2, s.height / 2);
     _root.position = CGPointMake(-s.width / 2, -s.height / 2);
-    NSMutableArray<SKLabelNode *> *rows = [NSMutableArray array];
-    // Sizes and spacing from Resources/UI/menus/browser.json.
-    UILayout *layout = [UILayout named:@"browser"];
-    CGFloat (^M)(NSString *, CGFloat) = ^CGFloat(NSString *name, CGFloat fallback) { return layout ? [layout metric:name flags:nil fallback:fallback] : fallback; };
     [_root addChild:[self motionBackdropWithSize:s]];
 
     // Commands stay in the title bar; the body owns games and connection status.
@@ -119,35 +114,18 @@
     [_root addChild:bar];
     [bar registerHover:_hover];
 
-    CGRect body = regions.body;
-    CGFloat x = CGRectGetMinX(body), y = CGRectGetMaxY(body), width = body.size.width;
-    if (!_servers.count) {
-        UIEmptyState *empty = [[UIEmptyState alloc] initWithRegion:body
-            text:_status.length ? _status : L10n(@"browser.searching") compact:regions.compact];
-        [_root addChild:empty];
+    NSMutableArray<ListEntry *> *entries = [NSMutableArray arrayWithCapacity:_servers.count];
+    for (LANServer *server in _servers) {
+        const LevelDef *level = LevelNamed(server.levelName);
+        [entries addObject:ServerEntry(server.name, server.players, server.maxPlayers, level ? level->title : nil,
+                                       server.pilots ? LANMatchSummary(server.settings) : nil)];
     }
-    if (_servers.count && _status.length) {
-        CGRect status = RectFromEdges(x, y - 52, CGRectGetMaxX(body), y);
-        [_root addChild:[[UIEmptyState alloc] initWithRegion:status text:_status compact:YES]];
-        y -= 64;
-        body = RectFromEdges(x, CGRectGetMinY(body), CGRectGetMaxX(body), y);
-    }
-    CGFloat rowHeight = _rowHeight = M(@"rowHeight", 64);
-    NSUInteger visible = MIN(_servers.count, (NSUInteger)MAX(1, floor(body.size.height / rowHeight)));
-    _firstVisible = visible && _index >= visible ? _index - visible + 1 : 0;
-    _serverRows = CGRectMake(x, y - visible * rowHeight, width, visible * rowHeight);
-    for (NSUInteger i = _firstVisible; i < _firstVisible + visible; i++) {
-        LANServer *srv = _servers[i];
-        BOOL sel = !_createSelected && i == _index;
-        const LevelDef *level = LevelNamed(srv.levelName);
-        NSString *mission = level ? level->title : nil;
-        CGRect rect = CGRectMake(x, y - (i - _firstVisible + 1) * rowHeight + 6, width, rowHeight - 6);
-        NSString *title = L10nFormat(@"browser.row", @"", srv.name, srv.players, srv.maxPlayers);
-        NSString *detail = srv.pilots ? L10nFormat(@"browser.row_detail", mission ?: L10n(@"browser.in_menus"), LANMatchSummary(srv.settings)) : (mission ?: L10n(@"browser.in_menus"));
-        UIListRow *row = [[UIListRow alloc] initWithRect:rect title:title detail:detail compact:regions.compact selected:sel];
-        [_root addChild:row]; [row registerHover:_hover];
-        [rows addObject:row.titleLabel];
-    }
+    BrowserSelection selection = { .create = _createSelected, .index = _index };
+    _list = [[UIListView alloc] initWithList:ServerListModel(entries, selection, _status) region:regions.body
+                                       style:UIListScrolling compact:regions.compact];
+    [_root addChild:_list];
+    [_list registerHover:_hover];
+    NSArray<SKLabelNode *> *rows = _list.titleLabels;
 
     if (!intro) return;
     for (NSUInteger i = 0; i < rows.count; i++) {
@@ -197,10 +175,10 @@
 }
 
 - (CGRect)joinRect { return _joinRect; }
-- (CGRect)serverRows { return _serverRows; }
+- (CGRect)serverRows { return _list.rowsRect; }
 - (void)pointerScroll:(CGFloat)delta at:(CGPoint)point {
     CGPoint at = CGPointMake(point.x * self.size.width, point.y * self.size.height);
-    if (!CGRectContainsPoint(_serverRows, at) || !_servers.count) return;
+    if (!CGRectContainsPoint(_list.rowsRect, at) || !_servers.count) return;
     NSInteger next = (NSInteger)_index + (delta > 0 ? 1 : -1);
     _index = (NSUInteger)MAX(0, MIN((NSInteger)_servers.count - 1, next));
     _createSelected = NO;
@@ -216,29 +194,20 @@
     _barInput = 0; _createRequested = NO;
     if ([_bar activateAt:click]) actions |= _barInput;
     if (_createRequested) return BrowserCommandCreate;
-    else if (CGRectContainsPoint(_serverRows, click)) {
-        NSUInteger row = _firstVisible + (NSUInteger)((CGRectGetMaxY(_serverRows) - click.y) / MAX(_rowHeight, 1));
-        if (row < _servers.count) { _index = row; _createSelected = NO; [[GameAudio shared] play:@"ui-hover"]; [self rebuild]; }
-    }
+    NSUInteger row = [_list entryAt:click];
+    if (row != NSNotFound) { _index = row; _createSelected = NO; [[GameAudio shared] play:@"ui-hover"]; [self rebuild]; }
     if (actions & InputActionBack) { [[GameAudio shared] play:@"ui-back"]; return BrowserCommandBack; }
     if (actions & (InputActionUp | InputActionDown)) [[GameAudio shared] play:@"ui-hover"];
     if (actions & InputActionConfirm) {
         [[GameAudio shared] play:@"ui-confirm"];
         return _createSelected || !_servers.count ? BrowserCommandCreate : BrowserCommandJoin;
     }
-    if (_servers.count) {
-        if (actions & InputActionUp) {
-            if (_createSelected) { _createSelected = NO; _index = _servers.count - 1; }
-            else if (_index == 0) _createSelected = YES;
-            else _index--;
-            [self rebuild];
-        }
-        if (actions & InputActionDown) {
-            if (_createSelected) { _createSelected = NO; _index = 0; }
-            else if (_index + 1 == _servers.count) _createSelected = YES;
-            else _index++;
-            [self rebuild];
-        }
+    NSInteger step = (actions & InputActionDown ? 1 : 0) - (actions & InputActionUp ? 1 : 0);
+    if (step && _servers.count) {
+        BrowserSelection moved = BrowserSelectionMove((BrowserSelection){ _createSelected, _index }, _servers.count, step);
+        _createSelected = moved.create;
+        if (!moved.create) _index = moved.index;
+        [self rebuild];
     }
     return BrowserCommandNone;
 }

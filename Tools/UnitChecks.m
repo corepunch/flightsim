@@ -1215,6 +1215,67 @@ static void CheckScreenModels(void) {
     CHECK(CGRectEqualToRect(MenuGridCell(low, frame, 2), CGRectMake(100, 200, 273, 56)));
     CHECK(CGRectEqualToRect(MenuGridCell(low, frame, 3), CGRectMake(379, 324, 273, 56)));
 
+    // The main menu's campaign row follows progress; only a desktop offers Quit.
+    MenuModel *fresh = MainMenuModel((MainMenuFacts){ .canQuit = YES });
+    CHECK(fresh.choices.count == 6 && [fresh.choices.lastObject.identifier isEqualToString:@"quit"]);
+    CHECK([fresh.choices[0].title isEqualToString:L10n(@"menu.campaign_start")] && !fresh.choices[0].detail);
+    CHECK([fresh.title isEqualToString:L10n(@"menu.unit")]);
+    MenuModel *resumed = MainMenuModel((MainMenuFacts){ .mission = 2, .missionTitle = @"Convoy", .started = YES, .score = 450 });
+    CHECK(resumed.choices.count == 5 && [resumed indexOfChoice:@"quit"] == NSNotFound);
+    CHECK([resumed.choices[0].title isEqualToString:L10n(@"menu.campaign_continue")]);
+    CHECK([resumed.choices[0].detail isEqualToString:L10nFormat(@"menu.mission_line", 3ul, @"CONVOY")]);
+    CHECK([resumed.choices[[resumed indexOfChoice:@"leaderboards"]].detail isEqualToString:L10nFormat(@"score.total", 450ul)]);
+    CHECK([MainMenuModel((MainMenuFacts){ .started = YES, .completed = YES }).choices[0].title
+           isEqualToString:L10n(@"menu.campaign_replay")]);
+
+    // The browser's highlight passes through "create" between the ends of the list.
+    BrowserSelection create = { .create = YES }, first = { .index = 0 }, last = { .index = 2 };
+    CHECK(BrowserSelectionMove(create, 3, 1).index == 0 && !BrowserSelectionMove(create, 3, 1).create);
+    CHECK(BrowserSelectionMove(create, 3, -1).index == 2 && !BrowserSelectionMove(create, 3, -1).create);
+    CHECK(BrowserSelectionMove(first, 3, -1).create && BrowserSelectionMove(last, 3, 1).create);
+    CHECK(BrowserSelectionMove(first, 3, 1).index == 1 && BrowserSelectionMove(first, 0, 1).create);
+    CHECK(ListFirstVisible(0, 4) == 0 && ListFirstVisible(3, 4) == 0 && ListFirstVisible(6, 4) == 3);
+    CHECK(ListFirstVisible(NSNotFound, 4) == 0 && ListFirstVisible(5, 0) == 0);
+
+    ListModel *searching = ServerListModel(@[], create, nil), *denied = ServerListModel(nil, create, @"No network");
+    CHECK(!searching.entries.count && [searching.message isEqualToString:L10n(@"browser.searching")] && !searching.heading);
+    CHECK([denied.message isEqualToString:@"No network"] && denied.selected == NSNotFound);
+    ListEntry *idle = ServerEntry(@"Wren", 1, 8, nil, nil), *lobby = ServerEntry(@"Tobin", 2, 4, @"Outpost", @"RULES");
+    CHECK([idle.title isEqualToString:L10nFormat(@"browser.row", @"", @"Wren", 1, 8)]);
+    CHECK([idle.detail isEqualToString:L10n(@"browser.in_menus")]);
+    CHECK([lobby.detail isEqualToString:L10nFormat(@"browser.row_detail", @"Outpost", @"RULES")]);
+    ListModel *found = ServerListModel(@[idle, lobby], (BrowserSelection){ .index = 1 }, @"Joining");
+    CHECK(found.entries.count == 2 && found.selected == 1 && [found.heading isEqualToString:@"Joining"] && !found.message);
+    CHECK(ServerListModel(@[idle, lobby], create, nil).selected == NSNotFound);
+
+    // A lobby waits until its host has someone to fly against.
+    LANMatchSettings match = LANMatchSettingsDefault();
+    ListModel *alone = LobbyModel(@[@"Wren"], YES, match), *ready = LobbyModel(@[@"Wren", @"Tobin"], YES, match);
+    ListModel *guest = LobbyModel(@[@"Wren", @"Tobin"], NO, match);
+    CHECK([alone.message isEqualToString:L10n(@"browser.waiting")] && !ready.message);
+    CHECK([guest.message isEqualToString:L10n(@"browser.guest_waiting")]);
+    CHECK(ready.entries.count == 2 && ready.selected == 0 && [ready.entries[1].title isEqualToString:@"Tobin"]);
+    CHECK([ready.heading hasSuffix:LANMatchSummary(match)]);
+    CHECK(LobbyModel(@[], NO, match).selected == NSNotFound);
+
+    // Setup rows step through fixed choices and wrap; an arena's odd default joins the ladder.
+    match.maxPilots = 4; match.fragLimit = 50; match.matchSeconds = 180; match.respawnSeconds = 4;
+    NSArray<SettingRow *> *setup = LANSetupRows(match);
+    CHECK(setup.count == 6 && [setup[2].value isEqualToString:@"4"] && [setup[3].value isEqualToString:@"50"]);
+    CHECK([setup[4].value isEqualToString:L10nFormat(@"browser.minutes", 3)] && setup[1].enabled);
+    CHECK(LANMatchSettingsStep(match, 2, 1).maxPilots == 6 && LANMatchSettingsStep(match, 2, -1).maxPilots == 2);
+    CHECK(LANMatchSettingsStep(match, 3, 1).fragLimit == 5 && LANMatchSettingsStep(match, 3, -1).fragLimit == 30);
+    CHECK(LANMatchSettingsStep(match, 4, -1).matchSeconds == 1200 && LANMatchSettingsStep(match, 4, 1).matchSeconds == 300);
+    CHECK(LANMatchSettingsStep(match, 5, 1).respawnSeconds == 5 && LANMatchSettingsStep(match, 5, -1).respawnSeconds == 3);
+    match.ship = @"";
+    NSString *firstShip = LANMatchSettingsStep(match, 1, 1).ship, *lastShip = LANMatchSettingsStep(match, 1, -1).ship;
+    CHECK(firstShip.length && [firstShip isEqualToString:ShipDefNames().firstObject]);
+    CHECK([lastShip isEqualToString:ShipDefNames().lastObject]);
+    match.ship = lastShip;
+    CHECK(LANMatchSettingsStep(match, 1, 1).ship.length == 0);
+    LANMatchSettings arena = LANMatchSettingsStep(match, 0, 1);
+    CHECK(!arena.arena.length || LevelNamed(arena.arena)->rules.deathmatch);
+
     // A debrief shows what the result earned; a failure shows no rating or score.
     NSArray<ObjectiveReadout *> *results = MissionResultReadouts(@[@"+ Escort", @"x Optional"]);
     ReportModel *won = DebriefReport((DebriefFacts){ .success = YES, .stars = 2, .total = 340, .earned = 40,
@@ -1236,16 +1297,16 @@ static void CheckScreenModels(void) {
     CHECK([end firstBlockOfKind:ReportScore].total == 900 && [end firstBlockOfKind:ReportScore].earned == 0);
 
     // The scoreboard keeps the server's order and marks the local pilot's row.
-    LANMatchResult match = { .pilots = @[@"Bo", @"Ada", @"Cy"], .scores = { {9, 2}, {5, 1}, {5, 1} }, .localIndex = 0 };
-    ReportModel *first = MatchReport(match, 500, 120);
-    CHECK([first.blocks[0].text isEqualToString:L10n(@"match.win")]);
-    ReportBlock *table = [first firstBlockOfKind:ReportTable];
+    LANMatchResult standings = { .pilots = @[@"Bo", @"Ada", @"Cy"], .scores = { {9, 2}, {5, 1}, {5, 1} }, .localIndex = 0 };
+    ReportModel *won1 = MatchReport(standings, 500, 120);
+    CHECK([won1.blocks[0].text isEqualToString:L10n(@"match.win")]);
+    ReportBlock *table = [won1 firstBlockOfKind:ReportTable];
     CHECK(table.header.count == 4 && table.rows.count == 3 && table.highlightedRow == 0);
     CHECK([table.rows[0] isEqualToArray:(@[@"1", @"Bo", @"9", @"2"])]);
     CHECK([table.rows[1][0] isEqualToString:@"2"] && [table.rows[2][0] isEqualToString:@"2"]);
-    CHECK([first firstBlockOfKind:ReportScore].earned == 120);
-    match.localIndex = 2;
-    CHECK([MatchReport(match, 0, 0).blocks[0].text isEqualToString:L10nFormat(@"match.place", 2ul)]);
+    CHECK([won1 firstBlockOfKind:ReportScore].earned == 120);
+    standings.localIndex = 2;
+    CHECK([MatchReport(standings, 0, 0).blocks[0].text isEqualToString:L10nFormat(@"match.place", 2ul)]);
     LANMatchResult solo = { .pilots = @[@"Ada"], .scores = { {3, 0} } };
     CHECK([MatchReport(solo, 0, 0).blocks[0].text isEqualToString:L10n(@"browser.results")]);
     CHECK([ReportBlock table:@[] rows:@[] highlighted:0].highlightedRow == NSNotFound);

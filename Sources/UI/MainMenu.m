@@ -21,8 +21,7 @@ static SKShader *MenuArtShader(void) {
     return shader;
 }
 
-// Rows come from Resources/UI/menus/main.json; ids the code acts on:
-// campaign, missions, lan, leaderboards, options, quit.
+// The rows are MainMenuModel's choices; Resources/UI/menus/main.json gives their sizes.
 #define MenuItemCount 8
 
 @interface MainMenu () <UIMotionScene>
@@ -33,10 +32,10 @@ static SKShader *MenuArtShader(void) {
     // _root and _ghost undo that offset, so content is laid out in scene space.
     SKNode *_stage, *_scenery, *_root, *_ghost, *_target;
     SKTexture *_art;
-    NSString *_campaignLabel, *_missionLabel, *_scoreLabel;
+    MainMenuFacts _facts;
+    MenuModel *_menu;
     CGRect _rows[MenuItemCount];
     UILayout *_layout;
-    NSArray<NSDictionary *> *_items;
     CGSize _laidOut;
     MainMenuInsets _usedInsets;
     NSUInteger _selected;
@@ -72,7 +71,7 @@ static SKShader *MenuArtShader(void) {
         [_stage addChild:_ghost];
         [self addChild:_stage];
 
-        [self showMission:0 title:nil started:NO completed:NO];
+        [self showFacts:(MainMenuFacts){0}];
     }
     return self;
 }
@@ -99,19 +98,13 @@ static SKShader *MenuArtShader(void) {
     _art = nil;
 }
 
-- (void)updateMissionLabels:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
-    _campaignLabel = L10n(completed ? @"menu.campaign_replay" : (started ? @"menu.campaign_continue" : @"menu.campaign_start"));
-    _missionLabel = title.length ? L10nFormat(@"menu.mission_line", (unsigned long)index + 1, title.uppercaseString) : @"";
-    _scoreLabel = L10nFormat(@"score.total", (unsigned long)ProgressPilotScore());
-}
-
-- (void)refreshMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
-    [self updateMissionLabels:index title:title started:started completed:completed];
+- (void)refreshFacts:(MainMenuFacts)facts {
+    _facts = facts;
     if (!_controls) [self rebuild];
 }
 
-- (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed {
-    [self updateMissionLabels:index title:title started:started completed:completed];
+- (void)showFacts:(MainMenuFacts)facts {
+    _facts = facts;
     _selected = 0;
     _controls = NO;
     _controlsPanel = nil;
@@ -122,7 +115,10 @@ static SKShader *MenuArtShader(void) {
 
 - (void)loadLayout {
     _layout = [UILayout named:@"main"] ?: _layout;
-    _items = [_layout itemsForTouch:self.touchNavigationEnabled] ?: @[];
+    // Quitting is a desktop command, whatever the caller knew about the device.
+    MainMenuFacts facts = _facts;
+    facts.canQuit = !self.touchNavigationEnabled;
+    _menu = MainMenuModel(facts);
 }
 
 - (void)setTouchNavigationEnabled:(BOOL)enabled {
@@ -136,18 +132,7 @@ static SKShader *MenuArtShader(void) {
     return _layout ? [_layout metric:name flags:flags fallback:fallback] : fallback;
 }
 
-- (NSUInteger)itemCount { return MIN(_items.count, (NSUInteger)MenuItemCount); }
-
-- (NSString *)itemId:(NSUInteger)i { return i < [self itemCount] ? _items[i][@"id"] : nil; }
-
-// A row's text: a catalog key, or $campaign / $mission / $score.
-- (NSString *)itemText:(id)value {
-    if (![value isKindOfClass:NSString.class]) return nil;
-    if ([value isEqualToString:@"$campaign"]) return _campaignLabel;
-    if ([value isEqualToString:@"$mission"]) return _missionLabel.length ? _missionLabel : nil;
-    if ([value isEqualToString:@"$score"]) return _scoreLabel;
-    return L10n(value);
-}
+- (NSUInteger)itemCount { return MIN(_menu.choices.count, (NSUInteger)MenuItemCount); }
 
 - (SKLabelNode *)label:(NSString *)text size:(CGFloat)size color:(UIRGB)color opacity:(CGFloat)opacity
                      x:(CGFloat)x y:(CGFloat)y {
@@ -310,7 +295,7 @@ static SKShader *MenuArtShader(void) {
     CGFloat stackBottom = portrait ? bottom + 8 : MAX(bottom, bottom + (top - bottom - blockHeight) * 0.5);
     CGFloat stackTop = stackBottom + stack;
 
-    [_header addObject:[self label:L10n(@"menu.unit") size:[self metric:@"unitSize" flags:flags fallback:13] color:UIAmber
+    [_header addObject:[self label:_menu.title size:[self metric:@"unitSize" flags:flags fallback:13] color:UIAmber
                            opacity:0.96 x:left + 2 y:stackTop + header - 6]];
     CGFloat titleY = stackTop + header - (compact ? 19 : 29);
     NSArray<NSString *> *words = L10nList(@"menu.wordmark");
@@ -332,7 +317,7 @@ static SKShader *MenuArtShader(void) {
     for (NSUInteger i = 0; i < [self itemCount]; i++) {
         CGFloat y = stackTop - (i + 1) * rowHeight - i * gap;
         _rows[i] = CGRectMake(left, y, width, rowHeight);
-        _rowNodes[i] = [self drawButton:[self itemText:_items[i][@"text"]] ?: @"" detail:[self itemText:_items[i][@"detail"]] rect:_rows[i]
+        _rowNodes[i] = [self drawButton:_menu.choices[i].title detail:_menu.choices[i].detail rect:_rows[i]
                                selected:i == _selected compact:compact labels:_rowLabels[i]];
     }
     [self startIdle];
@@ -561,8 +546,8 @@ static SKShader *MenuArtShader(void) {
 
     NSUInteger count = [self itemCount];
     if (actions & (InputActionUp | InputActionDown)) [[GameAudio shared] play:@"ui-hover"];
-    if (actions & InputActionUp) { _selected = (_selected + count - 1) % count; [self reselect]; }
-    if (actions & InputActionDown) { _selected = (_selected + 1) % count; [self reselect]; }
+    NSInteger step = (actions & InputActionDown ? 1 : 0) - (actions & InputActionUp ? 1 : 0);
+    if (step && count) { _selected = [_menu indexByMoving:step from:_selected]; [self reselect]; }
     for (NSUInteger i = 0; i < count; i++) {
         if (CGRectContainsPoint(_rows[i], click)) {
             if (_selected != i) { _selected = i; [self reselect]; }
@@ -571,7 +556,8 @@ static SKShader *MenuArtShader(void) {
         }
     }
     if (!(actions & InputActionConfirm)) return MainMenuCommandNone;
-    NSString *item = [self itemId:_selected];
+    NSString *item = [_menu choiceToActivateAt:_selected].identifier;
+    if (!item) return MainMenuCommandNone;
     [[GameAudio shared] play:@"ui-confirm"];
     if ([item isEqualToString:@"campaign"]) return MainMenuCommandCampaign;
     if ([item isEqualToString:@"missions"]) return MainMenuCommandMissions;

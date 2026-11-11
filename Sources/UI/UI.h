@@ -299,6 +299,23 @@ SKNode *UIResultsBackdrop(CGSize size);
 - (void)registerHover:(UIHover *)hover;
 @end
 
+// Draws a ListModel (Common.h) in a region: the heading on top, then the rows,
+// then the message (which has the region to itself when there are no rows).
+// A scrolling list keeps full-height rows and shows the window around the
+// selection; a fitted list shows every row, in columns and shorter if it must.
+typedef NS_ENUM(NSInteger, UIListStyle) { UIListScrolling, UIListFitted };
+@interface UIListView : SKNode
+- (instancetype)initWithList:(ListModel *)list region:(CGRect)region style:(UIListStyle)style compact:(BOOL)compact;
+@property (nonatomic, readonly) ListModel *list;
+@property (nonatomic, readonly) CGRect rowsRect;                        // the rows drawn, together
+@property (nonatomic, readonly) NSArray<NSValue *> *rowRects;           // boxed, one per row drawn
+@property (nonatomic, readonly) NSArray<SKLabelNode *> *titleLabels;
+@property (nonatomic, readonly) SKLabelNode *messageLabel;
+// The entry under a point in the view's coordinates, or NSNotFound.
+- (NSUInteger)entryAt:(CGPoint)point;
+- (void)registerHover:(UIHover *)hover;
+@end
+
 // Clips a report and shows a scrollbar when its content extends below the region.
 @interface TextViewport : SKNode
 - (instancetype)initWithRect:(CGRect)rect content:(SKNode *)content;
@@ -356,8 +373,10 @@ typedef NS_ENUM(NSInteger, MainMenuCommand) {
 @property (atomic) MainMenuInsets contentInsets;
 @property (nonatomic, readonly) ControlsPanel *controlsPanel;
 
-- (void)showMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed;
-- (void)refreshMission:(NSUInteger)index title:(NSString *)title started:(BOOL)started completed:(BOOL)completed;
+// The rows are MainMenuModel's; the facts say which mission the campaign row resumes.
+// Showing resets the highlight and plays the entrance; refreshing keeps both.
+- (void)showFacts:(MainMenuFacts)facts;
+- (void)refreshFacts:(MainMenuFacts)facts;
 // Releases the painting and nodes while the menu is away; the next show rebuilds them.
 - (void)unload;
 - (MainMenuCommand)handle:(InputAction)actions;
@@ -535,10 +554,6 @@ typedef NS_ENUM(NSInteger, LANGameCommand) { LANGameCommandNone, LANGameCommandC
 
 // A value from the root's "metrics" object, with "when" variants applied.
 - (CGFloat)metric:(NSString *)name flags:(NSSet<NSString *> *)flags fallback:(CGFloat)fallback;
-// The root's "items" array (for screens that draw their own rows), filtered
-// by an optional per-item "platforms": ["mac", "ios"].
-- (NSArray<NSDictionary *> *)items;
-- (NSArray<NSDictionary *> *)itemsForTouch:(BOOL)touch;
 
 @end
 

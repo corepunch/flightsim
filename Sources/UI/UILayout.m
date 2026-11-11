@@ -96,20 +96,6 @@
     return [self number:_root[@"metrics"][name] fallback:fallback];
 }
 
-- (NSArray<NSDictionary *> *)items {
-    return [self itemsForTouch:TARGET_OS_IOS];
-}
-
-- (NSArray<NSDictionary *> *)itemsForTouch:(BOOL)touch {
-    NSString *platform = touch ? @"ios" : @"mac";
-    NSMutableArray *items = [NSMutableArray array];
-    for (NSDictionary *item in _root[@"items"]) {
-        NSArray *platforms = item[@"platforms"];
-        if (!platforms || [platforms containsObject:platform]) [items addObject:item];
-    }
-    return items;
-}
-
 #pragma mark - Building
 
 - (UILayoutResult *)buildIn:(CGRect)bounds sceneSize:(CGSize)size flags:(NSSet<NSString *> *)flags

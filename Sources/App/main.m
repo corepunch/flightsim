@@ -122,7 +122,7 @@ static int RunDedicated(int mission) {
 @end
 
 // Runs the production views on sample data in a resizable SpriteKit window,
-// without a game session: KestrelFrontier --preview-ui [debrief|failed|end|match|pause|online]
+// without a game session: KestrelFrontier --preview-ui [debrief|failed|end|match|pause|online|menu|browser|lobby|setup]
 @interface UIPreviewScene : SKScene
 @property (nonatomic, copy) NSString *sample;
 @end
@@ -189,22 +189,46 @@ static ReportModel *PreviewReport(NSString *sample) {
         PauseMenu *pause = [[PauseMenu alloc] initWithSize:rect.size];
         pause.backgroundColor = UIColorWithOpacity(UIBackground, 1);
         [pause showRemote:[_sample isEqualToString:@"online"] cockpit:NO];
-        pause.delegate = self;
         scene = pause;
+    } else if ([_sample isEqualToString:@"menu"]) {
+        MainMenu *menu = [[MainMenu alloc] initWithSize:rect.size];
+        [menu showFacts:(MainMenuFacts){ .mission = 2, .missionTitle = @"Convoy to Halden Gate", .started = YES, .score = 1240 }];
+        scene = menu;
+    } else if ([_sample isEqualToString:@"browser"]) {
+        ServerBrowser *browser = [[ServerBrowser alloc] initWithSize:rect.size];
+        NSMutableArray<LANServer *> *servers = [NSMutableArray array];
+        for (NSString *name in @[@"Wren's game", @"Halcyon", @"Tobin"]) {
+            LANServer *server = [LANServer new];
+            server.name = name;
+            server.players = (int)servers.count + 1;
+            server.maxPlayers = 8;
+            server.settings = LANMatchSettingsCurrent();
+            if (servers.count) server.pilots = @[name];
+            [servers addObject:server];
+        }
+        [browser showServers:servers];
+        scene = browser;
+    } else if ([@[@"lobby", @"setup"] containsObject:_sample ?: @""]) {
+        LANGame *game = [[LANGame alloc] initWithSize:rect.size];
+        if ([_sample isEqualToString:@"lobby"]) [game showPilots:@[@"Wren (host)"]];
+        scene = game;
     } else {
         UIPreviewScene *report = [[UIPreviewScene alloc] initWithSize:rect.size];
         report.sample = _sample;
         scene = report;
     }
     scene.scaleMode = SKSceneScaleModeResizeFill;
+    scene.delegate = self;
     _window.contentView = view;
     [view presentScene:scene];
     [_window center];
     [_window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
 }
-// The pause menu lays out again when its size changes, as it does under the host.
-- (void)update:(NSTimeInterval)time forScene:(SKScene *)scene { [(PauseMenu *)scene handle:0]; }
+// Screens lay out again when their size changes, as they do under the host.
+- (void)update:(NSTimeInterval)time forScene:(SKScene *)scene {
+    if ([scene respondsToSelector:@selector(handle:)]) [(PauseMenu *)scene handle:0];
+}
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app { return YES; }
 @end
 

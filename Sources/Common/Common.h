@@ -228,7 +228,9 @@ NSArray<ObjectiveReadout *> *MissionResultReadouts(NSArray<NSString *> *lines);
 @interface MenuChoice : NSObject
 + (instancetype)choice:(NSString *)identifier title:(NSString *)title;
 + (instancetype)choice:(NSString *)identifier title:(NSString *)title enabled:(BOOL)enabled;
++ (instancetype)choice:(NSString *)identifier title:(NSString *)title detail:(NSString *)detail;
 @property (nonatomic, readonly, copy) NSString *identifier, *title;
+@property (nonatomic, readonly, copy) NSString *detail;     // a second, quieter line; nil for none
 @property (nonatomic, readonly) BOOL enabled;
 @end
 
@@ -247,6 +249,16 @@ NSArray<ObjectiveReadout *> *MissionResultReadouts(NSArray<NSString *> *lines);
 // The pause menu's content for a local or remote flight.
 MenuModel *PauseMenuModel(BOOL remote, BOOL cockpit, NSString *soundTitle);
 
+// The main menu's rows: the campaign row names the mission it resumes, and
+// only a desktop can quit. `title` is the line over the wordmark.
+typedef struct {
+    NSUInteger mission;             // the campaign's next mission, from 0
+    NSString *missionTitle;
+    BOOL started, completed, canQuit;
+    NSUInteger score;
+} MainMenuFacts;
+MenuModel *MainMenuModel(MainMenuFacts facts);
+
 // How a number of equal buttons fills a space: one column while the rows fit,
 // more columns when they do not, and shorter rows only when the columns ran out.
 typedef struct {
@@ -264,6 +276,46 @@ typedef struct {
 MenuGrid MenuGridFit(NSUInteger count, CGFloat width, CGSize available, MenuGridMetrics metrics);
 // Cells fill a column from the top before starting the next; `frame` has the grid's size.
 CGRect MenuGridCell(MenuGrid grid, CGRect frame, NSUInteger index);
+
+// A list of framed rows under an optional heading. `message` stands in for
+// rows that are not there yet (searching, waiting for pilots).
+@interface ListEntry : NSObject
++ (instancetype)entry:(NSString *)title detail:(NSString *)detail;
+@property (nonatomic, readonly, copy) NSString *title, *detail;
+@end
+
+@interface ListModel : NSObject
+- (instancetype)initWithHeading:(NSString *)heading entries:(NSArray<ListEntry *> *)entries
+                       selected:(NSUInteger)selected message:(NSString *)message;
+@property (nonatomic, readonly, copy) NSString *heading, *message;      // nil for none
+@property (nonatomic, readonly, copy) NSArray<ListEntry *> *entries;
+@property (nonatomic, readonly) NSUInteger selected;                    // NSNotFound for none
+@end
+// The first row shown when `visible` rows fit and the selection must be among them.
+NSUInteger ListFirstVisible(NSUInteger selected, NSUInteger visible);
+
+// The server browser highlights either "create a game" or one discovered game;
+// Up and Down pass through the create slot between the list's two ends.
+typedef struct { BOOL create; NSUInteger index; } BrowserSelection;
+BrowserSelection BrowserSelectionMove(BrowserSelection selection, NSUInteger count, NSInteger step);
+// One discovered game. `mission` is nil while its host sits in the menus and
+// `rules` (LANMatchSummary) is nil for a host that is not running a LAN lobby.
+ListEntry *ServerEntry(NSString *name, int players, int maxPlayers, NSString *mission, NSString *rules);
+// `status` is the connection line; without one an empty list says it is searching.
+ListModel *ServerListModel(NSArray<ListEntry *> *servers, BrowserSelection selection, NSString *status);
+// The lobby: the match on top, the host first among the pilots, and a waiting
+// line until the host can start.
+ListModel *LobbyModel(NSArray<NSString *> *pilots, BOOL hosting, LANMatchSettings settings);
+
+// One row of a settings form: what it sets, its current value, and whether it can change.
+@interface SettingRow : NSObject
+@property (nonatomic, readonly, copy) NSString *title, *value;
+@property (nonatomic, readonly) BOOL enabled;
+@end
+// The match setup form, in the order LANMatchSettingsStep numbers its rows.
+NSArray<SettingRow *> *LANSetupRows(LANMatchSettings settings);
+// The settings after row `row` moves one choice forward (+1) or back (-1); every row wraps.
+LANMatchSettings LANMatchSettingsStep(LANMatchSettings settings, NSUInteger row, NSInteger direction);
 
 // A results page is a column of blocks, drawn in order by UIReportView.
 typedef NS_ENUM(NSInteger, ReportBlockKind) {
