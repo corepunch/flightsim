@@ -69,8 +69,10 @@ static SKShapeNode *CaptionPanel(CGRect rect, BOOL speakerOnRight) {
     CGFloat tailScale = MIN(1, MIN(width / 100, height / 48));
     const CGPoint corners[] = {
         {cut, -height}, {width, -height}, {width, -cut}, {width - cut, 0},
-        {38 * tailScale, 0}, {-18 * tailScale, 18 * tailScale}, {12 * tailScale, 0},
-        {0, 0}, {0, -height + cut},
+        // A short tail on the speaker's side, level with the name: one from
+        // the top edge reaches up the face and reads as coming from the nose.
+        {0, 0}, {0, -9 * tailScale}, {-11 * tailScale, -12 * tailScale}, {0, -23 * tailScale},
+        {0, -height + cut},
     };
     CGAffineTransform placement = CGAffineTransformMake(speakerOnRight ? -1 : 1, 0, 0, 1,
         speakerOnRight ? CGRectGetMaxX(rect) : CGRectGetMinX(rect), CGRectGetMaxY(rect));
