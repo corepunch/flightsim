@@ -945,7 +945,7 @@ typedef struct {
 
 ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe);
 // For a bar that draws its own plate (-[TitleBar addPlateForSceneSize:]): the
-// header hugs the top so the plate is no taller than its controls need.
+// header sits at the top of the safe area, so the plate is exactly the row.
 ScreenRegions ScreenRegionsMakePlated(CGSize size, ScreenInsets safe, BOOL plated);
 
 // MARK: - TitleBar
@@ -994,7 +994,7 @@ SKTexture *UICommandTexture(UICommandIcon icon, UICommandState state);
 @property (nonatomic, readonly) SKLabelNode *titleLabel, *kickerLabel;
 - (void)registerHover:(UIHover *)hover;
 // Over artwork the bar needs its own ground: a dark band from the screen's top
-// edge to just under the controls, across the whole width, closed by a rule.
+// edge to the bottom of the bar's row, across the whole width, closed by a rule.
 - (void)addPlateForSceneSize:(CGSize)size;
 @property (nonatomic, readonly) CGRect plateRect;   // empty without a plate
 // The controls drop in from above in turn and the title decodes.

@@ -3,10 +3,6 @@
 
 // MARK: - ScreenRegions
 
-// The space a plated bar keeps above and below its row. A phone's row is a
-// touch target well taller than its icons' ink, so the plate cuts into it.
-static CGFloat PlatePadding(BOOL compact) { return compact ? -6 : 4; }
-
 ScreenRegions ScreenRegionsMake(CGSize size, ScreenInsets safe) {
     return ScreenRegionsMakePlated(size, safe, NO);
 }
@@ -16,7 +12,7 @@ ScreenRegions ScreenRegionsMakePlated(CGSize size, ScreenInsets safe, BOOL plate
     // Content keeps clear of the side insets; the bars' controls may reach
     // halfway into them, since phones keep their sensor housing at mid-height.
     CGFloat side = MAX(MIN(50, size.width * 0.05), MAX(safe.left, safe.right) + 12), edge = side / 2;
-    CGFloat headerTop = size.height - safe.top - (plated ? PlatePadding(r.compact) : r.compact ? 10 : 16);
+    CGFloat headerTop = size.height - safe.top - (plated ? 0 : r.compact ? 10 : 16);
     r.header = RectFromEdges(edge, headerTop - [TitleBar heightCompact:r.compact], size.width - edge, headerTop);
     CGFloat bottom = safe.bottom + (r.compact ? 8 : 16);
     CGFloat bodyTop = CGRectGetMinY(r.header) - 12;
@@ -267,7 +263,7 @@ SKTexture *UICommandTexture(UICommandIcon icon, UICommandState state) {
 }
 
 - (void)addPlateForSceneSize:(CGSize)size {
-    _plateRect = RectFromEdges(0, CGRectGetMinY(_row) - PlatePadding(_compact), size.width, size.height);
+    _plateRect = RectFromEdges(0, CGRectGetMinY(_row), size.width, size.height);
     SKSpriteNode *plate = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBackground, 0.9) size:_plateRect.size];
     plate.position = RectCenter(_plateRect);
     plate.zPosition = -1;
