@@ -399,7 +399,10 @@ static int CompareEntities(const void *a, const void *b) {
     for (NSUInteger i = 0; i < _slots.count; i++) {
         ServerSlot *slot = _slots[i];
         if (slot.state == SlotFree) continue;
-        if (now - slot.channel.lastReceived > NET_TIMEOUT) { [self drop:(int)i reason:@"timed out"]; continue; }
+        if (!slot.channel.address.isLoopback && now - slot.channel.lastReceived > NET_TIMEOUT) {
+            [self drop:(int)i reason:@"timed out"];
+            continue;
+        }
         // Keep the channel moving between snapshots: reliable data, acks.
         if (slot.state != SlotInGame || !_running || paused)
             if (slot.channel.hasPendingReliable || now - slot.channel.lastSent > 0.25) [slot.channel transmit:nil];

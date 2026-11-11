@@ -81,16 +81,24 @@ static const double kNetInterpDelay = TICK_DT * 3;
     _interpDelay = address.isLoopback ? kLocalInterpDelay : kNetInterpDelay;
 }
 
-- (void)disconnect {
+- (void)sendDisconnect {
     if (_state >= ClientConnected) {
         MsgWriter *w = [MsgWriter new];
         [w u8:clc_stringcmd];
         [w string:@"disconnect"];
         for (int i = 0; i < 3; i++) [_channel transmit:w.data];
     }
+}
+
+- (void)clearConnection {
     _state = ClientDisconnected;
     _channel = nil;
     [self resetSnapshots];
+}
+
+- (void)disconnect {
+    [self sendDisconnect];
+    [self clearConnection];
 }
 
 - (void)resetSnapshots {
@@ -144,7 +152,9 @@ static const double kNetInterpDelay = TICK_DT * 3;
         NSData *payload = [_channel process:packet];
         if (payload) [self parseServer:payload];
     }
-    if (_state >= ClientConnecting && now - _channel.lastReceived > NET_TIMEOUT) [self dropWithReason:L10n(@"net.timed_out")];
+    // The in-process server sleeps and wakes with the client.
+    if (_state >= ClientConnecting && !_channel.address.isLoopback && now - _channel.lastReceived > NET_TIMEOUT)
+        [self dropWithReason:L10n(@"net.timed_out")];
 }
 
 - (void)connectionless:(NSString *)text {
@@ -159,10 +169,9 @@ static const double kNetInterpDelay = TICK_DT * 3;
 
 - (void)dropWithReason:(NSString *)reason {
     NSLog(@"Client: %@", reason);
-    _state = ClientDisconnected;
-    _channel = nil;
-    [self resetSnapshots];
-    if (_disconnectHandler) _disconnectHandler(reason);
+    BOOL remote = _channel && !_channel.address.isLoopback;
+    [self clearConnection];
+    if (_disconnectHandler) _disconnectHandler(reason, remote);
 }
 
 - (void)parseServer:(NSData *)payload {
@@ -183,7 +192,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
                 NSString *value = [r string];
                 if (index < MAX_CONFIGSTRINGS) _cs[index] = value;
                 if (index == CS_GAME && _state == ClientActive && ![value isEqualToString:ShipDataIdentity()]) {
-                    [self disconnect];
+                    [self sendDisconnect];
                     [self dropWithReason:@"Incompatible game or ship data"];
                     return;
                 }
@@ -194,7 +203,7 @@ static const double kNetInterpDelay = TICK_DT * 3;
                 if ([r u32] != _spawnCount) break;
                 _view.configStrings = _cs;
                 if (![_cs[CS_GAME] isEqualToString:ShipDataIdentity()]) {
-                    [self disconnect]; // release the server slot, too
+                    [self sendDisconnect]; // release the server slot, too
                     [self dropWithReason:@"Incompatible game or ship data"];
                     return;
                 }
