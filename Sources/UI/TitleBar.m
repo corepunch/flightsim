@@ -258,6 +258,19 @@ SKTexture *UICommandTexture(UICommandIcon icon, UICommandState state) {
     }
 }
 
+- (void)addPlateForSceneSize:(CGSize)size {
+    _plateRect = RectFromEdges(0, CGRectGetMinY(_row) - 10, size.width, size.height);
+    SKSpriteNode *plate = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIBackground, 0.9) size:_plateRect.size];
+    plate.position = RectCenter(_plateRect);
+    plate.zPosition = -1;
+    [self addChild:plate];
+    SKSpriteNode *rule = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.7)
+                                                      size:CGSizeMake(_plateRect.size.width, 1.5)];
+    rule.position = CGPointMake(CGRectGetMidX(_plateRect), CGRectGetMinY(_plateRect));
+    rule.zPosition = -0.5;
+    [self addChild:rule];
+}
+
 - (void)revealAfter:(NSTimeInterval)delay {
     NSUInteger i = 0;
     for (UIBarControl *entry in _entries) {

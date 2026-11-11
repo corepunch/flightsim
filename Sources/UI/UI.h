@@ -990,6 +990,10 @@ SKTexture *UICommandTexture(UICommandIcon icon, UICommandState state);
 @property (nonatomic, readonly) SKShapeNode *action;                // the primary action
 @property (nonatomic, readonly) SKLabelNode *titleLabel, *kickerLabel;
 - (void)registerHover:(UIHover *)hover;
+// Over artwork the bar needs its own ground: a dark band from the screen's top
+// edge to just under the controls, across the whole width, closed by a rule.
+- (void)addPlateForSceneSize:(CGSize)size;
+@property (nonatomic, readonly) CGRect plateRect;   // empty without a plate
 // The controls drop in from above in turn and the title decodes.
 - (void)revealAfter:(NSTimeInterval)delay;
 @end

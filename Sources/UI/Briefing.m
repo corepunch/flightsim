@@ -885,6 +885,8 @@ static const CGFloat PhoneSpeakerFont = 16;
     TitleBar *bar = [[TitleBar alloc] initWithHeader:regions.header compact:compact back:back
         title:CampaignMissionAt(_index).title.uppercaseString
         kicker:L10nFormat(@"briefing.kicker", (unsigned long)_index + 1) actions:actions];
+    // The room art behind a story screen is bright along its top.
+    [bar addPlateForSceneSize:self.size];
     NavigationButtons b = { .back = [bar rectForAction:back], .confirm = [bar rectForAction:confirm],
                         .previous = [bar rectForAction:previous] };
     if (rects) *rects = b;
@@ -1216,15 +1218,18 @@ static const CGFloat PhoneSpeakerFont = 16;
         CGFloat right = size.width - self.contentInsets.right - 12 - CGRectGetMaxX(board);
         origin = CGPointMake(MIN(right, MAX(left, origin.x)), origin.y);
     }
-    CGFloat drop = 0;
+    // A band across the whole width hides the art above its lower edge, so
+    // the art may come down that far without opening a gap.
+    CGFloat drop = 0, ceiling = size.height;
     for (NSValue *value in clear) {
         CGRect rect = UnboxRect(value), placed = CGRectOffset(board, origin.x, origin.y);
+        if (CGRectGetMinX(rect) <= 0 && CGRectGetMaxX(rect) >= size.width) ceiling = MIN(ceiling, CGRectGetMinY(rect));
         if (CGRectGetMaxX(rect) > CGRectGetMinX(placed) && CGRectGetMinX(rect) < CGRectGetMaxX(placed))
             drop = MAX(drop, CGRectGetMaxY(placed) - CGRectGetMinY(rect) + 4);
     }
     // A blackboard must remain inside the safe body, even when the room needs
     // letterboxing on a portrait display. Other rooms keep their full bleed.
-    centerY -= blackboard ? drop : MIN(drop, MAX(0, origin.y + artSize.height - size.height));
+    centerY -= blackboard ? drop : MIN(drop, MAX(0, origin.y + artSize.height - ceiling));
     return (CGRect){ CGPointMake(origin.x, centerY - artSize.height / 2), artSize };
 }
 
@@ -1447,7 +1452,8 @@ static const CGFloat PhoneSpeakerFont = 16;
 
     // The monitor clears the whole bar, not just today's controls, so it stays
     // put when PREV appears after the first page.
-    NSArray<NSValue *> *clear = bar ? @[BoxRect(bar.row)] : nil;
+    // The room's board stays below the bar and its plate.
+    NSArray<NSValue *> *clear = bar ? @[BoxRect(CGRectIsEmpty(bar.plateRect) ? bar.row : bar.plateRect)] : nil;
     CGRect screen = [self addBackdrop:room raiseBoard:compact && !narrow clear:clear];
     if (_mode == ModeDebrief) {
         StoryRoom *briefingRoom = StoryRoomNamed(mission.briefingRoom);
