@@ -230,6 +230,29 @@ NSUInteger ProgressRecordMatch(NSString *arena, LANMatchResult result) {
     return increase;
 }
 
+uint64_t CampaignLevelTag(NSString *level) {
+    if (!level.length) return 0;
+    // FNV-1a over the name's UTF-8 bytes; the value has to be the same on every device and build.
+    uint64_t hash = 14695981039346656037ull;
+    for (const unsigned char *byte = (const unsigned char *)level.UTF8String; *byte; byte++)
+        hash = (hash ^ *byte) * 1099511628211ull;
+    return hash ?: 1;
+}
+
+uint64_t ProgressCampaignTag(void) {
+    ProgressSave *save = ProgressSnapshot();
+    NSUInteger count = CampaignMissions().count;
+    if (!count || save.completed >= count) return 0;
+    return CampaignLevelTag(CampaignLevelName(MIN(MAX(save.unlocked, (NSUInteger)1), count) - 1));
+}
+
+NSUInteger CampaignIndexOfTag(uint64_t tag) {
+    NSUInteger count = tag ? CampaignMissions().count : 0;
+    for (NSUInteger i = 0; i < count; i++)
+        if (CampaignLevelTag(CampaignLevelName(i)) == tag) return i;
+    return NSNotFound;
+}
+
 NSUInteger ProgressPilotScore(void) {
     ProgressSave *save = ProgressSnapshot();
     NSUInteger total = 0;

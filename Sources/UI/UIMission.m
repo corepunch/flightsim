@@ -17,45 +17,75 @@ static SKLabelNode *Wrapped(SKLabelNode *label, CGFloat width, NSInteger lines) 
 
 // MARK: - Mission select
 
-@implementation UIMissionGrid
+@implementation UIMissionRows
 - (instancetype)initWithList:(MissionListModel *)list region:(CGRect)region compact:(BOOL)compact {
     if (!(self = [super init])) return nil;
-    _grid = TileGridFit(CGRectGetWidth(region), compact ? 144 : 172);
-    CGPoint corner = CGPointMake(CGRectGetMinX(region), CGRectGetMaxY(region));
-    NSMutableArray<NSValue *> *rects = [NSMutableArray arrayWithCapacity:list.tiles.count];
+    const CGFloat height = compact ? 46 : 54, inset = 12, spacing = 4;
+    NSMutableArray<NSValue *> *rects = [NSMutableArray arrayWithCapacity:list.rows.count];
     static NSArray<NSString *> *ratings;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ ratings = @[@"☆ ☆ ☆", @"★ ☆ ☆", @"★ ★ ☆", @"★ ★ ★"]; });
-    for (NSUInteger i = 0; i < list.tiles.count; i++) {
-        MissionTile *mission = list.tiles[i];
+    for (NSUInteger i = 0; i < list.rows.count; i++) {
+        MissionRow *mission = list.rows[i];
         BOOL selected = i == list.selected;
-        CGRect rect = TileGridCell(_grid, corner, i);
+        CGRect rect = CGRectMake(CGRectGetMinX(region), CGRectGetMaxY(region) - height * (i + 1),
+                                 CGRectGetWidth(region), height);
         [rects addObject:BoxRect(rect)];
         SKColor *ink = UIColorWithOpacity(selected ? UIAmber : UIInk, mission.open ? 1 : 0.35);
-        SKShapeNode *tile = UIReadoutPanel(rect, ink, UIColorWithOpacity(selected ? UIInk : UIPanel, selected ? 0.14 : 0.88));
-        tile.name = [NSString stringWithFormat:@"mission-%lu", (unsigned long)i + 1];
-        [self addChild:tile];
-        // Top to bottom: number, title, then the stars and the status line
-        // from the bottom up. Each label sits clear of the measured frame of
-        // its neighbour, so no two can touch whatever the font metrics are.
-        const CGFloat inset = 16, spacing = 4;
+        // A plain list: a rule under each row, and a band with a marker on the highlighted one.
+        SKSpriteNode *rule = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.18) size:CGSizeMake(CGRectGetWidth(rect), 1)];
+        rule.anchorPoint = CGPointZero;
+        rule.position = rect.origin;
+        [self addChild:rule];
+        if (selected) {
+            SKSpriteNode *band = [SKSpriteNode spriteNodeWithColor:UIColorWithOpacity(UIInk, 0.14) size:rect.size];
+            band.anchorPoint = CGPointZero;
+            band.position = rect.origin;
+            [self addChild:band];
+            SKSpriteNode *marker = [SKSpriteNode spriteNodeWithColor:ink size:CGSizeMake(3, height)];
+            marker.anchorPoint = CGPointZero;
+            marker.position = rect.origin;
+            [self addChild:marker];
+        }
+        // The number leads; the title sits over the status beside it. The
+        // right edge carries the stars over the friends who are on the mission,
+        // and the left column gives way to whichever of the two is wider.
         CGRect inner = CGRectInset(rect, inset, 0);
-        CGFloat x = CGRectGetMinX(inner);
-        SKLabelNode *number = Line(mission.number, compact ? 42 : 52, ink, YES, CGPointMake(x, CGRectGetMaxY(rect) - 12));
+        CGFloat upper = CGRectGetMidY(rect) + spacing / 2, lower = CGRectGetMidY(rect) - spacing / 2;
+        SKLabelNode *number = Line(mission.number, compact ? 20 : 24, ink, YES, CGPointZero);
+        number.verticalAlignmentMode = SKLabelVerticalAlignmentModeCenter;
+        number.position = CGPointMake(CGRectGetMinX(inner), CGRectGetMidY(rect));
         [self addChild:number];
-        SKLabelNode *status = Line(mission.status, 10, ink, NO, CGPointZero);
-        status.position = CGPointMake(x, CGRectGetMinY(rect) + 10 + CGRectGetHeight(status.frame));
-        [self addChild:status];
-        SKLabelNode *rating = Line(ratings[MIN(mission.stars, (NSUInteger)3)], 18,
+        SKLabelNode *rating = Line(ratings[MIN(mission.stars, (NSUInteger)3)], 16,
             UIColorWithOpacity(mission.stars ? UIAmber : UIInk, mission.stars ? 1 : 0.25), NO, CGPointZero);
-        rating.position = CGPointMake(x, CGRectGetMaxY(status.frame) + spacing + CGRectGetHeight(rating.frame));
+        rating.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
+        rating.verticalAlignmentMode = SKLabelVerticalAlignmentModeBottom;
+        rating.position = CGPointMake(CGRectGetMaxX(inner), upper);
         [self addChild:rating];
-        CGFloat nameTop = CGRectGetMinY(number.frame) - spacing;
-        SKLabelNode *name = Wrapped(Line(mission.title, 12, ink, YES, CGPointMake(x, nameTop)), CGRectGetWidth(inner), 2);
-        if (nameTop - CGRectGetHeight(name.frame) < CGRectGetMaxY(rating.frame) + spacing) name.numberOfLines = 1;   // compact tiles
+        CGFloat left = CGRectGetMaxX(number.frame) + inset;
+        CGFloat titleRight = CGRectGetMinX(rating.frame) - inset, statusRight = CGRectGetMaxX(inner);
+        if (mission.friends) {
+            SKLabelNode *friends = Line(mission.friends, 11, UIColorWithOpacity(UIFriendly, 1), YES, CGPointMake(CGRectGetMaxX(inner), lower));
+            friends.horizontalAlignmentMode = SKLabelHorizontalAlignmentModeRight;
+            friends.numberOfLines = 1;
+            friends.lineBreakMode = NSLineBreakByTruncatingTail;
+            friends.preferredMaxLayoutWidth = (CGRectGetMaxX(inner) - left) * 0.6;
+            [self addChild:friends];
+            statusRight = CGRectGetMinX(friends.frame) - inset;
+        }
+        SKLabelNode *name = Line(mission.title, 13, ink, YES, CGPointMake(left, upper));
+        name.verticalAlignmentMode = SKLabelVerticalAlignmentModeBottom;
+        name.numberOfLines = 1;
+        name.lineBreakMode = NSLineBreakByTruncatingTail;
+        name.preferredMaxLayoutWidth = MAX(1, titleRight - left);
         [self addChild:name];
+        SKLabelNode *status = Line(mission.status, 10, ink, NO, CGPointMake(left, lower));
+        status.numberOfLines = 1;
+        status.lineBreakMode = NSLineBreakByTruncatingTail;
+        status.preferredMaxLayoutWidth = MAX(1, statusRight - left);
+        [self addChild:status];
     }
-    _tileRects = rects;
+    _rowRects = rects;
     return self;
 }
 @end

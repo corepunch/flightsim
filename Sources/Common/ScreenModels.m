@@ -184,13 +184,13 @@ ListModel *LobbyModel(NSArray<NSString *> *pilots, BOOL hosting, LANMatchSetting
 // MARK: - Campaign
 
 // The functions below fill these in; everyone else reads them.
-@interface MissionTile ()
-@property (nonatomic, readwrite, copy) NSString *number, *title, *status;
+@interface MissionRow ()
+@property (nonatomic, readwrite, copy) NSString *number, *title, *status, *friends;
 @property (nonatomic, readwrite) NSUInteger stars;
 @property (nonatomic, readwrite) BOOL open;
 @end
 @interface MissionListModel ()
-@property (nonatomic, readwrite, copy) NSArray<MissionTile *> *tiles;
+@property (nonatomic, readwrite, copy) NSArray<MissionRow *> *rows;
 @property (nonatomic, readwrite) NSUInteger selected;
 @property (nonatomic, readwrite, copy) NSString *action;
 @end
@@ -198,51 +198,43 @@ ListModel *LobbyModel(NSArray<NSString *> *pilots, BOOL hosting, LANMatchSetting
 @property (nonatomic, readwrite, copy) NSString *title, *location, *channel, *counter, *schematic, *legend, *readout;
 @end
 
-@implementation MissionTile
+@implementation MissionRow
 @end
 @implementation MissionListModel
 @end
 
+// "Wren, Tobin, Halcyon +2": the first few names, then how many more.
+static NSString *FriendsLine(NSArray<NSString *> *names) {
+    if (!names.count) return nil;
+    NSUInteger shown = MIN(names.count, (NSUInteger)MissionFriendsShown);
+    NSString *line = [[names subarrayWithRange:NSMakeRange(0, shown)] componentsJoinedByString:@", "];
+    return names.count > shown ? [line stringByAppendingFormat:@" +%lu", (unsigned long)(names.count - shown)] : line;
+}
+
 MissionListModel *MissionListModelMake(NSArray<NSString *> *titles, NSArray<NSNumber *> *stars,
-                                       NSUInteger unlocked, NSUInteger selected) {
-    NSMutableArray<MissionTile *> *tiles = [NSMutableArray arrayWithCapacity:titles.count];
+                                       NSUInteger unlocked, NSUInteger selected,
+                                       NSArray<NSArray<NSString *> *> *friends) {
+    NSMutableArray<MissionRow *> *rows = [NSMutableArray arrayWithCapacity:titles.count];
     for (NSUInteger i = 0; i < titles.count; i++) {
-        MissionTile *tile = [MissionTile new];
-        tile.open = i < unlocked;
-        tile.stars = i < stars.count ? MIN(stars[i].unsignedIntegerValue, (NSUInteger)3) : 0;
-        tile.number = [NSString stringWithFormat:@"%02lu", (unsigned long)i + 1];
-        tile.title = tile.open ? titles[i].uppercaseString : L10n(@"missions.classified");
-        tile.status = L10n(!tile.open ? @"missions.locked" : tile.stars ? @"missions.completed" : @"missions.ready");
-        [tiles addObject:tile];
+        MissionRow *row = [MissionRow new];
+        row.open = i < unlocked;
+        row.stars = i < stars.count ? MIN(stars[i].unsignedIntegerValue, (NSUInteger)3) : 0;
+        row.number = [NSString stringWithFormat:@"%02lu", (unsigned long)i + 1];
+        row.title = row.open ? titles[i].uppercaseString : L10n(@"missions.classified");
+        row.status = L10n(!row.open ? @"missions.locked" : row.stars ? @"missions.completed" : @"missions.ready");
+        row.friends = i < friends.count ? FriendsLine(friends[i]) : nil;
+        [rows addObject:row];
     }
     MissionListModel *list = [MissionListModel new];
-    list.tiles = tiles;
+    list.rows = rows;
     list.selected = titles.count ? MIN(selected, titles.count - 1) : 0;
     list.action = list.selected < MIN(unlocked, titles.count) ? L10n(@"missions.briefing") : nil;
     return list;
 }
 
-TileGrid TileGridFit(CGFloat width, CGFloat tileHeight) {
-    const CGFloat gap = 12, narrowest = 160;
-    NSUInteger columns = MAX(1, MIN(6, (NSInteger)((width + gap) / narrowest)));
-    return (TileGrid){ columns, { MAX(1, (width - gap * (columns - 1)) / columns), tileHeight }, gap };
-}
-
-CGRect TileGridCell(TileGrid grid, CGPoint corner, NSUInteger index) {
-    if (!grid.columns) return CGRectZero;
-    CGPoint cell = CGPointMake(index % grid.columns, index / grid.columns);
-    CGSize step = CGSizeMake(grid.tile.width + grid.gap, -(grid.tile.height + grid.gap));
-    CGPoint top = PointAdd(corner, PointMultiply(cell, step));
-    return (CGRect){ PointAdd(top, CGPointMake(0, -grid.tile.height)), grid.tile };
-}
-
-NSUInteger TileGridMove(TileGrid grid, NSUInteger count, NSUInteger index, NSInteger columns, NSInteger rows) {
+NSUInteger ListStep(NSUInteger count, NSUInteger index, NSInteger step) {
     if (!count) return 0;
-    NSInteger n = (NSInteger)count, i = MIN((NSInteger)index, n - 1);
-    i = ((i + columns) % n + n) % n;
-    NSInteger moved = i + rows * (NSInteger)grid.columns;
-    // Up from the first row stays; down past the end lands on the last tile.
-    return (NSUInteger)(moved < 0 ? i : MIN(moved, n - 1));
+    return (NSUInteger)MAX(0, MIN((NSInteger)count - 1, (NSInteger)MIN(index, count - 1) + step));
 }
 
 CGFloat ScrollDeltaRevealing(CGRect item, CGRect viewport, CGFloat offset) {

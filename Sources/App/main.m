@@ -212,6 +212,7 @@ static ReportModel *PreviewReport(NSString *sample) {
         // The campaign screens read the selected game's missions and the saved progress.
         Briefing *campaign = [[Briefing alloc] initWithSize:rect.size];
         campaign.backgroundColor = UIColorWithOpacity(UIBackground, 1);
+        [campaign showFriends:@[@[@"Wren"], @[], @[@"Tobin", @"Halcyon", @"Marisol Okonkwo-Lindqvist", @"Ash", @"Pike"]]];
         if ([_sample isEqualToString:@"briefing"]) [campaign showBriefing:0 page:1];
         else [campaign showListSelecting:0];
         scene = campaign;

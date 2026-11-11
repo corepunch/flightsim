@@ -160,6 +160,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
         else if (_screen == FrontScreenCampaign) [_briefing refreshProgress];
         else if (_screen == FrontScreenLAN) [_lanGame refreshProgress];
     }
+    [_briefing showFriends:_services.missionFriends];
     switch (_screen) {
         case FrontScreenMainMenu: [self mainMenuFrame:actions]; break;
         case FrontScreenCampaign: [self campaignFrame:actions]; break;

@@ -175,13 +175,12 @@ typedef struct {
     CGRect confirm, previous, back;
 } NavigationButtons;
 
-// The mission list's tiles, for clicks and keyboard navigation.
+// The mission list's rows, for clicks and keyboard navigation.
 typedef struct {
     CGRect rows;
-    TileGrid grid;
-    NSArray<NSValue *> *tiles;
+    NSArray<NSValue *> *rects;
     MissionListModel *list;
-} MissionGrid;
+} MissionList;
 
 // MARK: - Text viewport
 
@@ -776,7 +775,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
     NSArray<BriefingPage *> *_pages;
     NSUInteger _page;
     NavigationButtons _buttons;
-    MissionGrid _grid;
+    MissionList _list;
+    NSArray<NSArray<NSString *> *> *_friends;
     NSValue *_queuedClick;
     NSMutableArray<NSValue *> *_queuedScrolls;
     TextViewport *_viewport;     // the screen's scrolling text, if any
@@ -843,9 +843,8 @@ static CGPathRef CreatePartialRoute(NSArray<NSValue *> *points, CGFloat fraction
 - (CGRect)scrollRect { return _viewport.limit > 0 ? _viewport.rect : CGRectZero; }
 - (CGFloat)scrollOffset { return _scrollOffset; }
 - (SKNode *)scrollContent { return _viewport.content; }
-- (NSArray<NSValue *> *)missionTiles { return _grid.tiles; }
-- (CGRect)missionRows { return _grid.rows; }
-- (NSUInteger)missionColumns { return _grid.grid.columns; }
+- (NSArray<NSValue *> *)missionRowRects { return _list.rects; }
+- (CGRect)missionRows { return _list.rows; }
 
 - (BOOL)hasNextBriefingPage { return _page + 1 < _pages.count; }
 
@@ -970,7 +969,7 @@ static const CGFloat PhoneSpeakerFont = 16;
     _bar = nil;
     _barInput = 0;
     _buttons = (NavigationButtons){0};
-    _grid = (MissionGrid){0};
+    _list = (MissionList){0};
     _map = nil;
     _backdropRoom = nil;
     _laidOut = self.size;
@@ -1025,6 +1024,15 @@ static const CGFloat PhoneSpeakerFont = 16;
         [self rebuild];
 }
 
+- (void)showFriends:(NSArray<NSArray<NSString *> *> *)friends {
+    if (_friends == friends || [_friends isEqual:friends]) return;
+    _friends = [friends copy];
+    if (_mode == ModeList && _presented) {
+        _transition = UITransitionNone;
+        [self rebuild];
+    }
+}
+
 - (BriefingInsets)contentInsets { return _contentInsets; }
 
 - (void)setContentInsets:(BriefingInsets)insets {
@@ -1055,23 +1063,22 @@ static const CGFloat PhoneSpeakerFont = 16;
         [stars addObject:@(ProgressBestStars(titles.count))];
         [titles addObject:mission.title ?: @""];
     }
-    return MissionListModelMake(titles, stars, ProgressUnlockedCount(), _index);
+    return MissionListModelMake(titles, stars, ProgressUnlockedCount(), _index, _friends);
 }
 
 - (void)buildList {
-    // The grid fills the body; on a phone it runs to the screen's bottom edge.
+    // The rows fill the body; on a phone they run to the screen's bottom edge.
     CGRect body = [self listRegions].bodyToEdge;
-    _grid.list = [self missionList];
-    UIMissionGrid *tiles = [[UIMissionGrid alloc] initWithList:_grid.list
+    _list.list = [self missionList];
+    UIMissionRows *rows = [[UIMissionRows alloc] initWithList:_list.list
         region:RectInsetEdges(body, 0, 0, ScrollGutter, 0) compact:self.size.height < 550];
-    _grid.rows = body;
-    _grid.grid = tiles.grid;
-    _grid.tiles = tiles.tileRects;
-    [_root addChild:[self textViewport:body content:tiles]];
-    // Keyboard/controller navigation always brings its selected tile into view.
-    if (_transition != UITransitionNone && _index < _grid.tiles.count)
-        [self scrollBy:ScrollDeltaRevealing(UnboxRect(_grid.tiles[_index]), body, _scrollOffset)];
-    [self navigationAction:_grid.list.action];
+    _list.rows = body;
+    _list.rects = rows.rowRects;
+    [_root addChild:[self textViewport:body content:rows]];
+    // Keyboard/controller navigation always brings its selected row into view.
+    if (_transition != UITransitionNone && _index < _list.rects.count)
+        [self scrollBy:ScrollDeltaRevealing(UnboxRect(_list.rects[_index]), body, _scrollOffset)];
+    [self navigationAction:_list.list.action];
 }
 
 - (void)revealPreviewTitle:(SKLabelNode *)title location:(SKLabelNode *)location text:(SKLabelNode *)text
@@ -1792,10 +1799,10 @@ static const CGFloat PhoneSpeakerFont = 16;
             }
             a |= InputActionConfirm;
         } else if (barHit) a |= _barInput;
-        else if (_mode == ModeList && CGRectContainsPoint(_grid.rows, point)) {
+        else if (_mode == ModeList && CGRectContainsPoint(_list.rows, point)) {
             CGPoint inContent = PointSub(point, CGPointMake(0, _scrollOffset));
-            for (NSUInteger i = 0; i < _grid.tiles.count; i++) {
-                if (!CGRectContainsPoint(UnboxRect(_grid.tiles[i]), inContent)) continue;
+            for (NSUInteger i = 0; i < _list.rects.count; i++) {
+                if (!CGRectContainsPoint(UnboxRect(_list.rects[i]), inContent)) continue;
                 if (i == _index) a |= InputActionConfirm;
                 else { [[GameAudio shared] play:@"ui-hover"]; [self showListSelecting:i]; }
                 break;
@@ -1809,17 +1816,15 @@ static const CGFloat PhoneSpeakerFont = 16;
     NSUInteger count = CampaignMissions().count;
     if (a & InputActionBack) [[GameAudio shared] play:@"ui-back"];
     else if (a & InputActionConfirm) {
-        BOOL locked = _mode == ModeList && !_grid.list.action;
+        BOOL locked = _mode == ModeList && !_list.list.action;
         [[GameAudio shared] play:locked ? @"ui-alert" : @"ui-confirm"];
     } else if (_mode == ModeList && (a & (InputActionUp | InputActionDown))) [[GameAudio shared] play:@"ui-hover"];
     switch (_mode) {
         case ModeList:
             if (a & InputActionBack) return BriefingCommandMainMenu;
-            if (a & (InputActionLeft | InputActionRight))
-                [self showListSelecting:TileGridMove(_grid.grid, count, _index, a & InputActionLeft ? -1 : 1, 0)];
             if (a & (InputActionUp | InputActionDown))
-                [self showListSelecting:TileGridMove(_grid.grid, count, _index, 0, a & InputActionUp ? -1 : 1)];
-            if ((a & InputActionConfirm) && _grid.list.action) [self showBriefing:_index];
+                [self showListSelecting:ListStep(count, _index, a & InputActionUp ? -1 : 1)];
+            if ((a & InputActionConfirm) && _list.list.action) [self showBriefing:_index];
             break;
         case ModeBriefing:
             if (a & InputActionBack) { [self showListSelecting:_index]; break; }

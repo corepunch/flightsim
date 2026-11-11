@@ -169,6 +169,12 @@ NSUInteger ProgressResultStars(NSArray<ObjectiveReadout *> *results);
 NSUInteger ProgressRecordResult(NSUInteger missionIndex, NSUInteger stars);
 NSUInteger ProgressRecordMatch(NSString *arena, LANMatchResult result);
 NSUInteger ProgressPilotScore(void);
+// Where a pilot is in the campaign, as a number that rides along with their
+// leaderboard score: a hash of the level they have reached, so devices with
+// different content agree. 0 once the campaign is finished.
+uint64_t CampaignLevelTag(NSString *level);
+uint64_t ProgressCampaignTag(void);
+NSUInteger CampaignIndexOfTag(uint64_t tag);                // NSNotFound for 0 or an unknown level
 NSUInteger CampaignIndexOfLevel(NSString *level);
 StoryDefaults *CampaignStoryDefaults(void);
 

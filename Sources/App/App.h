@@ -29,6 +29,9 @@
 - (instancetype)initWithView:(SCNView *)view;
 - (void)start;
 - (void)showLeaderboard;
+// The names of the friends who have reached each campaign mission, by mission,
+// from their Pilot Score entries; nil until they are read. Any thread may read it.
+@property (atomic, copy) NSArray<NSArray<NSString *> *> *missionFriends;
 @end
 
 // Synchronizes progress with the signed-in player's iCloud Documents storage.

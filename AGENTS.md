@@ -127,7 +127,7 @@ controls, pause included, are the system `GCVirtualController`, owned by
 **Views draw models; scenes do not choose content.** What a screen shows is a
 plain value built by a function in `Sources/Common/ScreenModels.m` from facts
 (`PauseMenuModel`, `MainMenuModel`, `ServerListModel`, `LobbyModel`, `MissionListModelMake`, `BriefingMonitorModel`, `DebriefReport`, `MatchReport`), and a view renders it
-(`UIReportView`, `UIListView`, `UIMissionGrid`, `UIMonitorHeader`, a `UILayout` template bound to a datasource). A scene gathers
+(`UIReportView`, `UIListView`, `UIMissionRows`, `UIMonitorHeader`, a `UILayout` template bound to a datasource). A scene gathers
 the facts, hands the model to the view and maps the chosen identifier to a
 command. Add a block kind or a model when a screen needs something new, test
 the model in `Tools/UnitChecks.m`, and look at the view on sample data with

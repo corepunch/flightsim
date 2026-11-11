@@ -42,7 +42,9 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
     CloudSaves *_cloudSaves;
     NSString *_submittedPlayer;
     NSUInteger _submitted;
-    BOOL _started, _authResolved, _openRequested, _submitting, _authRetryScheduled;
+    NSString *_friendsPlayer;
+    NSDate *_friendsRead;
+    BOOL _started, _authResolved, _openRequested, _submitting, _authRetryScheduled, _readingFriends;
 }
 
 - (instancetype)initWithView:(SCNView *)view {
@@ -92,6 +94,7 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
         if (_authResolved && !GKLocalPlayer.localPlayer.authenticated) [self retryAuthenticationAfterError:error];
     }
     [self submitIfNeeded];
+    [self readFriendsIfDue];
     [_cloudSaves requestSync];
     [self openIfRequested];
 }
@@ -101,6 +104,7 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
         if (![self available]) return;
         [self startAuthentication];
         [self submitIfNeeded];
+        [self readFriendsIfDue];
         [self->_cloudSaves requestSync];
     });
 }
@@ -121,7 +125,8 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
     if (!score) return;
     if ([_submittedPlayer isEqualToString:playerID] && score <= _submitted) return;
     _submitting = YES;
-    [GKLeaderboard submitScore:(NSInteger)score context:0 player:player leaderboardIDs:@[PilotLeaderboard]
+    // The context carries the campaign mission the pilot has reached; friends read it back.
+    [GKLeaderboard submitScore:(NSInteger)score context:ProgressCampaignTag() player:player leaderboardIDs:@[PilotLeaderboard]
               completionHandler:^(NSError *error) {
         dispatch_async(dispatch_get_main_queue(), ^{
             self->_submitting = NO;
@@ -136,6 +141,55 @@ static BOOL AuthenticationErrorIsTransient(NSError *error) {
                 [self submitIfNeeded];
         });
     }];
+}
+
+// Friends' Pilot Score entries say which mission each has reached. The list is
+// read again when the menus come back, at most once a minute, and at once for
+// another account.
+- (void)readFriendsIfDue {
+    GKLocalPlayer *player = GKLocalPlayer.localPlayer;
+    if (!player.authenticated) {
+        _friendsPlayer = nil;
+        self.missionFriends = nil;
+        return;
+    }
+    NSString *playerID = player.gamePlayerID;
+    BOOL sameAccount = [_friendsPlayer isEqualToString:playerID];
+    if (_readingFriends || (sameAccount && _friendsRead.timeIntervalSinceNow > -60)) return;
+    if (!sameAccount) self.missionFriends = nil;
+    _readingFriends = YES;
+    _friendsPlayer = playerID;
+    _friendsRead = NSDate.date;
+    void (^finish)(NSArray<GKLeaderboardEntry *> *, NSError *) = ^(NSArray<GKLeaderboardEntry *> *entries, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self->_readingFriends = NO;
+            if (error) NSLog(@"Game Center friends: %@", error.localizedDescription);
+            else if ([playerID isEqualToString:GKLocalPlayer.localPlayer.gamePlayerID]) [self showFriendEntries:entries];
+        });
+    };
+    [GKLeaderboard loadLeaderboardsWithIDs:@[PilotLeaderboard] completionHandler:^(NSArray<GKLeaderboard *> *boards, NSError *error) {
+        if (!boards.count) { finish(nil, error); return; }
+        [boards.firstObject loadEntriesForPlayerScope:GKLeaderboardPlayerScopeFriendsOnly timeScope:GKLeaderboardTimeScopeAllTime
+                                                range:NSMakeRange(1, 100)
+                                    completionHandler:^(GKLeaderboardEntry *own, NSArray<GKLeaderboardEntry *> *entries,
+                                                        NSInteger total, NSError *entriesError) {
+            finish(entries, entriesError);
+        }];
+    }];
+}
+
+// Entries arrive best score first, so each mission lists its strongest pilots first.
+- (void)showFriendEntries:(NSArray<GKLeaderboardEntry *> *)entries {
+    NSMutableArray<NSMutableArray<NSString *> *> *missions = [NSMutableArray array];
+    for (NSUInteger i = 0; i < CampaignMissions().count; i++) [missions addObject:[NSMutableArray array]];
+    NSString *own = GKLocalPlayer.localPlayer.gamePlayerID;
+    for (GKLeaderboardEntry *entry in entries) {
+        NSUInteger mission = CampaignIndexOfTag(entry.context);
+        NSString *name = entry.player.displayName;
+        if (mission < missions.count && name.length && ![entry.player.gamePlayerID isEqualToString:own])
+            [missions[mission] addObject:name];
+    }
+    self.missionFriends = missions;
 }
 
 - (void)showLeaderboard {

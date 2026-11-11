@@ -39,6 +39,8 @@ typedef NSEdgeInsets BriefingInsets;
 
 - (void)showListSelecting:(NSUInteger)index;
 - (void)refreshProgress;
+// The Game Center friends on each campaign mission, by mission; nil for none.
+- (void)showFriends:(NSArray<NSArray<NSString *> *> *)friends;
 // Releases the art and laid-out nodes while the screen is away; the next show rebuilds them.
 - (void)unload;
 - (void)showBriefing:(NSUInteger)index;
@@ -62,9 +64,8 @@ typedef NSEdgeInsets BriefingInsets;
 @property (nonatomic, readonly) CGRect scrollRect;              // empty unless text overflows
 @property (nonatomic, readonly) CGFloat scrollOffset;
 @property (nonatomic, readonly) SKNode *scrollContent;
-@property (nonatomic, readonly) NSArray<NSValue *> *missionTiles;   // boxed CGRects
-@property (nonatomic, readonly) CGRect missionRows;                  // the scrolling area the tiles sit in
-@property (nonatomic, readonly) NSUInteger missionColumns;
+@property (nonatomic, readonly) NSArray<NSValue *> *missionRowRects;    // boxed CGRects
+@property (nonatomic, readonly) CGRect missionRows;                  // the scrolling area the rows sit in
 
 @end
 
@@ -87,6 +88,9 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)closeLANGame;
 - (void)startGameCenter;
 - (void)showLeaderboards;
+// The names of the Game Center friends who have reached each campaign mission,
+// by mission. A new array replaces it when the friends' records are read again.
+@property (readonly) NSArray<NSArray<NSString *> *> *missionFriends;
 @property (nonatomic, readonly) NSArray<NSString *> *hostedPilots;
 @property (nonatomic, readonly) BOOL hostingFailed;
 @property (nonatomic, readonly) BOOL waitingForLANMatch;
@@ -316,12 +320,11 @@ typedef NS_ENUM(NSInteger, UIListStyle) { UIListScrolling, UIListFitted };
 - (void)registerHover:(UIHover *)hover;
 @end
 
-// Draws a MissionListModel (Common.h) as a grid of tiles hanging from the top
-// left of `region`, in content coordinates for a TextViewport.
-@interface UIMissionGrid : SKNode
+// Draws a MissionListModel (Common.h) as full-width rows hanging from the top
+// of `region`, in content coordinates for a TextViewport.
+@interface UIMissionRows : SKNode
 - (instancetype)initWithList:(MissionListModel *)list region:(CGRect)region compact:(BOOL)compact;
-@property (nonatomic, readonly) TileGrid grid;
-@property (nonatomic, readonly) NSArray<NSValue *> *tileRects;      // boxed, one per mission
+@property (nonatomic, readonly) NSArray<NSValue *> *rowRects;       // boxed, one per mission
 @end
 
 // Draws a MonitorModel's header lines across [left, right] under `top`; the

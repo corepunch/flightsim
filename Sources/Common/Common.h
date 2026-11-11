@@ -307,34 +307,28 @@ ListModel *ServerListModel(NSArray<ListEntry *> *servers, BrowserSelection selec
 // line until the host can start.
 ListModel *LobbyModel(NSArray<NSString *> *pilots, BOOL hosting, LANMatchSettings settings);
 
-// The campaign's mission select: a tile per mission. A locked mission hides
+// The campaign's mission select: a row per mission. A locked mission hides
 // its title, and `action` (the title bar's confirm) is nil while one is highlighted.
-@interface MissionTile : NSObject
-@property (nonatomic, readonly, copy) NSString *number, *title, *status;
+// `friends` names the Game Center friends who have reached that mission, the
+// first MissionFriendsShown of them and a count of the rest; nil for none.
+@interface MissionRow : NSObject
+@property (nonatomic, readonly, copy) NSString *number, *title, *status, *friends;
 @property (nonatomic, readonly) NSUInteger stars;
 @property (nonatomic, readonly) BOOL open;
 @end
 @interface MissionListModel : NSObject
-@property (nonatomic, readonly, copy) NSArray<MissionTile *> *tiles;
+@property (nonatomic, readonly, copy) NSArray<MissionRow *> *rows;
 @property (nonatomic, readonly) NSUInteger selected;
 @property (nonatomic, readonly, copy) NSString *action;
 @end
-// `stars` holds each mission's best rating; the first `unlocked` missions are open.
+enum { MissionFriendsShown = 3 };
+// `stars` holds each mission's best rating; the first `unlocked` missions are
+// open. `friends` holds the names on each mission, and may be shorter or nil.
 MissionListModel *MissionListModelMake(NSArray<NSString *> *titles, NSArray<NSNumber *> *stars,
-                                       NSUInteger unlocked, NSUInteger selected);
-
-// Tiles of one height in as many equal columns as a width holds, filled row by row.
-typedef struct {
-    NSUInteger columns;
-    CGSize tile;
-    CGFloat gap;
-} TileGrid;
-TileGrid TileGridFit(CGFloat width, CGFloat tileHeight);
-// `corner` is the grid's top left.
-CGRect TileGridCell(TileGrid grid, CGPoint corner, NSUInteger index);
-// The highlight after a step: sideways wraps through the whole list; up stays
-// in the first row and down past the end lands on the last tile.
-NSUInteger TileGridMove(TileGrid grid, NSUInteger count, NSUInteger index, NSInteger columns, NSInteger rows);
+                                       NSUInteger unlocked, NSUInteger selected,
+                                       NSArray<NSArray<NSString *> *> *friends);
+// The highlight after a step up or down a list of `count`; it stops at the ends.
+NSUInteger ListStep(NSUInteger count, NSUInteger index, NSInteger step);
 // How much further to scroll so `item` (in content coordinates, drawn `offset`
 // higher) lies inside `viewport`; 0 when it already does.
 CGFloat ScrollDeltaRevealing(CGRect item, CGRect viewport, CGFloat offset);

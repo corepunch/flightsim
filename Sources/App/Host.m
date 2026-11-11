@@ -504,6 +504,7 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
 
 - (void)startGameCenter { [_gameCenter start]; }
 - (void)showLeaderboards { [_gameCenter showLeaderboard]; }
+- (NSArray<NSArray<NSString *> *> *)missionFriends { return _gameCenter.missionFriends; }
 
 // Leave our own server idle and connect to someone else's. The gamestate it
 // sends (now, or when it starts a mission) takes us through loading.

@@ -1277,24 +1277,28 @@ static void CheckScreenModels(void) {
     CHECK(!arena.arena.length || LevelNamed(arena.arena)->rules.deathmatch);
 
     // Mission select: locked missions keep their titles to themselves and cannot be briefed.
-    MissionListModel *missions = MissionListModelMake(@[@"First Watch", @"Convoy", @"Quiet Engine"], @[@3, @0], 2, 1);
-    CHECK(missions.tiles.count == 3 && missions.selected == 1 && [missions.action isEqualToString:L10n(@"missions.briefing")]);
-    CHECK([missions.tiles[0].number isEqualToString:@"01"] && [missions.tiles[0].title isEqualToString:@"FIRST WATCH"]);
-    CHECK(missions.tiles[0].stars == 3 && [missions.tiles[0].status isEqualToString:L10n(@"missions.completed")]);
-    CHECK(missions.tiles[1].open && [missions.tiles[1].status isEqualToString:L10n(@"missions.ready")]);
-    CHECK(!missions.tiles[2].open && [missions.tiles[2].title isEqualToString:L10n(@"missions.classified")]);
-    CHECK([missions.tiles[2].status isEqualToString:L10n(@"missions.locked")] && missions.tiles[2].stars == 0);
-    CHECK(!MissionListModelMake(@[@"A", @"B"], @[], 1, 1).action && MissionListModelMake(@[@"A", @"B"], @[], 1, 9).selected == 1);
-    CHECK(!MissionListModelMake(@[], @[], 3, 0).action);
+    NSArray<NSArray<NSString *> *> *friends = @[@[@"Wren"], @[@"Tobin", @"Ash", @"Pike", @"Halcyon", @"Juno"]];
+    MissionListModel *missions = MissionListModelMake(@[@"First Watch", @"Convoy", @"Quiet Engine"], @[@3, @0], 2, 1, friends);
+    CHECK(missions.rows.count == 3 && missions.selected == 1 && [missions.action isEqualToString:L10n(@"missions.briefing")]);
+    CHECK([missions.rows[0].number isEqualToString:@"01"] && [missions.rows[0].title isEqualToString:@"FIRST WATCH"]);
+    CHECK(missions.rows[0].stars == 3 && [missions.rows[0].status isEqualToString:L10n(@"missions.completed")]);
+    CHECK(missions.rows[1].open && [missions.rows[1].status isEqualToString:L10n(@"missions.ready")]);
+    CHECK(!missions.rows[2].open && [missions.rows[2].title isEqualToString:L10n(@"missions.classified")]);
+    CHECK([missions.rows[2].status isEqualToString:L10n(@"missions.locked")] && missions.rows[2].stars == 0);
+    // Friends: the first few names, a count of the rest, and nothing where nobody is.
+    CHECK([missions.rows[0].friends isEqualToString:@"Wren"] && !missions.rows[2].friends);
+    CHECK([missions.rows[1].friends isEqualToString:@"Tobin, Ash, Pike +2"]);
+    CHECK(!MissionListModelMake(@[@"A"], @[], 1, 0, @[@[]]).rows[0].friends && !MissionListModelMake(@[@"A"], @[], 1, 0, nil).rows[0].friends);
+    CHECK(!MissionListModelMake(@[@"A", @"B"], @[], 1, 1, nil).action && MissionListModelMake(@[@"A", @"B"], @[], 1, 9, nil).selected == 1);
+    CHECK(!MissionListModelMake(@[], @[], 3, 0, nil).action);
+    CHECK(ListStep(8, 0, -1) == 0 && ListStep(8, 0, 1) == 1 && ListStep(8, 7, 1) == 7 && ListStep(8, 20, -1) == 6 && ListStep(0, 3, 1) == 0);
 
-    TileGrid tiles = TileGridFit(500, 172);
-    CHECK(tiles.columns == 3 && tiles.tile.width == (500 - 24) / 3.0 && tiles.tile.height == 172);
-    CHECK(TileGridFit(100, 144).columns == 1 && TileGridFit(100, 144).tile.width == 100 && TileGridFit(4000, 144).columns == 6);
-    CGRect second = TileGridCell(tiles, CGPointMake(10, 900), 4);
-    CHECK(second.origin.x == 10 + tiles.tile.width + 12 && second.origin.y == 900 - 172 - 12 - 172 && second.size.height == 172);
-    CHECK(TileGridMove(tiles, 8, 0, -1, 0) == 7 && TileGridMove(tiles, 8, 7, 1, 0) == 0 && TileGridMove(tiles, 8, 3, 1, 0) == 4);
-    CHECK(TileGridMove(tiles, 8, 1, 0, -1) == 1 && TileGridMove(tiles, 8, 4, 0, -1) == 1);
-    CHECK(TileGridMove(tiles, 8, 1, 0, 1) == 4 && TileGridMove(tiles, 8, 5, 0, 1) == 7 && TileGridMove(tiles, 0, 3, 0, 1) == 0);
+    // A pilot's place in the campaign survives the trip through a leaderboard entry's context.
+    for (NSUInteger i = 0; i < CampaignMissions().count; i++)
+        CHECK(CampaignIndexOfTag(CampaignLevelTag(CampaignLevelName(i))) == i);
+    CHECK(CampaignIndexOfTag(0) == NSNotFound && CampaignIndexOfTag(CampaignLevelTag(@"no such level")) == NSNotFound);
+    CHECK(CampaignLevelTag(@"") == 0 && CampaignLevelTag(@"a") == 0xaf63dc4c8601ec8cull);
+
     CGRect port = CGRectMake(0, 100, 300, 400);
     CHECK(ScrollDeltaRevealing(CGRectMake(0, 200, 100, 100), port, 0) == 0);
     CHECK(ScrollDeltaRevealing(CGRectMake(0, 20, 100, 100), port, 0) == 80);
