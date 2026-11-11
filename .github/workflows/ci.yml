@@ -1,4 +1,4 @@
-name: Unit tests
+name: Build and test
 
 on:
   push:
@@ -6,15 +6,21 @@ on:
   pull_request:
 
 concurrency:
-  group: unit-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  unit:
-    name: Unit tests (10 second budget)
+  build-test:
+    name: Build and test
     runs-on: macos-15
-    timeout-minutes: 1
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - name: Compile and run unit tests within 10 seconds
+      - name: Build
+        run: |
+          git init
+          git fetch --no-tags --depth=1 "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          jobs=$(getconf _NPROCESSORS_ONLN) || jobs=1
+          make -j "$jobs" all
+      - name: Test
         run: ./Tools/run-unit-checks.sh

@@ -32,7 +32,8 @@ the runner terminates the process group if that limit is exceeded.
 ./Tools/run-unit-checks.sh
 ```
 
-CI runs this one command. Do not add GUI, network, stress, audio, simulator-build,
+GitHub Actions compiles and links the native targets in Build and runs this
+command in Test. Do not add GUI, network, stress, audio, simulator-build,
 screenshot-catalogue or localization-render jobs. Check appearance and real-device
 LAN behavior manually when needed; they are not automated merge gates.
 
