@@ -104,8 +104,8 @@ make racing-simulator   # unsigned simulator app
 make racing-net-test    # existing headless loopback and multi-peer UDP check
 ```
 
-Open `Games/Racing/Racing.xcodeproj` for Xcode, or run
-`make -C Games/Racing iphone` to compile, sign and install with your local
-development profile. See [Racing/MIGRATION.md](Racing/MIGRATION.md) for what is
+Run `make racing-iphone` or `make racing-ipad` to sign a copy and install it
+with your local development profile. See [Publishing](../PUBLISHING.md) for
+test bundle paths and the boundary between builds and manual distribution. See [Racing/MIGRATION.md](Racing/MIGRATION.md) for what is
 shared, what is deliberately separate, and what must be verified before
 retiring the original repository.

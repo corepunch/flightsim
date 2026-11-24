@@ -1,20 +1,54 @@
 .DEFAULT_GOAL := ios-build
+.DELETE_ON_ERROR:
 
-# Optional overrides: DEVICE (name or identifier), PROFILE, TEAM, BUNDLE_ID.
+PYTHON ?= python3
 BUILD_DIR ?= $(CURDIR)/build/ios
-APP := $(BUILD_DIR)/products/Debug-iphoneos/Racing.app
+IOS_MIN := 16.0
+IOS_ARCH = $(if $(filter iphoneos,$(IOS_SDK)),arm64,$(shell uname -m))
+SWIFT_OPTIMIZATION ?= -O
+IOS_OUT = $(BUILD_DIR)/$(IOS_SDK)-$(IOS_ARCH)
+IOS_APP = $(IOS_OUT)/Racing.app
+IOS_TARGET = $(IOS_ARCH)-apple-ios$(IOS_MIN)$(if $(filter iphonesimulator,$(IOS_SDK)),-simulator)
+SHARED_NET := ../../Sources/Net/PacketCore
+SWIFT_SOURCES := $(sort $(shell find Sources/Racing -type f -name '*.swift'))
+SWIFT_HEADERS := $(wildcard $(SHARED_NET)/*)
 
-.PHONY: iphone ios-build ios-simulator ios-devices
-iphone: ios-build
-	@python3 Tools/deploy-ios.py iphone "$(APP)"
+.PHONY: ios-build ios-simulator iphone ipad ios-devices ios-app FORCE
+ios-build:
+	@$(MAKE) ios-app IOS_SDK=iphoneos
 
-ios-build: IOS_SDK = iphoneos
-ios-simulator: IOS_SDK = iphonesimulator
-ios-build ios-simulator:
-	@xcodebuild -project Racing.xcodeproj -scheme Racing -configuration Debug \
-		-sdk $(IOS_SDK) -derivedDataPath "$(BUILD_DIR)/DerivedData" \
-		SYMROOT="$(BUILD_DIR)/products" OBJROOT="$(BUILD_DIR)/intermediates" \
-		CODE_SIGNING_ALLOWED=NO ENABLE_DEBUG_DYLIB=NO SWIFT_OPTIMIZATION_LEVEL=-O build
+ios-simulator:
+	@$(MAKE) ios-app IOS_SDK=iphonesimulator
+
+# These opt-in targets sign a copy and install it to a paired device.
+# Normal builds stay unsigned and never invoke signing or publication.
+iphone ipad: ios-build
+	@$(PYTHON) Tools/deploy-ios.py "$@" "$(BUILD_DIR)/iphoneos-arm64/Racing.app"
 
 ios-devices:
 	@xcrun devicectl list devices --timeout 15
+
+ifeq ($(filter ios-app,$(MAKECMDGOALS)),ios-app)
+ifeq ($(filter $(IOS_SDK),iphoneos iphonesimulator),)
+$(error ios-app requires IOS_SDK=iphoneos or iphonesimulator)
+endif
+
+# Build identity catches removed sources and tools changing after an SDK update.
+$(IOS_OUT)/swift-inputs: FORCE
+	@mkdir -p "$(@D)"
+	@{ xcrun --sdk "$(IOS_SDK)" --show-sdk-path && \
+	    xcrun --sdk "$(IOS_SDK)" swiftc --version && \
+	    printf '%s\n' "$(IOS_TARGET)" "$(SWIFT_OPTIMIZATION)" $(SWIFT_SOURCES); } > "$@.tmp"
+	@if cmp -s "$@.tmp" "$@"; then rm "$@.tmp"; else mv "$@.tmp" "$@"; fi
+
+$(IOS_OUT)/Racing: $(SWIFT_SOURCES) $(SWIFT_HEADERS) $(IOS_OUT)/swift-inputs Makefile
+	@printf '  Compiling Racing (%s)\n' "$(IOS_TARGET)"
+	@sdk_path=$$(xcrun --sdk "$(IOS_SDK)" --show-sdk-path) && \
+	xcrun --sdk "$(IOS_SDK)" swiftc -sdk "$$sdk_path" -target "$(IOS_TARGET)" \
+		-parse-as-library -swift-version 5 -module-name Racing $(SWIFT_OPTIMIZATION) \
+		-I "$(SHARED_NET)" -o "$@.tmp" $(SWIFT_SOURCES)
+	@mv "$@.tmp" "$@"
+
+ios-app: $(IOS_OUT)/Racing
+	@$(PYTHON) Tools/package-ios.py "$(IOS_SDK)" "$(IOS_MIN)" "$<" "$(IOS_APP)"
+endif

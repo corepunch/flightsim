@@ -10,8 +10,9 @@ import discards this ancestry.
 This is the public source baseline, not a statement about which exact source
 produced a particular distributed binary. The original build settings retain
 the display name `Arcline`, iOS app identifier `com.corepunch.arcline`,
-the existing Catalyst override, iOS minimum OS, Info.plist version/build,
-game data, and Bonjour service. There is no release or storefront change.
+iOS minimum OS, Info.plist version/build, game data, and Bonjour service. The
+former IDE-only Catalyst bundle ID (`com.racing.app.desktop`) remains reserved;
+the Make entry points build iOS device and simulator apps only. There is no release or storefront change.
 
 ## Boundary
 
@@ -50,7 +51,7 @@ build and ship in the same repository without changing the flight bundle.
 
 ## Verification before retiring Racing
 
-- Build the Racing simulator and device app in Xcode, and FlightSim's unchanged
+- Build the Racing simulator and device app with Make, and FlightSim's unchanged
   macOS/iOS targets. Inspect both app bundles: own resources, original identifier,
   signing and no files from the other game.
 - On iPhone and iPad compare startup, controller display, menus, garage, HUD,

@@ -106,7 +106,7 @@ include Tools/iOS.mk
 endif
 
 # Arcline is a separately packaged product. Do not ship it inside the flight app.
-.PHONY: racing-ios racing-simulator racing-net-test
+.PHONY: racing-ios racing-simulator racing-net-test racing-iphone racing-ipad
 racing-ios:
 	$(MAKE) -C Games/Racing ios-build
 
@@ -115,6 +115,9 @@ racing-simulator:
 
 racing-net-test:
 	Games/Racing/Tools/net-test.sh
+
+racing-iphone racing-ipad:
+	$(MAKE) -C Games/Racing $(@:racing-%=%)
 
 .PHONY: test-datagram-header
 test-datagram-header:

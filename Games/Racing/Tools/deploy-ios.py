@@ -93,17 +93,12 @@ def signing_profile(bundle_id, udid):
     }
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('family', choices=('iphone', 'ipad'))
-    parser.add_argument('app', type=Path)
-    args = parser.parse_args()
-    app = args.app.resolve()
+def deploy(family, app):
     info_path = app / 'Info.plist'
     info = plistlib.loads(info_path.read_bytes())
     bundle_id = os.environ.get('BUNDLE_ID') or info['CFBundleIdentifier']
 
-    device = select_device(args.family, os.environ.get('DEVICE'))
+    device = select_device(family, os.environ.get('DEVICE'))
     print('Selected ' + device['deviceProperties']['name'], flush=True)
     profile, identity, entitlements = signing_profile(bundle_id, device['hardwareProperties']['udid'])
 
@@ -122,6 +117,18 @@ def main():
     target = ['--device', device['identifier']]
     subprocess.run(command + ['install', 'app'] + target + [str(app)], check=True)
     subprocess.run(command + ['process', 'launch'] + target + ['--terminate-existing', bundle_id], check=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('family', choices=('iphone', 'ipad'))
+    parser.add_argument('app', type=Path)
+    args = parser.parse_args()
+    source = args.app.resolve()
+    with tempfile.TemporaryDirectory(prefix='racing-device-') as directory:
+        app = Path(directory) / source.name
+        shutil.copytree(source, app)
+        deploy(args.family, app)
 
 
 if __name__ == '__main__':
