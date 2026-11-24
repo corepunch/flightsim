@@ -258,16 +258,8 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
             [refresh endFrame];
             CGPoint centre = RectCenter((CGRect){ .size = points });
             HUDFrame hf = { .boresight = centre, .boresightVisible = YES, .throttle = 0.75, .boostEnergy = 1,
-                .secondary = 3, .secondaryCapacity = 4, .secondaryName = @"TORPEDO", .deltaTime = 1.0f / 60,
+                .secondary = 3, .secondaryCapacity = 4, .secondaryName = @"TORPEDO",
                 .cockpit = d.cockpit };
-            // The sun's lens flare, as the live view finds it.
-            simd_float3 sunDirection = refresh.sunDirection;
-            CGPoint sun;
-            if ([refresh projectPoint:camera.origin + sunDirection * 20000.0f to:&sun]) {
-                hf.sun = sun;
-                hf.sunVisibility = CGRectContainsPoint((CGRect){ .size = points }, sun) &&
-                    ![refresh traceOpaqueFrom:camera.origin to:camera.origin + sunDirection * 5000.0f] ? 1 : 0;
-            }
             HUDTarget target = {0};
             NSUInteger targets = 0;
             for (CaptureObject *object in d.objects) if (object.label.length) {
@@ -285,7 +277,7 @@ static simd_float3 CaptureMissilePoint(CaptureMissile *m, double time) {
                 .weaponShotEnergy = 0.035f, .weaponRecharge = 0.22f, .shieldRecharge = 0.06f,
                 .throttle = 0.75, .speed = 120, .maxSpeed = 160, .target = -1, .secondary = 3,
                 .secondaryName = @"TORP", .time = time,
-                .sun = simd_act(simd_inverse(player.orientation), sunDirection) };
+                .sun = simd_act(simd_inverse(player.orientation), refresh.sunDirection) };
             CockpitContact contacts[COCKPIT_MAX_CONTACTS];
             NSUInteger contactCount = 0;
             for (CaptureObject *object in d.objects) {

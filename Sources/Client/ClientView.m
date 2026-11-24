@@ -447,7 +447,7 @@ static float Ease(float value, float target, float rate, float dt) {
     [self updateBolts:dt];
     [self updateCamera:dt player:ps controls:controls];
     _damageFlash = fmaxf(0, _damageFlash - dt * 2.5f);
-    [self updateHUD:ps controls:controls dt:dt];
+    [self updateHUD:ps controls:controls];
 }
 
 #pragma mark - Camera
@@ -594,7 +594,7 @@ static float Ease(float value, float target, float rate, float dt) {
     return YES;
 }
 
-- (void)updateHUD:(const PlayerState *)ps controls:(ControlState)c dt:(float)dt {
+- (void)updateHUD:(const PlayerState *)ps controls:(ControlState)c {
     simd_float3 me = ps->move.origin, fwd = QuatForward(ps->move.orientation);
     uint16_t selected = (uint16_t)ps->stats[STAT_TARGET];
     EntityView *target = [self viewFor:selected];
@@ -636,18 +636,6 @@ static float Ease(float value, float target, float rate, float dt) {
         EntityState ts = target.state;
         simd_float3 p = simd_act(ts.orientation, targetInfo->parts[aim].center) + ts.origin;
         f.aimVisible = [self project:p into:&f.aim];
-    }
-
-    f.deltaTime = dt;
-    simd_float3 camPos = _camera.origin;
-    simd_float3 sunDir = _refresh.sunDirection;
-    simd_float3 sunPoint = camPos + sunDir * 20000.0f;
-    CGPoint sp;
-    if ([self project:sunPoint into:&sp]) {
-        float vis = CGRectContainsPoint(RectWithSize(size), sp) ? 1 : 0;
-        if (vis > 0 && [_refresh traceOpaqueFrom:camPos to:camPos + sunDir * 5000.0f]) vis = 0;
-        f.sun = sp;
-        f.sunVisibility = vis;
     }
 
     HUDTarget targets[MAX_HUD];

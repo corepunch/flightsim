@@ -49,7 +49,7 @@ headers only).
 | `Client/` | `Client`: connection, snapshots, interpolation, prediction of the player's ship. `ClientView`: turns a frame into renderer calls and fills the HUD and cockpit. Never imports SceneKit. |
 | `Net/` | `NetChannel` (sequencing, reliable fragments), `NetMsg` (bit-level codec), `NetProtocol` (deltas), transports (in-process loopback, UDP), LAN discovery. |
 | `Refresh/` | The renderer as the client sees it, after Quake 2's `refexport_t`: register models while loading, then describe each frame (entities, player, camera, effects). Also the HUD and `CockpitFrame`. No renderer types cross it. |
-| `Render/` | `SceneKitRefresh`, the only Refresh backend, and what it draws with: ship and capital views, hull styles, exhaust, effects, cockpit, flight instruments, lens flare, sky, the FX recorder. |
+| `Render/` | `SceneKitRefresh`, the only Refresh backend, and what it draws with: ship and capital views, hull styles, exhaust, effects, cockpit, flight instruments, sky, the FX recorder. |
 | `Collision/` | `ModelInfo`: capital models' parts and subsystems for server traces and renderer dressing; baked-scene loading. |
 | `Mission/` | The mission runtime (objectives, scripted events, scheduled arrivals and departures, win/lose rules) that runs a `LevelDef` against a `MissionWorld` the game supplies. Linked into game modules, not the engine binary. |
 | `Story/` | Campaign content and the local progress record. Progress merges unlocks and best results by level name. `App/CloudSaves.m` syncs that record through GameKit, and `App/GameCenter.m` reports the Pilot Score and the campaign's achievements from it. |
@@ -155,8 +155,8 @@ while nothing is drawn; the hand-off points are marked in `Client.h` and
 
 The space sky uses a small vertex-coloured mesh for the nebula and galaxy.
 Their procedural colours are calculated once during loading; shader point
-sprites draw the stars, and a fragment shader draws the planet. The sky shader draws the sun’s disc and corona. A projected SpriteKit shader
-adds a soft central glow and a faint horizontal lens streak.
+sprites draw the stars, and a fragment shader draws the planet. The sky shader draws
+the sun’s disc and corona behind the ships.
 There are no sky textures or cubemap convolution passes. All cameras use LDR
 on every platform; HDR and camera bloom are disabled. The sky applies its own
 tone curve and edge falloff to retain the darker space palette.

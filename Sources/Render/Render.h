@@ -295,16 +295,6 @@ void ApplyHullRolloff(SCNMaterial *m);
 @property (nonatomic, readonly) CGRect discFrame;
 @end
 
-// MARK: - LensFlare
-
-// Camera optics in view points: sun core, halo, aperture rays and reflections.
-// The shader supplies glare directly in the display range, without camera bloom.
-// The caller supplies visibility after testing the light against scene geometry.
-@interface LensFlare : SKNode
-- (void)updateSource:(CGPoint)source visibility:(CGFloat)visibility
-           viewport:(CGSize)viewport deltaTime:(NSTimeInterval)dt;
-@end
-
 // MARK: - SceneKitRefresh
 
 // The Refresh backend on SceneKit: one SCNScene holding the sky, sun, camera,

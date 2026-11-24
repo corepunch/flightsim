@@ -511,8 +511,7 @@ kernel void skyBake(texture2d<half, access::write> sky [[texture(0)]],
     float4 far = S.inverseViewProjection * float4(ndc.x, -ndc.y, 1.0, 1.0);
     float3 rd = normalize(far.xyz / far.w - T.camera.xyz);
     float3 sun = T.sun.xyz;
-    // The sun's disc is drawn by the screen-space glare shader.
-    float3 col = skyColor(rd, sun, false);
+    float3 col = skyColor(rd, sun, true);
     float jitter = hash12(float2(gid));
     float4 clouds = marchClouds(T.camera.xyz, rd, sun, 1e6, jitter, int(T.misc.w), 4);
     sky.write(half4(half3(col * (1.0 - clouds.a) + clouds.rgb), 1.0h), gid);

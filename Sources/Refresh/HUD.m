@@ -177,7 +177,6 @@ static SKShapeNode *Bracket(void) {
     UIHorizontalStack *_secondaryRow;
     NSMutableArray<SKShapeNode *> *_secondarySegments;
     NSMutableArray<SKLabelNode *> *_messages;
-    LensFlare *_lensFlare;
     CGSize _laidOut;
     HUDInsets _laidOutInsets;
     BOOL _laidOutTouch;
@@ -202,8 +201,6 @@ static SKShapeNode *Bracket(void) {
     for (SKNode *instrument in @[_targetReadout, _forwardScope, _rearScope]) {
         instrument.zPosition = 25; [_root addChild:instrument];
     }
-    _lensFlare = [LensFlare new];
-    [_root addChild:_lensFlare];
 
     _damage = [SKShapeNode shapeNodeWithRect:CGRectMake(0, 0, 10, 10)];
     _damage.fillColor = [SKColor colorWithRed:1 green:0.15 blue:0.1 alpha:1];
@@ -754,8 +751,6 @@ static CGAffineTransform RingTransform(HUDRing r) {
     _statusLabel.position = CGPointMake(f.boresight.x, f.boresight.y - 40);
     _deadLabel.hidden = !f.playerDead;
     _damage.alpha = f.damageFlash * 0.35;
-
-    [_lensFlare updateSource:f.sun visibility:f.sunVisibility viewport:s deltaTime:f.deltaTime];
 
     _selectedOutline.hidden = _selectedLeadOutline.hidden = _selectedLabelBacking.hidden = YES;
     for (NSUInteger i = 0; i < MAX_TARGETS; i++) {

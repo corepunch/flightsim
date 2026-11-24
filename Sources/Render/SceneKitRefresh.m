@@ -81,6 +81,12 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 @implementation SceneKitRefresh {
     __weak id<SCNSceneRenderer> _renderer;
     CGSize _size;
+    struct {
+        simd_float3 eye;
+        simd_quatf worldToCamera;
+        CGFloat focalLength;
+        CGPoint centre;
+    } _hudProjection;
     id<MTLDevice> _device;
 
     NSMutableArray<RefModelEntry *> *_models;          // handle - 1
@@ -623,6 +629,11 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     SCNCamera *cam = _cameraNode.camera;
     if (c.fov > 0) cam.fieldOfView = c.fov;
     if (c.zNear > 0) cam.zNear = c.zNear;
+    CGSize size = self.viewSize;
+    _hudProjection.eye = c.origin;
+    _hudProjection.worldToCamera = simd_inverse(c.orientation);
+    _hudProjection.centre = RectCenter(RectWithSize(size));
+    _hudProjection.focalLength = 0.5 * size.height / tan(cam.fieldOfView * M_PI / 360.0);
     if (_sunLight) {
         _sunLight.simdPosition = c.focus + self.sunDirection * 250.0f;
         [_sunLight simdLookAt:c.focus];
@@ -739,33 +750,13 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 }
 
 - (BOOL)projectPoint:(simd_float3)world to:(CGPoint *)out {
-    simd_float3 camFwd = simd_act(_cameraNode.simdOrientation, simd_make_float3(0, 0, -1));
-    if (simd_dot(world - _cameraNode.simdPosition, camFwd) <= 0.1f) return NO;
-    SCNVector3 p = [_renderer projectPoint:SCNVector3Make(world.x, world.y, world.z)];
-#if TARGET_OS_IOS
-    // The iOS view counts down from the top. The SpriteKit HUD counts up.
-    p.y = self.viewSize.height - p.y;
-#endif
-    *out = CGPointMake(p.x, p.y);
+    // The HUD and its ship pose belong to this update. Asking the live renderer
+    // to project a marker can wait for a different frame on the render queue.
+    simd_float3 local = simd_act(_hudProjection.worldToCamera, world - _hudProjection.eye);
+    if (local.z >= -0.1f) return NO;
+    *out = PointAdd(_hudProjection.centre, PointScale(CGPointMake(local.x, local.y),
+                                                       _hudProjection.focalLength / -local.z));
     return YES;
-}
-
-- (BOOL)traceOpaqueFrom:(simd_float3)from to:(simd_float3)to {
-    NSArray *hits = [_scene.rootNode hitTestWithSegmentFromPoint:SCNVector3Make(from.x, from.y, from.z)
-                                                         toPoint:SCNVector3Make(to.x, to.y, to.z)
-                                                         options:@{ SCNHitTestOptionSearchMode : @(SCNHitTestSearchModeAll),
-                                                                    SCNHitTestOptionCategoryBitMask : @(RenderCategoryGeometry),
-                                                                    SCNHitTestBackFaceCullingKey : @YES,
-                                                                    SCNHitTestIgnoreHiddenNodesKey : @YES }];
-    for (SCNHitTestResult *h in hits) {
-        // Ignore additive effects and transparent canopy glass, but keep
-        // searching: a hull behind them can still block the segment.
-        SCNMaterial *material = h.node.geometry.firstMaterial;
-        if (!material || h.node.particleSystems || h.node == _dust ||
-            material.blendMode != SCNBlendModeReplace || material.transparency < 0.95) continue;
-        return YES;
-    }
-    return NO;
 }
 
 #pragma mark - Cockpit

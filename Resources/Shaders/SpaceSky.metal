@@ -110,7 +110,7 @@ kernel void colourSkyMesh(device const float3 *directions [[buffer(0)]],
     float structure = saturate(0.55 + 0.9 * fbm(d * 6.0, 5, P.seed + 40u));
     float lane = smoothstep(-0.05, 0.25, fbm(d * 4.5 + float3(3.0), 4, P.seed + 41u))
                * exp(-lat * lat / (2.0 * 0.045 * 0.045));
-    // Keep the warm core subdued so it doesn't wash out the nearby sun streak.
+    // Keep the warm galactic core subdued beside the sun.
     float3 galaxy = (float3(0.50, 0.58, 0.78) * band * structure + float3(1.0, 0.78, 0.52) * bulge * 0.35) * 0.09;
     galaxy *= 1.0 - 0.9 * lane;
     col += galaxy;
@@ -205,7 +205,6 @@ fragment half4 skyFragment(SkyVarying in [[stage_in]],
         }
     }
 
-    // The HUD's glare shader adds the lens response on top of this disc.
     return half4(half3(displaySky(col * skyVignette(in.position.xy, scn_frame))), 1);
 }
 

@@ -79,9 +79,6 @@ typedef struct {
     int kills, deaths;
     BOOL playerDead;
     BOOL respawning;        // deathmatch; campaign death ends the mission
-    CGPoint sun;            // projected light source, HUD points
-    float sunVisibility;    // 0..1
-    float deltaTime;        // seconds, for the lens exposure response
     float damageFlash;      // 0..1
     BOOL cockpit;           // gauges are on the cockpit displays instead
     int secondary, secondaryCapacity;       // secondary weapon rounds left and carried
@@ -244,9 +241,6 @@ typedef struct {
 // World point to view points, origin bottom-left (the HUD's space). NO when
 // behind the camera.
 - (BOOL)projectPoint:(simd_float3)world to:(CGPoint *)out;
-// YES when opaque geometry lies on the segment. Additive effects, glass and
-// the dust don't count.
-- (BOOL)traceOpaqueFrom:(simd_float3)from to:(simd_float3)to;
 
 #pragma mark Cockpit (render thread)
 

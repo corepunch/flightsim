@@ -50,7 +50,7 @@ renderer as live gameplay. Older ribbon samples broaden and fade for two seconds
 after emission. The warm wake is deliberately faint and additive, so scenery
 remains visible through it.
 
-The sun's lens flare appears whenever the sun is in view, as in the game. Ships facing the camera are lit only when the sun is behind it; `cockpit-formation.json` is turned so that it is.
+Ships facing the camera are lit only when the sun is behind it; `cockpit-formation.json` is turned so that it is.
 
 Camera, geometry, timing and HUD layout are repeatable. SceneKit's exhaust
 particles can vary slightly between runs. Keep visual review manual; this tool
