@@ -40,10 +40,11 @@ text decodes, the wordmark glitches, scans sweep, panels are drawn by a beam),
 `"fade"` (the same entrances as plain fades) or `"none"`. The system Reduce
 Motion setting always turns it down to none.
 
-The theme's `"gunsight"` picks what the chase view aims with: `"stem"` (the
-default: a lit sight where the guns converge, on a dashed stem from the nose) or
-`"ringAndBead"` (a spoked metal ring ahead of the cowling and a bead beyond it,
-which line up when the aircraft flies straight). `colors.reticle` is its colour.
+The theme's `"gunsight"` picks what the chase view aims with: `"crosshair"` (the
+default: a crosshair far down the line of fire, at the centre of the screen when
+the ship flies straight) or `"ringAndBead"` (a spoked metal ring ahead of the
+cowling and a bead beyond it, which line up when the aircraft flies straight).
+`colors.reticle` is its colour.
 
 `Tools/validate_story.py` checks every game's levels and campaign;
 `Tools/validate_strings.py` checks every game's string catalogs.

@@ -111,13 +111,13 @@ UIGunsightStyle UIThemeGunsight(void) {
     static UIGunsightStyle style;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        NSString *name = JSONString(Theme(), @"gunsight") ?: @"stem";
+        NSString *name = JSONString(Theme(), @"gunsight") ?: @"crosshair";
         NSDictionary<NSString *, NSNumber *> *styles = @{
-            @"stem": @(UIGunsightStem), @"ringAndBead": @(UIGunsightRingAndBead),
+            @"crosshair": @(UIGunsightCrosshair), @"ringAndBead": @(UIGunsightRingAndBead),
         };
         NSNumber *value = styles[name];
-        if (!value) NSLog(@"UITheme: gunsight \"%@\" is not stem or ringAndBead; using stem", name);
-        style = value ? value.integerValue : UIGunsightStem;
+        if (!value) NSLog(@"UITheme: gunsight \"%@\" is not crosshair or ringAndBead; using crosshair", name);
+        style = value ? value.integerValue : UIGunsightCrosshair;
     });
     return style;
 }
