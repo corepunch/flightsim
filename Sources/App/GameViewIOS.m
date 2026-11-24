@@ -19,7 +19,9 @@
         _overlayView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         _overlayView.allowsTransparency = YES;
         _overlayView.backgroundColor = UIColor.clearColor;
-        _overlayView.asynchronous = NO;
+        // The overlay drives flight updates in its delegate. Synchronizing it
+        // with Core Animation makes those updates uneven during flight.
+        _overlayView.asynchronous = YES;
         _overlayView.userInteractionEnabled = NO; // GameView routes taps through Input.
         _overlayView.preferredFramesPerSecond = 60;
         _overlayView.paused = YES;
