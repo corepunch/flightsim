@@ -3,7 +3,7 @@
 
 typedef struct {
     simd_float4 sunDir, galaxyNormal, galaxyCenter, planetDir, planetAxis;
-    uint32_t seed, vertexCount, pad[2];
+    uint32_t seed, vertexCount, hdr, pad;
 } SkyParams;
 
 static const float kDustBox = 360.0f;
@@ -51,8 +51,9 @@ static simd_float3 SkyRandom(uint32_t index, uint32_t seed) {
     return material;
 }
 
-- (instancetype)initWithDevice:(id<MTLDevice>)device seed:(uint32_t)seed {
+- (instancetype)initWithDevice:(id<MTLDevice>)device seed:(uint32_t)seed hdr:(BOOL)hdr {
     if (!(self = [super init])) return nil;
+    _hdr = hdr;
     _sunDirection = simd_normalize(simd_make_float3(0.55f, 0.32f, -0.77f));
     _planetDirection = simd_normalize(simd_make_float3(-0.62f, -0.18f, -0.76f));
     _node = [SCNNode node];
@@ -104,6 +105,7 @@ static simd_float3 SkyRandom(uint32_t index, uint32_t seed) {
     params.planetAxis = simd_make_float4(simd_normalize(simd_make_float3(0.2f, 1.0f, 0.15f)), 0);
     params.seed = seed;
     params.vertexCount = count;
+    params.hdr = hdr;
     NSError *error = nil;
     id<MTLComputePipelineState> pipeline = [device newComputePipelineStateWithFunction:[library newFunctionWithName:@"colourSkyMesh"] error:&error];
     if (!pipeline) { NSLog(@"SpaceSky: mesh colours failed: %@", error); return self; }

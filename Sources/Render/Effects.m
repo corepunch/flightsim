@@ -141,6 +141,7 @@ static SCNGeometry *BoltStreak(CGFloat width, CGFloat length, simd_float3 tint) 
 - (instancetype)initWithScene:(SCNScene *)scene {
     if ((self = [super init])) {
         _scene = scene;
+        _fireRadiance = 1;
         // A near-white core line inside a wider, coloured glow.
         const simd_float3 cores[BOLT_STYLES] = { { 1.3f, 1.7f, 1.4f }, { 1.8f, 1.2f, 1.0f }, { 1.1f, 1.4f, 1.8f } };
         const simd_float3 glows[BOLT_STYLES] = { { 0.2f, 1.1f, 0.4f }, { 1.1f, 0.2f, 0.1f }, { 0.3f, 0.6f, 1.1f } };
@@ -458,8 +459,9 @@ static NSArray<NSNumber *> *Scaled(NSArray<NSNumber *> *values, float s) {
     billow.particleIntensity = 1;
     billow.imageSequenceColumnCount = billow.imageSequenceRowCount = 5;
     billow.imageSequenceAnimationMode = SCNParticleImageSequenceAnimationModeClamp;
-    // Color and coverage come only from the source frames, with no tint,
-    // intensity boost or additional opacity envelope over the animation.
+    // Color and coverage come only from the source frames, with no tint or
+    // additional opacity envelope over the animation; each explosion sets how
+    // bright they are drawn (fireRadiance).
     billow.imageSequenceFrameRate = 15;
     NSMutableDictionary *systems = [@{ @"flash" : flash, @"billow" : billow } mutableCopy];
 
@@ -555,6 +557,7 @@ static int FragmentCount(float scale) { return 8 + (int)lroundf(3 * fminf(scale,
         pocket.simdScale = simd_make_float3(size);
         SCNParticleSystem *billow = [systems[@"billow"] copy];
         billow.particleLifeSpan *= i ? 0.75 + frand() * 0.15 : 1;
+        billow.particleIntensity = _fireRadiance;
         billow.imageSequenceFrameRate = 25 / billow.particleLifeSpan;
         [pocket runAction:[SCNAction sequence:@[
             [SCNAction waitForDuration:i ? 0.055 + frand() * 0.09 : 0],

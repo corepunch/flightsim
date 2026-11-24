@@ -223,6 +223,12 @@ void ApplyHullRolloff(SCNMaterial *m);
 
 - (instancetype)initWithScene:(SCNScene *)scene;
 
+// How bright an explosion's fireball is drawn, in multiples of display white. Its
+// frames are painted for a display-ready frame (1); where the frame is post-processed
+// in scene-linear light the fire is several times white, so it blooms like the
+// sparks and flashes around it.
+@property (nonatomic) float fireRadiance;
+
 // Bolt prototype: a node whose children are a core and a glow streak along
 // +Y with their faces toward +Z. The renderer turns each bolt about its axis
 // to face the camera, so a shot reads as a long bolt from every angle but
@@ -321,11 +327,12 @@ void ApplyHullRolloff(SCNMaterial *m);
 // MARK: - PostProcess
 
 // The frame's post-processing as a SceneKit technique (Resources/Shaders/Post.metal): the
-// scene is drawn into a texture, its bright sky blooms into a glow and a wide veil, and
-// the final pass grades the frame. Set on anything that supports techniques.
+// scene is drawn into a texture, its bright parts bloom into a glow and a wide veil, and
+// the final pass composes the frame. Set on anything that supports techniques.
 typedef struct {
+    BOOL hdr;           // the scene is scene-linear light, brighter than white where it emits; mapped to the display here
     float bloom;        // share of blurred light added back; 0 draws none
-    float bloomKnee;    // display brightness where light starts to bloom
+    float bloomKnee;    // brightness where light starts to bloom
     float vignette;     // darkening at the corners, 0 to 1
     float grade;        // strength of the colour filter, 0 to 1
 } PostSettings;
@@ -341,9 +348,13 @@ typedef struct {
 // The sky and dust follow the camera without allocating sky textures.
 @interface SpaceSky : NSObject
 
-- (instancetype)initWithDevice:(id<MTLDevice>)device seed:(uint32_t)seed;
+// With `hdr` the sun and stars are written as scene-linear light, many times brighter
+// than white, for the post-process technique to bloom and map to the display; without
+// it the sky keeps everything inside the display range itself.
+- (instancetype)initWithDevice:(id<MTLDevice>)device seed:(uint32_t)seed hdr:(BOOL)hdr;
 
 @property (nonatomic, readonly) SCNNode *node;
+@property (nonatomic, readonly) BOOL hdr;
 @property (nonatomic, readonly) simd_float3 sunDirection;    // toward the sun
 @property (nonatomic, readonly) simd_float3 planetDirection;
 

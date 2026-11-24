@@ -1,7 +1,7 @@
 # Post-processing and look references
 
 What the frame does after the scene is drawn (`Sources/Render/Post.m`,
-`Resources/Shaders/Post.metal`), the standing trees it is drawn with
+`Resources/Shaders/Post.metal`), on landscapes and in space, the standing trees it is drawn with
 (`Resources/Shaders/Terrain.metal`, "Trees"), and what Project Aces published about
 the Ace Combat look the two are measured against. The target is Ace Combat 5's
 pastel, hazy frame and Ace Combat 7's sky light that bleeds into everything.
@@ -17,6 +17,75 @@ pastel, hazy frame and Ace Combat 7's sky light that bleeds into everything.
 
 Tuning: `r_post`, `r_bloom`, `r_vignette` ([CONSOLE.md](CONSOLE.md)); the knee and
 the filter's numbers are constants in `Post.metal` and `Post.m`.
+
+## Space: bloom in high dynamic range
+
+Space goes through the same technique with a half-float scene (`kHDR` in
+`Post.metal`, `r_spaceBloom`).
+
+| Piece | What it is | Where it comes from |
+|---|---|---|
+| Scene | Scene-linear light in `rgba16f`: lit hulls stay under 0.85, emitters are written above white (sun disc 40, brightest stars about 10, bolt cores 1.3 to 1.8, fire up to 6, the fireball's flipbook 1.7) | McCurdy: emissive has to sit far above lit surfaces for bloom to tell them apart |
+| Bloom | What exceeds white by its strongest channel, blurred at a quarter (glow) and a sixteenth (veil), added back at `r_spaceBloom` | The same reduced-buffer Gaussians as the landscape; the strongest channel rather than luma so a saturated red bolt blooms as readily as white fire |
+| Streak | The veil blurred sideways once more, tinted cool | Anamorphic streaks as a horizontal-only blur of the bloom buffer (KinoStreak) |
+| Tone curve | Identity up to 0.8, each channel rolled off above | Per-channel curves whiten hot cores and leave a coloured rim; identity below the shoulder as in Khronos PBR Neutral, so hulls and the nebula keep their look |
+| Stars | A star's colour survives into its bloom: the display curve runs on its strongest channel and the bright end is stretched back out above white | Star renderers map magnitude to radiance and let glare come from the bloom pyramid (Schneegans et al.) |
+
+Measured on an M1 at 3200x1800 in missions 3 and 6, GPU time a frame from the Metal
+HUD log (`MTL_HUD_ENABLED=1 MTL_HUD_LOG_ENABLED=1`), median of 1200 frames a run.
+Runs drift by a millisecond or more with what else the machine is doing, so only
+runs made back to back compare:
+
+| Pipeline | GPU time | Metal memory |
+|---|---|---|
+| Straight to the drawable (`r_post 0`) | 7.5 to 9.6 ms | 181 MiB |
+| SceneKit's HDR camera with its bloom | 10.6 to 12.0 ms | 258 to 265 MiB |
+| SceneKit's HDR camera, bloom off | 10.0 ms | 226 MiB |
+| This technique, half-float scene | 5.3 to 8.8 ms | 233 MiB |
+
+In each of six back-to-back pairs the technique took less GPU time than drawing
+straight to the drawable, by 0.5 to 2.7 ms; why SceneKit's direct path costs more on
+this machine was not established. SceneKit's HDR camera took 2.4 ms more than the
+direct path beside it. The technique's extra memory is the scene texture (8 bytes a
+pixel) and four small blur targets: about 14 MiB at the phone's 1864x860. Not
+measured on a phone.
+
+Sources read for it:
+
+- SceneKit: [SCNCamera](https://developer.apple.com/documentation/scenekit/scncamera)
+  (`wantsHDR`, bloom threshold 1, intensity 0 and blur radius 4 by default; exposure
+  adaptation on by default, which a mostly black frame does not want),
+  [SCNTechnique](https://developer.apple.com/documentation/scenekit/scntechnique)
+  (target formats are listed in `SCNTechnique.h`; `rgba16f` needs iOS 16 or macOS 13),
+  [WWDC 2016 session 609](https://nonstrict.eu/wwdcindex/wwdc2016/609/) (the HDR camera
+  renders "float per component"; effects add up in cost).
+- Bloom: Jimenez, *Next Generation Post Processing in Call of Duty: Advanced Warfare*,
+  SIGGRAPH 2014 ([post](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/));
+  [LearnOpenGL, Physically Based Bloom](https://learnopengl.com/Guest-Articles/2022/Phys.-Based-Bloom)
+  (no threshold, a 13-tap downsample and 3x3 tent upsample pyramid, bloom mixed in at
+  about 0.04, Karis average on the first downsample against fireflies);
+  Bjørge, *Bandwidth-Efficient Rendering*, SIGGRAPH 2015
+  ([notes](https://community.arm.com/cfs-file/__key/communityserver-blogs-components-weblogfiles/00-00-00-20-66/siggraph2015_2D00_mmg_2D00_marius_2D00_notes.pdf):
+  the dual filter, 5 taps down and 8 up, and why render target switches hurt tilers);
+  [Karis on tone mapping and averaging](http://graphicrants.blogspot.com/2013/12/tone-mapping.html);
+  [McCurdy, Emission and bloom](https://www.donmccurdy.com/2024/04/27/emission-and-bloom/).
+- Flares without a depth read: Chapman, *Screen Space Lens Flare*
+  ([2017](https://john-chapman.github.io/2017/11/05/pseudo-lens-flare.html)): ghosts and
+  a halo made by reading the bloom buffer mirrored through the centre, so occlusion is
+  automatic. Tried here and taken out: from a sixteenth-size veil the ghosts were
+  coloured blobs. [KinoStreak](https://github.com/keijiro/KinoStreak) for the streak.
+- Stars and backdrops: Schneegans et al., *Smaller than Pixels: Rendering Millions of
+  Stars in Real-Time*, Eurographics 2025 ([paper](https://elib.dlr.de/215930/1/egs20251029.pdf):
+  magnitude to luminance, splatting over 2x2 pixels against flicker, glare as a sum of
+  Gaussians); [godot-starlight](https://github.com/tiffany352/godot-starlight);
+  [Simon Schreibt on Homeworld 2's backgrounds](https://simonschreibt.de/gat/homeworld-2-backgrounds/)
+  (a vertex-coloured sphere, as the nebula here).
+- Tone curves: [Tone Mapping](https://64.github.io/tonemapping/) (Reinhard, Hable,
+  ACES fits), [Khronos PBR Neutral](https://github.com/KhronosGroup/ToneMapping/blob/main/PBR_Neutral/README.md).
+
+Not done, in order of promise: a pyramid bloom with the dual filter in place of the
+two Gaussians; Chapman's ghosts from the quarter-size glow with a threshold only the
+sun passes; stars splatted over 2x2 pixels.
 
 ## Ace Combat 7 (Project Aces, Unreal Engine 4.18, trueSKY)
 
