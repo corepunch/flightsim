@@ -1,5 +1,5 @@
 // Soft sky colours live on a small mesh. Stars and the planet are shaded at
-// screen resolution; no cubemap or full-screen floating-point target is needed.
+// screen resolution; no cubemap is needed.
 #include <metal_stdlib>
 using namespace metal;
 
@@ -21,7 +21,7 @@ struct SCNSceneBuffer {
 struct SkyParams {
     float4 sunDir, galaxyNormal, galaxyCenter, planetDir, planetAxis;
     uint seed, vertexCount;
-    uint2 pad;
+    uint hdr, pad;      // hdr: the frame is post-processed, so the sun and stars are written brighter than white
 };
 static uint3 pcg3d(uint3 v) {
     v = v * 1664525u + 1013904223u;
@@ -141,10 +141,13 @@ vertex SkyVarying skyVertex(SkyVertex in [[stage_in]],
 }
 
 static float3 displaySky(float3 col) {
-    // Keep the sky palette in the display range without camera postprocessing.
+    // Keep the sky palette in the display range; the post-process leaves it as it is.
     col = max(col, 0.0);
     return col / (1.0 + col);
 }
+
+// The sun's disc when the frame is post-processed, in multiples of display white.
+constant float kSunRadiance = 40.0;
 
 static float skyVignette(float2 pixel, constant SCNSceneBuffer &frame) {
     // Match the old camera's sky falloff without retaining its postprocess targets.
@@ -158,6 +161,7 @@ fragment half4 skyFragment(SkyVarying in [[stage_in]],
     float3 d = normalize(in.direction);
     float pix = max(length(dfdx(d)), length(dfdy(d)));
     float3 col = float3(in.colour);
+    float3 sun = 0.0;
     // The sun's disc and corona sit in the sky, so ships and the planet
     // occlude it like any other backdrop. sunDir.w is its angular radius.
     {
@@ -169,7 +173,8 @@ fragment half4 skyFragment(SkyVarying in [[stage_in]],
         float limb = 0.55 + 0.45 * sqrt(saturate(1.0 - (a / sr) * (a / sr)));
         float outside = max(a - sr, 0.0);
         float corona = exp(-outside / (sr * 0.35)) * 1.6 + exp(-outside / (sr * 2.5)) * 0.25 + exp(-a / (sr * 14.0)) * 0.03;
-        col += sunColour * (disc * limb * 9.0 + corona * (1.0 - disc));
+        col += sunColour * corona * (1.0 - disc);
+        sun = sunColour * disc * limb;
     }
 
     // Gas giant with atmosphere.
@@ -202,10 +207,15 @@ fragment half4 skyFragment(SkyVarying in [[stage_in]],
             float3 atm = float3(0.35, 0.55, 1.0) * rim * saturate(ndl + 0.35) * 0.9;
             float3 planet = surf * diff * 0.55 + atm;
             col = mix(col, planet, coverage);
+            sun *= 1.0 - coverage;
         }
     }
 
-    return half4(half3(displaySky(col * skyVignette(in.position.xy, scn_frame))), 1);
+    float vignette = skyVignette(in.position.xy, scn_frame);
+    // Post-processed, the disc is written as bright as it is, far above white, and
+    // blooms in proportion; the rest of the sky looks the same either way.
+    if (P.hdr != 0) return half4(half3(displaySky(col * vignette) + sun * (kSunRadiance * vignette)), 1);
+    return half4(half3(displaySky((col + sun * 9.0) * vignette)), 1);
 }
 
 struct StarVertex {
@@ -244,5 +254,12 @@ fragment half4 starFragment(StarVarying in [[stage_in]], float2 uv [[point_coord
     float spikes = (exp(-abs(r.x) * 2.5) * exp(-abs(r.y) / in.scale) + exp(-abs(r.y) * 2.5) * exp(-abs(r.x) / in.scale)) * 0.04 * extra;
     float edge = 1.0 - smoothstep(0.7, 1.0, length(uv - 0.5) * 2.0);
     float glow = (exp(-dot(r, r) * 0.5) + (halo + spikes) * edge) * skyVignette(in.position.xy, scn_frame);
-    return half4(half3(displaySky(float3(in.colour) * glow)), 1);
+    float3 c = float3(in.colour) * glow;
+    if (P.hdr == 0) return half4(half3(displaySky(c)), 1);
+    // Post-processed: the same curve on the strongest channel, which keeps the star's
+    // colour for its bloom, and then the bright end stretched back out above white.
+    // A faint star is left as it was; the brightest reach about ten times white.
+    float peak = max(c.r, max(c.g, c.b));
+    float y = peak / (1.0 + peak);
+    return half4(half3(c / ((1.0 + peak) * (1.0 - y * y * y))), 1);
 }

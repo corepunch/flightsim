@@ -115,7 +115,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     float _dt;
     SCNMaterial *_tracer;
     Cvar *_shadowSize, *_terrainGrid, *_terrainTrees, *_terrainMap;
-    Cvar *_post, *_bloom, *_vignette;
+    Cvar *_post, *_bloom, *_vignette, *_spaceBloom;
+    BOOL _postPending;      // the world was built on the load queue; the frame thread sets its technique
 }
 
 - (instancetype)initWithRenderer:(id<SCNSceneRenderer>)renderer size:(CGSize)size {
@@ -139,11 +140,13 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         _terrainMap = [Cvar get:@"r_terrainMap" defaultValue:TARGET_OS_IOS ? @"512" : @"1024" flags:CVAR_ARCHIVE
                           help:@"Texels per edge of each procedural ground map level, a power of two from 256 to 2048, 8 bytes a texel; the finest level is a metre per texel (applies on the next level)"];
         _post = [Cvar get:@"r_post" defaultValue:@"1" flags:CVAR_ARCHIVE
-                     help:@"Post-processes terrain levels: bloom from the bright sky and a colour filter (applies on the next level)"];
+                     help:@"Post-processes the frame: in space, high dynamic range with bloom; on terrain, bloom from the bright sky and a colour filter (applies on the next level)"];
         _bloom = [Cvar get:@"r_bloom" defaultValue:@"0.3" flags:CVAR_ARCHIVE
                       help:@"Bloom intensity in terrain levels, the share of blurred sky light added back; 0 draws none (applies on the next level)"];
         _vignette = [Cvar get:@"r_vignette" defaultValue:@"0.3" flags:CVAR_ARCHIVE
                          help:@"Darkening of the frame's corners in terrain levels, 0 to 1 (applies on the next level)"];
+        _spaceBloom = [Cvar get:@"r_spaceBloom" defaultValue:@"0.8" flags:CVAR_ARCHIVE
+                           help:@"Bloom intensity in space, the share of blurred light above white added back; 0 draws none (applies on the next level)"];
     }
     return self;
 }
@@ -186,13 +189,13 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
               _device.currentAllocatedSize / 1048576.0, (unsigned long)_models.count, (unsigned long)_entities.count);
     [RenderTextures printStats];
     if (_backdrop.terrain) NSLog(@"%@", _backdrop.terrain.stats);
-    NSLog(@"Render pipeline: HDR %@, colour pixel format %lu, camera bloom %.2f",
-          _cameraNode.camera.wantsHDR ? @"on" : @"off", (unsigned long)_renderer.colorPixelFormat,
-          _cameraNode.camera.bloomIntensity);
+    BOOL post = [(id)_renderer conformsToProtocol:@protocol(SCNTechniqueSupport)] && ((id<SCNTechniqueSupport>)_renderer).technique;
+    NSLog(@"Render pipeline: post-process %@, colour pixel format %lu",
+          !post ? @"off" : _backdrop ? @"on (display-ready scene)" : @"on (half-float scene)", (unsigned long)_renderer.colorPixelFormat);
 #if TARGET_OS_IOS
     if ([(id)_renderer isKindOfClass:SCNView.class]) {
         SCNView *view = (SCNView *)_renderer;
-        NSLog(@"Render target: %@ pixels, %.2f pixels/point, HDR off, mesh sky",
+        NSLog(@"Render target: %@ pixels, %.2f pixels/point, mesh sky",
               NSStringFromCGSize(((CAMetalLayer *)view.layer).drawableSize), view.contentScaleFactor);
     }
 #endif
@@ -258,7 +261,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     [SCNTransaction begin];
     [SCNTransaction setDisableActions:YES];
     _scene = [SCNScene scene];
-    [self applySky:[[SpaceSky alloc] initWithDevice:_device seed:1337] dust:nil];
+    [self applySky:[[SpaceSky alloc] initWithDevice:_device seed:1337 hdr:self.spaceHDR] dust:nil];
 
     SCNLight *sun = [SCNLight light];
     sun.type = SCNLightTypeDirectional;
@@ -285,6 +288,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     [_playerNode addChildNode:_cockpit.node];
     [SCNTransaction commit];
     [SCNTransaction flush];
+    _postPending = YES;
 }
 
 - (void)buildStudio {
@@ -311,6 +315,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     [self buildCommon:YES];
     [SCNTransaction commit];
     [SCNTransaction flush];
+    _postPending = YES;
 }
 
 - (void)applySky:(SpaceSky *)sky dust:(SCNNode *)dust {
@@ -328,7 +333,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 
 - (void)beginRegistration:(uint32_t)skySeed {
     _nextBackdrop = nil;
-    _nextSky = [[SpaceSky alloc] initWithDevice:_device seed:skySeed ?: 1337];
+    _nextSky = [[SpaceSky alloc] initWithDevice:_device seed:skySeed ?: 1337 hdr:self.spaceHDR];
     _nextDust = [_nextSky makeDustNode];
     @synchronized (_pending) { [_pending addObject:_nextSky.node]; [_pending addObject:_nextDust]; }
 }
@@ -452,19 +457,34 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
             [_world addChildNode:_backdrop.terrain.skyNode];
         }
     }
-    [self applyPost:_backdrop.terrain != nil];
+    _postPending = NO;
+    [self applyPost];
     _playerShown = NO;
 }
 
-// The post-process technique belongs to landscapes; space keeps its own sky tone.
-- (void)applyPost:(BOOL)on {
+// Whether a space sky made now should write scene-linear light: the post-process
+// technique has to be there to bring it back into the display range.
+- (BOOL)spaceHDR {
+    return _post.integer && [(id)_renderer conformsToProtocol:@protocol(SCNTechniqueSupport)];
+}
+
+// How the frame reaches the screen. Space is drawn in scene-linear light, and the
+// technique blooms what is brighter than white and maps the frame to the display;
+// a landscape is drawn display-ready, and the technique blooms and grades it. A level
+// around a model with a panorama sky is drawn straight to the screen.
+- (void)applyPost {
     if (![(id)_renderer conformsToProtocol:@protocol(SCNTechniqueSupport)]) return;
     id<SCNTechniqueSupport> target = (id<SCNTechniqueSupport>)_renderer;
+    BOOL space = !_backdrop && (_sky ? _sky.hdr : self.spaceHDR);
+    BOOL terrain = _backdrop.terrain && _post.integer;
+    PostSettings settings = {0};
+    _fx.fireRadiance = space ? 1.7f : 1;
+    if (space) settings = (PostSettings){ .hdr = YES, .bloom = MAX(0, _spaceBloom.value), .bloomKnee = 1.0f };
+    if (terrain) settings = (PostSettings){ .bloom = MAX(0, _bloom.value), .bloomKnee = 0.8f,
+                                             .vignette = MIN(1, MAX(0, _vignette.value)), .grade = 1 };
     SCNTechnique *technique = nil;
-    if (on && _post.integer) {
+    if (space || terrain) {
         NSURL *shaders = [[NSBundle.mainBundle URLForResource:@"Post" withExtension:@"metal" subdirectory:@"Shaders"] URLByDeletingLastPathComponent];
-        PostSettings settings = { .bloom = MAX(0, _bloom.value), .bloomKnee = 0.8f,
-                                  .vignette = MIN(1, MAX(0, _vignette.value)), .grade = 1 };
         technique = [PostProcess techniqueWithDevice:_device shaderDirectory:shaders settings:settings];
     }
     if (technique || target.technique) target.technique = technique;
@@ -480,7 +500,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
         _scene.fogStartDistance = 0;
         _scene.fogEndDistance = 0;
         [self applySky:_sky dust:nil];
-        [self applyPost:NO];
+        [self applyPost];
     }
     for (int i = 0; i < REF_MAX_BOLTS; i++) _boltNodes[i].hidden = YES;
     _playerNode.hidden = YES;
@@ -624,6 +644,10 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 }
 
 - (void)setCamera:(RefCamera)c {
+    if (_postPending) {
+        _postPending = NO;
+        [self applyPost];
+    }
     _cameraNode.simdPosition = c.origin;
     _cameraNode.simdOrientation = c.orientation;
     SCNCamera *cam = _cameraNode.camera;

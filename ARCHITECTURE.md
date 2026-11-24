@@ -157,14 +157,23 @@ The space sky uses a small vertex-coloured mesh for the nebula and galaxy.
 Their procedural colours are calculated once during loading; shader point
 sprites draw the stars, and a fragment shader draws the planet. The sky shader draws
 the sun’s disc and corona behind the ships.
-There are no sky textures or cubemap convolution passes. All cameras use LDR
-on every platform; HDR and camera bloom are disabled. The sky applies its own
-tone curve and edge falloff to retain the darker space palette.
+There are no sky textures or cubemap convolution passes. SceneKit's own HDR camera
+and camera bloom stay off on every platform: measured on an M1 at 3200x1800 they cost
+2.4 ms of GPU time a frame and 84 MiB of Metal memory
+([POST-REFERENCES.md](POST-REFERENCES.md)). The sky applies its own tone curve and
+edge falloff to retain the darker space palette.
 
-Terrain levels draw through a post-process technique (`PostProcess`,
+The frame goes through a post-process technique (`PostProcess`,
 `Resources/Shaders/Post.metal`): the scene pass renders into a texture, its light
 above a knee is blurred at a quarter and a sixteenth of the drawable, and the final
-quad pass adds the two back and grades the frame (lifted blacks, eased saturation,
+quad pass adds the two back. In space the scene texture is half-float and holds
+scene-linear light: the sun's disc, the bright stars, engine cores, bolts and fire are
+written several times brighter than white, bloom in proportion, and the final pass
+rolls the sum off into the display range, leaving everything below its shoulder (lit
+hulls, the nebula) as it would look drawn straight to the screen. A light that goes
+behind a hull stops blooming because the bloom is made from the frame; nothing reads
+the depth buffer back. On terrain levels the scene stays display-ready and the final
+pass also grades the frame (lifted blacks, eased saturation,
 warm highlights, a vignette, a trace of colour fringing), after Ace Combat's look
 ([POST-REFERENCES.md](POST-REFERENCES.md)). The terrain and tree shaders still tone
 map their own output, so the grade works on a display-ready frame. With a
