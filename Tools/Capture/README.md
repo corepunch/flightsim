@@ -55,3 +55,40 @@ Ships facing the camera are lit only when the sun is behind it; `cockpit-formati
 Camera, geometry, timing and HUD layout are repeatable. SceneKit's exhaust
 particles can vary slightly between runs. Keep visual review manual; this tool
 is not a screenshot test suite or a CI gate.
+
+## Stock SceneKit bloom trial (space)
+
+The optional `r_stockBloom` console variable is not saved and takes effect on the
+next level registration:
+
+| Mode | World camera |
+|---|---|
+| `0` (default) | Current shipping pipeline: HDR and bloom off |
+| `1` | Arcline camera: HDR on, exposure adaptation and motion blur off, bloom intensity 0.7, threshold 1.0, blur radius 12 |
+| `2` | Same HDR camera and fixed exposure as mode 1, but bloom off |
+
+Terrain, panorama and ship-studio cameras are outside the trial; their existing
+rendering is unchanged. The existing space shader still tone maps the background
+into the display range. A bright-looking part of that backdrop can therefore
+remain below the native bloom threshold. This comparison does not change sky
+intensity, add a glow shader, or modify the HUD or depth handling.
+
+On an Apple GPU, take all three images from the same seeded scene and camera:
+
+```sh
+app=build/KestrelFrontier.app/Contents/MacOS/KestrelFrontier
+for mode in 0 2 1; do
+  "$app" --render-scene Tools/Capture/torpedo-run.json \
+    "/tmp/flight-stock-bloom-$mode.png" 1280 590 +set r_stockBloom "$mode"
+done
+```
+
+Compare 0 vs 1 for the full visible and timing change, and 2 vs 1 to isolate
+bloom from switching to HDR. The snapshots are for visual comparison only:
+capture deliberately reads the rendered image, so its wall time is not game
+frame time. For timing, use the live game on one physical device at a fixed
+resolution and view, record a warmed-up 30-second interval per mode in a Metal
+System Trace, and compare median and 95th-percentile GPU frame times and missed
+presents. Repeat in alternating order at the same device thermal state. Keep
+capture off while measuring. Leave the trial off if it only looks faster because
+it misses frame work, or if it makes frame times or pacing worse.

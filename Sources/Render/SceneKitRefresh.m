@@ -115,7 +115,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
     float _dt;
     SCNMaterial *_tracer;
     Cvar *_shadowSize, *_terrainGrid, *_terrainTrees, *_terrainMap;
-    Cvar *_post, *_bloom, *_vignette;
+    Cvar *_post, *_bloom, *_vignette, *_stockBloom;
 }
 
 - (instancetype)initWithRenderer:(id<SCNSceneRenderer>)renderer size:(CGSize)size {
@@ -144,6 +144,8 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
                       help:@"Bloom intensity in terrain levels, the share of blurred sky light added back; 0 draws none (applies on the next level)"];
         _vignette = [Cvar get:@"r_vignette" defaultValue:@"0.3" flags:CVAR_ARCHIVE
                          help:@"Darkening of the frame's corners in terrain levels, 0 to 1 (applies on the next level)"];
+        _stockBloom = [Cvar get:@"r_stockBloom" defaultValue:@"0" flags:0
+                          help:@"Space camera trial on the next level: 0 off, 1 Arcline bloom, 2 HDR only"];
     }
     return self;
 }
@@ -192,7 +194,7 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 #if TARGET_OS_IOS
     if ([(id)_renderer isKindOfClass:SCNView.class]) {
         SCNView *view = (SCNView *)_renderer;
-        NSLog(@"Render target: %@ pixels, %.2f pixels/point, HDR off, mesh sky",
+        NSLog(@"Render target: %@ pixels, %.2f pixels/point, mesh sky",
               NSStringFromCGSize(((CAMetalLayer *)view.layer).drawableSize), view.contentScaleFactor);
     }
 #endif
@@ -335,10 +337,11 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
 
 - (void)registerEnvironment:(LevelEnvironment)environment {
     if (!environment.model.length && !environment.terrain) return;
+    // Landscape tone mapping does not inherit the previous space camera's trial.
     _nextBackdrop = [[WorldBackdrop alloc] initWithDefinition:environment device:_device
                                                         cells:(NSUInteger)MAX(0, _terrainGrid.integer)
                                                     treeCells:(NSUInteger)MAX(0, _terrainTrees.integer)
-                                                    mapTexels:(NSUInteger)MAX(0, _terrainMap.integer) hdr:_cameraNode.camera.wantsHDR];
+                                                    mapTexels:(NSUInteger)MAX(0, _terrainMap.integer) hdr:NO];
     @synchronized (_pending) {
         [_pending addObject:_nextBackdrop.node];
         if (_nextBackdrop.terrain) [_pending addObject:_nextBackdrop.terrain.skyNode];
@@ -452,8 +455,23 @@ typedef NS_ENUM(int, RefModelKind) { RefKindNone, RefKindShip, RefKindCapital, R
             [_world addChildNode:_backdrop.terrain.skyNode];
         }
     }
+    [self applyStockBloomTrial:_backdrop == nil];
     [self applyPost:_backdrop.terrain != nil];
     _playerShown = NO;
+}
+
+// Keep the trial out of terrain and panorama levels, and don't stack it with
+// the landscape technique. Compare HDR alone against the exact Arcline camera.
+- (void)applyStockBloomTrial:(BOOL)space {
+    NSInteger mode = space ? _stockBloom.integer : 0;
+    BOOL bloom = mode == 1;
+    SCNCamera *camera = _cameraNode.camera;
+    camera.wantsHDR = bloom || mode == 2;
+    camera.wantsExposureAdaptation = NO;
+    camera.motionBlurIntensity = 0;
+    camera.bloomThreshold = 1.0;
+    camera.bloomBlurRadius = 12.0;
+    camera.bloomIntensity = bloom ? 0.7 : 0.0;
 }
 
 // The post-process technique belongs to landscapes; space keeps its own sky tone.
