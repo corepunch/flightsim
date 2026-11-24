@@ -6,22 +6,28 @@ static SKTexture *SymbolTexture(NSString *name) {
     if (!cache) cache = [NSMutableDictionary dictionary];
     if (cache[name]) return cache[name];
     // SF Symbols supplies the exact letterforms used by Apple's virtual pad.
-    // Filled variants have a black foreground and a light circular background.
-    BOOL circle = [name hasSuffix:@".circle"] || [name hasSuffix:@".circle.fill"];
     NSString *filled = [name hasSuffix:@".circle"] ? [name stringByAppendingString:@".fill"] : name;
 #if TARGET_OS_IOS
     UIImageSymbolConfiguration *size = [UIImageSymbolConfiguration configurationWithPointSize:64 weight:UIImageSymbolWeightRegular];
-    UIImageSymbolConfiguration *palette = [UIImageSymbolConfiguration configurationWithPaletteColors:
-        circle ? @[UIColor.blackColor, [UIColor colorWithWhite:0.92 alpha:1]] : @[[UIColor colorWithWhite:0.92 alpha:1]]];
-    UIImageSymbolConfiguration *config = [size configurationByApplyingConfiguration:palette];
-    UIImage *image = [UIImage systemImageNamed:filled withConfiguration:config] ?: [UIImage systemImageNamed:name withConfiguration:config];
+    UIImage *source = [UIImage systemImageNamed:filled withConfiguration:size] ?: [UIImage systemImageNamed:name withConfiguration:size];
+    if (!source) return nil;
+    UIImage *white = [source imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:white.size];
+    UIImage *image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        [white drawAtPoint:CGPointZero];
+    }];
 #else
     NSImageSymbolConfiguration *size = [NSImageSymbolConfiguration configurationWithPointSize:64 weight:NSFontWeightRegular];
-    NSImageSymbolConfiguration *palette = [NSImageSymbolConfiguration configurationWithPaletteColors:
-        circle ? @[NSColor.blackColor, [NSColor colorWithWhite:0.92 alpha:1]] : @[[NSColor colorWithWhite:0.92 alpha:1]]];
     NSImage *source = [NSImage imageWithSystemSymbolName:filled accessibilityDescription:nil] ?:
         [NSImage imageWithSystemSymbolName:name accessibilityDescription:nil];
-    NSImage *image = [source imageWithSymbolConfiguration:[size configurationByApplyingConfiguration:palette]];
+    source = [source imageWithSymbolConfiguration:size];
+    if (!source) return nil;
+    NSImage *image = [NSImage imageWithSize:source.size flipped:NO drawingHandler:^BOOL(NSRect rect) {
+        [source drawInRect:rect];
+        [NSColor.whiteColor setFill];
+        NSRectFillUsingOperation(rect, NSCompositingOperationSourceIn);
+        return YES;
+    }];
 #endif
     if (!image) return nil;
     SKTexture *texture = [SKTexture textureWithImage:image];
@@ -31,14 +37,18 @@ static SKTexture *SymbolTexture(NSString *name) {
 }
 
 SKNode *UIInputGlyph(NSString *symbol, NSString *text, CGFloat size) {
+    SKColor *ink = UIColorWithOpacity(UIInk, 1);
     SKTexture *texture = SymbolTexture(symbol);
     if (texture) {
         SKSpriteNode *icon = [SKSpriteNode spriteNodeWithTexture:texture];
+        icon.color = ink;
+        icon.colorBlendFactor = 1;
+        icon.alpha = 0.94;
         CGFloat scale = size / MAX(texture.size.height, 1);
         icon.size = CGSizeMake(texture.size.width * scale, size);
         return icon;
     }
-    SKLabelNode *label = UIInterfaceLabel(size * 0.62, UIColorWithOpacity(UIInk, 1),
+    SKLabelNode *label = UIInterfaceLabel(size * 0.62, UIColorWithOpacity(UIInk, 0.94),
         SKLabelHorizontalAlignmentModeCenter, SKLabelVerticalAlignmentModeCenter);
     label.text = text.length ? text : symbol;
     return label;
@@ -88,8 +98,10 @@ SKNode *UIInputGlyph(NSString *symbol, NSString *text, CGFloat size) {
                 line.position = PointAdd(line.position, CGPointMake(labelWidth, 0));
             }
         }
-        CGFloat captionHeight = MAX(compact ? 30 : 34, CGRectGetHeight([caption calculateAccumulatedFrame]));
-        [row addArrangedNode:caption layoutBounds:CGRectMake(0, -captionHeight, labelWidth, captionHeight)];
+        CGRect captionBounds = [caption calculateAccumulatedFrame];
+        captionBounds.size.width = labelWidth;
+        [row addArrangedNode:caption layoutBounds:captionBounds];
+        [row setVerticalCenter:CGRectGetMidY(label.frame) forArrangedNode:caption];
         [row layout];
         [cells addObject:row];
     }

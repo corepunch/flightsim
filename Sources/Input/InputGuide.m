@@ -29,7 +29,7 @@ InputGuide *InputGuideMake(InputScheme scheme, NSString *name, InputPadSymbols p
         BOOL touch = scheme == InputSchemeTouch;
         add(InputHintSteer, @[p.leftStick ?: @"l.joystick"], nil);
         add(InputHintSpeed, touch ? @[p.rightStick ?: @"r.joystick"] :
-            @[p.leftShoulder ?: @"lb.rectangle.roundedbottom", p.rightShoulder ?: @"rb.rectangle.roundedbottom"], touch ? @"↑↓" : nil);
+            @[p.leftShoulder ?: @"lb.rectangle.roundedbottom", p.rightShoulder ?: @"rb.rectangle.roundedbottom"], nil);
         add(InputHintFire, @[touch ? @"x.circle" : (p.rightTrigger ?: @"rt.rectangle.roundedtop")], nil);
         add(InputHintSecondary, @[touch ? @"a.circle" : (p.b ?: @"b.circle")], nil);
         add(InputHintTarget, @[touch ? @"y.circle" : (p.y ?: @"y.circle")], nil);
