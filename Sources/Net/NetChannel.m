@@ -1,11 +1,9 @@
 #import "Net.h"
+#include "PacketCore/DatagramHeader.h"
 #import <QuartzCore/QuartzCore.h>
 
 #define FRAGMENT_SIZE 1200          // payload per datagram; safe under typical MTUs
 #define MAX_RELIABLE 4000           // one reliable block
-#define FRAGMENT_BIT (1u << 30)
-#define RELIABLE_BIT (1u << 31)
-#define SEQ_MASK 0x3FFFFFFFu
 
 @implementation NetChannel {
     uint32_t _reliableSequence;             // bit: toggles for each new reliable block
@@ -52,19 +50,18 @@
     }
 
     uint32_t seq = _outgoingSequence++;
-    uint32_t w2 = (_incomingSequence & SEQ_MASK) | (_incomingReliableSequence ? RELIABLE_BIT : 0);
+    uint32_t w2 = DatagramSequenceWord(_incomingSequence, _incomingReliableSequence, false);
     NSMutableData *payload = [NSMutableData data];
     if (sendReliable) {
         [payload appendData:_reliable];
         _lastReliableSequence = _outgoingSequence;
     }
     if (unreliable) [payload appendData:unreliable];
-    uint32_t w1 = (seq & SEQ_MASK) | (sendReliable ? RELIABLE_BIT : 0);
     _lastSent = CACurrentMediaTime();
 
     if (payload.length <= FRAGMENT_SIZE) {
         MsgWriter *w = [MsgWriter new];
-        [w u32:w1];
+        [w u32:DatagramSequenceWord(seq, sendReliable, false)];
         [w u32:w2];
         [w bytes:payload];
         [_transport send:w.data to:_address];
@@ -77,7 +74,7 @@
     for (NSUInteger start = 0;; start += FRAGMENT_SIZE) {
         NSUInteger len = MIN((NSUInteger)FRAGMENT_SIZE, payload.length - start);
         MsgWriter *w = [MsgWriter new];
-        [w u32:w1 | FRAGMENT_BIT];
+        [w u32:DatagramSequenceWord(seq, sendReliable, true)];
         [w u32:w2];
         [w u16:(uint16_t)start / FRAGMENT_SIZE];
         [w u16:(uint16_t)len];
@@ -93,11 +90,11 @@
     MsgReader *r = [[MsgReader alloc] initWithData:packet];
     uint32_t w1 = [r u32], w2 = [r u32];
     if (r.overflow) return nil;
-    uint32_t seq = w1 & SEQ_MASK, ack = w2 & SEQ_MASK;
-    BOOL reliableMessage = (w1 & RELIABLE_BIT) != 0, reliableAck = (w2 & RELIABLE_BIT) != 0;
+    DatagramHeader header = DatagramDecodeHeader(w1, w2);
+    uint32_t seq = header.sequence;
     NSData *payload;
 
-    if (w1 & FRAGMENT_BIT) {
+    if (header.fragmented) {
         uint16_t index = [r u16], len = [r u16];
         NSData *chunk = [r bytes:len];
         if (r.overflow) return nil;
@@ -116,24 +113,24 @@
 
     if (seq <= _incomingSequence) return nil;   // duplicate or out of order
     _droppedPackets += seq - _incomingSequence - 1;
-    if (reliableAck == _reliableSequence) _reliable.length = 0;   // our block arrived
+    if (header.reliableAcknowledged == _reliableSequence) _reliable.length = 0;   // our block arrived
     _incomingSequence = seq;
-    _incomingAcknowledged = ack;
-    _incomingReliableAcknowledged = reliableAck;
-    if (reliableMessage) _incomingReliableSequence ^= 1;
+    _incomingAcknowledged = header.acknowledged;
+    _incomingReliableAcknowledged = header.reliableAcknowledged;
+    if (header.reliable) _incomingReliableSequence ^= 1;
     _lastReceived = CACurrentMediaTime();
     return payload;
 }
 
 + (void)sendOutOfBand:(NSString *)text transport:(id<NetTransport>)t to:(NetAddress *)to {
     MsgWriter *w = [MsgWriter new];
-    [w u32:0xFFFFFFFF];
+    [w u32:DatagramOutOfBandMarker()];
     [w bytes:[text dataUsingEncoding:NSUTF8StringEncoding]];
     [t send:w.data to:to];
 }
 
 + (NSString *)outOfBandText:(NSData *)packet {
-    if (packet.length < 4 || *(const uint32_t *)packet.bytes != 0xFFFFFFFF) return nil;
+    if (packet.length < 4 || *(const uint32_t *)packet.bytes != DatagramOutOfBandMarker()) return nil;
     return [[NSString alloc] initWithData:[packet subdataWithRange:NSMakeRange(4, packet.length - 4)] encoding:NSUTF8StringEncoding];
 }
 

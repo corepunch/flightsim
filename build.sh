@@ -14,7 +14,12 @@ log() {
     printf '[build +%ss] %s\n' "$SECONDS" "$*"
 }
 
-APP=build/KestrelFrontier.app
+source Tools/flight-packs.sh
+GAME=${GAME:-KestrelFrontier}
+if ! is_flight_pack "Games/$GAME"; then
+    print -u2 "Not a flight pack: $GAME. For Arcline, run make racing-ios or make racing-simulator."
+    exit 1
+fi
 mkdir -p build
 zmodload zsh/system
 : >> build/.lock
@@ -23,7 +28,6 @@ if ! zsystem flock -t 0 -f build_lock build/.lock 2>/dev/null; then
     zsystem flock -f build_lock build/.lock
 fi
 
-GAME=${GAME:-KestrelFrontier}
 APP=build/$GAME.app
 jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null) || jobs=1
 platform=

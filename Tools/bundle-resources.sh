@@ -3,6 +3,26 @@
 set -e
 destination=${1:?Expected a bundle resource directory}
 working_dir=${2:?Expected a build directory}
+source Tools/flight-packs.sh
+# Resolve flight packs before writing to the application bundle.
+games=()
+if [[ -n ${GAMES:-} ]]; then
+    games=(${=GAMES})
+else
+    for candidate in Games/*(N/); do
+        if is_flight_pack "$candidate"; then games+=("${candidate:t}"); fi
+    done
+fi
+# A game also needs the games it builds on (game.json "base").
+for (( i = 1; i <= $#games; i++ )); do
+    if ! is_flight_pack "Games/$games[i]"; then
+        print -u2 "Not a flight pack: $games[i]. See Games/README.md for standalone targets."
+        exit 1
+    fi
+    base=$(plutil -extract base raw -o - "Games/$games[i]/game.json" 2>/dev/null || true)
+    if [[ -n $base ]] && (( ! ${games[(Ie)$base]} )); then games+=($base); fi
+done
+
 baker=$working_dir/tools/BakeModels
 cache=$working_dir/ModelCache
 
@@ -32,14 +52,6 @@ for localized in Resources/Localizations/*.lproj(N/); do
 done
 cp -p CREDITS.md "$destination/"
 
-# Each game's folder, as Games/<name>/ (Sources/Shared/Shared.h): its data,
-# with models baked to .scn. GAMES limits which games ship (the iOS app has one).
-games=(${=GAMES:-${(@)$(print -l Games/*/(N:t))}})
-# A game also needs the games it builds on (game.json "base").
-for (( i = 1; i <= $#games; i++ )); do
-    base=$(plutil -extract base raw -o - "Games/$games[i]/game.json" 2>/dev/null || true)
-    if [[ -n $base && -d Games/$base ]] && (( ! ${games[(Ie)$base]} )); then games+=($base); fi
-done
 mkdir -p "$destination/Games"
 for existing in "$destination"/Games/*(N/); do
     if (( ! ${games[(Ie)${existing:t}]} )); then rm -rf -- "$existing"; fi
