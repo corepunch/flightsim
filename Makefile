@@ -94,6 +94,14 @@ build/tools/TerrainPreview: $(TERRAIN_PREVIEW_SOURCES) Sources/Render/Render.h S
 		-framework Cocoa -framework SceneKit -framework SpriteKit -framework Metal -framework QuartzCore -o "$@"
 
 
+# Application bundles for local testing; neither target signs for distribution.
+.PHONY: macos ios-simulator ios-device
+macos:
+	@./build.sh
+
+ios-simulator ios-device:
+	@./build.sh "$@"
+
 .PHONY: iphone ipad ios-devices
 iphone ipad:
 	@./build.sh "$@"

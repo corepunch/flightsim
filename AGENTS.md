@@ -8,9 +8,10 @@ modules and how a frame runs; this file covers building, checking and the house 
 macOS with Xcode's command-line tools. Everything builds from the shell:
 
 ```sh
-./build.sh                      # macOS app: build/KestrelFrontier.app (engine + every game module)
-./build.sh ios-simulator        # iOS simulator app under build/iOS/
-GAME=EmberReach ./build.sh      # another default game
+make macos                      # macOS app: build/KestrelFrontier.app (engine + every game module)
+make ios-simulator              # iOS simulator app under build/iOS/
+make macos GAME=EmberReach      # another default game
+make racing-simulator           # unsigned iOS simulator build of Arcline
 make -j8                        # just compile and link the native targets (faster while iterating)
 ```
 
@@ -19,9 +20,10 @@ status: "No rule to make target …" contains no "error". After files move, stal
 dependency files in `build/Native` can name the old paths; delete the `.d` files
 that mention them (or all of `build/Native`).
 
-`KestrelFrontier.xcodeproj` is generated. After adding, moving or removing source
-files run `python3 Tools/Xcode/generate.py`; never edit `project.pbxproj` by hand.
-The Makefile picks up `Sources/*/*.m` and `Games/*/Game/*.m` by wildcard.
+The build uses Make and Apple SDK command-line tools, not an IDE project.
+The flight Makefile picks up `Sources/*/*.m` and `Games/*/Game/*.m` by wildcard.
+Arcline discovers Swift sources under `Games/Racing/Sources/Racing/`.
+Build and CI targets never upload or submit an app; see [PUBLISHING.md](PUBLISHING.md).
 
 ## Check
 
@@ -171,5 +173,5 @@ changed and why. Commit only when asked.
 | [CREDITS.md](CREDITS.md) | Third-party assets and their licences |
 | [TERRAIN-REFERENCES.md](TERRAIN-REFERENCES.md) | Terrain papers and what shipped flight games published |
 | [POST-REFERENCES.md](POST-REFERENCES.md) | The post-process and tree look, what Ace Combat published about theirs, and the bloom in space with its measurements |
-| [Tools/IOS.md](Tools/IOS.md) | Xcode project, iOS builds and devices |
+| [Tools/IOS.md](Tools/IOS.md) | Make builds, simulator and local devices |
 | [Tools/NETWORK.md](Tools/NETWORK.md) | LAN configuration and manual device testing |

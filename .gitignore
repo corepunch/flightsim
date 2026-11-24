@@ -4,7 +4,7 @@ fx/
 *.blend1
 Games/*/Art/kit/*.blend
 
-# Xcode user settings (the generated project and shared scheme are tracked).
+# Ignore any local IDE settings; build targets do not use an IDE project.
 xcuserdata/
 *.xcuserstate
 

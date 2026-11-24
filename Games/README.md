@@ -3,7 +3,7 @@
 A flight pack declares a `Game/` module or a `game.json` manifest and runs
 on the engine in `Sources/`. Standalone game targets also live here but
 are not packed into the flight app. `fs_game <name>` picks the flight pack;
-the default is the app's `FSDefaultGame` (build with `GAME=<name> ./build.sh`).
+the default is the app's `FSDefaultGame` (build with `make macos GAME=<name>`).
 
 ```
 Games/<name>/
@@ -64,7 +64,7 @@ dialogue, tactical captions, intel, and mission results.
 
 `DawnPatrol` is an atmospheric-flight game using the Kestrel Frontier module and
 its own campaign, aircraft, landscape, theme, art, sound and string catalogs.
-Build with `GAME=DawnPatrol ./build.sh` to produce `build/DawnPatrol.app`. The console can also select it at startup:
+Build with `make macos GAME=DawnPatrol` to produce `build/DawnPatrol.app`. The console can also select it at startup:
 `+set fs_game DawnPatrol +map 01-morning-patrol`.
 
 The first sortie starts airborne in an S.E.5a with Bennett. Fly Saint-Martin,

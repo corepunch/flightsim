@@ -2,15 +2,15 @@
 
 The shared iPhone/iPad and Mac listing is Kestrel Frontier, App Store ID `6831063163`, bundle
 identifier `com.corepunch.spacefight`, development team `BM2R8F5YHC`. This setup
-uses one app record for both platforms. The Fastlane lanes below target iOS;
-archive and distribute the native Mac target through Xcode using the same bundle
-identifier, with macOS added to that app record in App Store Connect.
-The Mac target signs with `Resources/KestrelFrontier-macOS.entitlements`, enabling
-App Sandbox and the incoming/outgoing connections used by multiplayer.
+uses one app record for both platforms. The local Fastlane lanes below target iOS
+and run only on explicit operator invocation. [PUBLISHING.md](../PUBLISHING.md)
+defines the separation from Make and CI. For a manually signed Mac distribution
+bundle, preserve the separate `Resources/KestrelFrontier-macOS.entitlements`
+file, including App Sandbox and the connections used by multiplayer.
 
 ## Game Center
 
-Both Xcode app targets sign with the Game Center entitlement. The universal
+The checked-in distribution entitlements include Game Center for both platforms. The universal
 bundle ID has Game Center enabled in the developer account. The classic
 **Pilot Score** leaderboard in App Store Connect uses
 `com.corepunch.spacefight.pilot_score`, descending integer scores and Best Score.
@@ -237,11 +237,10 @@ and its exact ImageGen prompt. The search image is cropped from real gameplay.
 
 The upload command takes an already signed App Store IPA, checks its bundle ID
 and marketing version, and sends it to TestFlight without inviting external
-testers. Use Xcode's existing `KestrelFrontier-iOS` scheme to archive and export
-the IPA. This setup does not build an archive automatically. Align the source
-plists with the store version in
-`fastlane/version.txt` before creating a new distribution build, and choose an
-unused build number. Signing uses your existing Xcode configuration.
+testers. Supply a separately prepared and signed distribution IPA. The test
+Make targets produce local test bundles, not signed distribution archives.
+Align the source plists with the store version in `fastlane/version.txt` and
+choose an unused build number before manual distribution.
 Both Info.plists declare `ITSAppUsesNonExemptEncryption` false (the app makes no
 encrypted connections; it only hashes asset files), so uploaded builds skip the
 export compliance questions. Revisit it if the app ever adds encryption.

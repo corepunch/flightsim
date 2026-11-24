@@ -1,51 +1,30 @@
-# Xcode builds: iOS and macOS
+# Local builds and testing on Apple platforms
 
-Open `KestrelFrontier.xcodeproj`. Choose the shared `KestrelFrontier-iOS`
-scheme for iPhone and iPad, or `KestrelFrontier-macOS` for a native Mac build.
-Both schemes support Debug, Release, and Archive. The Mac target builds and
-embeds the game module (`KestrelFrontier.dylib`, from `Games/KestrelFrontier/Game`) automatically;
-the iOS target compiles that game into the app and ships only its `Games/` folder.
-
-For App Store listing text, screenshots, build uploads and review submission
-from the command line, see [APPSTORE.md](APPSTORE.md).
-
-For iOS, select an iPhone or iPad simulator to build and run. For a physical device,
-choose your development team under Signing & Capabilities. Xcode compiles
-the game directly and bakes its SceneKit models in DerivedData. Xcode-built
-apps are named `KestrelFrontier.app` and display as **Kestrel Frontier**.
-
-Regenerate after adding or removing source files:
+On a Mac with the Apple SDK command-line tools installed, run from the
+repository root:
 
 ```sh
-sh Tools/Xcode/generate.sh
+make macos
+make ios-simulator
+make ios-device
+make racing-simulator
+make racing-ios
 ```
 
-The generator uses an installed Python 3.9+ and works offline. Set
-`FLIGHTSIM_PYTHON` to an installed interpreter if needed. The generator keeps
-the shared scheme and existing signing settings. Pass `--team` or
-`--bundle-id` to set those explicitly.
+These targets only build local apps. Neither signing for distribution nor
+uploads run as part of a build or CI. See [PUBLISHING.md](../PUBLISHING.md) for
+the output paths and manual publishing boundary.
 
-## Command line
-
-Build either shared Xcode scheme without device signing:
+With an iOS Simulator already booted:
 
 ```sh
-xcodebuild -project KestrelFrontier.xcodeproj -scheme KestrelFrontier-macOS \
-    -configuration Debug -destination 'platform=macOS' build
-xcodebuild -project KestrelFrontier.xcodeproj -scheme KestrelFrontier-iOS \
-    -configuration Debug -destination 'generic/platform=iOS Simulator' build
-```
-
-The existing `build.sh` and Make targets below retain their legacy output paths.
-
-On a Mac with Xcode and an installed iOS Simulator runtime:
-
-```sh
-./build.sh ios-simulator
 app="build/iOS/iphonesimulator-$(uname -m)/KestrelFrontier.app"
 xcrun simctl install booted "$app"
-xcrun simctl launch booted com.igor.spacefight
+xcrun simctl launch booted com.corepunch.spacefight
 ```
+
+Arcline uses `Games/Racing/build/ios/iphonesimulator-$(uname -m)/Racing.app`
+and simulator bundle identifier `com.corepunch.arcline`.
 
 For a paired physical device with Developer Mode enabled:
 
@@ -54,6 +33,8 @@ make iphone
 make ipad
 make ios-devices
 make ipad DEVICE="My iPad"
+make racing-iphone
+make racing-ipad DEVICE="My iPad"
 ```
 
 The deploy targets build, sign, install, and launch the game on the requested
@@ -62,11 +43,11 @@ available. Set `DEVICE` to a name, hardware UDID, or CoreDevice identifier to
 choose explicitly. Unlock the device before launch.
 
 Signing uses a local Apple Development identity and a development provisioning
-profile covering both the device and `com.igor.spacefight`. Use
-`PROFILE=/path/to/profile.mobileprovision` or `TEAM=<team-id>` to select signing
-credentials, or set `BUNDLE_ID` to the identifier covered by your profile.
-`./build.sh ios-device` still creates the unsigned bundle at
-`build/iOS/iphoneos-arm64/KestrelFrontier.app`. Command-line builds share a model bake cache.
+profile covering the device and the chosen app's bundle identifier. Use
+`PROFILE=/path/to/profile.mobileprovision` or `TEAM=<team-id>` to select a local
+profile, or explicitly set `BUNDLE_ID` for a development install with a
+different identifier. `make ios-device` and `make racing-ios` only create
+unsigned device bundles. Flight builds share a model bake cache.
 
 The game runs in either landscape orientation. The flight controls are centered
 vertically on both iPhone and iPad.
@@ -88,11 +69,11 @@ and X switches the camera. Menu or Select pauses. Use the D-pad and A in menus.
 Disconnecting brings the on-screen controller back at the current throttle.
 
 Console commands and cvars (see `CONSOLE.md`) go after the bundle id as
-launch arguments, or in the scheme's arguments in Xcode. To verify the touch
+launch arguments. To verify the touch
 layout in Simulator even when it passes through a Mac controller:
 
 ```sh
-xcrun simctl launch booted com.igor.spacefight +set in_touchOnly 1
+xcrun simctl launch booted com.corepunch.spacefight +set in_touchOnly 1
 ```
 
 For a quick flight check, add `+set net_port 0 +map 1`.
