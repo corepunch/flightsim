@@ -153,10 +153,11 @@ static simd_float3 SkyRandom(uint32_t index, uint32_t seed) {
         simd_float3 cool = simd_make_float3(1, 0.62f, 0.38f), mid = simd_make_float3(1, 0.94f, 0.88f), hot = simd_make_float3(0.66f, 0.78f, 1);
         simd_float3 colour = t < 0.55f ? simd_mix(cool, mid, t / 0.55f) : simd_mix(mid, hot, (t - 0.55f) / 0.45f);
         float brightness = (0.015f + powf(random.y, 14)) * (i < 5600 ? 7 : i < 37200 ? 1.6f : 0.6f);
-        // A few dozen standouts, like the brightest named stars, so the sky
-        // has landmarks beyond the sun.
-        if (i < 48) brightness = 9 + 22 * random.y * random.y;
-        simd_float4 value = simd_make_float4(colour, brightness);
+        // Mark the landmark stars explicitly. The signed intensity keeps the
+        // glow flag in the existing half4 attribute without widening the buffer.
+        BOOL landmark = i < 48;
+        if (landmark) brightness = 9 + 22 * random.y * random.y;
+        simd_float4 value = simd_make_float4(colour, landmark ? -brightness : brightness);
         starValues[i] = __builtin_convertvector(value, simd_half4);
     }
     SCNGeometrySource *starSource = [SCNGeometrySource geometrySourceWithBuffer:stars vertexFormat:MTLVertexFormatFloat3

@@ -179,14 +179,16 @@ fragment half4 skyFragment(SkyVarying in [[stage_in]],
     float s = sqrt(max(1.0 - b * b, 0.0));             // sin of angle from planet centre
     if (b > 0.0) {
         float3 sun = P.sunDir.xyz;
-        // Halo: scattering in the outer atmosphere, brighter toward the sun.
-        float h = (s - pr) / pr;
-        if (h > 0.0) {
-            float3 hn = normalize(d * b - pc);
-            float lit = saturate(dot(hn, sun) * 0.9 + 0.25);
-            col += float3(0.35, 0.55, 1.0) * exp(-h * 22.0) * lit * 0.6;
-        }
         float coverage = smoothstep(-pix, pix, pr - s);
+        // Only the sunward atmosphere scatters a little light beyond the limb.
+        // Fade to zero before the halo can wash out the surrounding sky.
+        float h = (s - pr) / pr;
+        if (coverage < 1.0 && h < 0.12) {
+            float3 hn = normalize(d * b - pc);
+            float lit = smoothstep(-0.25, 0.75, dot(hn, sun));
+            float edge = 1.0 - smoothstep(0.04, 0.12, h);
+            col += float3(0.35, 0.55, 1.0) * exp(-max(h, 0.0) * 26.0) * edge * lit * 0.24;
+        }
         if (coverage > 0.0) {
             float disc = max(b * b - (1.0 - pr * pr), 0.0);
             float3 hit = d * (b - sqrt(disc));
@@ -216,9 +218,11 @@ struct StarVertex {
 struct StarVarying {
     float4 position [[position]];
     float size [[point_size]];
-    float scale;        // sprite size over a faint star's; bright stars get room for a halo
+    float scale [[flat]];        // only landmark stars get a larger sprite
+    float clipPlanet [[flat]];
     half3 colour;
 };
+
 vertex StarVarying starVertex(StarVertex in [[stage_in]],
                               constant SCNSceneBuffer &scn_frame [[buffer(0)]],
                               constant SkyParams &P [[buffer(2)]]) {
@@ -226,24 +230,44 @@ vertex StarVarying starVertex(StarVertex in [[stage_in]],
     float4 view = scn_frame.viewTransform * float4(in.position, 0);
     out.position = scn_frame.projectionTransform * view;
     out.position.z = out.position.w;
-    // Fixed angular radius keeps stars sharp independently of sky mesh density.
-    float brightness = in.colour.a;
-    out.scale = clamp(sqrt(brightness * 0.5), 1.0, 4.0);
-    out.size = max(1.0, 0.00092 * 3.0 * scn_frame.projectionTransform[1][1] * scn_frame.viewportSize.y) * out.scale;
-    if (dot(in.position, P.planetDir.xyz) > cos(P.planetDir.w)) brightness = 0;
+    // Core size stays fixed; ordinary stars never acquire a halo from brightness.
+    float brightness = abs(in.colour.a);
+    out.scale = in.colour.a < 0.0 ? 3.2 : 1.0;
+    float focalPixels = scn_frame.projectionTransform[1][1] * scn_frame.viewportSize.y;
+    out.size = max(1.0, 0.00092 * 3.0 * focalPixels) * out.scale;
+
+    // Test the silhouette per fragment only where a sprite could straddle it.
+    // For square pixels, sqrt(2) * point size / focalPixels bounds how far
+    // the normalized ray can move from the point center over its square.
+    float side = dot(in.position, P.planetDir.xyz) - cos(P.planetDir.w);
+    float bound = 1.42 * out.size / max(0.001, focalPixels);
+    out.clipPlanet = abs(side) <= bound ? 1.0 : 0.0;
+    if (side > bound) {
+        out.size = 1.0;
+        brightness = 0.0;
+    }
     out.colour = half3(in.colour.rgb * brightness);
     return out;
 }
+
 fragment half4 starFragment(StarVarying in [[stage_in]], float2 uv [[point_coord]],
                             constant SCNSceneBuffer &scn_frame [[buffer(0)]],
                             constant SkyParams &P [[buffer(2)]]) {
-    // r is measured in a faint star's core widths, so every core stays sharp;
-    // the extra sprite area of a bright star holds a soft halo and faint spikes.
-    float2 r = (uv - 0.5) * 6 * in.scale;
-    float extra = in.scale - 1.0;
-    float halo = exp(-dot(r, r) / (2.0 * in.scale * in.scale)) * 0.06 * extra;
-    float spikes = (exp(-abs(r.x) * 2.5) * exp(-abs(r.y) / in.scale) + exp(-abs(r.y) * 2.5) * exp(-abs(r.x) / in.scale)) * 0.04 * extra;
-    float edge = 1.0 - smoothstep(0.7, 1.0, length(uv - 0.5) * 2.0);
-    float glow = (exp(-dot(r, r) * 0.5) + (halo + spikes) * edge) * skyVignette(in.position.xy, scn_frame);
+    if (in.clipPlanet > 0.0) {
+        float2 ndc = (in.position.xy - scn_frame.viewportSize.zw) / scn_frame.viewportSize.xy * 2.0 - 1.0;
+        ndc.y = -ndc.y;
+        float3 view = (scn_frame.inverseProjectionTransform * float4(ndc, 1, 1)).xyz;
+        float3 ray = normalize((scn_frame.inverseViewTransform * float4(view, 0)).xyz);
+        if (dot(ray, P.planetDir.xyz) > cos(P.planetDir.w)) discard_fragment();
+    }
+
+    float2 p = (uv - 0.5) * 2.0;
+    float rr = dot(p, p);
+    float glow = exp(-4.5 * rr * in.scale * in.scale);
+    if (in.scale > 1.0) {
+        // A bounded, soft shoulder rather than diffraction spikes or camera bloom.
+        glow += 0.052 * exp(-5.0 * rr) * (1.0 - smoothstep(0.45, 1.0, rr));
+    }
+    glow *= skyVignette(in.position.xy, scn_frame);
     return half4(half3(displaySky(float3(in.colour) * glow)), 1);
 }
