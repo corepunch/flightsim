@@ -14,7 +14,7 @@ checked-in IDE projects or generation steps, and no build target uploads anythin
 | App Store package | Command | Output |
 | --- | --- | --- |
 | FlightSim, iOS | `make archive-ios` | `build/Archives/KestrelFrontier-ios-<version>-<build>/KestrelFrontier.ipa` |
-| FlightSim, macOS (universal) | `make archive-macos` | `build/Archives/KestrelFrontier-macos-<version>-<build>/KestrelFrontier.pkg` |
+| FlightSim, macOS (Apple silicon) | `make archive-macos` | `build/Archives/KestrelFrontier-macos-<version>-<build>/KestrelFrontier.pkg` |
 | Arcline, iOS | `make racing-archive` | `build/Archives/Racing-ios-<version>-<build>/Racing.ipa` |
 
 The default `make all` compiles and links the native flight targets. GitHub CI

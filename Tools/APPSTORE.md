@@ -256,7 +256,7 @@ make archive-ios      # build/Archives/KestrelFrontier-ios-<version>-<build>/Kes
 make archive-macos    # build/Archives/KestrelFrontier-macos-<version>-<build>/KestrelFrontier.pkg
 ```
 
-`Tools/archive.sh` builds the release app (the Mac app universal, arm64 and x86_64),
+`Tools/archive.sh` builds the release app (the Mac app for Apple silicon only),
 keeps its dSYMs beside the package, strips the binaries and signs with
 `Tools/sign-distribution.py`: the Apple Distribution identity in the keychain, the
 installed App Store profile for the bundle ID (`PROFILE=path` chooses one), and the

@@ -2,11 +2,10 @@
 .DEFAULT_GOAL := all
 .DELETE_ON_ERROR:
 
-NATIVE ?= build/Native
+NATIVE := build/Native
 TOOLCHAIN := $(NATIVE)/toolchain
-# ARCH_FLAGS (for example -arch x86_64) builds one other architecture into its own NATIVE tree.
-ARCH_FLAGS ?=
-COMMON_FLAGS := -fobjc-arc -O2 -g -Wall -Wno-unused-function -mmacosx-version-min=13.0 $(ARCH_FLAGS)
+# The Mac app ships for Apple silicon only.
+COMMON_FLAGS := -arch arm64 -fobjc-arc -O2 -g -Wall -Wno-unused-function -mmacosx-version-min=13.0
 SHARED := $(wildcard Sources/Shared/*.m Sources/Shared/*.c)
 ENGINE_DIRS := $(filter-out Sources/Shared/,$(wildcard Sources/*/))
 # Sources/Mission is the engine's mission runtime for game modules: it
@@ -110,18 +109,6 @@ iphone ipad:
 
 ios-devices:
 	@xcrun devicectl list devices --timeout 15
-
-# The Mac app ships for Apple silicon and Intel. Each architecture builds in its own
-# tree; lipo joins the executable and every game module into build/Native-universal.
-MAC_ARCHS := arm64 x86_64
-UNIVERSAL := build/Native-universal
-.PHONY: universal
-universal:
-	@for arch in $(MAC_ARCHS); do $(MAKE) all NATIVE=build/Native-$$arch ARCH_FLAGS="-arch $$arch" || exit 1; done
-	@mkdir -p $(UNIVERSAL)
-	@for product in KestrelFrontier $(addsuffix .dylib,$(GAMES)); do \
-		lipo -create $(foreach arch,$(MAC_ARCHS),build/Native-$(arch)/$$product) -output $(UNIVERSAL)/$$product || exit 1; \
-	done
 
 # Signed App Store packages (Tools/archive.sh): an .ipa or a Mac .pkg ready for
 # `asc builds upload`, with the app's dSYMs, under build/Archives/. Nothing is uploaded.

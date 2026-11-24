@@ -2,7 +2,7 @@
 # Builds a signed App Store package. Usage: Tools/archive.sh ios|macos|racing-ios
 #
 # ios         build/Archives/<app>-ios-<version>-<build>/<app>.ipa
-# macos       build/Archives/<app>-macos-<version>-<build>/<app>.pkg (universal)
+# macos       build/Archives/<app>-macos-<version>-<build>/<app>.pkg (Apple silicon)
 # racing-ios  build/Archives/Racing-ios-<version>-<build>/Racing.ipa (Arcline)
 #
 # Each folder also holds the signed .app and its dSYMs. The version and build come
@@ -23,7 +23,7 @@ entitlements=()
 case $product in
     ios)        platform=ios; ./build.sh ios-device; app=build/iOS/iphoneos-arm64/KestrelFrontier.app
                 entitlements=(Resources/KestrelFrontier-iOS.entitlements) ;;
-    macos)      platform=macos; ./build.sh macos-universal; app=build/${GAME:-KestrelFrontier}.app
+    macos)      platform=macos; ./build.sh; app=build/${GAME:-KestrelFrontier}.app
                 entitlements=(Resources/KestrelFrontier-macOS.entitlements) ;;
     racing-ios) platform=ios; make -C Games/Racing ios-build; app=Games/Racing/build/ios/iphoneos-arm64/Racing.app ;;
     *)          print -u2 "Usage: Tools/archive.sh ios|macos|racing-ios"; exit 2 ;;

@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds KestrelFrontier.app. Usage: ./build.sh [run|macos-universal|ios-simulator|ios-device|iphone|ipad]
+# Builds KestrelFrontier.app. Usage: ./build.sh [run|ios-simulator|ios-device|iphone|ipad]
 #
 # Sources/Shared       protocol, flight model, file system and data tables (engine and game)
 # Sources/<module>     the engine: server, client, renderer, UI and the app itself
@@ -29,7 +29,6 @@ if ! zsystem flock -t 0 -f build_lock build/.lock 2>/dev/null; then
 fi
 
 APP=build/$GAME.app
-native=build/Native
 jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null) || jobs=1
 platform=
 case "$1" in
@@ -42,11 +41,6 @@ if [[ -n $platform ]]; then
     log "Building for $platform ($arch)"
     make -j "$jobs" ios IOS_PLATFORM="$platform" GAME="$GAME"
     export GAMES=$GAME
-elif [[ $1 == macos-universal ]]; then
-    # Distribution builds run on Apple silicon and Intel Macs alike.
-    native=build/Native-universal
-    log "Building universal native targets ($jobs parallel jobs)"
-    make -j "$jobs" universal
 else
     log "Checking native targets ($jobs parallel jobs)"
     make -j "$jobs" all
@@ -70,8 +64,8 @@ if [[ -n $platform ]]; then
 else
     bundle_resources=$APP/Contents/Resources
     mkdir -p "$APP/Contents/MacOS" "$bundle_resources" "$APP/Contents/PlugIns"
-    cp "$native/KestrelFrontier" "$APP/Contents/MacOS/"
-    for module in Games/*/Game(N/); do cp "$native/${module:h:t}.dylib" "$APP/Contents/PlugIns/"; done
+    cp build/Native/KestrelFrontier "$APP/Contents/MacOS/"
+    for module in Games/*/Game(N/); do cp "build/Native/${module:h:t}.dylib" "$APP/Contents/PlugIns/"; done
     cp Resources/Info.plist "$APP/Contents/"
     info_plist=$APP/Contents/Info.plist
     plutil -insert CFBundleSupportedPlatforms -json '["MacOSX"]' "$info_plist"
@@ -96,7 +90,7 @@ else
     if [[ $platform == iphonesimulator ]]; then
         codesign --force --sign - "$APP"
     else
-        # Inside out: the linker signs only arm64 code, so a universal module needs its own signature.
+        # Inside out: each game module is signed before the app that contains it.
         for module in "$APP"/Contents/PlugIns/*.dylib(N); do codesign --force --sign - "$module"; done
         codesign --force --sign - "$APP" || log "Code signing failed, continuing"
     fi

@@ -226,7 +226,7 @@ Make builds and packages the apps with the installed Apple SDK tools:
   explicit installation to a paired device, not store distribution.
 - `make archive-ios`, `make archive-macos` and `make racing-archive`: signed App
   Store packages under `build/Archives/` (`Tools/archive.sh`); the Mac app is
-  universal. Nothing is uploaded.
+  for Apple silicon only. Nothing is uploaded.
 
 The native flight Makefile and `Tools/iOS.mk` compile FlightSim. `build.sh`
 is the flight bundle helper. `Games/Racing/Makefile` compiles and packages
