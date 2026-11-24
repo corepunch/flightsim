@@ -4,7 +4,7 @@ import Foundation
 struct OwnedCar: Codable, Identifiable, Equatable {
     var id = UUID()
     var loadout: Loadout
-    /// Shown instead of the model name when the car was won in a pink-slip race.
+    /// Legacy garage provenance retained for existing saves.
     var wonFrom: String?
 
     var design: CarDesign { loadout.design }
@@ -108,7 +108,7 @@ final class Profile {
     /// Takes the credits if there are enough.
     @discardableResult
     func spend(_ amount: Int) -> Bool {
-        guard amount <= stored.credits else { return false }
+        guard amount >= 0, amount <= stored.credits else { return false }
         stored.credits -= amount
         save()
         return true
@@ -194,50 +194,28 @@ final class Profile {
         return (prize, bonus)
     }
 
-    enum Stake: Equatable {
-        case money(Int)
-        case pinkSlip
-    }
-
-    /// Settles a street race. A pink slip changes hands: theirs comes to the garage, or
-    /// the car that raced goes to them.
-    func settle(challenger: Challenger, stake: Stake, won: Bool, carID: UUID) {
+    /// A finished challenge advances the board. A loss changes no balance or car.
+    func record(challenger: Challenger, won: Bool) -> Int {
         stored.races += 1
         stored.streetRound += 1
-        if won { stored.wins += 1 }
-        switch stake {
-        case .money(let amount):
-            if won {
-                stored.credits += amount
-                stored.earnings += amount
-            } else {
-                stored.credits = max(0, stored.credits - amount)
-            }
-        case .pinkSlip:
-            if won {
-                stored.cars.append(OwnedCar(loadout: .generated(challenger.blueprint), wonFrom: challenger.driver))
-                if challenger.isKing {
-                    stored.kingBeaten = true
-                    stored.credits += 50_000
-                    stored.earnings += 50_000
-                }
-            } else if stored.cars.count > 1, let i = stored.cars.firstIndex(where: { $0.id == carID }) {
-                stored.cars.remove(at: i)
-                if stored.selected == carID { stored.selected = stored.cars[0].id }
-            }
+        var prize = 0
+        if won {
+            stored.wins += 1
+            if !challenger.isKing || !stored.kingBeaten { prize = challenger.victoryPrize }
+            if challenger.isKing { stored.kingBeaten = true }
         }
+        stored.credits += prize
+        stored.earnings += prize
         save()
+        return prize
     }
 
-    /// Online races: the buy-in is paid when the countdown starts; the server splits the pot.
-    /// Everyone also gets a little for turning up, more the more cars they beat.
-    func settleOnline(payout: Int, position: Int, cars: Int) -> (payout: Int, appearance: Int) {
-        stored.races += 1
-        if position == 1 && cars > 1 { stored.wins += 1 }
-        let appearance = 150 + max(0, cars - position) * 75
-        stored.credits += payout + appearance
-        stored.earnings += payout + appearance
-        save()
-        return (payout, appearance)
+    /// LAN classifications are peer-reported. Only fixed credits are awarded;
+    /// solo race records and unlocks do not depend on them.
+    func recordOnline(position: Int, finished: Bool) -> Int {
+        let prize = RacePrizes.lan(position: position, finished: finished)
+        earn(prize)
+        return prize
     }
+
 }

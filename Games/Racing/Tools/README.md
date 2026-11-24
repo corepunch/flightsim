@@ -45,3 +45,19 @@ for wav in "$music_build_dir"/music-*.wav; do
     lame --silent -V 1 "$wav" "Resources/Audio/$name.mp3"
 done
 ```
+
+## Race rewards checks
+
+- Circuit and Street races are free to start, restart or leave; credits buy cars,
+  upgrades and customization only. Circuit podiums earn listed fixed prizes.
+- Street rivals rotate after each finish; winning earns the listed prize. A loss
+  changes neither the garage nor the balance, including the King challenge.
+- LAN awards are fixed per finishing position, independent of roster size. A DNF
+  costs nothing and earns nothing. LAN races do not count toward solo wins or
+  unlocks; their finish times come from the peers, not a server simulation.
+- LAN protocol v3 is incompatible with v2. Update both devices before racing.
+  New clients mark old rooms as needing an update; old clients may not list new
+  rooms at all.
+- On macOS run `sh Tools/net-test.sh` for the live UDP protocol regression. On a
+  simulator or device, check a two-car career before and after a Street defeat,
+  a Circuit retry with zero credits, and free LAN play with finishers and a DNF.

@@ -20,8 +20,6 @@ struct MatchSettings: Equatable {
     var trackIndex = 0
     var trackSeed: UInt64 = 0
     var laps = 3
-    /// Credits each human car buys in with; 0 is a friendly race.
-    var stake = 0
 }
 
 struct NetCar: Equatable {
@@ -41,20 +39,7 @@ struct NetResult: Equatable {
     var carID: UInt8
     /// The car's own measured race time; nil = did not finish.
     var time: Float?
-    /// Credits won from the pot (gross; the stake was paid going in).
-    var payout = 0
 
-    /// The pot (every human car's stake) goes 60/30/10 to the first three finishers,
-    /// renormalised when fewer finish; rounding goes to the winner. A bot's share stays
-    /// in the house, so racing bots for money is a real risk.
-    static func payouts(pot: Int, finishers: Int) -> [Int] {
-        guard pot > 0, finishers > 0 else { return Array(repeating: 0, count: finishers) }
-        let weights = Array([6, 3, 1].prefix(finishers))
-        let total = weights.reduce(0, +)
-        var shares = weights.map { pot * $0 / total }
-        shares[0] += pot - shares.reduce(0, +)
-        return shares + Array(repeating: 0, count: finishers - shares.count)
-    }
 }
 
 enum NetPhase: Equatable {
@@ -80,7 +65,7 @@ enum NetPhase: Equatable {
 
 enum NetProtocol {
     /// Bump on any wire change; a guest on another version is turned away at join.
-    static let version: UInt16 = 2
+    static let version: UInt16 = 3
     static let port: UInt16 = 27911
     static let serviceType = "_arcline._udp"
     static let tickRate = 30.0
@@ -125,7 +110,7 @@ enum ServerMsg: UInt8 {
     case settings           // settings
     case phase              // u8 kind, f64 start
     case finish             // u8 car, f32 time
-    case results            // u8 n, n × (u8 car, f32 time or NaN, i32 payout)
+    case results            // u8 n, n × (u8 car, f32 time or NaN)
     case snapshot           // unreliable: f64 server time, u8 n, n × (u8 car, f32 age, state)
     case pong               // unreliable: f64 echoed client clock, f64 server time
 }
@@ -175,14 +160,12 @@ extension MatchSettings {
         w.u16(UInt16(clamping: trackIndex))
         w.u64(trackSeed)
         w.u8(UInt8(clamping: laps))
-        w.u32(UInt32(clamping: stake))
     }
 
     init(from r: inout MsgReader) {
         trackIndex = Int(r.u16())
         trackSeed = r.u64()
         laps = Int(r.u8())
-        stake = Int(r.u32())
     }
 }
 

@@ -77,8 +77,7 @@ final class OnlineViewController: ScreenController {
         let card = CardView()
         let map = TrackMaps.map(server.trackIndex, size: 46)
         let name = UI.label(server.name, UI.font(15, .black))
-        var line = "\(TrackMaps.definition(server.trackIndex).name.uppercased())  ·  \(server.players)/\(server.maxPlayers)"
-        if server.settings.stake > 0 { line += "  ·  BUY-IN \(Economy.credits(server.settings.stake))" }
+        let line = "\(TrackMaps.definition(server.trackIndex).name.uppercased())  ·  \(server.players)/\(server.maxPlayers)"
         let detail = UI.caps(line, 9)
         let phase = UI.caps(server.phase.uppercased(), 9, server.phase == "Lobby" ? UI.green : UI.amber)
         let text = UI.stack([name, detail, phase], spacing: 3)
@@ -92,7 +91,7 @@ final class OnlineViewController: ScreenController {
     }
 
     private func host() {
-        let settings = MatchSettings(trackIndex: 0, trackSeed: TrackLibrary.all[0].seed, laps: 3, stake: 0)
+        let settings = MatchSettings(trackIndex: 0, trackSeed: TrackLibrary.all[0].seed, laps: 3)
         do {
             open(try RaceClient.host(name: profile.driver, room: profile.driver + "'S RACE", loadout: profile.selectedCar.loadout.encoded(), settings: settings))
         } catch {
@@ -110,7 +109,7 @@ final class OnlineViewController: ScreenController {
     }
 }
 
-/// The waiting room: the host picks the track, laps, buy-in and bots; everyone readies up;
+/// The waiting room: the host picks the track, laps and bots; everyone readies up;
 /// the race starts on the server's countdown, for everyone at once.
 final class LobbyViewController: ScreenController {
     private let client: RaceClient
@@ -220,14 +219,8 @@ final class LobbyViewController: ScreenController {
         let laps = chips(title: "LAPS", options: [1, 2, 3, 4, 5], current: s.laps, label: { "\($0)" }) { [weak self] v in
             self?.change { $0.laps = v }
         }
-        let stakes = chips(title: "BUY-IN", options: [0, 250, 500, 1_000, 2_500], current: s.stake,
-                           label: { $0 == 0 ? "FREE" : Economy.credits($0) }) { [weak self] v in
-            self?.change { $0.stake = v }
-        }
-        let note = UI.body(s.stake > 0
-                           ? "Everyone pays \(Economy.credits(s.stake)) at the start. The pot goes 60/30/10 to the top three drivers."
-                           : "Friendly race: no buy-in. Everyone still earns for taking part.", 12, UI.faint)
-        settingsCard.fill(with: UI.stack([trackRow, laps, stakes, note], spacing: 8), inset: 12)
+        let note = UI.body("Free entry. Fixed prizes: \(Economy.credits(RacePrizes.lan(position: 1, finished: true))) for first, \(Economy.credits(RacePrizes.lan(position: 2, finished: true))) for second and \(Economy.credits(RacePrizes.lan(position: 3, finished: true))) for third.", 12, UI.faint)
+        settingsCard.fill(with: UI.stack([trackRow, laps, note], spacing: 8), inset: 12)
     }
 
     private func chips(title: String, options: [Int], current: Int, label: (Int) -> String,
@@ -308,8 +301,6 @@ final class LobbyViewController: ScreenController {
     private var hostOwnerID: UInt8? { client.cars.first { !$0.isBot }?.ownerID }
 
     private func updateAction() {
-        let stake = client.settings.stake
-        let broke = profile.credits < stake
         guard client.isConnected else {
             action.setTitleText("CONNECTING…")
             action.isEnabled = false
@@ -319,17 +310,17 @@ final class LobbyViewController: ScreenController {
         switch client.phase {
         case .lobby:
             if client.isHost {
-                action.setTitleText(stake > 0 ? "START RACE  ·  \(Economy.credits(stake))" : "START RACE")
+                action.setTitleText("START RACE")
                 action.restyle(tint: UI.magenta, filled: true)
-                action.isEnabled = client.canStart && !broke
+                action.isEnabled = client.canStart
                 let waiting = client.cars.filter { !$0.isBot && !$0.ready && $0.ownerID != hostOwnerID }.count
-                hint.text = broke ? "YOU CAN'T COVER THE BUY-IN" : (waiting > 0 ? "WAITING FOR \(waiting) TO GET READY" : "EVERYONE'S READY")
+                hint.text = waiting > 0 ? "WAITING FOR \(waiting) TO GET READY" : "EVERYONE'S READY"
             } else {
                 let ready = myCar?.ready ?? false
-                action.setTitleText(ready ? "READY  ·  TAP TO CANCEL" : (stake > 0 ? "READY UP  ·  \(Economy.credits(stake))" : "READY UP"))
+                action.setTitleText(ready ? "READY  ·  TAP TO CANCEL" : "READY UP")
                 action.restyle(tint: ready ? UI.green : UI.cyan, filled: !ready)
-                action.isEnabled = !broke || ready
-                hint.text = broke ? "YOU CAN'T COVER THE \(Economy.credits(stake)) BUY-IN" : "THE HOST STARTS THE RACE"
+                action.isEnabled = true
+                hint.text = "THE HOST STARTS THE RACE"
             }
         case .loading, .countdown, .racing:
             action.setTitleText(myCar?.inRace == true ? "RACE STARTING" : "RACE IN PROGRESS")
@@ -382,9 +373,6 @@ final class LobbyViewController: ScreenController {
                              remote: !mine.contains(car.id))
         }
         guard let first = entries.first else { return }
-        // The buy-in goes in the pot as the lights come on.
-        if settings.stake > 0 { profile.spend(min(settings.stake, profile.credits)) }
-
         let definition = TrackMaps.definition(settings.trackIndex)
         var config = RaceConfig(definition: definition, player: first.design, rivals: [])
         config.laps = settings.laps
@@ -392,20 +380,12 @@ final class LobbyViewController: ScreenController {
         config.difficulty = 1
         config.playerName = first.name
         config.online = OnlineRace(client: client, entries: entries)
-        let humans = cars.filter { !$0.isBot }.count
         let game = GameViewController(config: config)
         game.onOnlineResults = { [weak self] results in
             guard let self else { return [] }
-            let position = (results.firstIndex { $0.carID == first.id } ?? results.count) + 1
-            let payout = results.first { $0.carID == first.id }?.payout ?? 0
-            let booked = self.profile.settleOnline(payout: payout, position: position, cars: cars.count)
-            var lines: [ResultLine] = []
-            if settings.stake > 0 {
-                lines.append(ResultLine(title: "BUY-IN", value: "−" + Economy.credits(settings.stake), color: UI.dim))
-                lines.append(ResultLine(title: "POT SHARE (\(humans) DRIVERS)", value: Economy.credits(booked.payout),
-                                        color: booked.payout > 0 ? UI.amber : UI.dim))
-            }
-            lines.append(ResultLine(title: "RACE FEE", value: Economy.credits(booked.appearance), color: UI.green))
+            guard let index = results.firstIndex(where: { $0.carID == first.id }) else { return [] }
+            let prize = self.profile.recordOnline(position: index + 1, finished: results[index].time != nil)
+            var lines = [ResultLine(title: "PRIZE", value: Economy.credits(prize), color: prize > 0 ? UI.green : UI.dim)]
             lines.append(ResultLine(title: "BALANCE", value: Economy.credits(self.profile.credits), color: .white))
             return lines
         }
