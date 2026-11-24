@@ -52,6 +52,7 @@ typedef struct {
     float fov;
     float shake;                // hits and explosions, decaying
     float dead;                 // pull-back after the ship is destroyed, 0..1
+    simd_float3 seat;           // where the settled camera sits, in ship space
 } ChaseCam;
 
 // Banks the ship into a yaw turn so it leans like an aircraft instead of
@@ -77,9 +78,11 @@ static simd_quatf QuatFromRotation(simd_float3 v) {
     return a > 1e-5f ? simd_quaternion(a, v / a) : simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
 }
 
-// How far ahead of the ship the chase reticle's rings hang, nearest first.
-// The chase camera aims at the last, so in level flight it is the screen's centre.
-static const float ReticleDistances[HUD_RETICLE_RINGS] = { 25, 60, 110 };
+// How far ahead of the ship the chase gunsight's stations lie, nearest first:
+// just past the nose (pushed out for a long hull), a few lengths ahead, and where
+// the guns converge. The chase camera aims at the last, so in level flight it is
+// the screen's centre.
+static const float SightDistances[HUD_SIGHT_STATIONS] = { 8, 25, 110 };
 
 static float Ease(float value, float target, float rate, float dt) {
     return value + (target - value) * (1.0f - expf(-rate * dt));
@@ -508,18 +511,19 @@ static float Ease(float value, float target, float rate, float dt) {
     chase.dead = Ease(chase.dead, ps->alive ? 0 : 1, ps->alive ? 8 : 2.5f, dt);
     simd_float3 deathPull = simd_make_float3(0, 8.0f, 32.0f) * chase.dead;
     // Dynamic: low and close behind the ship, which sits in the lower part of
-    // the frame with the reticle and whatever it is chasing above it. Fixed:
+    // the frame with the gunsight and whatever it is chasing above it. Fixed:
     // farther back, looking along the ship's nose.
     simd_float3 eye = _playerDef ? _playerDef->cockpitEye : RefCockpitEye;
     simd_float3 offset = _cockpit ? eye
                        : dynamic ? simd_make_float3(0, 3.2f, 14.0f + speed * 0.008f + boostFx * 3.0f)
                                  : simd_make_float3(0, 1.6f, 17.0f + speed * 0.012f + boostFx * 3.0f);
+    chase.seat = offset;
     offset += deathPull;
     simd_float3 pos = ps->move.origin + simd_act(_cockpit ? shipQ : chase.orientation, simd_act(look, offset));
     if (_cockpit) pos = ps->move.origin + simd_act(ViewOrientation(ps), offset);
-    // Aim down the line of fire at the farthest reticle ring, which puts it
+    // Aim down the line of fire at the farthest sight station, which puts it
     // at the centre of the screen and the ship below it.
-    if (dynamic) q = simd_mul(q, simd_quaternion(-atan2f(offset.y, offset.z + ReticleDistances[HUD_RETICLE_RINGS - 1]),
+    if (dynamic) q = simd_mul(q, simd_quaternion(-atan2f(offset.y, offset.z + SightDistances[HUD_SIGHT_STATIONS - 1]),
                                                    simd_make_float3(1, 0, 0)));
 
     chase.shake = fmaxf(0, chase.shake - dt * 1.5f);
@@ -602,16 +606,23 @@ static float Ease(float value, float target, float rate, float dt) {
     HUDFrame f = {0};
     CGSize size = _refresh.viewSize;
     f.boresightVisible = [self project:me + fwd * 400.0f into:&f.boresight];
-    // The chase reticle is a row of rings ahead of the ship on its line of
+    // The chase gunsight is drawn at stations ahead of the ship on its line of
     // fire, leaning with the hull, so its perspective shows where the guns point.
     if (!_cockpit) {
         simd_quatf banked = ViewOrientation(ps);
         simd_float3 right = simd_act(banked, simd_make_float3(1, 0, 0)), up = simd_act(banked, simd_make_float3(0, 1, 0));
-        for (int i = 0; i < HUD_RETICLE_RINGS; i++) {
-            simd_float3 centre = me + fwd * ReticleDistances[i];
-            CGPoint c, r, u;
-            if (![self project:centre into:&c] || ![self project:centre + right into:&r] || ![self project:centre + up into:&u]) break;
-            f.reticle[f.reticleRings++] = (HUDRing){ .centre = c, .right = PointSub(r, c), .up = PointSub(u, c) };
+        // The settled camera sits above the line of fire and looks down it at the
+        // farthest station; its line of sight passes this far above a nearer one.
+        simd_float3 seatUp = simd_act(ps->move.orientation, simd_make_float3(0, 1, 0));
+        float reach = SightDistances[HUD_SIGHT_STATIONS - 1] + _chase.seat.z;
+        for (int i = 0; i < HUD_SIGHT_STATIONS; i++) {
+            float ahead = i ? SightDistances[i] : fmaxf(SightDistances[0], (_playerDef ? _playerDef->radius : 0) + 2);
+            simd_float3 centre = me + fwd * ahead;
+            float lift = _chase.seat.y * (1 - (ahead + _chase.seat.z) / reach);
+            CGPoint c, r, u, l;
+            if (![self project:centre into:&c] || ![self project:centre + right into:&r] || ![self project:centre + up into:&u]
+                || ![self project:centre + seatUp * lift into:&l]) break;
+            f.sight[f.sightStations++] = (HUDStation){ .centre = c, .right = PointSub(r, c), .up = PointSub(u, c), .level = l };
         }
     }
     f.mouseStick = _input.mouseStick;

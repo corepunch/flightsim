@@ -585,7 +585,8 @@ typedef struct { CGFloat r, g, b; } UIRGB;
 //   { "colors":  { "ink": [0.55, 0.95, 0.85], … },     linear 0..1 RGB
 //     "fonts":   { "interface": "Oxanium-Regular", … },  PostScript names
 //     "metrics": { "slant": 0.36, … },
-//     "motion":  "full" }                               UIMotionStyle; optional
+//     "motion":  "full",                                UIMotionStyle; optional
+//     "gunsight": "stem" }                              UIGunsightStyle; optional
 //
 // The roles: ink (phosphor text and outlines), amber (emphasis), red
 // (danger); panel, background and map fills; the console variant's steel,
@@ -605,11 +606,19 @@ typedef NS_ENUM(NSInteger, UIMotionStyle) {
     UIMotionStyleNone,   // everything appears in place
 };
 
+// The chase view's gunsight. A game picks it with "gunsight" in its UI/theme.json.
+typedef NS_ENUM(NSInteger, UIGunsightStyle) {
+    UIGunsightStem,          // the default: a lit sight where the guns converge, on a fading stem from the nose
+    UIGunsightRingAndBead,   // a metal ring ahead of the cowling and a bead on a post beyond it
+};
+
 UIRGB UIThemeColor(NSString *name);
 NSString *UIThemeFont(NSString *name);
 CGFloat UIThemeMetric(NSString *name);
 // "motion": "full" (default), "fade" or "none"; see UIMotionStyle.
 UIMotionStyle UIThemeMotion(void);
+// "gunsight": "stem" (default) or "ringAndBead"; see UIGunsightStyle.
+UIGunsightStyle UIThemeGunsight(void);
 
 // MARK: - UIStyle
 
