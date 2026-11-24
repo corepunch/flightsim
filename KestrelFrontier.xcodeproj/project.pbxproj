@@ -1072,6 +1072,20 @@
 				"COMPILER_FLAGS" = "-include \"$(SRCROOT)/Sources/Prefix.h\"";
 			};
 		};
+		"F8805EC4B5A8649A65F03235" = {
+			"isa" = "PBXFileReference";
+			"path" = "DatagramHeader.h";
+			"sourceTree" = "<group>";
+			"lastKnownFileType" = "sourcecode.c.h";
+		};
+		"9382E1968E730C3D7474761C" = {
+			"isa" = "PBXGroup";
+			"path" = "PacketCore";
+			"children" = (
+				"F8805EC4B5A8649A65F03235",
+			);
+			"sourceTree" = "<group>";
+		};
 		"9D7DFE180ACBB9025868BBAD" = {
 			"isa" = "PBXFileReference";
 			"path" = "UDPTransport.m";
@@ -1102,6 +1116,7 @@
 				"08134182195B4256D7CF53F0",
 				"9812A6D90A56B0F3C73CE61F",
 				"BD7F393837279C9AD1A98436",
+				"9382E1968E730C3D7474761C",
 				"9D7DFE180ACBB9025868BBAD",
 			);
 			"sourceTree" = "<group>";

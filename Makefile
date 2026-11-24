@@ -104,3 +104,20 @@ ios-devices:
 ifneq ($(filter ios,$(MAKECMDGOALS)),)
 include Tools/iOS.mk
 endif
+
+# Arcline is a separately packaged product. Do not ship it inside the flight app.
+.PHONY: racing-ios racing-simulator racing-net-test
+racing-ios:
+	$(MAKE) -C Games/Racing ios-build
+
+racing-simulator:
+	$(MAKE) -C Games/Racing ios-simulator
+
+racing-net-test:
+	Games/Racing/Tools/net-test.sh
+
+.PHONY: test-datagram-header
+test-datagram-header:
+	@mkdir -p build
+	$(CC) -std=c11 -Wall -Wextra -Werror -ISources/Net/PacketCore 		Tools/DatagramHeaderCheck.c -o build/DatagramHeaderCheck
+	build/DatagramHeaderCheck

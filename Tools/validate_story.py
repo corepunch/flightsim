@@ -342,8 +342,10 @@ def validate_game(game):
 
 
 def main():
-    games = sorted(path for path in (ROOT / "Games").iterdir() if path.is_dir())
-    assert games, "no games in Games/"
+    # Match Tools/flight-packs.sh: a flight pack declares a module or manifest.
+    games = sorted(path for path in (ROOT / "Games").iterdir()
+                   if (path / "Game").is_dir() or (path / "game.json").is_file())
+    assert games, "no flight packs in Games/"
     for game in games:
         validate_game(game)
 

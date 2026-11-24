@@ -30,7 +30,10 @@ qa=$2
 # shared code reads.
 mkdir -p "$qa/Games"
 ln -s "$PWD/Resources/Strings" "$qa/Strings"
-for game in Games/*(N/); do ln -s "$PWD/$game" "$qa/$game"; done
+source Tools/flight-packs.sh
+for game in Games/*(N/); do
+    if is_flight_pack "$game"; then ln -s "$PWD/$game" "$qa/$game"; fi
+done
 # A game that builds on another (game.json "base"), for the search-path checks.
 mkdir -p "$qa/Games/ZCheckMod/Levels"
 print '{ "title": "Check", "base": "KestrelFrontier" }' > "$qa/Games/ZCheckMod/game.json"

@@ -1,8 +1,9 @@
 # Games
 
-Each folder here is one flight game built on the engine in `Sources/`. The
-engine has no game content of its own. `fs_game <name>` picks the game; the
-default is the app's `FSDefaultGame` (build with `GAME=<name> ./build.sh`).
+A flight pack declares a `Game/` module or a `game.json` manifest and runs
+on the engine in `Sources/`. Standalone game targets also live here but
+are not packed into the flight app. `fs_game <name>` picks the flight pack;
+the default is the app's `FSDefaultGame` (build with `GAME=<name> ./build.sh`).
 
 ```
 Games/<name>/
@@ -90,3 +91,21 @@ board's `bezel` polygon, without those effects. Dawn Patrol uses `blackboard`.
 A game may ship `default.cfg` for its initial cvars. Explicit `+set` launch
 arguments override these defaults. Dawn Patrol starts the throttle at 80 percent
 so its airborne start has flying speed.
+
+## Arcline (Racing)
+
+`Racing` is Arcline's existing Swift, UIKit and SceneKit app. It uses its own
+target, assets, app identity, controls and driving physics, not the
+`fs_game` interface. Build from this repository's root:
+
+```sh
+make racing-ios         # unsigned iOS device app
+make racing-simulator   # unsigned simulator app
+make racing-net-test    # existing headless loopback and multi-peer UDP check
+```
+
+Open `Games/Racing/Racing.xcodeproj` for Xcode, or run
+`make -C Games/Racing iphone` to compile, sign and install with your local
+development profile. See [Racing/MIGRATION.md](Racing/MIGRATION.md) for what is
+shared, what is deliberately separate, and what must be verified before
+retiring the original repository.

@@ -1,0 +1,4 @@
+module DatagramCore {
+    header "DatagramHeader.h"
+    export *
+}
