@@ -67,7 +67,7 @@ typedef struct {
     CGPoint centre, right, up, level;
 } HUDStation;
 
-#define HUD_SIGHT_STATIONS 3
+#define HUD_SIGHT_STATIONS 2
 
 typedef struct {
     CGPoint boresight;      // where the guns converge, view points

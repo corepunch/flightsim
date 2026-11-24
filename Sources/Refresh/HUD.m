@@ -70,18 +70,19 @@ static CGAffineTransform SightTransform(HUDStation r, CGPoint centre, CGFloat ra
     return (CGAffineTransform){ r.right.x * k, r.right.y * k, r.up.x * k, r.up.y * k, centre.x, centre.y };
 }
 
-// The stem style's sight: a ring with four ticks and a pip, where the guns converge.
-static const CGFloat kStemSightRadius = 3.4, kStemSightReach = 6.2;
-// The ring and bead: a spoked ring near the nose, a bead on a post far ahead.
+// The ring and bead, in metres: a spoked ring near the nose, a bead on a post far ahead.
 static const CGFloat kRingRadius = 3.0, kBeadRadius = 1.2;
+// The crosshair, in view points: four ticks around a gap, and a dot.
+static const CGFloat kCrosshairGap = 6, kCrosshairReach = 15;
 
-// The chase view's gunsight, drawn in perspective each frame at the stations the
-// client projects along the line of fire. The stem style is one lit sight at the
-// farthest station on a dashed stem from the nose, fainter toward the ship. The ring and
-// bead is what a 1917 scout carried: a ring near the cowling and a bead beyond
-// it, dark metal with a pale edge so it reads against sky and forest alike;
-// flying straight the bead sits in the ring's centre, and it slides off as the
-// nose swings.
+// The chase view's gunsight, drawn each frame at the stations the client projects
+// along the line of fire. The crosshair is what a shooter draws: upright, one
+// size, standing at the farthest station, so it marks where the shots go even
+// while the chase camera lags the ship through a turn; flying straight that is
+// the centre of the screen. The ring and bead is what a 1917 scout carried: a
+// ring near the cowling and a bead beyond it, drawn in perspective, dark metal
+// with a pale edge so it reads against sky and forest alike; flying straight the
+// bead sits in the ring's centre, and it slides off as the nose swings.
 @interface HUDGunsight : SKNode
 + (instancetype)gunsightWithStyle:(UIGunsightStyle)style;
 // Stations nearest first. The sight needs them all and hides without.
@@ -90,8 +91,8 @@ static const CGFloat kRingRadius = 3.0, kBeadRadius = 1.2;
 
 @implementation HUDGunsight {
     UIGunsightStyle _style;
-    NSArray<SKShapeNode *> *_parts;     // stem: three dashes then the sight; ring and bead: the ring, the bead
-    CGPathRef _near, _far;              // the ring and what stands where the guns converge, in metres
+    NSArray<SKShapeNode *> *_parts;     // crosshair: the one; ring and bead: the ring, the bead
+    CGPathRef _near, _far;              // the ring and the bead, in metres
 }
 
 - (void)dealloc {
@@ -139,13 +140,14 @@ static void SetPartPath(SKShapeNode *part, CGPathRef path) {
         bead.fillColor = ReticleColor(1);
         sight->_parts = @[ring, bead];
     } else {
-        SightCircle(far, kStemSightRadius);
-        SightSpokes(far, kStemSightRadius * 1.3, kStemSightReach);
-        SightCircle(far, 0.45);
-        NSMutableArray *parts = [NSMutableArray array];
-        for (int i = 0; i < 3; i++) [parts addObject:[sight partWithColor:ReticleColor(0.3 + 0.25 * i) width:2 backing:nil]];
-        [parts addObject:[sight partWithColor:ReticleColor(0.95) width:1.5 backing:nil]];
-        sight->_parts = parts;
+        // A dark edge under the lit lines keeps them readable over a bright sun or fire.
+        SKShapeNode *cross = [sight partWithColor:ReticleColor(0.95) width:2 backing:[SKColor colorWithWhite:0 alpha:0.45]];
+        CGMutablePathRef shape = CGPathCreateMutable();
+        SightSpokes(shape, kCrosshairGap, kCrosshairReach);
+        SightCircle(shape, 1);
+        SetPartPath(cross, shape);
+        CGPathRelease(shape);
+        sight->_parts = @[cross];
     }
     sight->_near = near;
     sight->_far = far;
@@ -156,9 +158,9 @@ static void SetPartPath(SKShapeNode *part, CGPathRef path) {
 - (void)showStations:(const HUDStation *)stations count:(int)count {
     self.hidden = count < HUD_SIGHT_STATIONS;
     if (self.hidden) return;
-    HUDStation nose = stations[0], last = stations[HUD_SIGHT_STATIONS - 1];
+    HUDStation last = stations[HUD_SIGHT_STATIONS - 1];
     if (_style == UIGunsightRingAndBead) {
-        HUDStation cowl = stations[1];
+        HUDStation cowl = stations[0];
         CGAffineTransform ring = SightTransform(cowl, cowl.level, kRingRadius, 20);
         CGAffineTransform bead = SightTransform(last, last.centre, kBeadRadius, 3);
         CGPathRef ringPath = CGPathCreateCopyByTransformingPath(_near, &ring);
@@ -169,28 +171,7 @@ static void SetPartPath(SKShapeNode *part, CGPathRef path) {
         CGPathRelease(beadPath);
         return;
     }
-    CGAffineTransform t = SightTransform(last, last.centre, kStemSightRadius, 12);
-    CGPathRef sight = CGPathCreateCopyByTransformingPath(_far, &t);
-    SetPartPath(_parts[3], sight);
-    CGPathRelease(sight);
-    // The stem runs up the line of fire and stops short of the sight's ticks.
-    // Its dashes shorten with distance, as the line itself would.
-    static const CGFloat dashes[3][2] = { { 0, 0.30 }, { 0.42, 0.64 }, { 0.76, 0.92 } };
-    CGFloat clear = kStemSightReach * hypot(t.a, t.b) + 5;
-    CGFloat length = PointDistance(nose.centre, last.centre) - clear;
-    for (int i = 0; i < 3; i++) {
-        SKShapeNode *dash = _parts[i];
-        dash.hidden = length < 14;
-        if (dash.hidden) continue;
-        CGPoint along = PointScale(PointNormalize(PointSub(last.centre, nose.centre)), length);
-        CGPoint from = PointAdd(nose.centre, PointScale(along, dashes[i][0]));
-        CGPoint to = PointAdd(nose.centre, PointScale(along, dashes[i][1]));
-        CGMutablePathRef path = CGPathCreateMutable();
-        CGPathMoveToPoint(path, NULL, from.x, from.y);
-        CGPathAddLineToPoint(path, NULL, to.x, to.y);
-        SetPartPath(dash, path);
-        CGPathRelease(path);
-    }
+    _parts[0].position = last.centre;
 }
 
 @end

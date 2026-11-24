@@ -78,11 +78,11 @@ static simd_quatf QuatFromRotation(simd_float3 v) {
     return a > 1e-5f ? simd_quaternion(a, v / a) : simd_quaternion(0.0f, simd_make_float3(0, 1, 0));
 }
 
-// How far ahead of the ship the chase gunsight's stations lie, nearest first:
-// just past the nose (pushed out for a long hull), a few lengths ahead, and where
-// the guns converge. The chase camera aims at the last, so in level flight it is
-// the screen's centre.
-static const float SightDistances[HUD_SIGHT_STATIONS] = { 8, 25, 110 };
+// How far ahead of the ship the chase gunsight's stations lie, nearest first: a
+// few lengths past the nose, and far down the line of fire, where a target is
+// and the crosshair stands. The chase camera aims at the last, so in level
+// flight it is the screen's centre.
+static const float SightDistances[HUD_SIGHT_STATIONS] = { 25, 400 };
 
 static float Ease(float value, float target, float rate, float dt) {
     return value + (target - value) * (1.0f - expf(-rate * dt));
@@ -605,7 +605,7 @@ static float Ease(float value, float target, float rate, float dt) {
 
     HUDFrame f = {0};
     CGSize size = _refresh.viewSize;
-    f.boresightVisible = [self project:me + fwd * 400.0f into:&f.boresight];
+    f.boresightVisible = [self project:me + fwd * SightDistances[HUD_SIGHT_STATIONS - 1] into:&f.boresight];
     // The chase gunsight is drawn at stations ahead of the ship on its line of
     // fire, leaning with the hull, so its perspective shows where the guns point.
     if (!_cockpit) {
@@ -616,9 +616,8 @@ static float Ease(float value, float target, float rate, float dt) {
         simd_float3 seatUp = simd_act(ps->move.orientation, simd_make_float3(0, 1, 0));
         float reach = SightDistances[HUD_SIGHT_STATIONS - 1] + _chase.seat.z;
         for (int i = 0; i < HUD_SIGHT_STATIONS; i++) {
-            float ahead = i ? SightDistances[i] : fmaxf(SightDistances[0], (_playerDef ? _playerDef->radius : 0) + 2);
-            simd_float3 centre = me + fwd * ahead;
-            float lift = _chase.seat.y * (1 - (ahead + _chase.seat.z) / reach);
+            simd_float3 centre = me + fwd * SightDistances[i];
+            float lift = _chase.seat.y * (1 - (SightDistances[i] + _chase.seat.z) / reach);
             CGPoint c, r, u, l;
             if (![self project:centre into:&c] || ![self project:centre + right into:&r] || ![self project:centre + up into:&u]
                 || ![self project:centre + seatUp * lift into:&l]) break;
