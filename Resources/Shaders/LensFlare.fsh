@@ -1,7 +1,7 @@
 // Analytic optics: no stretched particle bitmap, animation noise or hard quad
 // edges. All profiles reach zero before the sprite borders. Values are linear
-// additive light. The glare profile supplies the sun core, halo and diffraction
-// rays directly, without relying on HDR or a camera bloom pass.
+// additive light. The glare profile supplies the soft optical bloom
+// around the source, without relying on HDR or a camera bloom pass.
 float gaussian(float x, float width) {
     float q = x / width;
     return exp(-q * q);
@@ -26,18 +26,13 @@ void main() {
         light *= ends * (1.0 - smoothstep(0.65, 1.0, abs(p.y)));
     } else if (u_profile < 1.5) {
         float r = length(p);
-        float core = gaussian(r, 0.046) * 3.0;
-        float inner = gaussian(r, 0.11) * 0.85;
-        float halo = gaussian(r, 0.23) * 0.18;
-        // Thin aperture rays give glare a luminous shape instead of a foggy disc.
-        float vertical = gaussian(p.x, 0.012) * gaussian(p.y, p.y > 0.0 ? 0.52 : 0.38);
-        vec2 diagonal = vec2(p.x + p.y, p.x - p.y) * 0.70710678;
-        float rays = vertical * 0.70
-                   + gaussian(diagonal.x, 0.011) * gaussian(diagonal.y, 0.34) * 0.45
-                   + gaussian(diagonal.y, 0.010) * gaussian(diagonal.x, 0.27) * 0.35;
-        vec3 warm = vec3(1.0, 0.86, 0.65);
-        vec3 coating = mix(warm, vec3(0.25, 0.48, 1.0), smoothstep(0.06, 0.30, r));
-        light = warm * (core + inner) + coating * (halo + rays);
+        // A smooth white-hot centre fades into the warmer scattered light.
+        float core = gaussian(r, 0.028);
+        float bloom = gaussian(r, 0.105);
+        float halo = gaussian(r, 0.34);
+        light = vec3(1.0, 0.96, 0.88) * core
+              + vec3(0.47, 0.32, 0.18) * bloom
+              + vec3(0.10, 0.062, 0.034) * halo;
         light *= 1.0 - smoothstep(0.60, 0.95, r);
     } else {
         float r = length(p);

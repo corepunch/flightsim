@@ -80,10 +80,10 @@ static SKShader *FlareShader(int profile) {
     self.alpha = _visibility;
 
     _streak.position = _glare.position = source;
-    _streak.size = CGSizeMake(MIN(viewport.width * 1.15, shortSide * 1.8), shortSide * 0.065);
+    _streak.size = CGSizeMake(MIN(viewport.width * 1.15, shortSide * 0.78), shortSide * 0.065);
     _glare.size = CGSizeMake(shortSide * 0.24, shortSide * 0.24);
     _glare.alpha = 0.92;
-    _streak.alpha = 0.8;
+    _streak.alpha = 0.20;
 
     CGPoint centre = PointScale(PointFromSize(viewport), 0.5);
     CGPoint axis = PointSub(source, centre);   // ghosts sit along the line through the optical centre

@@ -165,11 +165,11 @@ fragment half4 skyFragment(SkyVarying in [[stage_in]],
         float sr = P.sunDir.w;
         float a = 2.0 * asin(min(length(d - sd) * 0.5, 1.0));    // angle from the sun's centre, precise near it
         float3 sunColour = float3(1.0, 0.93, 0.82);
-        float disc = smoothstep(sr + pix, sr - pix, a);
+        float disc = 1.0 - smoothstep(sr - pix, sr + pix, a);
         float limb = 0.55 + 0.45 * sqrt(saturate(1.0 - (a / sr) * (a / sr)));
         float outside = max(a - sr, 0.0);
         float corona = exp(-outside / (sr * 0.35)) * 1.6 + exp(-outside / (sr * 2.5)) * 0.25 + exp(-a / (sr * 14.0)) * 0.03;
-        col += sunColour * (disc * limb * 60.0 + corona * (1.0 - disc));
+        col += sunColour * (disc * limb * 9.0 + corona * (1.0 - disc));
     }
 
     // Gas giant with atmosphere.

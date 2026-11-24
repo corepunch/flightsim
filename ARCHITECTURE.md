@@ -155,9 +155,8 @@ while nothing is drawn; the hand-off points are marked in `Client.h` and
 
 The space sky uses a small vertex-coloured mesh for the nebula and galaxy.
 Their procedural colours are calculated once during loading; shader point
-sprites draw the stars, and a fragment shader draws the planet. The sun is a
-projected optical source: its screen-space shader draws the bright core, halo,
-diffraction rays and horizontal lens streak.
+sprites draw the stars, and a fragment shader draws the planet. The sky shader draws the sun’s disc and corona. A projected SpriteKit shader
+adds a soft central glow and a faint horizontal lens streak.
 There are no sky textures or cubemap convolution passes. All cameras use LDR
 on every platform; HDR and camera bloom are disabled. The sky applies its own
 tone curve and edge falloff to retain the darker space palette.

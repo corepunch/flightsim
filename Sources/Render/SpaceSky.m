@@ -96,7 +96,7 @@ static simd_float3 SkyRandom(uint32_t index, uint32_t seed) {
         }
     }
     SkyParams params = {0};
-    params.sunDir = simd_make_float4(_sunDirection, 0.022f);     // angular radius: a large, near star
+    params.sunDir = simd_make_float4(_sunDirection, 0.008f);     // angular radius in radians
     simd_float3 normal = simd_normalize(simd_make_float3(0.25f, 0.9f, 0.35f));
     params.galaxyNormal = simd_make_float4(normal, 0);
     params.galaxyCenter = simd_make_float4(simd_normalize(simd_cross(normal, simd_make_float3(1, 0, 0))), 0);
