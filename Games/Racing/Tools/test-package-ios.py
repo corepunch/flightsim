@@ -25,8 +25,13 @@ class BundleContract(unittest.TestCase):
             executable.chmod(0o755)
             for sdk, platform in package_ios.PLATFORMS.items():
                 with self.subTest(sdk=sdk):
-                    def fake_actool(argv, *, check):
+                    stamped = []
+
+                    def fake_tools(argv, *, check):
                         self.assertTrue(check)
+                        if argv[:2] == ["python3", str(package_ios.STAMP)]:
+                            stamped.append(argv[2:])
+                            return
                         self.assertEqual(argv[:4], ["xcrun", "--sdk", sdk, "actool"])
                         self.assertEqual(argv[argv.index("--platform") + 1], sdk)
                         self.assertEqual(argv.count("--target-device"), 2)
@@ -38,9 +43,12 @@ class BundleContract(unittest.TestCase):
                     app.mkdir(parents=True)
                     (app / "embedded.mobileprovision").touch()
                     with patch.object(subprocess, "check_output", return_value="18.5\n"), \
-                         patch.object(subprocess, "run", side_effect=fake_actool):
+                         patch.object(subprocess, "run", side_effect=fake_tools):
                         package_ios.package(sdk, "16.0", executable, app)
 
+                    # The SDK and toolchain keys are written into the staged bundle, once.
+                    self.assertEqual(len(stamped), 1)
+                    self.assertEqual(stamped[0][1], sdk)
                     info = plistlib.loads((app / "Info.plist").read_bytes())
                     self.assertEqual(info["CFBundleIdentifier"], "com.corepunch.arcline")
                     self.assertEqual(info["CFBundleDisplayName"], "Arcline")

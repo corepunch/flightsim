@@ -12,6 +12,7 @@ make macos                      # macOS app: build/KestrelFrontier.app (engine +
 make ios-simulator              # iOS simulator app under build/iOS/
 make macos GAME=EmberReach      # another default game
 make racing-simulator           # unsigned iOS simulator build of Arcline
+make archive-ios                # signed App Store packages (also archive-macos, racing-archive); see PUBLISHING.md
 make -j8                        # just compile and link the native targets (faster while iterating)
 ```
 

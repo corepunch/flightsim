@@ -40,6 +40,8 @@
     <string>com.corepunch.spacefight</string>
     <key>CFBundleName</key>
     <string>Kestrel Frontier</string>
+    <key>CFBundleDisplayName</key>
+    <string>Kestrel Frontier</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundlePackageType</key>

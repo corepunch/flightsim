@@ -8,7 +8,7 @@ IOS_BUILD := build/iOS/$(IOS_PLATFORM)-$(IOS_ARCH)
 IOS_CC := xcrun --sdk $(IOS_PLATFORM) clang
 IOS_SYSROOT := $(shell xcrun --sdk $(IOS_PLATFORM) --show-sdk-path)
 IOS_DEPLOY := $(if $(filter iphoneos,$(IOS_PLATFORM)),-miphoneos-version-min=,-mios-simulator-version-min=)$(IOS_MIN)
-IOS_FLAGS := -isysroot "$(IOS_SYSROOT)" -arch $(IOS_ARCH) $(IOS_DEPLOY) -fobjc-arc -O2 -Wall -Wno-unused-function -Wno-deprecated-declarations
+IOS_FLAGS := -isysroot "$(IOS_SYSROOT)" -arch $(IOS_ARCH) $(IOS_DEPLOY) -fobjc-arc -O2 -g -Wall -Wno-unused-function -Wno-deprecated-declarations
 IOS_FRAMEWORKS := UIKit SceneKit SpriteKit Metal CoreGraphics CoreText QuartzCore ImageIO GameController AVFoundation GameKit
 IOS_ENGINE_SOURCES := $(filter-out %/FXRecorder.m %/ShipPreview.m %/Input.m %/GameView.m %/main.m,$(ENGINE_SOURCES))
 IOS_ENGINE_OBJECTS := $(addprefix $(IOS_BUILD)/engine/,$(addsuffix .o,$(IOS_ENGINE_SOURCES)))

@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds KestrelFrontier.app. Usage: ./build.sh [run|ios-simulator|ios-device|iphone|ipad]
+# Builds KestrelFrontier.app. Usage: ./build.sh [run|macos-universal|ios-simulator|ios-device|iphone|ipad]
 #
 # Sources/Shared       protocol, flight model, file system and data tables (engine and game)
 # Sources/<module>     the engine: server, client, renderer, UI and the app itself
@@ -29,6 +29,7 @@ if ! zsystem flock -t 0 -f build_lock build/.lock 2>/dev/null; then
 fi
 
 APP=build/$GAME.app
+native=build/Native
 jobs=$(getconf _NPROCESSORS_ONLN 2>/dev/null) || jobs=1
 platform=
 case "$1" in
@@ -41,6 +42,11 @@ if [[ -n $platform ]]; then
     log "Building for $platform ($arch)"
     make -j "$jobs" ios IOS_PLATFORM="$platform" GAME="$GAME"
     export GAMES=$GAME
+elif [[ $1 == macos-universal ]]; then
+    # Distribution builds run on Apple silicon and Intel Macs alike.
+    native=build/Native-universal
+    log "Building universal native targets ($jobs parallel jobs)"
+    make -j "$jobs" universal
 else
     log "Checking native targets ($jobs parallel jobs)"
     make -j "$jobs" all
@@ -54,11 +60,8 @@ if [[ -n $platform ]]; then
     cp "$mobile/KestrelFrontier" "$APP/"
     cp Resources/Info-iOS.plist "$APP/Info.plist"
     info_plist=$APP/Info.plist
-    sdk_version=$(xcrun --sdk "$platform" --show-sdk-version)
     plutil -insert CFBundleSupportedPlatforms -json "[\"$([[ $platform == iphoneos ]] && print iPhoneOS || print iPhoneSimulator)\"]" "$APP/Info.plist"
     plutil -insert MinimumOSVersion -string 16.0 "$APP/Info.plist"
-    plutil -insert DTPlatformName -string "$platform" "$APP/Info.plist"
-    plutil -insert DTSDKName -string "$platform$sdk_version" "$APP/Info.plist"
     icon_info=$mobile/AppIcon-Info.plist
     xcrun --sdk "$platform" actool --compile "$APP" --platform "$platform" \
         --minimum-deployment-target 16.0 --target-device iphone --target-device ipad \
@@ -67,17 +70,20 @@ if [[ -n $platform ]]; then
 else
     bundle_resources=$APP/Contents/Resources
     mkdir -p "$APP/Contents/MacOS" "$bundle_resources" "$APP/Contents/PlugIns"
-    cp build/Native/KestrelFrontier "$APP/Contents/MacOS/"
-    for module in Games/*/Game(N/); do cp "build/Native/${module:h:t}.dylib" "$APP/Contents/PlugIns/"; done
+    cp "$native/KestrelFrontier" "$APP/Contents/MacOS/"
+    for module in Games/*/Game(N/); do cp "$native/${module:h:t}.dylib" "$APP/Contents/PlugIns/"; done
     cp Resources/Info.plist "$APP/Contents/"
     info_plist=$APP/Contents/Info.plist
+    plutil -insert CFBundleSupportedPlatforms -json '["MacOSX"]' "$info_plist"
     cp Resources/AppIcon.icns "$bundle_resources/"
 fi
 /bin/zsh Tools/bundle-resources.sh "$bundle_resources" build
 plutil -replace FSDefaultGame -string "$GAME" "$info_plist"
+python3 Tools/stamp-bundle.py "$APP" "${platform:-macosx}"
 if [[ $GAME != KestrelFrontier ]]; then
     game_title=$(plutil -extract title raw -o - "Games/$GAME/game.json")
     plutil -replace CFBundleName -string "$game_title" "$info_plist"
+    plutil -replace CFBundleDisplayName -string "$game_title" "$info_plist"
     plutil -replace CFBundleIdentifier -string "com.corepunch.spacefight.${GAME:l}" "$info_plist"
 fi
 if [[ $1 == iphone || $1 == ipad ]]; then
@@ -90,6 +96,8 @@ else
     if [[ $platform == iphonesimulator ]]; then
         codesign --force --sign - "$APP"
     else
+        # Inside out: the linker signs only arm64 code, so a universal module needs its own signature.
+        for module in "$APP"/Contents/PlugIns/*.dylib(N); do codesign --force --sign - "$module"; done
         codesign --force --sign - "$APP" || log "Code signing failed, continuing"
     fi
 fi

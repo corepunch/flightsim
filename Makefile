@@ -2,9 +2,11 @@
 .DEFAULT_GOAL := all
 .DELETE_ON_ERROR:
 
-NATIVE := build/Native
+NATIVE ?= build/Native
 TOOLCHAIN := $(NATIVE)/toolchain
-COMMON_FLAGS := -fobjc-arc -O2 -g -Wall -Wno-unused-function -mmacosx-version-min=13.0
+# ARCH_FLAGS (for example -arch x86_64) builds one other architecture into its own NATIVE tree.
+ARCH_FLAGS ?=
+COMMON_FLAGS := -fobjc-arc -O2 -g -Wall -Wno-unused-function -mmacosx-version-min=13.0 $(ARCH_FLAGS)
 SHARED := $(wildcard Sources/Shared/*.m Sources/Shared/*.c)
 ENGINE_DIRS := $(filter-out Sources/Shared/,$(wildcard Sources/*/))
 # Sources/Mission is the engine's mission runtime for game modules: it
@@ -94,7 +96,7 @@ build/tools/TerrainPreview: $(TERRAIN_PREVIEW_SOURCES) Sources/Render/Render.h S
 		-framework Cocoa -framework SceneKit -framework SpriteKit -framework Metal -framework QuartzCore -o "$@"
 
 
-# Application bundles for local testing; neither target signs for distribution.
+# Application bundles for local testing; these targets do not sign for distribution.
 .PHONY: macos ios-simulator ios-device
 macos:
 	@./build.sh
@@ -108,6 +110,30 @@ iphone ipad:
 
 ios-devices:
 	@xcrun devicectl list devices --timeout 15
+
+# The Mac app ships for Apple silicon and Intel. Each architecture builds in its own
+# tree; lipo joins the executable and every game module into build/Native-universal.
+MAC_ARCHS := arm64 x86_64
+UNIVERSAL := build/Native-universal
+.PHONY: universal
+universal:
+	@for arch in $(MAC_ARCHS); do $(MAKE) all NATIVE=build/Native-$$arch ARCH_FLAGS="-arch $$arch" || exit 1; done
+	@mkdir -p $(UNIVERSAL)
+	@for product in KestrelFrontier $(addsuffix .dylib,$(GAMES)); do \
+		lipo -create $(foreach arch,$(MAC_ARCHS),build/Native-$(arch)/$$product) -output $(UNIVERSAL)/$$product || exit 1; \
+	done
+
+# Signed App Store packages (Tools/archive.sh): an .ipa or a Mac .pkg ready for
+# `asc builds upload`, with the app's dSYMs, under build/Archives/. Nothing is uploaded.
+.PHONY: archive-ios archive-macos racing-archive
+archive-ios:
+	@Tools/archive.sh ios
+
+archive-macos:
+	@Tools/archive.sh macos
+
+racing-archive:
+	@Tools/archive.sh racing-ios
 
 ifneq ($(filter ios,$(MAKECMDGOALS)),)
 include Tools/iOS.mk

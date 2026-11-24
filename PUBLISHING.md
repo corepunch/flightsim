@@ -1,7 +1,7 @@
 # Test builds and publishing
 
 Builds use Make and the Apple SDK command-line tools on macOS. There are no
-checked-in IDE projects, generation steps, or store uploads in the build path.
+checked-in IDE projects or generation steps, and no build target uploads anything.
 
 | Product | Command | Local test output |
 | --- | --- | --- |
@@ -10,6 +10,12 @@ checked-in IDE projects, generation steps, or store uploads in the build path.
 | FlightSim, iOS device | `make ios-device` | `build/iOS/iphoneos-arm64/KestrelFrontier.app` |
 | Arcline, iOS simulator | `make racing-simulator` | `Games/Racing/build/ios/iphonesimulator-<arch>/Racing.app` |
 | Arcline, iOS device | `make racing-ios` | `Games/Racing/build/ios/iphoneos-arm64/Racing.app` |
+
+| App Store package | Command | Output |
+| --- | --- | --- |
+| FlightSim, iOS | `make archive-ios` | `build/Archives/KestrelFrontier-ios-<version>-<build>/KestrelFrontier.ipa` |
+| FlightSim, macOS (universal) | `make archive-macos` | `build/Archives/KestrelFrontier-macos-<version>-<build>/KestrelFrontier.pkg` |
+| Arcline, iOS | `make racing-archive` | `build/Archives/Racing-ios-<version>-<build>/Racing.ipa` |
 
 The default `make all` compiles and links the native flight targets. GitHub CI
 runs that target plus the headless unit suite on macOS. It does not sign,
@@ -31,12 +37,21 @@ explicit local development operations and require a matching profile on the
 Mac. The unsigned app targets alone do not install anything. See
 [local device testing](Tools/IOS.md).
 
-## Manual distribution
+## Distribution
 
-The owner prepares and signs distribution packages separately and explicitly
-uploads and submits them. Test bundles above are not distribution archives.
-Keep the existing app identities: `com.corepunch.spacefight` for regular
-FlightSim distribution and `com.corepunch.arcline` for Arcline iOS. Do not add
-upload, App Store Connect credentials, submission, or release steps to Make
-or CI. The existing FlightSim [manual operator commands](Tools/APPSTORE.md)
-are not called by any build target or GitHub workflow.
+The archive targets follow the direct route in `~/Developer/PUBLISHING.md`
+(section 4b). `Tools/archive.sh` builds the release app, keeps its dSYMs beside
+the package, strips the binaries, and `Tools/sign-distribution.py` signs it with
+the keychain's Apple Distribution identity, the installed App Store profile for
+the bundle ID (`PROFILE=path` picks one) and the checked-in entitlements plus the
+identifiers that profile grants. `Tools/stamp-bundle.py` gives every bundle the
+SDK and toolchain keys Xcode writes. An IPA is checked with
+`asc ipa-info --verify-signature`. The Mac package also needs a Mac Installer
+Distribution identity in the keychain; an Xcode cloud-managed certificate has no
+local private key and cannot sign it.
+
+Uploading, attaching a build and submitting stay separate, explicit `asc` steps
+([Tools/APPSTORE.md](Tools/APPSTORE.md)); no Make target or CI job uploads,
+submits or holds App Store Connect credentials. Keep the existing app identities:
+`com.corepunch.spacefight` for FlightSim on both platforms and
+`com.corepunch.arcline` for Arcline iOS.

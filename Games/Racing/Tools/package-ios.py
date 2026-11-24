@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble an unsigned Arcline test app from a linked Swift executable."""
+"""Assemble an unsigned Arcline app from a linked Swift executable."""
 
 import argparse
 import plistlib
@@ -12,6 +12,7 @@ import tempfile
 IDENTIFIER = "com.corepunch.arcline"
 PLATFORMS = {"iphoneos": "iPhoneOS", "iphonesimulator": "iPhoneSimulator"}
 RESOURCES = Path(__file__).resolve().parents[1] / "Resources"
+STAMP = Path(__file__).resolve().parents[3] / "Tools" / "stamp-bundle.py"
 
 
 def package(sdk: str, minimum: str, executable: Path, destination: Path) -> None:
@@ -56,10 +57,11 @@ def package(sdk: str, minimum: str, executable: Path, destination: Path) -> None
         if "CFBundleIcons" not in info:
             raise ValueError("actool did not produce iPhone icon declarations")
         (stage / "Info.plist").write_bytes(plistlib.dumps(info))
+        subprocess.run(["python3", str(STAMP), str(stage), sdk], check=True)
         if destination.exists():
             shutil.rmtree(destination)
         stage.rename(destination)
-    print(f"Built unsigned test app: {destination}")
+    print(f"Built unsigned app: {destination}")
 
 
 def main() -> None:

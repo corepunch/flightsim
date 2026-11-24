@@ -4,9 +4,9 @@ The shared iPhone/iPad and Mac listing is Kestrel Frontier, App Store ID `683106
 identifier `com.corepunch.spacefight`, development team `BM2R8F5YHC`. This setup
 uses one app record for both platforms. The local Fastlane lanes below target iOS
 and run only on explicit operator invocation. [PUBLISHING.md](../PUBLISHING.md)
-defines the separation from Make and CI. For a manually signed Mac distribution
-bundle, preserve the separate `Resources/KestrelFrontier-macOS.entitlements`
-file, including App Sandbox and the connections used by multiplayer.
+defines the separation from Make and CI. The Mac app signs with
+`Resources/KestrelFrontier-macOS.entitlements`, which adds App Sandbox and the
+connections used by multiplayer to the iOS set.
 
 ## Game Center
 
@@ -237,13 +237,41 @@ and its exact ImageGen prompt. The search image is cropped from real gameplay.
 
 The upload command takes an already signed App Store IPA, checks its bundle ID
 and marketing version, and sends it to TestFlight without inviting external
-testers. Supply a separately prepared and signed distribution IPA. The test
-Make targets produce local test bundles, not signed distribution archives.
-Align the source plists with the store version in `fastlane/version.txt` and
-choose an unused build number before manual distribution.
+testers. `make archive-ios` builds that IPA and `make archive-macos` the Mac
+package (see [Building a release](#building-a-release)); the other Make targets
+produce local test bundles only. Align the source plists with the store version
+in `fastlane/version.txt` and choose an unused build number before archiving.
 Both Info.plists declare `ITSAppUsesNonExemptEncryption` false (the app makes no
 encrypted connections; it only hashes asset files), so uploaded builds skip the
 export compliance questions. Revisit it if the app ever adds encryption.
+
+## Building a release
+
+Set the version and build in `Resources/Info-iOS.plist` and `Resources/Info.plist`
+(one build number for both platforms; `asc builds next-build-number --app 6831063163
+--version X --platform IOS` gives the next free one) and commit them. Then:
+
+```sh
+make archive-ios      # build/Archives/KestrelFrontier-ios-<version>-<build>/KestrelFrontier.ipa
+make archive-macos    # build/Archives/KestrelFrontier-macos-<version>-<build>/KestrelFrontier.pkg
+```
+
+`Tools/archive.sh` builds the release app (the Mac app universal, arm64 and x86_64),
+keeps its dSYMs beside the package, strips the binaries and signs with
+`Tools/sign-distribution.py`: the Apple Distribution identity in the keychain, the
+installed App Store profile for the bundle ID (`PROFILE=path` chooses one), and the
+checked-in entitlements plus the identifiers that profile grants. The IPA is checked
+with `asc ipa-info --verify-signature`. The Mac package is signed with a Mac Installer
+Distribution identity, which must be in the keychain (one Xcode signed with in the
+cloud cannot be used here). Nothing is uploaded; send the packages with
+
+```sh
+asc builds upload --app 6831063163 --ipa build/Archives/…/KestrelFrontier.ipa --wait
+asc builds upload --app 6831063163 --pkg build/Archives/…/KestrelFrontier.pkg \
+    --platform MAC_OS --version X --build-number N --wait
+```
+
+and attach and submit the builds as `~/Developer/PUBLISHING.md` describes.
 
 ## Submitting for review
 

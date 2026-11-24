@@ -43,10 +43,13 @@ $(IOS_OUT)/swift-inputs: FORCE
 
 $(IOS_OUT)/Racing: $(SWIFT_SOURCES) $(SWIFT_HEADERS) $(IOS_OUT)/swift-inputs Makefile
 	@printf '  Compiling Racing (%s)\n' "$(IOS_TARGET)"
+	@# One whole-module object stays beside the executable, so dsymutil can read its
+	@# debug information when an archive is made.
 	@sdk_path=$$(xcrun --sdk "$(IOS_SDK)" --show-sdk-path) && \
 	xcrun --sdk "$(IOS_SDK)" swiftc -sdk "$$sdk_path" -target "$(IOS_TARGET)" \
-		-parse-as-library -swift-version 5 -module-name Racing $(SWIFT_OPTIMIZATION) \
-		-I "$(SHARED_NET)" -o "$@.tmp" $(SWIFT_SOURCES)
+		-parse-as-library -swift-version 5 -module-name Racing $(SWIFT_OPTIMIZATION) -g \
+		-whole-module-optimization -c -I "$(SHARED_NET)" -o "$@.o" $(SWIFT_SOURCES) && \
+	xcrun --sdk "$(IOS_SDK)" swiftc -sdk "$$sdk_path" -target "$(IOS_TARGET)" -g "$@.o" -o "$@.tmp"
 	@mv "$@.tmp" "$@"
 
 ios-app: $(IOS_OUT)/Racing
