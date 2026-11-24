@@ -139,6 +139,10 @@ def main():
         motion = json.loads(path.read_text(encoding="utf-8")).get("motion", "full")
         assert motion in ("full", "fade", "none"), \
             f"{path.relative_to(ROOT)}: motion must be full, fade or none, not {motion!r}"
+        # ... and the chase view's gunsight (UIGunsightStyle).
+        gunsight = json.loads(path.read_text(encoding="utf-8")).get("gunsight", "stem")
+        assert gunsight in ("stem", "ringAndBead"), \
+            f"{path.relative_to(ROOT)}: gunsight must be stem or ringAndBead, not {gunsight!r}"
 
     # Every layout the code loads exists.
     named = set()

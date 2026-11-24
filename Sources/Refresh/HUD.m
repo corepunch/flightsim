@@ -34,9 +34,11 @@ static SKLabelNode *Label(CGFloat size, SKLabelHorizontalAlignmentMode align) {
     return UIMonoLabel(size, HUDColor(0.9), align, SKLabelVerticalAlignmentModeCenter);
 }
 
-// These small moving rings need no per-frame cubic subdivision in SpriteKit.
-// A 64-edge circle differs by less than a pixel at the reticle's drawn size.
-static void ReticleArc(CGMutablePathRef path, CGFloat radius, CGFloat start, CGFloat end, int steps) {
+// MARK: - Gunsight
+
+// These small moving shapes need no per-frame cubic subdivision in SpriteKit.
+// A 64-edge circle differs by less than a pixel at the gunsight's drawn size.
+static void SightArc(CGMutablePathRef path, CGFloat radius, CGFloat start, CGFloat end, int steps) {
     for (int i = 0; i <= steps; i++) {
         CGFloat angle = start + (end - start) * i / steps;
         CGPoint point = PointScale(CGPointMake(cos(angle), sin(angle)), radius);
@@ -45,25 +47,153 @@ static void ReticleArc(CGMutablePathRef path, CGFloat radius, CGFloat start, CGF
     }
 }
 
-static CGPathRef ReticleShape(BOOL nearest, BOOL pip) {
-    static CGPathRef shapes[4];
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        for (int i = 0; i < 4; i++) {
-            CGMutablePathRef path = CGPathCreateMutable();
-            ReticleArc(path, 2.5, 0, M_PI * 2, 64);
-            CGPathCloseSubpath(path);
-            if (i & 1) for (int side = 0; side < 2; side++)
-                ReticleArc(path, 3.6, side * M_PI - 0.6, side * M_PI + 0.6, 16);
-            if (i & 2) {
-                ReticleArc(path, 0.4, 0, M_PI * 2, 16);
-                CGPathCloseSubpath(path);
-            }
-            shapes[i] = path;
-        }
-    });
-    return shapes[(nearest ? 1 : 0) | (pip ? 2 : 0)];
+static void SightCircle(CGMutablePathRef path, CGFloat radius) {
+    SightArc(path, radius, 0, M_PI * 2, radius > 1.5 ? 64 : 16);
+    CGPathCloseSubpath(path);
 }
+
+// Four spokes on the ship's axes, between two radii.
+static void SightSpokes(CGMutablePathRef path, CGFloat inner, CGFloat outer) {
+    for (int i = 0; i < 4; i++) {
+        CGPoint along = CGPointMake(cos(i * M_PI_2), sin(i * M_PI_2));
+        CGPathMoveToPoint(path, NULL, along.x * inner, along.y * inner);
+        CGPathAddLineToPoint(path, NULL, along.x * outer, along.y * outer);
+    }
+}
+
+// The ship's frame at a station, mapping metres there to view points, about
+// `centre`. A shape `radius` metres across is never drawn smaller than
+// `minimum` points, so a phone's sight stays readable.
+static CGAffineTransform SightTransform(HUDStation r, CGPoint centre, CGFloat radius, CGFloat minimum) {
+    CGFloat metre = MAX(PointLength(r.right), 0.001);
+    CGFloat k = MAX(1, minimum / (radius * metre));
+    return (CGAffineTransform){ r.right.x * k, r.right.y * k, r.up.x * k, r.up.y * k, centre.x, centre.y };
+}
+
+// The stem style's sight: a ring with four ticks and a pip, where the guns converge.
+static const CGFloat kStemSightRadius = 3.4, kStemSightReach = 6.2;
+// The ring and bead: a spoked ring near the nose, a bead on a post far ahead.
+static const CGFloat kRingRadius = 3.0, kBeadRadius = 1.2;
+
+// The chase view's gunsight, drawn in perspective each frame at the stations the
+// client projects along the line of fire. The stem style is one lit sight at the
+// farthest station on a dashed stem from the nose, fainter toward the ship. The ring and
+// bead is what a 1917 scout carried: a ring near the cowling and a bead beyond
+// it, dark metal with a pale edge so it reads against sky and forest alike;
+// flying straight the bead sits in the ring's centre, and it slides off as the
+// nose swings.
+@interface HUDGunsight : SKNode
++ (instancetype)gunsightWithStyle:(UIGunsightStyle)style;
+// Stations nearest first. The sight needs them all and hides without.
+- (void)showStations:(const HUDStation *)stations count:(int)count;
+@end
+
+@implementation HUDGunsight {
+    UIGunsightStyle _style;
+    NSArray<SKShapeNode *> *_parts;     // stem: three dashes then the sight; ring and bead: the ring, the bead
+    CGPathRef _near, _far;              // the ring and what stands where the guns converge, in metres
+}
+
+- (void)dealloc {
+    CGPathRelease(_near);
+    CGPathRelease(_far);
+}
+
+// One stroked part. A backed part has the same path under it, wider and pale.
+- (SKShapeNode *)partWithColor:(SKColor *)color width:(CGFloat)width backing:(SKColor *)backing {
+    SKShapeNode *part = [SKShapeNode node];
+    part.strokeColor = color;
+    part.lineWidth = width;
+    part.lineCap = kCGLineCapRound;
+    if (backing) {
+        SKShapeNode *under = [SKShapeNode node];
+        under.strokeColor = backing;
+        under.lineWidth = width + 2.5;
+        under.lineCap = kCGLineCapRound;
+        under.zPosition = -1;
+        [part addChild:under];
+    }
+    [self addChild:part];
+    return part;
+}
+
+static void SetPartPath(SKShapeNode *part, CGPathRef path) {
+    part.path = path;
+    ((SKShapeNode *)part.children.firstObject).path = path;
+}
+
++ (instancetype)gunsightWithStyle:(UIGunsightStyle)style {
+    HUDGunsight *sight = [self node];
+    sight->_style = style;
+    CGMutablePathRef near = CGPathCreateMutable(), far = CGPathCreateMutable();
+    if (style == UIGunsightRingAndBead) {
+        SKColor *edge = HUDColor(0.55);
+        SightCircle(near, kRingRadius);
+        SightCircle(near, kRingRadius * 0.22);
+        SightSpokes(near, kRingRadius * 0.37, kRingRadius);
+        SightCircle(far, kBeadRadius);
+        CGPathMoveToPoint(far, NULL, 0, -kBeadRadius);
+        CGPathAddLineToPoint(far, NULL, 0, -kBeadRadius * 8);
+        SKShapeNode *ring = [sight partWithColor:ReticleColor(1) width:2 backing:edge];
+        SKShapeNode *bead = [sight partWithColor:ReticleColor(1) width:2 backing:edge];
+        bead.fillColor = ReticleColor(1);
+        sight->_parts = @[ring, bead];
+    } else {
+        SightCircle(far, kStemSightRadius);
+        SightSpokes(far, kStemSightRadius * 1.3, kStemSightReach);
+        SightCircle(far, 0.45);
+        NSMutableArray *parts = [NSMutableArray array];
+        for (int i = 0; i < 3; i++) [parts addObject:[sight partWithColor:ReticleColor(0.3 + 0.25 * i) width:2 backing:nil]];
+        [parts addObject:[sight partWithColor:ReticleColor(0.95) width:1.5 backing:nil]];
+        sight->_parts = parts;
+    }
+    sight->_near = near;
+    sight->_far = far;
+    sight.hidden = YES;
+    return sight;
+}
+
+- (void)showStations:(const HUDStation *)stations count:(int)count {
+    self.hidden = count < HUD_SIGHT_STATIONS;
+    if (self.hidden) return;
+    HUDStation nose = stations[0], last = stations[HUD_SIGHT_STATIONS - 1];
+    if (_style == UIGunsightRingAndBead) {
+        HUDStation cowl = stations[1];
+        CGAffineTransform ring = SightTransform(cowl, cowl.level, kRingRadius, 20);
+        CGAffineTransform bead = SightTransform(last, last.centre, kBeadRadius, 3);
+        CGPathRef ringPath = CGPathCreateCopyByTransformingPath(_near, &ring);
+        CGPathRef beadPath = CGPathCreateCopyByTransformingPath(_far, &bead);
+        SetPartPath(_parts[0], ringPath);
+        SetPartPath(_parts[1], beadPath);
+        CGPathRelease(ringPath);
+        CGPathRelease(beadPath);
+        return;
+    }
+    CGAffineTransform t = SightTransform(last, last.centre, kStemSightRadius, 12);
+    CGPathRef sight = CGPathCreateCopyByTransformingPath(_far, &t);
+    SetPartPath(_parts[3], sight);
+    CGPathRelease(sight);
+    // The stem runs up the line of fire and stops short of the sight's ticks.
+    // Its dashes shorten with distance, as the line itself would.
+    static const CGFloat dashes[3][2] = { { 0, 0.30 }, { 0.42, 0.64 }, { 0.76, 0.92 } };
+    CGFloat clear = kStemSightReach * hypot(t.a, t.b) + 5;
+    CGFloat length = PointDistance(nose.centre, last.centre) - clear;
+    for (int i = 0; i < 3; i++) {
+        SKShapeNode *dash = _parts[i];
+        dash.hidden = length < 14;
+        if (dash.hidden) continue;
+        CGPoint along = PointScale(PointNormalize(PointSub(last.centre, nose.centre)), length);
+        CGPoint from = PointAdd(nose.centre, PointScale(along, dashes[i][0]));
+        CGPoint to = PointAdd(nose.centre, PointScale(along, dashes[i][1]));
+        CGMutablePathRef path = CGPathCreateMutable();
+        CGPathMoveToPoint(path, NULL, from.x, from.y);
+        CGPathAddLineToPoint(path, NULL, to.x, to.y);
+        SetPartPath(dash, path);
+        CGPathRelease(path);
+    }
+}
+
+@end
 
 // Four corner marks of a square of side `size`, centred on the origin.
 static CGPathRef BracketPath(CGFloat size) {
@@ -158,9 +288,7 @@ static SKShapeNode *Bracket(void) {
     // the on-screen controller's stick covers.
     ConditionBar *_thrustBar;
     SKShapeNode *_boresight, *_cursor, *_cursorLine, *_ring;
-    // The chase view's reticle, drawn in perspective each frame: one node per
-    // ring so farther rings can be fainter.
-    NSArray<SKShapeNode *> *_reticleRings;
+    HUDGunsight *_gunsight;     // the chase view's, in the game's style
     SKShapeNode *_throttleFrame, *_throttleFill, *_boostFill;
     SKLabelNode *_speedLabel, *_throttleLabel, *_scoreLabel, *_inputLabel, *_deadLabel;
     SKNode *_help;
@@ -228,17 +356,8 @@ static SKShapeNode *Bracket(void) {
         [_boresight addChild:tick];
     }
     [_root addChild:_boresight];
-    NSMutableArray<SKShapeNode *> *rings = [NSMutableArray array];
-    for (int i = 0; i < HUD_RETICLE_RINGS; i++) {
-        SKShapeNode *n = [SKShapeNode node];
-        n.strokeColor = ReticleColor(0.95 - 0.22 * i);
-        n.lineWidth = i ? 1 : 1.5;
-        n.lineCap = kCGLineCapRound;
-        n.hidden = YES;
-        [_root addChild:n];
-        [rings addObject:n];
-    }
-    _reticleRings = rings;
+    _gunsight = [HUDGunsight gunsightWithStyle:UIThemeGunsight()];
+    [_root addChild:_gunsight];
 
     _ring = [SKShapeNode shapeNodeWithCircleOfRadius:100];
     _ring.strokeColor = HUDColor(0.12);
@@ -676,37 +795,15 @@ static void SetBar(SKShapeNode *n, CGFloat w, CGFloat h) {
     CGPathRelease(p);
 }
 
-// The ship's frame at one ring, mapping metres there to view points.
-static CGAffineTransform RingTransform(HUDRing r) {
-    return (CGAffineTransform){ r.right.x, r.right.y, r.up.x, r.up.y, r.centre.x, r.centre.y };
-}
-
-// The reticle: separate rings of one radius at growing distances along the
-// line of fire, so perspective shrinks them toward the aim point and the row
-// shows which way the guns point. The nearest ring carries side arcs, the
-// farthest the pip.
-- (void)drawReticle:(HUDFrame)f hidden:(BOOL)hidden {
-    int count = hidden ? 0 : f.reticleRings;
-    for (int i = 0; i < HUD_RETICLE_RINGS; i++) {
-        SKShapeNode *node = _reticleRings[i];
-        node.hidden = i >= count;
-        if (node.hidden) continue;
-        CGAffineTransform t = RingTransform(f.reticle[i]);
-        CGPathRef p = CGPathCreateCopyByTransformingPath(ReticleShape(i == 0, i == count - 1), &t);
-        node.path = p;
-        CGPathRelease(p);
-    }
-}
-
 - (void)updateFrame:(HUDFrame)f targets:(const HUDTarget *)targets count:(NSUInteger)count {
     [self layoutIfNeeded];
     CGSize s = self.size;
     CGPoint center = CGPointMake(s.width / 2, s.height / 2);
 
-    BOOL perspective = !f.cockpit && f.reticleRings > 0;
+    BOOL perspective = !f.cockpit && f.sightStations > 0;
     _boresight.hidden = !f.boresightVisible || f.playerDead || perspective;
     _boresight.position = f.boresight;
-    [self drawReticle:f hidden:!perspective || f.playerDead];
+    [_gunsight showStations:f.sight count:perspective && !f.playerDead ? f.sightStations : 0];
 
     CGFloat ringR = MIN(s.width, s.height) * 0.22;
     _ring.hidden = _cursor.hidden = _cursorLine.hidden = !f.mouseCaptured || f.playerDead;
