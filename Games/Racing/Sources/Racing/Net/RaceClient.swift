@@ -386,7 +386,7 @@ final class RaceClient: @unchecked Sendable {
 
         case .settings:
             let settings = MatchSettings(from: &r)
-            guard !r.overflow else { return false }
+            guard !r.overflow, r.remaining == 0 else { return false }
             locked { $0.settings = settings }
             return true
 
@@ -417,10 +417,13 @@ final class RaceClient: @unchecked Sendable {
 
         case .results:
             let count = Int(r.u8())
+            guard !r.overflow, count <= NetProtocol.maxCars, r.remaining == count * 5 else { return false }
             var results: [NetResult] = []
+            var ids = Set<UInt8>()
             for _ in 0..<count {
-                let id = r.u8(), time = r.f32(), payout = r.i32()
-                results.append(NetResult(carID: id, time: time.isNaN ? nil : time, payout: Int(payout)))
+                let id = r.u8(), time = r.f32()
+                guard ids.insert(id).inserted, time.isNaN || (time.isFinite && time > 0) else { return false }
+                results.append(NetResult(carID: id, time: time.isNaN ? nil : time))
             }
             guard !r.overflow else { return false }
             locked { $0.results = results }

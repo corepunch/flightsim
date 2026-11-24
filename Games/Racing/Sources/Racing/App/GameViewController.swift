@@ -23,11 +23,10 @@ final class GameViewController: GCEventViewController {
     private var raceIsForeground: Bool { raceIsVisible && UIApplication.shared.applicationState == .active }
     private var lastImpactFeedback = -TimeInterval.infinity
 
-    /// Books the result (prize money, pink slips) and returns the lines for the results panel.
+    /// Records fixed finish prizes and returns the lines for the results panel.
     var onFinish: ((RaceResult) -> [ResultLine])?
     /// Pays for another go; false hides RACE AGAIN (street challenges are one-off).
-    var onRetry: (() -> Bool)?
-    var retryTitle = "RACE AGAIN"
+    var allowsRetry = false
     /// Online: books the server's results and returns the payout lines.
     var onOnlineResults: (([NetResult]) -> [ResultLine])?
     /// Online: the player left the race from the pause panel.
@@ -299,14 +298,10 @@ final class GameViewController: GCEventViewController {
         if result.isRecord { subtitle += "  ·  NEW RECORD" }
         let money = onFinish?(result) ?? []
         var buttons: [GlowButton] = []
-        if onRetry != nil || onFinish == nil {
-            let again = GlowButton(retryTitle, filled: true)
+        if allowsRetry || onFinish == nil {
+            let again = GlowButton("RACE AGAIN", filled: true)
             again.onTap = { [weak self] in
                 guard let self else { return }
-                if let pay = self.onRetry, !pay() {
-                    Toast.show("NOT ENOUGH CREDITS", in: self.view, color: UI.magenta)
-                    return
-                }
                 self.restart()
             }
             buttons.append(again)
@@ -356,7 +351,7 @@ final class GameViewController: GCEventViewController {
         closePanel()
         hud.announce("", hold: 0)
         show(PanelView(title: UI.ordinal(position), titleColor: position == 1 ? UI.amber : .white,
-                       subtitle: client.settings.stake > 0 ? "BUY-IN \(Economy.credits(client.settings.stake))" : "FRIENDLY RACE",
+                       subtitle: "FREE ENTRY",
                        rows: rows, money: money, buttons: [back]))
     }
 

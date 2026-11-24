@@ -29,10 +29,6 @@ enum RaceLauncher {
     static func circuit(_ event: CircuitEvent, from vc: UIViewController) {
         guard let window = vc.viewIfLoaded?.window else { return }
         let profile = Profile.shared
-        guard profile.spend(event.entry) else {
-            Toast.show("NOT ENOUGH CREDITS", in: vc.view, color: UI.magenta)
-            return
-        }
         let car = profile.selectedCar
         var config = RaceConfig(definition: TrackMaps.definition(event.track), player: car.design,
                                 rivals: event.rivals.map { Entrant(name: $0.driver, design: $0.design) })
@@ -44,19 +40,17 @@ enum RaceLauncher {
         game.onFinish = { result in
             let (prize, bonus) = profile.record(event: event, position: result.position)
             var lines: [ResultLine] = []
-            if event.entry > 0 { lines.append(ResultLine(title: "ENTRY", value: "−" + Economy.credits(event.entry), color: UI.dim)) }
             lines.append(ResultLine(title: result.position <= 3 ? "\(UI.ordinal(result.position)) PLACE PRIZE" : "PRIZE",
                                     value: Economy.credits(prize), color: prize > 0 ? UI.amber : UI.dim))
             if bonus > 0 { lines.append(ResultLine(title: "FIRST WIN BONUS", value: Economy.credits(bonus), color: UI.green)) }
             lines.append(ResultLine(title: "BALANCE", value: Economy.credits(profile.credits), color: .white))
             return lines
         }
-        game.retryTitle = event.entry > 0 ? "RACE AGAIN · \(Economy.credits(event.entry))" : "RACE AGAIN"
-        game.onRetry = { profile.spend(event.entry) }
+        game.allowsRetry = true
         game.start(in: window)
     }
 
-    static func street(_ challenger: Challenger, stake: Profile.Stake, from vc: UIViewController) {
+    static func street(_ challenger: Challenger, from vc: UIViewController) {
         guard let window = vc.viewIfLoaded?.window else { return }
         let profile = Profile.shared
         let car = profile.selectedCar
@@ -68,20 +62,10 @@ enum RaceLauncher {
         config.assist = profile.assist
         config.playerName = profile.driver
         let game = GameViewController(config: config)
-        let carName = car.design.name
         game.onFinish = { result in
             let won = result.position == 1
-            profile.settle(challenger: challenger, stake: stake, won: won, carID: car.id)
-            var lines: [ResultLine] = []
-            switch stake {
-            case .money(let amount):
-                lines.append(ResultLine(title: won ? "BET WON" : "BET LOST",
-                                        value: (won ? "+" : "−") + Economy.credits(amount), color: won ? UI.green : UI.magenta))
-            case .pinkSlip:
-                lines.append(won ? ResultLine(title: "PINK SLIP", value: challenger.design.name + " IS YOURS", color: UI.green)
-                                 : ResultLine(title: "PINK SLIP", value: carName + " IS GONE", color: UI.magenta))
-                if won, challenger.isKing { lines.append(ResultLine(title: "KING'S PURSE", value: Economy.credits(50_000))) }
-            }
+            let prize = profile.record(challenger: challenger, won: won)
+            var lines = [ResultLine(title: "PRIZE", value: Economy.credits(prize), color: prize > 0 ? UI.amber : UI.dim)]
             lines.append(ResultLine(title: "BALANCE", value: Economy.credits(profile.credits), color: .white))
             return lines
         }
@@ -89,7 +73,7 @@ enum RaceLauncher {
     }
 }
 
-/// Circuit events (entry fee, purse) and the street board (bets and pink slips).
+/// Free circuit events and head-to-head street challenges.
 final class EventsViewController: ScreenController {
     private let profile = Profile.shared
     private let switcher = SegmentSwitch(["STREET", "CIRCUIT"])
@@ -202,13 +186,12 @@ final class EventsViewController: ScreenController {
         notes.append("Five rivals in class \(event.carClass.letter) cars. Best lap and podium shown at the finish.")
         let body = UI.body(notes.joined(separator: " "), 13)
 
-        let start = GlowButton(event.entry > 0 ? "ENTER  ·  \(Economy.credits(event.entry))" : "START  ·  FREE ENTRY",
+        let start = GlowButton("START  ·  FREE ENTRY",
                                filled: true, size: 16)
         start.heightAnchor.constraint(equalToConstant: 58).isActive = true
         var problem: String?
         if profile.wins < event.winsToUnlock { problem = event.winsToUnlock - profile.wins == 1 ? "WIN 1 MORE RACE TO ENTER" : "WIN \(event.winsToUnlock - profile.wins) MORE RACES TO ENTER" }
         else if car.spec.index > event.carClass.cap { problem = "\(car.name) IS OVER CLASS \(event.carClass.letter) (\(car.spec.index) > \(event.carClass.cap))" }
-        else if profile.credits < event.entry { problem = "NOT ENOUGH CREDITS FOR THE ENTRY" }
         let warning = UI.caps(problem ?? "", 10, UI.magenta)
         warning.numberOfLines = 2
         warning.isHidden = problem == nil
@@ -229,53 +212,47 @@ final class EventsViewController: ScreenController {
     // MARK: - Street
 
     private func buildStreet() {
-        let intro = UI.body("Illegal night racing. One on one, two laps. Bet credits or race for pink slips. "
+        let intro = UI.body("Night rivals. One on one, two laps, free entry. "
                             + "The board changes after every street race.", 13)
         content.addArrangedSubview(intro)
         content.setCustomSpacing(16, after: intro)
         for challenger in Street.board(round: profile.streetRound, playerIndex: profile.selectedCar.design.spec.index) {
             let card = ChallengeCard(challenger: challenger, profile: profile)
-            card.onRace = { [weak self] stake in self?.confirmStreet(challenger, stake) }
+            card.onRace = { [weak self] in self?.confirmStreet(challenger) }
             content.addArrangedSubview(card)
         }
         let kingHeader = UI.caps("THE KING", 10, UI.amber)
         content.setCustomSpacing(26, after: content.arrangedSubviews.last!)
         content.addArrangedSubview(kingHeader)
         if profile.kingBeaten {
-            content.addArrangedSubview(UI.body("You beat the King. The crown and his car are yours.", 13))
+            content.addArrangedSubview(UI.body("You beat the King. The crown is yours.", 13))
         } else if profile.wins < Street.winsForKing {
             let card = CardView()
             let lock = UIImageView(image: UI.symbol("lock.fill", 16))
             lock.tintColor = UI.amber
             let text = UI.body("The King only races drivers with \(Street.winsForKing) wins. "
-                               + "You have \(profile.wins). Pink slips only.", 13)
+                               + "You have \(profile.wins).", 13)
             card.fill(with: UI.stack([lock, text], axis: .horizontal, spacing: 12, alignment: .center), inset: 16)
             content.addArrangedSubview(card)
         } else {
             let card = ChallengeCard(challenger: Street.king, profile: profile)
-            card.onRace = { [weak self] stake in self?.confirmStreet(Street.king, stake) }
+            card.onRace = { [weak self] in self?.confirmStreet(Street.king) }
             content.addArrangedSubview(card)
         }
     }
 
-    private func confirmStreet(_ challenger: Challenger, _ stake: Profile.Stake) {
+    private func confirmStreet(_ challenger: Challenger) {
         let car = profile.selectedCar.design
-        let message: String
-        switch stake {
-        case .money(let amount):
-            message = "\(car.name) against \(challenger.driver)'s \(challenger.design.name). Winner takes \(Economy.credits(amount))."
-        case .pinkSlip:
-            message = "Lose and \(car.name) goes to \(challenger.driver) for good, upgrades and all. "
-                + "Win and \(challenger.design.name) is yours."
-        }
-        let sheet = SheetController.confirm(title: stake == .pinkSlip ? "RACE FOR PINK SLIPS?" : "TAKE THE BET?",
+        let message = "\(car.name) against \(challenger.driver)'s \(challenger.design.name). Free entry. Win \(Economy.credits(challenger.victoryPrize))."
+        let sheet = SheetController.confirm(title: challenger.isKing ? "CHALLENGE THE KING?" : "CHALLENGE THIS RIVAL?",
                                             message: message, confirm: "RACE",
-                                            tint: stake == .pinkSlip ? UI.magenta : UI.cyan) { [weak self] in
+                                            tint: challenger.isKing ? UI.amber : UI.cyan) { [weak self] in
             guard let self else { return }
-            RaceLauncher.street(challenger, stake: stake, from: self)
+            RaceLauncher.street(challenger, from: self)
         }
         present(sheet, animated: true)
     }
+
 }
 
 /// One circuit event in the list.
@@ -295,7 +272,7 @@ private final class EventCard: UIControl {
         let map = TrackMaps.map(event.track, size: 62)
         let name = UI.label(event.name, UI.font(15, .black))
         let place = UI.caps("\(TrackMaps.definition(event.track).name.uppercased())  ·  \(event.laps) LAPS", 9)
-        let entry = UI.caps(event.entry > 0 ? "ENTRY \(Economy.credits(event.entry))" : "FREE ENTRY", 9, UI.dim)
+        let entry = UI.caps("FREE ENTRY", 9, UI.dim)
         let text = UI.stack([name, place, entry], spacing: 3)
         let prizeLabel = UI.caps("1ST", 9, UI.faint)
         prizeLabel.textAlignment = .right
@@ -355,13 +332,10 @@ private final class EventCard: UIControl {
 
 /// A challenger on the street board: who, in what, where, and for how much.
 private final class ChallengeCard: CardView {
-    var onRace: ((Profile.Stake) -> Void)?
-    private var stake: Profile.Stake
-    private var chips: [(Profile.Stake, UIButton)] = []
+    var onRace: (() -> Void)?
     private let race = GlowButton("RACE", filled: true, size: 14)
 
     init(challenger: Challenger, profile: Profile) {
-        stake = challenger.isKing ? .pinkSlip : .money(challenger.wagers[0])
         super.init(raised: false)
         if challenger.isKing { layer.borderColor = UI.amber.withAlphaComponent(0.6).cgColor }
         let design = challenger.design
@@ -387,65 +361,18 @@ private final class ChallengeCard: CardView {
         compare.distribution = .fillEqually
         let compareTitle = UI.caps("THEIR CAR VS YOURS", 8)
 
-        var options: [Profile.Stake] = challenger.isKing ? [] : challenger.wagers.map { .money($0) }
-        options.append(.pinkSlip)
-        let chipRow = UI.stack([], axis: .horizontal, spacing: 6)
-        chipRow.distribution = .fillEqually
-        for option in options {
-            let b = UIButton(type: .custom)
-            switch option {
-            case .money(let a): b.setTitle(Economy.credits(a), for: .normal)
-            case .pinkSlip: b.setTitle("PINK SLIP", for: .normal)
-            }
-            b.titleLabel?.font = UI.font(10, .black)
-            b.titleLabel?.adjustsFontSizeToFitWidth = true
-            b.titleLabel?.minimumScaleFactor = 0.7
-            b.layer.cornerRadius = 9
-            b.layer.borderWidth = 1
-            b.heightAnchor.constraint(equalToConstant: 36).isActive = true
-            let affordable: Bool
-            switch option {
-            case .money(let a): affordable = profile.credits >= a
-            case .pinkSlip: affordable = profile.cars.count > 1 || challenger.isKing && profile.cars.count > 1
-            }
-            b.isEnabled = affordable
-            b.alpha = affordable ? 1 : 0.3
-            b.addAction(UIAction { [weak self] _ in UI.haptic(); self?.choose(option) }, for: .touchUpInside)
-            chips.append((option, b))
-            chipRow.addArrangedSubview(b)
-        }
-        if case .money(let first) = stake, profile.credits < first { stake = .pinkSlip }
-
+        let prize = UI.caps("WIN \(Economy.credits(challenger.victoryPrize))  ·  FREE ENTRY", 10, UI.amber)
         race.heightAnchor.constraint(equalToConstant: 46).isActive = true
-        race.onTap = { [weak self] in guard let self else { return }; self.onRace?(self.stake) }
-        var views: [UIView] = [head, car, compareTitle, compare, chipRow, race]
-        if profile.cars.count < 2 {
-            views.insert(UI.caps("PINK SLIPS NEED A SECOND CAR IN THE GARAGE", 8, UI.faint), at: 5)
-        }
-        let stack = UI.stack(views, spacing: 8)
+        race.onTap = { [weak self] in self?.onRace?() }
+        let stack = UI.stack([head, car, compareTitle, compare, prize, race], spacing: 8)
         stack.setCustomSpacing(2, after: head)
         stack.setCustomSpacing(14, after: car)
         stack.setCustomSpacing(4, after: compareTitle)
         stack.setCustomSpacing(14, after: compare)
         fill(with: stack, inset: 16)
-        choose(stake)
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
-    private func choose(_ option: Profile.Stake) {
-        stake = option
-        for (o, b) in chips {
-            let on = o == option
-            let tint = o == .pinkSlip ? UI.magenta : UI.cyan
-            b.backgroundColor = on ? tint : UIColor(white: 1, alpha: 0.05)
-            b.setTitleColor(on ? UI.ink : .white, for: .normal)
-            b.layer.borderColor = (on ? tint : UI.hairline).cgColor
-        }
-        let usable = chips.first { $0.0 == option }?.1.isEnabled ?? false
-        race.isEnabled = usable
-        race.restyle(tint: option == .pinkSlip ? UI.magenta : UI.cyan, filled: true)
-        race.setTitleText(option == .pinkSlip ? "RACE FOR PINK SLIPS" : "RACE")
-    }
 }
 

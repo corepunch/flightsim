@@ -64,7 +64,7 @@ do {
 }
 
 let t0 = Date()
-let settings = MatchSettings(trackIndex: 2, trackSeed: 42, laps: 3, stake: 100)
+let settings = MatchSettings(trackIndex: 2, trackSeed: 42, laps: 3)
 let host = try RaceClient.host(name: "Host", loadout: Data([1, 2, 3]), settings: settings)
 let server = host.server!
 print("server on UDP \(server.port)")
@@ -91,7 +91,12 @@ check(g2.cars.first { $0.name == "Guest One" }?.loadout == bigLoadout, "400-byte
 check(Set(clients.compactMap(\.localID)).count == 3, "distinct client ids")
 check(clients.allSatisfy { $0.myCarIDs.count == 1 }, "each client owns one car")
 
-// Wrong protocol version is turned away with a reason.
+// No payment field is encoded in the lobby settings.
+var encodedSettings = MsgWriter()
+settings.write(to: &encodedSettings)
+check(encodedSettings.data.count == 11, "lobby settings carry only track, seed and laps")
+
+// Legacy protocol v2 (with player-funded entry and prize fields) cannot join.
 do {
     let q = DispatchQueue(label: "rawjoin")
     var reason: String?
@@ -105,12 +110,12 @@ do {
         }
     })
     q.sync {
-        channel.queueReliable(MsgWriter.message(ClientMsg.join.rawValue) { $0.u16(99); $0.string("Old"); $0.blob(Data()) })
+        channel.queueReliable(MsgWriter.message(ClientMsg.join.rawValue) { $0.u16(2); $0.string("Old"); $0.blob(Data()) })
         channel.transmit()
     }
     wait(2) { q.sync { reason != nil } }
     let got = q.sync { reason }
-    check(got?.contains("version") == true, "version mismatch rejected: \(got ?? "nil")")
+    check(got?.contains("newer version") == true, "version mismatch rejected: \(got ?? "nil")")
     link.close()
 }
 check(host.cars.count == 3, "rejected joiner never entered the roster")
@@ -190,6 +195,7 @@ check(wait(4) { clients.allSatisfy { if case .racing = $0.reportedPhase { return
 let botID = host.myCarIDs[1]
 g1.reportFinish(carID: botID, time: 1)   // not g1's car: ignored
 g1.reportFinish(carID: g1.myCarIDs[0], time: 62)
+g1.reportFinish(carID: g1.myCarIDs[0], time: 1) // duplicate must not change classification
 wait(0.1) { false }
 g2.reportFinish(carID: g2.myCarIDs[0], time: 61)
 wait(0.1) { false }
@@ -198,9 +204,8 @@ check(wait(1) { clients.allSatisfy { $0.finishTimes.count == 3 } }, "per-car fin
 check(clients.allSatisfy { if case .racing = $0.phase { return true } else { return false } }, "still racing during the grace period")
 check(wait(3) { clients.allSatisfy { $0.phase == .results && $0.results.count == 4 } }, "results after the DNF grace")
 let results = g2.results
-let expected: [(UInt8, Float?, Int)] = [(host.myCarIDs[0], 60.5, 180), (g2.myCarIDs[0], 61, 90), (g1.myCarIDs[0], 62, 30), (botID, nil, 0)]
+let expected: [(UInt8, Float?)] = [(host.myCarIDs[0], 60.5), (g2.myCarIDs[0], 61), (g1.myCarIDs[0], 62), (botID, nil)]
 check(results.map(\.carID) == expected.map(\.0) && results.map(\.time) == expected.map(\.1), "ordered by measured time, bot DNF")
-check(results.map(\.payout) == expected.map(\.2), "stake pot 300 split 180/90/30: \(results.map(\.payout))")
 check(clients.allSatisfy { $0.results == results }, "everyone has the same results")
 
 host.returnToLobby()

@@ -1,8 +1,20 @@
 import Foundation
 import simd
 
-// The money side of the game, after Street Rod: win races for purses and side bets,
-// put the winnings into the car, and race the best for their pink slips.
+// Earn fixed race prizes and spend credits on cars, custom parts, and tuning.
+
+enum RacePrizes {
+    static func lan(position: Int, finished: Bool) -> Int {
+        guard finished else { return 0 }
+        switch position {
+        case 1: return 900
+        case 2: return 500
+        case 3: return 300
+        case 4...: return 150
+        default: return 0
+        }
+    }
+}
 
 /// Performance index: the mean of a car's four ratings, ×1000. Classes cap it, so a
 /// race is between comparable cars however much has been spent on them.
@@ -195,14 +207,13 @@ enum Dealer {
 
 // MARK: - Circuit events
 
-/// A sanctioned race: pay the entry, finish on the podium for a share of the purse.
+/// A sanctioned race: free entry, with fixed prizes for the podium.
 struct CircuitEvent: Identifiable {
     let id: String
     let name: String
     let track: Int
     let carClass: CarClass
     let laps: Int
-    let entry: Int
     let purse: Int
     /// Wins needed (any race) before the event opens.
     let winsToUnlock: Int
@@ -231,18 +242,17 @@ struct CircuitEvent: Identifiable {
 
 enum Events {
     static let all: [CircuitEvent] = {
-        let tiers: [(CarClass, laps: Int, entry: Int, purse: Int, wins: Int, difficulty: Int, names: [String])] = [
-            (.c, 2, 0, 1_500, 0, 0, ["NIGHT SHIFT", "FIRST LIGHT", "COLD START", "STREET LEGAL"]),
-            (.b, 3, 600, 4_500, 2, 1, ["NEON CUP", "SPARK SERIES", "HALO TROPHY", "RIDGE OPEN"]),
-            (.a, 3, 1_500, 10_000, 5, 2, ["VOLT GRAND PRIX", "AURORA CLASSIC", "IRON CROWN", "PULSE MASTERS"]),
-            (.s, 4, 4_000, 25_000, 9, 2, ["ARCLINE INVITATIONAL", "OMEGA RUN", "SUPERNOVA", "THE LONG NIGHT"]),
+        let tiers: [(CarClass, laps: Int, purse: Int, wins: Int, difficulty: Int, names: [String])] = [
+            (.c, 2, 1_500, 0, 0, ["NIGHT SHIFT", "FIRST LIGHT", "COLD START", "STREET LEGAL"]),
+            (.b, 3, 4_500, 2, 1, ["NEON CUP", "SPARK SERIES", "HALO TROPHY", "RIDGE OPEN"]),
+            (.a, 3, 10_000, 5, 2, ["VOLT GRAND PRIX", "AURORA CLASSIC", "IRON CROWN", "PULSE MASTERS"]),
+            (.s, 4, 25_000, 9, 2, ["ARCLINE INVITATIONAL", "OMEGA RUN", "SUPERNOVA", "THE LONG NIGHT"]),
         ]
         var events: [CircuitEvent] = []
         for tier in tiers {
             for track in 0..<4 {
                 events.append(CircuitEvent(id: "\(tier.0.letter)\(track)", name: tier.names[track], track: track,
                                         carClass: tier.0, laps: tier.laps,
-                                        entry: track == 0 && tier.0 == .c ? 0 : tier.entry + track * tier.entry / 4,
                                         purse: tier.purse + track * tier.purse / 6,
                                         winsToUnlock: tier.wins + (track > 1 ? 1 : 0), difficulty: tier.difficulty))
             }
@@ -253,7 +263,7 @@ enum Events {
 
 // MARK: - Street challenges
 
-/// A one-on-one for money or the cars themselves, posted on the street board.
+/// A free head-to-head challenge on the street board.
 struct Challenger {
     let driver: String
     let blueprint: Blueprint
@@ -261,11 +271,11 @@ struct Challenger {
     let isKing: Bool
     var design: CarDesign { blueprint.design }
 
-    /// Side bets on offer; the bigger the car, the bigger the bets.
-    var wagers: [Int] {
-        let base = [100, 250, 500, 1_200, 3_000][design.spec.carClass.rawValue]
-        return [base, base * 2, base * 4]
+    /// Fixed event prize, not deducted from the rival or from the player.
+    var victoryPrize: Int {
+        isKing ? 50_000 : [500, 1_000, 2_000, 4_800, 12_000][design.spec.carClass.rawValue]
     }
+
 }
 
 enum Street {

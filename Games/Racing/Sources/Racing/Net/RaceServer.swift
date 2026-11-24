@@ -338,7 +338,7 @@ final class RaceServer: @unchecked Sendable {
         switch message {
         case .settings:
             let s = MatchSettings(from: &r)
-            guard !r.overflow, phase == .lobby, s != settings else { return }
+            guard !r.overflow, r.remaining == 0, phase == .lobby, s != settings else { return }
             settings = s
             broadcast(settingsMessage())
 
@@ -482,9 +482,7 @@ final class RaceServer: @unchecked Sendable {
             .sorted { (finishes[$0.info.id]!, $0.info.id) < (finishes[$1.info.id]!, $1.info.id) }
         let unfinished = racers.filter { finishes[$0.info.id] == nil }
             .sorted { ($0.state?.progress ?? -.infinity) > ($1.state?.progress ?? -.infinity) }
-        let pot = settings.stake * racers.filter { !$0.info.isBot }.count
-        let payouts = NetResult.payouts(pot: pot, finishers: finished.count)
-        results = finished.enumerated().map { NetResult(carID: $1.info.id, time: finishes[$1.info.id], payout: payouts[$0]) }
+        results = finished.map { NetResult(carID: $0.info.id, time: finishes[$0.info.id]) }
             + unfinished.map { NetResult(carID: $0.info.id, time: nil) }
         phase = .results
         broadcast(resultsMessage())
@@ -534,7 +532,6 @@ final class RaceServer: @unchecked Sendable {
             for result in self.results {
                 w.u8(result.carID)
                 w.f32(result.time ?? .nan)
-                w.i32(Int32(clamping: result.payout))
             }
         }
     }
