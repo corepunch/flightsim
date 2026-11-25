@@ -150,6 +150,8 @@ static inline void ParticleSet(SCNParticleSystem *ps, NSString *key, CGFloat val
 // Reproducible, staged images rendered through the game's normal backend.
 @interface SceneCapture : NSObject
 + (int)renderFile:(NSString *)definition toFile:(NSString *)path size:(CGSize)size;
+// Streams tightly packed BGRA frames at 30 fps to standard output.
++ (int)streamFile:(NSString *)definition size:(CGSize)size firstFrame:(int)firstFrame count:(int)count;
 @end
 
 // MARK: - ProjectileTrail

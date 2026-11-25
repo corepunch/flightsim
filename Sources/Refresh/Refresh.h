@@ -253,3 +253,27 @@ typedef struct {
 - (void)renderDisplaysWithQueue:(id<MTLCommandQueue>)queue time:(NSTimeInterval)time;
 
 @end
+
+
+// MARK: - Flight camera
+
+// The chase camera's eased state, carried from frame to frame. Every field
+// chases its target with 1 - exp(-k dt), so it never depends on frame rate.
+typedef struct {
+    simd_quatf orientation;     // lags the ship's
+    simd_float3 lead;           // turn the view leads by: local pitch, yaw rotation vector
+    float roll;                 // the part of the ship's lean the view shares
+    float lookYaw, lookPitch;   // free look, toward the hat
+    float boost;                // boost effects, 0..1
+    float fov;
+    float shake;                // hits and explosions, decaying
+    float dead;                 // pull-back after the ship is destroyed, 0..1
+    simd_float3 seat;           // where the settled camera sits, in ship space
+} FlightCameraState;
+
+// The player's flight pose, camera rig, and sight projection for both views.
+simd_quatf FlightViewOrientation(const PlayerState *player);
+RefCamera FlightCameraUpdate(FlightCameraState *state, const PlayerState *player, simd_float3 eye,
+                             BOOL cockpit, BOOL dynamic, int hat, float dt, double time);
+void FlightCameraSight(HUDFrame *frame, id<Refresh> refresh, const PlayerState *player,
+                       simd_float3 seat, BOOL cockpit);
