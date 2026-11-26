@@ -41,6 +41,7 @@ process modes and stay as flags.
 | `lan_host` | Hosts a lobby using the saved match settings |
 | `lan_start` | Starts the hosted match after another pilot joins |
 | `screenshot <file.png>` | Saves the next frame |
+| `rate` | Asks the system for the App Store rating sheet; a development build always shows it, TestFlight never does |
 | `r_stats [reset]` | Prints app/Metal/texture memory and host/render callback timing; `reset` starts a new timing window |
 | `quit` | Exits |
 

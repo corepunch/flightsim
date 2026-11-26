@@ -199,6 +199,20 @@ NSArray<CampaignAchievement *> *CampaignAchievements(void);
 @end
 NSArray<AchievementProgress *> *ProgressAchievements(ProgressSave *save);
 
+// The App Store rating sheet. The system draws it and shows it at most three
+// times a year, so the campaign asks only after a mission is finished for the
+// first time: the fifth mission for the first ask, then at least five missions
+// and thirty days later, three asks in all. The record belongs to the device,
+// not the campaign, so a new campaign or a cloud merge does not ask again.
+typedef struct { NSInteger asks, mission, day; } RatingRecord;   // asks made; missions finished and the day at the last one
+enum { RatingFirstMission = 5, RatingMissionGap = 5, RatingDayGap = 30, RatingAsks = 3 };
+// Whether finishing `missions` campaign missions for the first time, on `day`
+// (days since the Unix epoch), earns an ask.
+BOOL RatingDue(RatingRecord record, NSInteger missions, NSInteger day);
+NSInteger RatingToday(void);
+RatingRecord RatingRecordLoad(void);
+void RatingRecordAsked(NSInteger missions);
+
 #pragma mark - Cast and rooms
 
 @interface StoryCharacter : NSObject

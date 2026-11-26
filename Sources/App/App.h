@@ -40,6 +40,13 @@
 - (void)requestSync;
 @end
 
+// MARK: - Store rating
+
+// Asks the system for the App Store's own rating sheet over the game. The
+// system decides whether it shows (at most three times a year, never in
+// TestFlight) and does not say, so NO only means there was no window to ask in.
+BOOL StoreRatingRequest(void);
+
 // MARK: - Host
 
 // The application loop: boots the renderer, runs the menus and loading

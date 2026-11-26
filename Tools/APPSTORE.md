@@ -74,6 +74,27 @@ Drive and Game Center sign-in on each device. Earn different results offline
 on two devices, then reconnect and check that both results appear on both.
 [Apple's GameKit saved-game setup](https://developer.apple.com/documentation/gamekit/saving-the-player-s-game-data-to-an-icloud-account)
 
+## App Store rating
+
+The campaign asks for a rating with the App Store's own sheet
+(`SKStoreReviewController`, `Sources/App/StoreRating.m`) on iOS and macOS. A
+custom look-alike is not allowed; the game only picks the moment. The system
+shows the sheet at most three times a year per player, never in TestFlight,
+and does not report whether it showed.
+
+- Only a mission finished for the first time asks (`RatingDue` in
+  `Sources/Story/Progress.m`): the fifth mission, the end of Strange Orders,
+  for the first ask, then at least five missions and thirty days later, three
+  asks in all.
+- The sheet waits until the pilot has read the results and the debrief
+  conversation and moved on; it rises a second after the next screen appears.
+  Launching the next sortie first drops the ask unspent.
+- The record is device-local (`SFRating…` defaults), so a new campaign or a
+  cloud merge does not ask again.
+
+The console command `rate` asks for the sheet directly; a development build
+always shows it.
+
 ## Fastlane
 
 Fastlane and its dependencies are pinned by `Gemfile` and `Gemfile.lock`.

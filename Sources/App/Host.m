@@ -311,6 +311,9 @@ static const double kMinMissionLoadSeconds = 1.2;   // long enough to read the t
         if (a.count < 2) { NSLog(@"usage: screenshot <file.png>"); return; }
         [weak saveScreenshot:a[1]];
     }];
+    [Cmd add:@"rate" help:@"Asks the system for the App Store rating sheet (development builds always show it)" handler:^(NSArray<NSString *> *a) {
+        [weak requestRating];
+    }];
     [Cmd add:@"quit" help:@"Exits the game" handler:^(NSArray<NSString *> *a) {
 #if TARGET_OS_OSX
         // Screenshots finish over the next frames; let them land first.
@@ -588,6 +591,12 @@ static NSData *PNGFromTexture(id<MTLTexture> t, CGColorSpaceRef space) {
     if (_revealing) return;
     if (_screens.shown == _loading && _booted && _state == HostStateMenus) { [self reveal:0.5]; return; }
     [self presentOverlay:screen];
+}
+
+// The menus run on the render thread; the sheet belongs to the main one.
+- (BOOL)requestRating {
+    dispatch_async(dispatch_get_main_queue(), ^{ StoreRatingRequest(); });
+    return YES;
 }
 
 - (void)quitAfter:(NSTimeInterval)seconds {

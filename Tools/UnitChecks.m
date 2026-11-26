@@ -1366,6 +1366,17 @@ static void CheckScreenModels(void) {
     CHECK([ReportBlock table:@[] rows:@[] highlighted:0].highlightedRow == NSNotFound);
 }
 
+static void CheckRating(void) {
+    RatingRecord fresh = {0};
+    CHECK(!RatingDue(fresh, RatingFirstMission - 1, 0) && RatingDue(fresh, RatingFirstMission, 0));
+    RatingRecord asked = {.asks = 1, .mission = RatingFirstMission, .day = 100};
+    CHECK(!RatingDue(asked, RatingFirstMission + RatingMissionGap, 100 + RatingDayGap - 1));
+    CHECK(!RatingDue(asked, RatingFirstMission + RatingMissionGap - 1, 100 + RatingDayGap));
+    CHECK(RatingDue(asked, RatingFirstMission + RatingMissionGap, 100 + RatingDayGap));
+    asked.asks = RatingAsks;
+    CHECK(!RatingDue(asked, 1000, 100000));
+}
+
 static void CheckProgressSaves(void) {
     NSArray<ObjectiveReadout *> *flight = FlightObjectiveReadouts(@"{#debrief.objectives}\nEscort\nOptional\nMissing state", @"123");
     CHECK(flight.count == 4);
@@ -1450,6 +1461,7 @@ int main(void) {
         CheckLANMatchResults();
         CheckScreenModels();
         CheckProgressSaves();
+        CheckRating();
         CheckConsole();
         CheckCampaign();
         CheckDefinitions();

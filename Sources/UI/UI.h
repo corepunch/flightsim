@@ -36,6 +36,7 @@ typedef NSEdgeInsets BriefingInsets;
 @property (nonatomic) BOOL touchNavigationEnabled;
 
 @property (nonatomic, readonly) NSUInteger selectedIndex;
+@property (nonatomic, readonly) BOOL showingDebrief;            // results or the conversation after them
 
 - (void)showListSelecting:(NSUInteger)index;
 - (void)refreshProgress;
@@ -98,6 +99,8 @@ typedef NSEdgeInsets BriefingInsets;
 - (void)present:(SKScene *)screen;
 // Plays an exit of `seconds` (e.g. the main menu powering down), then quits.
 - (void)quitAfter:(NSTimeInterval)seconds;
+// Asks for the App Store rating sheet; YES once the request is on its way.
+- (BOOL)requestRating;
 // The slow drift through the sky behind see-through screens.
 - (void)drawMenuBackdrop;
 // Whether a LAN listing is our own listen server (left off the list).

@@ -1674,6 +1674,8 @@ static const CGFloat PhoneSpeakerFont = 16;
 
 #pragma mark - Debrief
 
+- (BOOL)showingDebrief { return _mode == ModeDebrief; }
+
 - (void)showDebrief:(NSUInteger)index success:(BOOL)success results:(NSArray<ObjectiveReadout *> *)results
               stars:(NSUInteger)stars points:(NSUInteger)points campaignFinale:(BOOL)finale {
     _mode = ModeDebrief;

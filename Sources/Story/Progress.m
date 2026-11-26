@@ -184,6 +184,27 @@ void ProgressMarkStarted(void) {
     });
 }
 
+BOOL RatingDue(RatingRecord record, NSInteger missions, NSInteger day) {
+    if (record.asks >= RatingAsks) return NO;
+    if (record.asks == 0) return missions >= RatingFirstMission;
+    return missions - record.mission >= RatingMissionGap && day - record.day >= RatingDayGap;
+}
+
+NSInteger RatingToday(void) { return (NSInteger)floor(NSDate.date.timeIntervalSince1970 / 86400); }
+
+RatingRecord RatingRecordLoad(void) {
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    return (RatingRecord){[defaults integerForKey:@"SFRatingAsks"], [defaults integerForKey:@"SFRatingMission"],
+                          [defaults integerForKey:@"SFRatingDay"]};
+}
+
+void RatingRecordAsked(NSInteger missions) {
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    [defaults setInteger:[defaults integerForKey:@"SFRatingAsks"] + 1 forKey:@"SFRatingAsks"];
+    [defaults setInteger:missions forKey:@"SFRatingMission"];
+    [defaults setInteger:RatingToday() forKey:@"SFRatingDay"];
+}
+
 NSUInteger ProgressBestStars(NSUInteger index) {
     NSString *level = CampaignLevelName(index);
     return level ? ProgressSnapshot().missionStars[level].unsignedIntegerValue : 0;

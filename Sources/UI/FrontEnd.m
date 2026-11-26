@@ -10,6 +10,9 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     __weak id<UIServices> _services;
     MainMenu *_mainMenu;
     Briefing *_briefing;
+    // The rating sheet a first finish has earned: missions finished, and when
+    // the screen after the debrief has stood long enough to show it.
+    struct { NSInteger missions; double at; } _rating;
     ServerBrowser *_browser;
     LANBrowser *_lan;
     LANGame *_lanGame;
@@ -135,6 +138,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 }
 
 - (void)flightStarted {
+    _rating.missions = 0;   // on to the next sortie: another finish will ask
     [_briefing unload];
     [_mainMenu unload];
 }
@@ -143,7 +147,11 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
     NSArray<ObjectiveReadout *> *objectives = MissionResultReadouts(results);
     NSUInteger stars = success ? ProgressResultStars(objectives) : 0, points = 0;
     BOOL finale = success && !remote && index < CampaignMissions().count && index + 1 == CampaignMissions().count;
+    BOOL first = success && !remote && ProgressBestStars(index) == 0;
     if (success && !remote) points = ProgressRecordResult(index, stars);
+    NSInteger finished = (NSInteger)index + 1;
+    _rating.missions = first && RatingDue(RatingRecordLoad(), finished, RatingToday()) ? finished : 0;
+    _rating.at = 0;
     [_briefing showDebrief:index success:success results:objectives stars:stars points:points campaignFinale:finale];
     [self present:FrontScreenCampaign];
 }
@@ -151,6 +159,16 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
 - (void)levelLeft:(NSUInteger)index { [self showMissionsSelecting:index]; }
 
 #pragma mark - Frame
+
+// The rating sheet waits for the pilot to read the debrief and move on, then
+// for the next screen to stand a moment: it never covers the results.
+- (void)rateAfterDebrief {
+    if (!_rating.missions || (_screen == FrontScreenCampaign && _briefing.showingDebrief)) return;
+    if (!_rating.at) { _rating.at = _services.time + 1.0; return; }
+    if (_services.time < _rating.at) return;
+    if ([_services requestRating]) RatingRecordAsked(_rating.missions);
+    _rating.missions = 0;
+}
 
 - (void)frame:(InputAction)actions {
     NSUInteger revision = ProgressRevision();
@@ -161,6 +179,7 @@ typedef NS_ENUM(NSInteger, FrontScreen) { FrontScreenMainMenu, FrontScreenCampai
         else if (_screen == FrontScreenLAN) [_lanGame refreshProgress];
     }
     [_briefing showFriends:_services.missionFriends];
+    [self rateAfterDebrief];
     switch (_screen) {
         case FrontScreenMainMenu: [self mainMenuFrame:actions]; break;
         case FrontScreenCampaign: [self campaignFrame:actions]; break;
